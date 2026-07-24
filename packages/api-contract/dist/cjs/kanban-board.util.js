@@ -65,6 +65,8 @@ function toBoardData(rows, columns) {
                 type: "card",
                 content: task.content,
                 origin: task.origin,
+                createdAt: task.createdAt,
+                createdBy: task.createdBy,
                 updatedAt: task.updatedAt,
             };
         }
@@ -112,6 +114,8 @@ function fromBoardData(board, stand, now, boardId) {
                 position,
                 content: node.content,
                 origin: node.origin ?? stand,
+                createdAt: node.createdAt,
+                createdBy: node.createdBy,
                 updatedAt: now,
             });
         });

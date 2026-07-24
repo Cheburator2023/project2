@@ -412,6 +412,8 @@ function parseBacklogRows(
 			position,
 			content,
 			origin: options.standId,
+			createdAt: now,
+			createdBy: null,
 			updatedAt: now,
 		});
 	});
@@ -479,6 +481,8 @@ function applyWorkloadSheet(
 					estimatePd: effort,
 				}),
 				origin: options.standId,
+				createdAt: now,
+				createdBy: null,
 				updatedAt: now,
 			};
 			tasks.push(task);

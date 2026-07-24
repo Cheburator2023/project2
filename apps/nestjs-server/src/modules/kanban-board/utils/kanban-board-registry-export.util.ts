@@ -33,6 +33,8 @@ const TASK_EXPORT_COLUMNS = [
 	{ header: "Спринт", key: "sprint", width: 18 },
 	{ header: "Стрим", key: "stream", width: 18 },
 	{ header: "Стенд", key: "origin", width: 12 },
+	{ header: "Создал", key: "createdBy", width: 18 },
+	{ header: "Создано", key: "createdAt", width: 22 },
 	{ header: "Обновлено", key: "updatedAt", width: 22 },
 ] as const;
 
@@ -113,6 +115,8 @@ function taskToExportRow(task: KanbanBoardTaskRegistryDto): Record<string, strin
 		sprint: task.sprintTitle ?? "",
 		stream: task.streamCustomer ?? "",
 		origin: task.origin,
+		createdBy: task.createdBy ?? "",
+		createdAt: task.createdAt ?? "",
 		updatedAt: task.updatedAt,
 	};
 	for (const field of KANBAN_BOARD_ROLE_ESTIMATE_FIELDS) {

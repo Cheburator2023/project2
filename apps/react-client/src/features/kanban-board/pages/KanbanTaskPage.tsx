@@ -1,9 +1,8 @@
 import Alert from "@mui/material/Alert";
-import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
-import Stack from "@mui/material/Stack";
+import Divider from "@mui/material/Divider";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
@@ -67,6 +66,7 @@ import { normalizeTrackerCode } from "@smart-anketa/api-contract";
 import { TrackerMarkdownEditor } from "@react-client/features/kanban-board/components/TrackerMarkdownEditor";
 import { TrackerTaskConflictDialog } from "@react-client/features/tracker/components/TrackerTaskConflictDialog";
 import { useKanbanTaskEditLock } from "@react-client/features/tracker/hooks/useKanbanTaskEditLock";
+import { trackerDateFormatter } from "@react-client/features/tracker/components/TrackerRegistryGrid";
 import { useTrackerTaskSync } from "@react-client/features/tracker/hooks/useTrackerTaskSync";
 
 const PRIORITY_OPTIONS = KANBAN_BOARD_PRIORITIES.map((option) => ({
@@ -164,21 +164,19 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 		!isCreate && taskKey ? taskKey : undefined,
 	);
 	const taskId = taskByRefQuery.data?.id ?? "";
-	const taskImagesQuery = useKanbanBoardTaskImages(!isCreate ? taskId : undefined);
+	const taskImagesQuery = useKanbanBoardTaskImages(
+		!isCreate ? taskId : undefined,
+	);
 	const boardIdFromTask = taskByRefQuery.data?.boardId ?? "";
 	const boardIdFromQuery = searchParams.get("boardId") ?? "";
 
 	const boardsQuery = useKanbanBoardBoards();
 	const boardMetaFromKey = boardsQuery.data?.find(
 		(item) =>
-			item.boardKey === normalizeTrackerCode(boardKey) ||
-			item.id === boardKey,
+			item.boardKey === normalizeTrackerCode(boardKey) || item.id === boardKey,
 	);
 	const boardId =
-		boardIdFromTask ||
-		boardIdFromQuery ||
-		boardMetaFromKey?.id ||
-		"";
+		boardIdFromTask || boardIdFromQuery || boardMetaFromKey?.id || "";
 
 	const [selectedBoardId, setSelectedBoardId] = useState("");
 	const [title, setTitle] = useState("");
@@ -416,7 +414,8 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 
 	useEffect(() => {
 		if (!isCreate) return;
-		const defaultName = settingsQuery.data?.defaultCurrentUserAssigneeName?.trim();
+		const defaultName =
+			settingsQuery.data?.defaultCurrentUserAssigneeName?.trim();
 		if (!defaultName) return;
 		setAssignees((prev) => (prev.length ? prev : [defaultName]));
 		setCurrentAssignee((prev) => prev || defaultName);
@@ -449,7 +448,10 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 			? Number(backlogNumber)
 			: undefined;
 		const parsedEstimate = estimatePd.trim() ? Number(estimatePd) : undefined;
-		const assigneeFields = resolveKanbanTaskAssigneeFields(assignees, currentAssignee);
+		const assigneeFields = resolveKanbanTaskAssigneeFields(
+			assignees,
+			currentAssignee,
+		);
 		return normalizeKanbanBoardTaskContent({
 			title: title.trim(),
 			description: description || undefined,
@@ -494,6 +496,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 				boardId: effectiveBoardId,
 				parentId,
 				content,
+				createdBy: editLabel || null,
 			});
 			navigate(trackerTaskPath(created.taskKey));
 			return;
@@ -559,15 +562,29 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 		>
 			<Header
 				leadingAccessory={
-					<Typography variant="body2" color="text.secondary" noWrap>
-						{boardSubtitle}
-					</Typography>
+					<Flex alignItems="center" gap={8} minWidth="0">
+						{!isCreate && taskKey ? (
+							<Typography
+								variant="subtitle2"
+								color="text.secondary"
+								noWrap
+								sx={{ fontWeight: 700, letterSpacing: 0.2 }}
+							>
+								{taskKey}
+							</Typography>
+						) : null}
+						<Typography variant="body2" color="text.secondary" noWrap>
+							{boardSubtitle}
+						</Typography>
+					</Flex>
 				}
 			>
 				<Flex gap={6} wrap="wrap" alignItems="center">
 					<Chip
 						size="small"
-						label={isCreate ? "Создание" : isTaskLoading ? "Загрузка…" : statusTitle}
+						label={
+							isCreate ? "Создание" : isTaskLoading ? "Загрузка…" : statusTitle
+						}
 						sx={{
 							bgcolor: alpha(columnColor, 0.14),
 							color: columnColor,
@@ -586,16 +603,24 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 				</Flex>
 			</Header>
 			<Card
+				padding="0"
+				height="100%"
+				overflow="hidden"
 				sx={{
-					p: 2,
 					flex: 1,
 					minHeight: 0,
 					display: "flex",
 					flexDirection: "column",
-					overflow: "hidden",
 				}}
 			>
-				<Stack spacing={2} sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
+				<Flex
+					flexDirection="column"
+					flexGrow={1}
+					minHeight="0"
+					height="100%"
+					gap={12}
+					sx={{ p: 2, overflow: "hidden" }}
+				>
 					{isTaskLoading ? (
 						<Flex
 							flexDirection="column"
@@ -638,7 +663,9 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 									color="inherit"
 									size="small"
 									onClick={() => {
-										void taskByRefQuery.refetch().then(() => setRemoteStale(false));
+										void taskByRefQuery
+											.refetch()
+											.then(() => setRemoteStale(false));
 									}}
 								>
 									Обновить
@@ -650,217 +677,311 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 					) : null}
 
 					{showForm ? (
-						<Stack spacing={2} sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
-							{showBoardPicker ? (
-								<KanbanTaskSelectField
-									label="Доска"
-									value={selectedBoardId}
-									options={boardOptions}
-									onChange={setSelectedBoardId}
-									required
-									fullWidth
-								/>
-							) : null}
-							<Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-								<TextField
-									label="№ в бэклоге"
-									type="number"
-									value={backlogNumber}
-									onChange={(event) => setBacklogNumber(event.target.value)}
-									sx={{ maxWidth: 140 }}
-									inputProps={{ min: 0, step: 1 }}
-								/>
-								<TextField
-									label="Заголовок"
-									value={title}
-									onChange={(event) => setTitle(event.target.value)}
-									required
-									fullWidth
-									autoFocus={isCreate}
-								/>
-							</Stack>
-							<Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-								<KanbanTaskSelectField
-									label="Колонка"
-									value={parentId}
-									options={columnOptions}
-									onChange={setParentId}
-									disabled={columnsQuery.isLoading || !columns.length}
-									fullWidth
-								/>
-								<KanbanTaskSelectField
-									label="Приоритет"
-									value={priority}
-									options={PRIORITY_OPTIONS.map((option) => ({
-										value: option.value,
-										label: option.label,
-										color: option.color,
-									}))}
-									onChange={setPriority}
-									fullWidth
-								/>
-								<KanbanTaskMultiSelectField
-									label="Исполнители"
-									value={assignees}
-									options={assigneeOptions}
-									onChange={setAssignees}
-									fullWidth
-								/>
-								<KanbanTaskSelectField
-									label="Текущий исполнитель"
-									value={currentAssignee}
-									options={currentAssigneeOptions}
-									onChange={setCurrentAssignee}
-									disabled={!currentAssigneeOptions.length}
-									fullWidth
-								/>
-							</Stack>
-							<Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-								<KanbanTaskSelectField
-									label="Тип задачи"
-									value={taskType}
-									options={taskTypeOptions}
-									onChange={setTaskType}
-									fullWidth
-								/>
-								<KanbanTaskSelectField
-									label="Тип работ"
-									value={workType}
-									options={workTypeOptions}
-									onChange={setWorkType}
-									fullWidth
-								/>
-								<TextField
-									label="Оценка, чд (итого)"
-									type="number"
-									value={estimatePd}
-									onChange={(event) => setEstimatePd(event.target.value)}
-									fullWidth
-									inputProps={{ min: 0, step: 0.5 }}
-									helperText="Заполняется автоматически из оценок по ролям"
-								/>
-							</Stack>
-							<KanbanRoleEstimatesFields
-								value={roleEstimates}
-								onChange={setRoleEstimates}
-							/>
-							<Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-								<DatePicker
-									label="Срок / плановая дата"
-									value={parseDueDate(dueDate)}
-									onChange={(value) => setDueDate(formatDueDate(value))}
-									slotProps={{
-										textField: { fullWidth: true },
-										field: { clearable: true },
-									}}
-								/>
-								<FuzzyAutocomplete<ParentTaskOption>
-									label="Родительская задача"
-									options={parentTaskOptions}
-									value={selectedParentTask}
-									onChange={(option) => {
-										if (!option) {
-											setParentTask("");
-											return;
-										}
-										const row = (tasksRegistryQuery.data ?? []).find(
-											(item) => item.id === option.id,
-										);
-										setParentTask(row?.title ?? option.label);
-									}}
-									getOptionLabel={(option) => option.label}
-									getOptionValue={(option) => option.id}
-									emptyLabel="— без родителя —"
-									searchPlaceholder="Поиск по задачам…"
-									noMatchesText="Задачи не найдены"
-									placeholder="Выберите родительскую задачу"
-									helperText={
-										parentTask && !selectedParentTask
-											? `Текущее значение не найдено в реестре: ${parentTask}`
-											: undefined
-									}
-									disabled={tasksRegistryQuery.isLoading}
-									size="medium"
-								/>
-								<KanbanTaskSelectField
-									label="Заказчик"
-									value={customer}
-									options={customerOptions}
-									onChange={setCustomer}
-									fullWidth
-								/>
-								<KanbanTaskSelectField
-									label="Спринт"
-									value={sprintId}
-									options={sprintOptions}
-									onChange={setSprintId}
-									fullWidth
-								/>
-								<KanbanTaskSelectField
-									label="Стрим-заказчик"
-									value={streamCustomer}
-									options={streamOptions}
-									onChange={setStreamCustomer}
-									fullWidth
-								/>
-							</Stack>
-							<Spacer space={12} />
-							<TextField
-								label="Ожидаемый результат спринта"
-								value={sprintOutcome}
-								onChange={(event) => setSprintOutcome(event.target.value)}
-								fullWidth
-								multiline
-								minRows={5}
-								placeholder="Релиз, ПСИ, ошибки устранены, готовность к демо…"
-							/>
-							<Spacer space={12} />
+						<Flex
+							flexGrow={1}
+							minHeight="0"
+							gap={16}
+							sx={{
+								overflow: "hidden",
+								flexDirection: { xs: "column", md: "row" },
+								alignItems: "stretch",
+							}}
+						>
+							<Flex
+								flexDirection="column"
+								flexGrow={1}
+								minWidth="0"
+								minHeight="0"
+								gap={16}
+								sx={{ overflow: "auto", pr: { md: 0.5 } }}
+							>
+								<Flex flexDirection="column" gap={6}>
+									<TextField
+										value={title}
+										onChange={(event) => setTitle(event.target.value)}
+										required
+										fullWidth
+										autoFocus={isCreate}
+										placeholder="Заголовок задачи"
+										variant="standard"
+										InputProps={{
+											disableUnderline: true,
+											sx: {
+												fontSize: "1.5rem",
+												fontWeight: 600,
+												lineHeight: 1.3,
+											},
+										}}
+										inputProps={{ "aria-label": "Заголовок" }}
+									/>
+									<Typography variant="body2" color="text.secondary">
+										{[
+											isCreate
+												? editLabel
+													? `Назначил: ${editLabel}`
+													: "Назначил: — (укажите «Я — исполнитель» в настройках)"
+												: task?.createdBy
+													? `Назначил: ${task.createdBy}`
+													: "Назначил: —",
+											!isCreate && task?.createdAt
+												? `Создано: ${trackerDateFormatter(task.createdAt)}`
+												: null,
+											!isCreate && task
+												? `Обновлено: ${trackerDateFormatter(task.updatedAt)}`
+												: null,
+										]
+											.filter(Boolean)
+											.join(" · ")}
+									</Typography>
+								</Flex>
 
-							<KanbanSubtasksChecklist
-								items={subtasks}
-								onChange={setSubtasks}
-								disabled={isSaving}
-							/>
+								<Flex flexDirection="column" gap={8}>
+									<Typography variant="subtitle2" color="text.secondary">
+										Описание
+									</Typography>
+									<TrackerMarkdownEditor
+										value={description}
+										onChange={setDescription}
+										height={360}
+									/>
+								</Flex>
 
-							<Spacer space={12} />
+								{!isCreate && taskId ? (
+									<KanbanTaskImagesSection
+										taskId={taskId}
+										images={taskImages}
+										disabled={isSaving}
+									/>
+								) : isCreate ? (
+									<Alert severity="info">
+										Изображения можно прикрепить после создания задачи
+									</Alert>
+								) : null}
 
-							{!isCreate && taskId ? (
-								<KanbanTaskImagesSection
-									taskId={taskId}
-									images={taskImages}
+								<KanbanSubtasksChecklist
+									items={subtasks}
+									onChange={setSubtasks}
 									disabled={isSaving}
 								/>
-							) : isCreate ? (
-								<Alert severity="info">
-									Изображения можно прикрепить после создания задачи
-								</Alert>
-							) : null}
 
-							<Spacer space={12} />
+								<Flex flexDirection="column" gap={8}>
+									<Typography variant="subtitle2" color="text.secondary">
+										Ожидаемый результат спринта
+									</Typography>
+									<TextField
+										value={sprintOutcome}
+										onChange={(event) => setSprintOutcome(event.target.value)}
+										fullWidth
+										multiline
+										minRows={3}
+										placeholder="Релиз, ПСИ, ошибки устранены, готовность к демо…"
+									/>
+								</Flex>
 
-							<Box sx={{ flex: 1, minHeight: 360 }}>
-								<Typography variant="subtitle2" sx={{ mb: 1 }}>
-									Описание (Markdown, Mermaid)
-								</Typography>
-								<TrackerMarkdownEditor
-									value={description}
-									onChange={setDescription}
-									height={480}
-								/>
-							</Box>
-
-							{!isCreate && taskId ? (
-								<>
-									<Spacer space={12} />
+								{!isCreate && taskId ? (
 									<KanbanTaskCommentsSection
 										taskId={taskId}
 										disabled={isSaving}
 									/>
-								</>
-							) : null}
-						</Stack>
+								) : null}
+							</Flex>
+
+							<Flex
+								flexDirection="column"
+								gap={14}
+								sx={{
+									width: { xs: "100%", md: 340 },
+									flexShrink: 0,
+									minHeight: { md: 0 },
+									height: { xs: "auto", md: "100%" },
+									maxHeight: { md: "100%" },
+									overflowY: "auto",
+									overflowX: "hidden",
+									p: 2,
+									border: "1px solid",
+									borderColor: "divider",
+									borderRadius: 1,
+									boxSizing: "border-box",
+									bgcolor: (theme) =>
+										alpha(
+											theme.palette.mode === "dark"
+												? theme.palette.common.white
+												: theme.palette.common.black,
+											0.02,
+										),
+								}}
+							>
+									<KanbanTaskSelectField
+										label="Статус"
+										value={parentId}
+										options={columnOptions}
+										onChange={setParentId}
+										disabled={columnsQuery.isLoading || !columns.length}
+										fullWidth
+									/>
+
+									<Divider />
+
+									<Typography
+										variant="caption"
+										color="text.secondary"
+										sx={{
+											fontWeight: 600,
+											letterSpacing: 0.4,
+											textTransform: "uppercase",
+										}}
+									>
+										Детали
+									</Typography>
+
+									{showBoardPicker ? (
+										<KanbanTaskSelectField
+											label="Доска"
+											value={selectedBoardId}
+											options={boardOptions}
+											onChange={setSelectedBoardId}
+											required
+											fullWidth
+										/>
+									) : null}
+
+									<TextField
+										label="№ в бэклоге"
+										type="number"
+										value={backlogNumber}
+										onChange={(event) => setBacklogNumber(event.target.value)}
+										fullWidth
+										size="small"
+										inputProps={{ min: 0, step: 1 }}
+									/>
+
+									<KanbanTaskSelectField
+										label="Приоритет"
+										value={priority}
+										options={PRIORITY_OPTIONS.map((option) => ({
+											value: option.value,
+											label: option.label,
+											color: option.color,
+										}))}
+										onChange={setPriority}
+										fullWidth
+									/>
+
+									<KanbanTaskMultiSelectField
+										label="Исполнители"
+										value={assignees}
+										options={assigneeOptions}
+										onChange={setAssignees}
+										fullWidth
+									/>
+
+									<KanbanTaskSelectField
+										label="Текущий исполнитель"
+										value={currentAssignee}
+										options={currentAssigneeOptions}
+										onChange={setCurrentAssignee}
+										disabled={!currentAssigneeOptions.length}
+										fullWidth
+									/>
+
+									<KanbanTaskSelectField
+										label="Тип задачи"
+										value={taskType}
+										options={taskTypeOptions}
+										onChange={setTaskType}
+										fullWidth
+									/>
+
+									<KanbanTaskSelectField
+										label="Тип работ"
+										value={workType}
+										options={workTypeOptions}
+										onChange={setWorkType}
+										fullWidth
+									/>
+
+									<TextField
+										label="Оценка, чд (итого)"
+										type="number"
+										value={estimatePd}
+										onChange={(event) => setEstimatePd(event.target.value)}
+										fullWidth
+										size="small"
+										inputProps={{ min: 0, step: 0.5 }}
+										helperText="Из оценок по ролям"
+									/>
+
+									<KanbanRoleEstimatesFields
+										value={roleEstimates}
+										onChange={setRoleEstimates}
+									/>
+
+									<DatePicker
+										label="Срок"
+										value={parseDueDate(dueDate)}
+										onChange={(value) => setDueDate(formatDueDate(value))}
+										slotProps={{
+											textField: { fullWidth: true, size: "small" },
+											field: { clearable: true },
+										}}
+									/>
+
+									<FuzzyAutocomplete<ParentTaskOption>
+										label="Родительская задача"
+										options={parentTaskOptions}
+										value={selectedParentTask}
+										onChange={(option) => {
+											if (!option) {
+												setParentTask("");
+												return;
+											}
+											const row = (tasksRegistryQuery.data ?? []).find(
+												(item) => item.id === option.id,
+											);
+											setParentTask(row?.title ?? option.label);
+										}}
+										getOptionLabel={(option) => option.label}
+										getOptionValue={(option) => option.id}
+										emptyLabel="— без родителя —"
+										searchPlaceholder="Поиск по задачам…"
+										noMatchesText="Задачи не найдены"
+										placeholder="Выберите родительскую задачу"
+										helperText={
+											parentTask && !selectedParentTask
+												? `Не найдено в реестре: ${parentTask}`
+												: undefined
+										}
+										disabled={tasksRegistryQuery.isLoading}
+										size="small"
+									/>
+
+									<KanbanTaskSelectField
+										label="Заказчик"
+										value={customer}
+										options={customerOptions}
+										onChange={setCustomer}
+										fullWidth
+									/>
+
+									<KanbanTaskSelectField
+										label="Спринт"
+										value={sprintId}
+										options={sprintOptions}
+										onChange={setSprintId}
+										fullWidth
+									/>
+
+									<KanbanTaskSelectField
+										label="Стрим-заказчик"
+										value={streamCustomer}
+										options={streamOptions}
+										onChange={setStreamCustomer}
+										fullWidth
+									/>
+							</Flex>
+						</Flex>
 					) : null}
-				</Stack>
+				</Flex>
 			</Card>
 			<TrackerTaskConflictDialog
 				open={Boolean(editBlocked)}

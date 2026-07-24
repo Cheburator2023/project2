@@ -216,6 +216,10 @@ export interface KanbanBoardTaskRecord {
     position: number;
     content: KanbanBoardTaskContent;
     origin: string;
+    /** ISO; при отсутствии у старых записей сервер подставляет updatedAt. */
+    createdAt?: string;
+    /** Имя исполнителя из настроек трекера («Я — исполнитель»). */
+    createdBy?: string | null;
     updatedAt: string;
 }
 export interface KanbanBoardProjectDto {
@@ -241,6 +245,8 @@ export interface KanbanBoardBoardDto {
     sortOrder: number;
     taskCount: number;
     createdAt: string;
+    /** Имя из настроек трекера («Я — исполнитель»). */
+    createdBy: string | null;
     updatedAt: string;
 }
 export interface KanbanBoardTaskRegistryDto extends KanbanBoardTaskRecord {
@@ -292,6 +298,8 @@ export interface CreateKanbanBoardBoardRequestDto {
     slug: string;
     description?: string | null;
     sortOrder?: number;
+    /** Имя из настроек трекера («Я — исполнитель»). */
+    createdBy?: string | null;
 }
 export interface UpdateKanbanBoardBoardRequestDto {
     projectId?: string;
@@ -305,6 +313,8 @@ export interface CreateKanbanBoardTaskRequestDto {
     parentId: string;
     content: KanbanBoardTaskContent;
     position?: number;
+    /** Имя из настроек трекера («Я — исполнитель»), как authorName у комментариев. */
+    createdBy?: string | null;
 }
 export interface UpdateKanbanBoardTaskRequestDto {
     boardId?: string;
@@ -627,6 +637,8 @@ export interface KanbanBoardItem {
     type?: string;
     content?: KanbanBoardNodeContent;
     origin?: string;
+    createdAt?: string;
+    createdBy?: string | null;
     /** Версия задачи для optimistic locking на доске */
     updatedAt?: string;
 }

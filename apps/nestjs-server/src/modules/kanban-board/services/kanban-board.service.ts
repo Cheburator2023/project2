@@ -109,14 +109,6 @@ export class KanbanBoardService {
 						userId: createdBy ?? null,
 					}
 				: undefined;
-		const normalized = tasks.map((task) => ({
-			...task,
-			boardId,
-			origin: standId,
-			updatedAt: now,
-		}));
-		const prepared = await this.ensureTaskIdentities(boardId, normalized);
-
 		const board = await this.boardRepository.findOne({
 			where: { id: boardId },
 			relations: { project: true },
@@ -126,6 +118,21 @@ export class KanbanBoardService {
 			relations: { board: { project: true }, project: true },
 		});
 		const existingById = new Map(existing.map((row) => [row.id, row]));
+
+		const normalized = tasks.map((task) => {
+			const prev = existingById.get(task.id);
+			return {
+				...task,
+				boardId,
+				origin: standId,
+				createdAt: prev?.createdAt ?? task.createdAt ?? now,
+				createdBy: prev
+					? (prev.createdBy ?? null)
+					: (task.createdBy?.trim() || null),
+				updatedAt: now,
+			};
+		});
+		const prepared = await this.ensureTaskIdentities(boardId, normalized);
 
 		if (!options?.forceOverwrite && options?.expectedUpdatedAtByTaskId) {
 			const conflicts: KanbanBoardTaskConflictItemDto[] = [];
@@ -408,6 +415,8 @@ export class KanbanBoardService {
 			position: entity.position,
 			content: entity.content,
 			origin: entity.origin,
+			createdAt: entity.createdAt ?? entity.updatedAt,
+			createdBy: entity.createdBy ?? null,
 			updatedAt: entity.updatedAt,
 		};
 	}
@@ -422,6 +431,8 @@ export class KanbanBoardService {
 		entity.position = record.position;
 		entity.content = record.content;
 		entity.origin = record.origin;
+		entity.createdAt = record.createdAt ?? record.updatedAt;
+		entity.createdBy = record.createdBy ?? null;
 		entity.updatedAt = record.updatedAt;
 		return entity;
 	}

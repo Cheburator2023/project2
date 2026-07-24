@@ -37,6 +37,10 @@ export class KanbanBoardEntity {
 	@Column({ name: "sort_order", type: "int", default: 0 })
 	sortOrder!: number;
 
+	/** Имя из настроек трекера («Я — исполнитель»), как у комментариев. */
+	@Column({ name: "created_by", type: "varchar", length: 255, nullable: true })
+	createdBy!: string | null;
+
 	@CreateDateColumn({ name: "created_at", type: "timestamptz" })
 	createdAt!: Date;
 

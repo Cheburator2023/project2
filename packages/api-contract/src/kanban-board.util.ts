@@ -75,6 +75,8 @@ export function toBoardData(
 				type: "card",
 				content: task.content,
 				origin: task.origin,
+				createdAt: task.createdAt,
+				createdBy: task.createdBy,
 				updatedAt: task.updatedAt,
 			};
 		}
@@ -130,6 +132,8 @@ export function fromBoardData(
 				position,
 				content: node.content as KanbanBoardTaskContent,
 				origin: node.origin ?? stand,
+				createdAt: node.createdAt,
+				createdBy: node.createdBy,
 				updatedAt: now,
 			});
 		});

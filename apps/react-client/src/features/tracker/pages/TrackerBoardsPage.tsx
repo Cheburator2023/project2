@@ -12,6 +12,7 @@ import {
 } from "@react-client/features/tracker/components/TrackerRegistryChipCell";
 import { TrackerRegistryPage } from "@react-client/features/tracker/components/TrackerRegistryPage";
 import { trackerDateFormatter } from "@react-client/features/tracker/components/TrackerRegistryGrid";
+import { useTrackerEditIdentity } from "@react-client/features/tracker/hooks/useTrackerEditIdentity";
 import type { KanbanBoardBoardDto } from "@smart-anketa/api-contract";
 import { useMemo } from "react";
 import { useNavigate } from "react-router";
@@ -24,6 +25,7 @@ export function TrackerBoardsPage() {
 	const createBoard = useCreateKanbanBoardBoard();
 	const updateBoard = useUpdateKanbanBoardBoard();
 	const deleteBoard = useDeleteKanbanBoardBoard();
+	const createdBy = useTrackerEditIdentity();
 
 	const projectOptions = useMemo(
 		() =>
@@ -68,6 +70,19 @@ export function TrackerBoardsPage() {
 				headerName: "Описание",
 				flex: 1.5,
 				minWidth: 180,
+			},
+			{
+				field: "createdBy",
+				headerName: "Создал",
+				minWidth: 140,
+				width: 160,
+				valueGetter: (params) => params.data?.createdBy ?? "",
+			},
+			{
+				field: "createdAt",
+				headerName: "Создано",
+				minWidth: 170,
+				valueFormatter: (params) => trackerDateFormatter(params.value),
 			},
 			{
 				field: "updatedAt",
@@ -140,6 +155,7 @@ export function TrackerBoardsPage() {
 					slug: values.slug,
 					description: values.description || null,
 					sortOrder: Number(values.sortOrder || 0),
+					createdBy: createdBy || null,
 				});
 			}}
 			onUpdate={async (row, values) => {

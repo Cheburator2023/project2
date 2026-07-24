@@ -718,6 +718,7 @@ export class KanbanBoardRegistryService {
 			slug: normalizeTrackerCode(dto.slug),
 			description: dto.description?.trim() || null,
 			sortOrder: dto.sortOrder ?? 0,
+			createdBy: dto.createdBy?.trim() || null,
 		});
 		entity.project = project;
 		await this.boardRepository.save(entity);
@@ -1274,6 +1275,7 @@ export class KanbanBoardRegistryService {
 
 		const content = await this.validateTaskContent(dto.content);
 		const taskNumber = await this.allocateTaskNumber(board.projectId);
+		const now = new Date().toISOString();
 
 		const entity = this.taskRepository.create({
 			id: ulid(),
@@ -1284,7 +1286,9 @@ export class KanbanBoardRegistryService {
 			position,
 			content,
 			origin: this.kanbanBoardService.getStandId(),
-			updatedAt: new Date().toISOString(),
+			createdAt: now,
+			createdBy: dto.createdBy?.trim() || null,
+			updatedAt: now,
 		});
 		entity.board = board;
 		await this.taskRepository.save(entity);
@@ -1783,6 +1787,7 @@ export class KanbanBoardRegistryService {
 			sortOrder: board.sortOrder,
 			taskCount: countMap.get(board.id) ?? 0,
 			createdAt: board.createdAt.toISOString(),
+			createdBy: board.createdBy ?? null,
 			updatedAt: board.updatedAt.toISOString(),
 		};
 	}
@@ -1810,6 +1815,8 @@ export class KanbanBoardRegistryService {
 			position: task.position,
 			content,
 			origin: task.origin,
+			createdAt: task.createdAt ?? task.updatedAt,
+			createdBy: task.createdBy ?? null,
 			updatedAt: task.updatedAt,
 			projectCode,
 			projectName: task.board?.project?.name ?? task.project?.name ?? "",

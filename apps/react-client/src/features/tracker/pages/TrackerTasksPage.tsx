@@ -256,6 +256,19 @@ export function TrackerTasksPage() {
 					params.data ? <TrackerTaskOriginChip origin={params.data.origin} /> : null,
 			},
 			{
+				field: "createdBy",
+				headerName: "Создал",
+				minWidth: 140,
+				width: 160,
+				valueGetter: (params) => params.data?.createdBy ?? "",
+			},
+			{
+				field: "createdAt",
+				headerName: "Создано",
+				minWidth: 170,
+				valueFormatter: (params) => trackerDateFormatter(params.value),
+			},
+			{
 				field: "updatedAt",
 				headerName: "Обновлено",
 				minWidth: 170,
