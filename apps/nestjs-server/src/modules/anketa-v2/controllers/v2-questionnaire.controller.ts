@@ -43,9 +43,11 @@ import {
     AUDIT_EVENT_SUMD_CREATEANKETA,
     AUDIT_EVENT_SUMD_SAVEANKETA,
     AUDIT_EVENT_SUMD_DELETEANKETA,
-    AUDIT_EVENT_SUMD_EXPORT,
     AUDIT_EVENT_SUMD_HOLDANKETA,
-    AUDIT_EVENT_SUMD_APPROVE,
+    AUDIT_EVENT_SUMD_BLOCKAPPROVE,
+    AUDIT_EVENT_SUMD_ANKETAAPPROVE,
+    AUDIT_EVENT_SUMD_EXPORTLISTANKET,
+    AUDIT_EVENT_SUMD_EXPORTANKETA,
 } from "../../../shared/audit/audit.constants";
 import { v4 as uuidv4 } from "uuid";
 import { normalizeV2AnketaWorkflow } from "../utils/v2-anketa-workflow.util";
@@ -197,7 +199,7 @@ export class V2QuestionnaireController {
         const initiator = this.buildInitiator(user);
 
         this.auditService.sendEvent(
-            AUDIT_EVENT_SUMD_EXPORT,
+            AUDIT_EVENT_SUMD_EXPORTLISTANKET,
             "START",
             correlationId,
             initiator,
@@ -208,7 +210,7 @@ export class V2QuestionnaireController {
             const buffer = await this.questionnaireService.exportRegistryXlsx();
             this.sendRegistryXlsxResponse(res, buffer, "v2-questionnaires");
             this.auditService.sendEvent(
-                AUDIT_EVENT_SUMD_EXPORT,
+                AUDIT_EVENT_SUMD_EXPORTLISTANKET,
                 "SUCCESS",
                 correlationId,
                 initiator,
@@ -216,7 +218,7 @@ export class V2QuestionnaireController {
             );
         } catch (error) {
             this.auditService.sendEvent(
-                AUDIT_EVENT_SUMD_EXPORT,
+                AUDIT_EVENT_SUMD_EXPORTLISTANKET,
                 "FAILURE",
                 correlationId,
                 initiator,
@@ -247,7 +249,7 @@ export class V2QuestionnaireController {
         const initiator = this.buildInitiator(user);
 
         this.auditService.sendEvent(
-            AUDIT_EVENT_SUMD_EXPORT,
+            AUDIT_EVENT_SUMD_EXPORTANKETA,
             "START",
             correlationId,
             initiator,
@@ -262,7 +264,7 @@ export class V2QuestionnaireController {
                 `v2-questionnaires-selected-${body.ids.length}`,
             );
             this.auditService.sendEvent(
-                AUDIT_EVENT_SUMD_EXPORT,
+                AUDIT_EVENT_SUMD_EXPORTANKETA,
                 "SUCCESS",
                 correlationId,
                 initiator,
@@ -270,7 +272,7 @@ export class V2QuestionnaireController {
             );
         } catch (error) {
             this.auditService.sendEvent(
-                AUDIT_EVENT_SUMD_EXPORT,
+                AUDIT_EVENT_SUMD_EXPORTANKETA,
                 "FAILURE",
                 correlationId,
                 initiator,
@@ -416,11 +418,12 @@ export class V2QuestionnaireController {
 
             // Дополнительные события при изменении статусов
             if (beforeWorkflow && afterWorkflow) {
-                // Глобальный статус -> HOLDANKETA (утверждение)
+                // Глобальный статус -> HOLDANKETA (утверждение/блокировка)
                 if (
                     beforeWorkflow.globalStatus !== "Заполнено" &&
                     afterWorkflow.globalStatus === "Заполнено"
                 ) {
+                    // Отправляем событие блокировки анкеты (SUMD_HOLDANKETA)
                     this.auditService.sendEvent(
                         AUDIT_EVENT_SUMD_HOLDANKETA,
                         "SUCCESS",
@@ -432,9 +435,21 @@ export class V2QuestionnaireController {
                             newStatus: afterWorkflow.globalStatus,
                         },
                     );
+                    // Отправляем событие подтверждения завершения анкеты (SUMD_ANKETAAPPROVE)
+                    this.auditService.sendEvent(
+                        AUDIT_EVENT_SUMD_ANKETAAPPROVE,
+                        "SUCCESS",
+                        uuidv4(),
+                        initiator,
+                        {
+                            questionnaireId: id,
+                            oldStatus: beforeWorkflow.globalStatus,
+                            newStatus: afterWorkflow.globalStatus,
+                        },
+                    );
                 }
 
-                // Статусы разделов -> APPROVE
+                // Статусы разделов -> BLOCKAPPROVE (подтверждение завершения блока)
                 const sections = [
                     "generalInfo",
                     "detailInfo",
@@ -446,7 +461,7 @@ export class V2QuestionnaireController {
                     const afterStatus = afterWorkflow.sections?.[section];
                     if (beforeStatus !== "Заполнено" && afterStatus === "Заполнено") {
                         this.auditService.sendEvent(
-                            AUDIT_EVENT_SUMD_APPROVE,
+                            AUDIT_EVENT_SUMD_BLOCKAPPROVE,
                             "SUCCESS",
                             uuidv4(),
                             initiator,
@@ -493,17 +508,48 @@ export class V2QuestionnaireController {
         }
     }
 
-	@Post(":id/hold")
-	@HttpCode(200)
-	@RealmRole(Permission.ANKETA_HOLD)
-	@ApiOperation({
-		summary: "Зафиксировать срез анкеты (Заполнено → Утверждена)",
-	})
-	async hold(
-		@Param("id", ParseUUIDPipe) id: string,
-	): Promise<V2QuestionnaireDto> {
-		return this.questionnaireService.hold(id);
-	}
+    @Post(":id/hold")
+    @HttpCode(200)
+    @RealmRole(Permission.ANKETA_HOLD)
+    @ApiOperation({
+        summary: "Зафиксировать срез анкеты (Заполнено → Утверждена)",
+    })
+    async hold(
+        @Param("id", ParseUUIDPipe) id: string,
+        @CurrentUser() user: Record<string, unknown> | undefined,
+    ): Promise<V2QuestionnaireDto> {
+        const correlationId = uuidv4();
+        const initiator = this.buildInitiator(user);
+
+        this.auditService.sendEvent(
+            AUDIT_EVENT_SUMD_HOLDANKETA,
+            "START",
+            correlationId,
+            initiator,
+            { questionnaireId: id },
+        );
+
+        try {
+            const result = await this.questionnaireService.hold(id);
+            this.auditService.sendEvent(
+                AUDIT_EVENT_SUMD_HOLDANKETA,
+                "SUCCESS",
+                uuidv4(),
+                initiator,
+                { questionnaireId: id },
+            );
+            return result;
+        } catch (error) {
+            this.auditService.sendEvent(
+                AUDIT_EVENT_SUMD_HOLDANKETA,
+                "FAILURE",
+                correlationId,
+                initiator,
+                { questionnaireId: id, errorMessage: (error as Error).message },
+            );
+            throw error;
+        }
+    }
 
 	@Post(":id/new-version")
 	@RealmRole(Permission.ANKETA_CREATE_CALCULATION)
