@@ -3,6 +3,7 @@ import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { DomainRoles } from "../../../shared/decorators/domain-roles.decorator";
 import {
 	V2KeycloakBackupRequestDto,
+	V2KeycloakRestoreRequestDto,
 	V2KeycloakRoleSyncDto,
 } from "../dto/request/v2-keycloak-role-sync.dto";
 import { V2KeycloakRoleSyncService } from "../services/v2-keycloak-role-sync.service";
@@ -39,6 +40,25 @@ export class V2KeycloakRoleSyncController {
 			keycloakUrl: body.keycloakUrl,
 			realm: body.realm,
 			adminRealm: body.adminRealm,
+			include: body.include,
+		});
+	}
+
+	@Post("restore")
+	@DomainRoles("appadmin", "sacfg")
+	@ApiOperation({
+		summary:
+			"Восстановить Keycloak из JSON-бекапа (dry-run по умолчанию; anketa_* на группах/юзерах, membership)",
+	})
+	async restore(@Body() body: V2KeycloakRestoreRequestDto) {
+		return this.syncService.restoreFromBackup({
+			adminUsername: body.adminUsername,
+			adminPassword: body.adminPassword,
+			dryRun: body.dryRun !== false,
+			keycloakUrl: body.keycloakUrl,
+			realm: body.realm,
+			adminRealm: body.adminRealm,
+			backup: body.backup,
 			include: body.include,
 		});
 	}

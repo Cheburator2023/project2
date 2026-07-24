@@ -1,5 +1,6 @@
 import {
 	IsBoolean,
+	IsObject,
 	IsOptional,
 	IsString,
 	MinLength,
@@ -81,6 +82,29 @@ export class V2KeycloakBackupIncludeDto {
 }
 
 export class V2KeycloakBackupRequestDto extends V2KeycloakAdminCredsDto {
+	@IsOptional()
+	@ValidateNested()
+	@Type(() => V2KeycloakBackupIncludeDto)
+	include?: V2KeycloakBackupIncludeDto;
+}
+
+/**
+ * Восстановление из JSON, скачанного через /backup.
+ * `backup` — целиком тело файла (валидируется в сервисе).
+ */
+export class V2KeycloakRestoreRequestDto extends V2KeycloakAdminCredsDto {
+	/** По умолчанию true — только план без записи. */
+	@IsOptional()
+	@IsBoolean()
+	dryRun?: boolean;
+
+	@IsObject()
+	backup!: Record<string, unknown>;
+
+	/**
+	 * Какие секции восстанавливать. Если не задано — по `backup.include`
+	 * (или всё доступное в JSON).
+	 */
 	@IsOptional()
 	@ValidateNested()
 	@Type(() => V2KeycloakBackupIncludeDto)

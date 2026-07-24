@@ -86,6 +86,35 @@ export type V2KeycloakRoleSyncResult = {
 	}>;
 };
 
+export type V2KeycloakRestoreResult = {
+	dryRun: boolean;
+	keycloakUrl: string;
+	realm: string;
+	backupExportedAt: string | null;
+	include: V2KeycloakBackupInclude;
+	rolesCreated: string[];
+	groupsCreated: string[];
+	groupRoleChanges: Array<{
+		path: string;
+		add: string[];
+		remove: string[];
+		status: "ok" | "missing_group" | "updated" | "would_update";
+	}>;
+	userGroupChanges: Array<{
+		username: string;
+		join: string[];
+		leave: string[];
+		status: "ok" | "missing_user" | "updated" | "would_update";
+	}>;
+	userRoleChanges: Array<{
+		username: string;
+		add: string[];
+		remove: string[];
+		status: "ok" | "missing_user" | "updated" | "would_update";
+	}>;
+	warnings: string[];
+};
+
 export type V2KeycloakBackupDto = {
 	exportedAt: string;
 	keycloakUrl: string;
@@ -401,6 +430,663 @@ export class V2KeycloakRoleSyncService {
 			`Keycloak backup: realm=${realm} groups=${groups.length} users=${users.length} include=${JSON.stringify(include)}`,
 		);
 		return backup;
+	}
+
+	/**
+	 * Откат по JSON с /backup:
+	 * - создать недостающие realm roles / groups path;
+	 * - выровнять anketa_* на группах;
+	 * - выровнять membership юзеров и их direct anketa_* (если есть в бекапе).
+	 * Пароли, clients, IdP не трогаем.
+	 */
+	async restoreFromBackup(options: {
+		adminUsername: string;
+		adminPassword: string;
+		dryRun: boolean;
+		keycloakUrl?: string;
+		realm?: string;
+		adminRealm?: string;
+		backup: unknown;
+		include?: Partial<V2KeycloakBackupInclude> | null;
+	}): Promise<V2KeycloakRestoreResult> {
+		const parsed = this.parseBackupPayload(options.backup);
+		const include = resolveBackupInclude({
+			...parsed.include,
+			...(options.include ?? {}),
+		});
+		if (!include.realmRoles && !include.groups && !include.users) {
+			throw new BadRequestException(
+				"Выберите хотя бы одну секцию restore: realm roles / groups / users",
+			);
+		}
+
+		const { keycloakUrl, realm, adminRealm } = this.resolveConnection({
+			keycloakUrl: options.keycloakUrl || parsed.keycloakUrl || undefined,
+			realm: options.realm || parsed.realm || undefined,
+			adminRealm: options.adminRealm,
+		});
+
+		const token = await this.fetchAdminToken({
+			keycloakUrl,
+			adminRealm,
+			username: options.adminUsername,
+			password: options.adminPassword,
+		});
+
+		const apply = !options.dryRun;
+		const result: V2KeycloakRestoreResult = {
+			dryRun: options.dryRun,
+			keycloakUrl,
+			realm,
+			backupExportedAt: parsed.exportedAt,
+			include,
+			rolesCreated: [],
+			groupsCreated: [],
+			groupRoleChanges: [],
+			userGroupChanges: [],
+			userRoleChanges: [],
+			warnings: [...parsed.warnings],
+		};
+
+		let byName = await this.loadRolesByName(keycloakUrl, realm, token);
+
+		if (include.realmRoles && parsed.realmRoles.length) {
+			for (const role of parsed.realmRoles) {
+				if (byName[role.name]) continue;
+				result.rolesCreated.push(role.name);
+				if (!apply) continue;
+				try {
+					await this.api(keycloakUrl, realm, token, "POST", "/roles", {
+						name: role.name,
+						description: role.description || role.name,
+					});
+				} catch (e) {
+					const msg = String(e);
+					if (!msg.includes("409")) throw e;
+				}
+			}
+			byName = await this.loadRolesByName(keycloakUrl, realm, token);
+		}
+
+		let byPath = await this.loadGroupsByPath(
+			keycloakUrl,
+			realm,
+			token,
+			parsed.groups.map((g) => g.path),
+		);
+
+		if (include.groups && parsed.groups.length) {
+			const pathsToEnsure = [
+				...new Set(
+					parsed.groups
+						.map((g) => g.path)
+						.filter(Boolean)
+						.sort(
+							(a, b) =>
+								a.split("/").length - b.split("/").length ||
+								a.localeCompare(b),
+						),
+				),
+			];
+
+			for (const path of pathsToEnsure) {
+				if (byPath[path]) continue;
+				result.groupsCreated.push(path);
+				if (!apply) continue;
+				await this.ensureGroupPath(keycloakUrl, realm, token, path, byPath);
+				byPath = await this.loadGroupsByPath(
+					keycloakUrl,
+					realm,
+					token,
+					pathsToEnsure,
+				);
+			}
+
+			if (include.groupAttributes) {
+				for (const gBackup of parsed.groups) {
+					if (!gBackup.attributes || !Object.keys(gBackup.attributes).length) {
+						continue;
+					}
+					const g = byPath[gBackup.path];
+					if (!g?.id) continue;
+					if (!apply) continue;
+					await this.api(keycloakUrl, realm, token, "PUT", `/groups/${g.id}`, {
+						id: g.id,
+						name: g.name,
+						path: g.path,
+						attributes: gBackup.attributes,
+					});
+				}
+			}
+
+			if (include.groupRealmRoles) {
+				for (const gBackup of parsed.groups) {
+					const g = byPath[gBackup.path];
+					if (!g?.id) {
+						result.groupRoleChanges.push({
+							path: gBackup.path,
+							add: gBackup.anketaRealmRoles,
+							remove: [],
+							status: "missing_group",
+						});
+						continue;
+					}
+					const current =
+						(await this.api<KcRole[]>(
+							keycloakUrl,
+							realm,
+							token,
+							"GET",
+							`/groups/${g.id}/role-mappings/realm`,
+						)) || [];
+					const have = current
+						.map((r) => r.name)
+						.filter((n) => n.startsWith("anketa_"))
+						.sort();
+					const want = [...gBackup.anketaRealmRoles].sort();
+					const add = want.filter((n) => !have.includes(n));
+					const remove = have.filter((n) => !want.includes(n));
+					if (!add.length && !remove.length) {
+						result.groupRoleChanges.push({
+							path: gBackup.path,
+							add: [],
+							remove: [],
+							status: "ok",
+						});
+						continue;
+					}
+					if (!apply) {
+						result.groupRoleChanges.push({
+							path: gBackup.path,
+							add,
+							remove,
+							status: "would_update",
+						});
+						continue;
+					}
+					if (add.length) {
+						await this.api(
+							keycloakUrl,
+							realm,
+							token,
+							"POST",
+							`/groups/${g.id}/role-mappings/realm`,
+							add.map((name) => {
+								const role = byName[name];
+								if (!role) {
+									throw new ServiceUnavailableException(
+										`Role missing: ${name}`,
+									);
+								}
+								return { id: role.id, name: role.name };
+							}),
+						);
+					}
+					if (remove.length) {
+						await this.api(
+							keycloakUrl,
+							realm,
+							token,
+							"DELETE",
+							`/groups/${g.id}/role-mappings/realm`,
+							remove.map((name) => {
+								const role = byName[name];
+								if (!role) {
+									throw new ServiceUnavailableException(
+										`Role missing: ${name}`,
+									);
+								}
+								return { id: role.id, name: role.name };
+							}),
+						);
+					}
+					result.groupRoleChanges.push({
+						path: gBackup.path,
+						add,
+						remove,
+						status: "updated",
+					});
+				}
+			}
+		}
+
+		if (
+			include.users &&
+			parsed.users.length &&
+			(include.userGroups || include.userRealmRoles)
+		) {
+			const usersByUsername = await this.loadUsersByUsername(
+				keycloakUrl,
+				realm,
+				token,
+			);
+			byPath = await this.loadGroupsByPath(
+				keycloakUrl,
+				realm,
+				token,
+				parsed.users.flatMap((u) => u.groups),
+			);
+
+			for (const uBackup of parsed.users) {
+				const username = uBackup.username;
+				if (!username) {
+					result.warnings.push("Пропущен пользователь без username в бекапе");
+					continue;
+				}
+				const live = usersByUsername.get(username.toLowerCase());
+				if (!live?.id) {
+					if (include.userGroups) {
+						result.userGroupChanges.push({
+							username,
+							join: uBackup.groups,
+							leave: [],
+							status: "missing_user",
+						});
+					}
+					if (include.userRealmRoles) {
+						result.userRoleChanges.push({
+							username,
+							add: uBackup.anketaDirectRoles,
+							remove: [],
+							status: "missing_user",
+						});
+					}
+					continue;
+				}
+
+				if (include.userGroups) {
+					const currentGroups = await this.listUserGroups(
+						keycloakUrl,
+						realm,
+						token,
+						live.id,
+					);
+					const have = currentGroups.map((g) => g.path).sort();
+					const want = [...uBackup.groups].sort();
+					const join = want.filter((p) => !have.includes(p));
+					const leave = have.filter((p) => !want.includes(p));
+					if (!join.length && !leave.length) {
+						result.userGroupChanges.push({
+							username,
+							join: [],
+							leave: [],
+							status: "ok",
+						});
+					} else if (!apply) {
+						result.userGroupChanges.push({
+							username,
+							join,
+							leave,
+							status: "would_update",
+						});
+					} else {
+						for (const path of join) {
+							const g = byPath[path];
+							if (!g?.id) {
+								result.warnings.push(
+									`${username}: нет группы ${path} для join`,
+								);
+								continue;
+							}
+							await this.api(
+								keycloakUrl,
+								realm,
+								token,
+								"PUT",
+								`/users/${live.id}/groups/${g.id}`,
+							);
+						}
+						for (const path of leave) {
+							const g =
+								currentGroups.find((x) => x.path === path) || byPath[path];
+							if (!g?.id) continue;
+							await this.api(
+								keycloakUrl,
+								realm,
+								token,
+								"DELETE",
+								`/users/${live.id}/groups/${g.id}`,
+							);
+						}
+						result.userGroupChanges.push({
+							username,
+							join,
+							leave,
+							status: "updated",
+						});
+					}
+				}
+
+				if (include.userRealmRoles) {
+					const current =
+						(await this.api<KcRole[]>(
+							keycloakUrl,
+							realm,
+							token,
+							"GET",
+							`/users/${live.id}/role-mappings/realm`,
+						)) || [];
+					const have = current
+						.map((r) => r.name)
+						.filter((n) => n.startsWith("anketa_"))
+						.sort();
+					const want = [...uBackup.anketaDirectRoles].sort();
+					const add = want.filter((n) => !have.includes(n));
+					const remove = have.filter((n) => !want.includes(n));
+					if (!add.length && !remove.length) {
+						result.userRoleChanges.push({
+							username,
+							add: [],
+							remove: [],
+							status: "ok",
+						});
+					} else if (!apply) {
+						result.userRoleChanges.push({
+							username,
+							add,
+							remove,
+							status: "would_update",
+						});
+					} else {
+						if (add.length) {
+							await this.api(
+								keycloakUrl,
+								realm,
+								token,
+								"POST",
+								`/users/${live.id}/role-mappings/realm`,
+								add.map((name) => {
+									const role = byName[name];
+									if (!role) {
+										throw new ServiceUnavailableException(
+											`Role missing: ${name}`,
+										);
+									}
+									return { id: role.id, name: role.name };
+								}),
+							);
+						}
+						if (remove.length) {
+							await this.api(
+								keycloakUrl,
+								realm,
+								token,
+								"DELETE",
+								`/users/${live.id}/role-mappings/realm`,
+								remove.map((name) => {
+									const role = byName[name];
+									if (!role) {
+										throw new ServiceUnavailableException(
+											`Role missing: ${name}`,
+										);
+									}
+									return { id: role.id, name: role.name };
+								}),
+							);
+						}
+						result.userRoleChanges.push({
+							username,
+							add,
+							remove,
+							status: "updated",
+						});
+					}
+				}
+			}
+		}
+
+		this.logger.log(
+			`Keycloak restore: realm=${realm} dryRun=${options.dryRun} groupRoleΔ=${result.groupRoleChanges.filter((c) => c.add.length || c.remove.length).length} userGroupΔ=${result.userGroupChanges.filter((c) => c.join.length || c.leave.length).length}`,
+		);
+		return result;
+	}
+
+	private parseBackupPayload(raw: unknown): {
+		exportedAt: string | null;
+		keycloakUrl: string | null;
+		realm: string | null;
+		include: Partial<V2KeycloakBackupInclude>;
+		realmRoles: Array<{ name: string; description?: string | null }>;
+		groups: Array<{
+			path: string;
+			name: string;
+			attributes: Record<string, string[]> | null;
+			anketaRealmRoles: string[];
+		}>;
+		users: Array<{
+			username: string | null;
+			groups: string[];
+			anketaDirectRoles: string[];
+		}>;
+		warnings: string[];
+	} {
+		if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+			throw new BadRequestException(
+				"backup: ожидается JSON-объект из «Создать бекап»",
+			);
+		}
+		const obj = raw as Record<string, unknown>;
+		const warnings: string[] = [];
+		if (
+			obj.purpose != null &&
+			obj.purpose !== "pre-f05-sync-backup"
+		) {
+			warnings.push(
+				`Нестандартный purpose=${String(obj.purpose)} — продолжаем`,
+			);
+		}
+
+		const includeRaw =
+			obj.include && typeof obj.include === "object" && !Array.isArray(obj.include)
+				? (obj.include as Partial<V2KeycloakBackupInclude>)
+				: {};
+
+		const realmRoles: Array<{ name: string; description?: string | null }> = [];
+		if (Array.isArray(obj.realmRoles)) {
+			for (const r of obj.realmRoles) {
+				if (!r || typeof r !== "object") continue;
+				const name = String((r as { name?: unknown }).name || "").trim();
+				if (!name) continue;
+				realmRoles.push({
+					name,
+					description:
+						typeof (r as { description?: unknown }).description === "string"
+							? ((r as { description: string }).description as string)
+							: null,
+				});
+			}
+		}
+
+		const groups: Array<{
+			path: string;
+			name: string;
+			attributes: Record<string, string[]> | null;
+			anketaRealmRoles: string[];
+		}> = [];
+		if (Array.isArray(obj.groups)) {
+			for (const g of obj.groups) {
+				if (!g || typeof g !== "object") continue;
+				const path = String((g as { path?: unknown }).path || "").trim();
+				if (!path.startsWith("/")) continue;
+				const name =
+					String((g as { name?: unknown }).name || "").trim() ||
+					path.split("/").filter(Boolean).pop() ||
+					path;
+				const anketaFromField = Array.isArray(
+					(g as { anketaRealmRoles?: unknown }).anketaRealmRoles,
+				)
+					? ((g as { anketaRealmRoles: unknown[] }).anketaRealmRoles as unknown[])
+							.map((n) => String(n))
+							.filter((n) => n.startsWith("anketa_"))
+					: null;
+				const fromRealmRoles = Array.isArray(
+					(g as { realmRoles?: unknown }).realmRoles,
+				)
+					? ((g as { realmRoles: unknown[] }).realmRoles as unknown[])
+							.map((n) => String(n))
+							.filter((n) => n.startsWith("anketa_"))
+					: [];
+				const attrsRaw = (g as { attributes?: unknown }).attributes;
+				let attributes: Record<string, string[]> | null = null;
+				if (attrsRaw && typeof attrsRaw === "object" && !Array.isArray(attrsRaw)) {
+					attributes = {};
+					for (const [k, v] of Object.entries(
+						attrsRaw as Record<string, unknown>,
+					)) {
+						if (Array.isArray(v)) {
+							attributes[k] = v.map((x) => String(x));
+						}
+					}
+				}
+				groups.push({
+					path,
+					name,
+					attributes,
+					anketaRealmRoles: [...new Set(anketaFromField ?? fromRealmRoles)].sort(),
+				});
+			}
+		}
+
+		const users: Array<{
+			username: string | null;
+			groups: string[];
+			anketaDirectRoles: string[];
+		}> = [];
+		if (Array.isArray(obj.users)) {
+			for (const u of obj.users) {
+				if (!u || typeof u !== "object") continue;
+				const usernameRaw = (u as { username?: unknown }).username;
+				const username =
+					typeof usernameRaw === "string" && usernameRaw.trim()
+						? usernameRaw.trim()
+						: null;
+				const groupsList = Array.isArray((u as { groups?: unknown }).groups)
+					? ((u as { groups: unknown[] }).groups as unknown[])
+							.map((p) => String(p))
+							.filter((p) => p.startsWith("/"))
+					: [];
+				const direct = Array.isArray(
+					(u as { realmRolesDirect?: unknown }).realmRolesDirect,
+				)
+					? ((u as { realmRolesDirect: unknown[] }).realmRolesDirect as unknown[])
+							.map((n) => String(n))
+							.filter((n) => n.startsWith("anketa_"))
+					: [];
+				users.push({
+					username,
+					groups: [...new Set(groupsList)].sort(),
+					anketaDirectRoles: [...new Set(direct)].sort(),
+				});
+			}
+		}
+
+		if (!realmRoles.length && !groups.length && !users.length) {
+			throw new BadRequestException(
+				"В backup нет секций realmRoles / groups / users — нечего восстанавливать",
+			);
+		}
+
+		return {
+			exportedAt:
+				typeof obj.exportedAt === "string" ? obj.exportedAt : null,
+			keycloakUrl:
+				typeof obj.keycloakUrl === "string" ? obj.keycloakUrl : null,
+			realm: typeof obj.realm === "string" ? obj.realm : null,
+			include: includeRaw,
+			realmRoles,
+			groups,
+			users,
+			warnings,
+		};
+	}
+
+	private async loadRolesByName(
+		keycloakUrl: string,
+		realm: string,
+		token: string,
+	): Promise<Record<string, KcRole>> {
+		const roles =
+			(await this.api<KcRole[]>(
+				keycloakUrl,
+				realm,
+				token,
+				"GET",
+				"/roles?max=1000",
+			)) || [];
+		return Object.fromEntries(roles.map((r) => [r.name, r]));
+	}
+
+	private async ensureGroupPath(
+		keycloakUrl: string,
+		realm: string,
+		token: string,
+		path: string,
+		byPath: Record<string, KcGroup>,
+	): Promise<void> {
+		const parts = path.split("/").filter(Boolean);
+		let currentPath = "";
+		for (let i = 0; i < parts.length; i++) {
+			currentPath += `/${parts[i]}`;
+			if (byPath[currentPath]) continue;
+			const name = parts[i];
+			try {
+				if (i === 0) {
+					await this.api(keycloakUrl, realm, token, "POST", "/groups", {
+						name,
+					});
+				} else {
+					const parentPath = `/${parts.slice(0, i).join("/")}`;
+					const parent = byPath[parentPath];
+					if (!parent?.id) {
+						throw new ServiceUnavailableException(
+							`Нельзя создать ${currentPath}: нет родителя ${parentPath}`,
+						);
+					}
+					await this.api(
+						keycloakUrl,
+						realm,
+						token,
+						"POST",
+						`/groups/${parent.id}/children`,
+						{ name },
+					);
+				}
+			} catch (e) {
+				const msg = String(e);
+				if (!msg.includes("409")) throw e;
+			}
+			const refreshed = await this.loadGroupsByPath(
+				keycloakUrl,
+				realm,
+				token,
+				[currentPath],
+			);
+			Object.assign(byPath, refreshed);
+		}
+	}
+
+	private async loadUsersByUsername(
+		keycloakUrl: string,
+		realm: string,
+		token: string,
+	): Promise<Map<string, KcUser & { username?: string }>> {
+		const map = new Map<string, KcUser & { username?: string }>();
+		for (let first = 0; ; first += 100) {
+			const batch =
+				(await this.api<Array<KcUser & { username?: string }>>(
+					keycloakUrl,
+					realm,
+					token,
+					"GET",
+					`/users?first=${first}&max=100&briefRepresentation=true`,
+				)) || [];
+			if (!batch.length) break;
+			for (const u of batch) {
+				if (u.username) map.set(u.username.toLowerCase(), u);
+			}
+			if (batch.length < 100) break;
+		}
+		return map;
 	}
 
 	async sync(options: {

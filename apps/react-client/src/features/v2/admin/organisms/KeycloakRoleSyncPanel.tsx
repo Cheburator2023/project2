@@ -16,7 +16,7 @@ import { downloadBlob } from "@react-client/common/api/queries/kanban-board";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { toast } from "@react-client/common/toasts";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type StandPrefixOption = { value: string; label: string };
 
@@ -53,6 +53,20 @@ const DEFAULT_BACKUP_INCLUDE: BackupInclude = {
 	userRealmRoles: true,
 };
 
+/** Секции, которые реально пишет restore (не всё из бекапа). */
+const DEFAULT_RESTORE_INCLUDE: BackupInclude = {
+	realmRoles: true,
+	groups: true,
+	groupAttributes: false,
+	groupRealmRoles: true,
+	groupMembers: false,
+	users: true,
+	userProfile: false,
+	userAttributes: false,
+	userGroups: true,
+	userRealmRoles: true,
+};
+
 type SyncDefaults = {
 	keycloakUrl: string;
 	realm: string;
@@ -84,7 +98,35 @@ type BackupResult = {
 	};
 };
 
-type ModalMode = "sync" | "backup";
+type RestoreResult = {
+	dryRun: boolean;
+	keycloakUrl: string;
+	realm: string;
+	backupExportedAt: string | null;
+	rolesCreated: string[];
+	groupsCreated: string[];
+	groupRoleChanges: Array<{
+		path: string;
+		add: string[];
+		remove: string[];
+		status: string;
+	}>;
+	userGroupChanges: Array<{
+		username: string;
+		join: string[];
+		leave: string[];
+		status: string;
+	}>;
+	userRoleChanges: Array<{
+		username: string;
+		add: string[];
+		remove: string[];
+		status: string;
+	}>;
+	warnings: string[];
+};
+
+type ModalMode = "sync" | "backup" | "restore";
 
 function downloadBackupJson(data: unknown, realm: string) {
 	const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
@@ -104,6 +146,19 @@ function connectionPayload(fields: {
 	};
 }
 
+function summarizeRestore(data: RestoreResult): string {
+	const groupΔ = data.groupRoleChanges.filter(
+		(c) => c.add.length || c.remove.length || c.status === "missing_group",
+	).length;
+	const userGΔ = data.userGroupChanges.filter(
+		(c) => c.join.length || c.leave.length || c.status === "missing_user",
+	).length;
+	const userRΔ = data.userRoleChanges.filter(
+		(c) => c.add.length || c.remove.length || c.status === "missing_user",
+	).length;
+	return `roles+${data.rolesCreated.length}, groups+${data.groupsCreated.length}, groupRolesΔ${groupΔ}, userGroupsΔ${userGΔ}, userRolesΔ${userRΔ}`;
+}
+
 export function KeycloakRoleSyncPanel() {
 	const defaultsQuery = useQuery({
 		queryKey: ["v2-keycloak-role-sync-defaults"],
@@ -115,6 +170,7 @@ export function KeycloakRoleSyncPanel() {
 		staleTime: 60_000,
 	});
 
+	const fileInputRef = useRef<HTMLInputElement>(null);
 	const [open, setOpen] = useState(false);
 	const [mode, setMode] = useState<ModalMode>("sync");
 	const [keycloakUrl, setKeycloakUrl] = useState("");
@@ -125,8 +181,17 @@ export function KeycloakRoleSyncPanel() {
 	const [backupInclude, setBackupInclude] = useState<BackupInclude>(
 		DEFAULT_BACKUP_INCLUDE,
 	);
+	const [restoreInclude, setRestoreInclude] = useState<BackupInclude>(
+		DEFAULT_RESTORE_INCLUDE,
+	);
+	const [backupFileName, setBackupFileName] = useState<string | null>(null);
+	const [backupPayload, setBackupPayload] = useState<Record<
+		string,
+		unknown
+	> | null>(null);
 	const [lastResult, setLastResult] = useState<SyncResult | null>(null);
 	const [lastBackup, setLastBackup] = useState<BackupResult | null>(null);
+	const [lastRestore, setLastRestore] = useState<RestoreResult | null>(null);
 	const [backupDoneInSession, setBackupDoneInSession] = useState(false);
 
 	useEffect(() => {
@@ -138,8 +203,13 @@ export function KeycloakRoleSyncPanel() {
 
 	const connection = connectionPayload({ keycloakUrl, realm });
 
-	const setInclude = (key: keyof BackupInclude, value: boolean) => {
-		setBackupInclude((prev) => {
+	const setInclude = (
+		target: "backup" | "restore",
+		key: keyof BackupInclude,
+		value: boolean,
+	) => {
+		const setter = target === "backup" ? setBackupInclude : setRestoreInclude;
+		setter((prev) => {
 			const next = { ...prev, [key]: value };
 			if (key === "groups" && !value) {
 				next.groupAttributes = false;
@@ -147,9 +217,13 @@ export function KeycloakRoleSyncPanel() {
 				next.groupMembers = false;
 			}
 			if (key === "groups" && value) {
-				next.groupAttributes = true;
-				next.groupRealmRoles = true;
-				next.groupMembers = true;
+				if (target === "backup") {
+					next.groupAttributes = true;
+					next.groupRealmRoles = true;
+					next.groupMembers = true;
+				} else {
+					next.groupRealmRoles = true;
+				}
 			}
 			if (key === "users" && !value) {
 				next.userProfile = false;
@@ -158,13 +232,59 @@ export function KeycloakRoleSyncPanel() {
 				next.userRealmRoles = false;
 			}
 			if (key === "users" && value) {
-				next.userProfile = true;
-				next.userAttributes = true;
-				next.userGroups = true;
-				next.userRealmRoles = true;
+				if (target === "backup") {
+					next.userProfile = true;
+					next.userAttributes = true;
+					next.userGroups = true;
+					next.userRealmRoles = true;
+				} else {
+					next.userGroups = true;
+					next.userRealmRoles = true;
+				}
 			}
 			return next;
 		});
+	};
+
+	const onBackupFile = async (file: File | null) => {
+		if (!file) {
+			setBackupFileName(null);
+			setBackupPayload(null);
+			return;
+		}
+		try {
+			const text = await file.text();
+			const parsed = JSON.parse(text) as unknown;
+			if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+				throw new Error("Ожидается JSON-объект бекапа");
+			}
+			const obj = parsed as Record<string, unknown>;
+			setBackupPayload(obj);
+			setBackupFileName(file.name);
+			if (typeof obj.realm === "string" && obj.realm.trim()) {
+				setRealm(obj.realm.trim());
+			}
+			if (typeof obj.keycloakUrl === "string" && obj.keycloakUrl.trim()) {
+				const fromBackup = obj.keycloakUrl.trim();
+				setKeycloakUrl((prev) => prev || fromBackup);
+			}
+			if (obj.include && typeof obj.include === "object") {
+				setRestoreInclude((prev) => ({
+					...prev,
+					...(obj.include as Partial<BackupInclude>),
+					groupMembers: false,
+					userProfile: false,
+					userAttributes: false,
+				}));
+			}
+			toast.success(`Файл бекапа загружен: ${file.name}`);
+		} catch (err) {
+			setBackupFileName(null);
+			setBackupPayload(null);
+			toast.error("Не удалось прочитать JSON бекапа", {
+				description: err instanceof Error ? err.message : String(err),
+			});
+		}
 	};
 
 	const backupMutation = useMutation({
@@ -234,15 +354,64 @@ export function KeycloakRoleSyncPanel() {
 		},
 	});
 
-	const pending = backupMutation.isPending || syncMutation.isPending;
+	const restoreMutation = useMutation({
+		mutationFn: (dryRun: boolean) =>
+			apiClient<RestoreResult>({
+				url: "/v2/admin/keycloak-role-sync/restore",
+				method: "POST",
+				data: {
+					adminUsername: username,
+					adminPassword: password,
+					dryRun,
+					...connection,
+					backup: backupPayload,
+					include: {
+						realmRoles: restoreInclude.realmRoles,
+						groups: restoreInclude.groups,
+						groupAttributes: restoreInclude.groupAttributes,
+						groupRealmRoles: restoreInclude.groupRealmRoles,
+						users: restoreInclude.users,
+						userGroups: restoreInclude.userGroups,
+						userRealmRoles: restoreInclude.userRealmRoles,
+					},
+				},
+			}),
+		onSuccess: (data, dryRun) => {
+			setLastRestore(data);
+			toast.success(
+				dryRun
+					? `Dry-run restore: ${summarizeRestore(data)}`
+					: `Restore применён: ${summarizeRestore(data)}`,
+			);
+			if (!dryRun) {
+				setPassword("");
+				setOpen(false);
+			}
+		},
+		onError: (err) => {
+			toast.error("Восстановление Keycloak не удалось", {
+				description: apiErrorMessage(err),
+			});
+		},
+	});
+
+	const pending =
+		backupMutation.isPending ||
+		syncMutation.isPending ||
+		restoreMutation.isPending;
 	const hasBackupSection =
 		backupInclude.realmRoles || backupInclude.groups || backupInclude.users;
+	const hasRestoreSection =
+		restoreInclude.realmRoles ||
+		restoreInclude.groups ||
+		restoreInclude.users;
 	const canSubmit = Boolean(
 		username &&
 			password &&
 			keycloakUrl.trim() &&
 			realm.trim() &&
-			(mode !== "backup" || hasBackupSection),
+			(mode !== "backup" || hasBackupSection) &&
+			(mode !== "restore" || (hasRestoreSection && backupPayload)),
 	);
 
 	const changed =
@@ -250,38 +419,63 @@ export function KeycloakRoleSyncPanel() {
 			(c) => c.add.length || c.remove.length || c.status === "missing_group",
 		) ?? [];
 
+	const restoreChanged =
+		lastRestore == null
+			? []
+			: [
+					...lastRestore.groupRoleChanges.filter(
+						(c) =>
+							c.add.length || c.remove.length || c.status === "missing_group",
+					),
+					...lastRestore.userGroupChanges.filter(
+						(c) =>
+							c.join.length || c.leave.length || c.status === "missing_user",
+					),
+					...lastRestore.userRoleChanges.filter(
+						(c) =>
+							c.add.length || c.remove.length || c.status === "missing_user",
+					),
+				];
+
 	const openModal = (next: ModalMode) => {
 		setMode(next);
+		if (next === "restore") {
+			setRestoreInclude(DEFAULT_RESTORE_INCLUDE);
+		}
 		setOpen(true);
 	};
 
 	const envUrl = defaultsQuery.data?.keycloakUrl || "—";
+
+	const dialogTitle =
+		mode === "backup"
+			? "Бекап Keycloak (скачать JSON)"
+			: mode === "restore"
+				? "Восстановление Keycloak из бекапа"
+				: "Синхронизация ролей Keycloak";
 
 	return (
 		<>
 			<Flex flexDirection="column" gap={8}>
 				<Typography variant="h6">Keycloak · роли F-05</Typography>
 				<Typography variant="body2" color="text.secondary">
-					Сначала скачайте бекап, затем dry-run / apply. Выставляет realm roles
-					канонических групп по матрице F-05. Latin-дубли с другим регистром
-					(/DE vs /de) не трогаем. Креды admin только в модалке. Доступно ролям
-					appadmin / sacfg.
+					Сначала скачайте бекап, затем dry-run / apply. При откате — загрузка
+					того же JSON. Выставляет realm roles канонических групп по матрице
+					F-05. Latin-дубли (/DE vs /de) не трогаем. Креды admin только в
+					модалке. Доступно ролям appadmin / sacfg.
 				</Typography>
 				<Alert severity="info">
 					URL из env Nest: <code>{envUrl}</code>
 					{defaultsQuery.isError ? " (не удалось загрузить defaults)" : null}. В
-					модалке можно переопределить URL и <strong>префикс стенда</strong> (
-					<code>test_</code> / <code>dev_</code> / <code>prod_</code>
-					): AD-имя всегда с <code>sum_</code> — например{" "}
-					<code>/admin_it/test_sum_appadmin</code>,{" "}
-					<code>/sarep/test_sum_sarep_dadm</code> (+ канон{" "}
-					<code>/appadmin</code>).
+					модалке sync можно переопределить URL и{" "}
+					<strong>префикс стенда</strong> (<code>test_</code> /{" "}
+					<code>dev_</code> / <code>prod_</code>
+					): AD-имя всегда с <code>sum_</code>.
 				</Alert>
 				<Alert severity="warning">
-					После apply — re-login пользователей. Кириллические{" "}
-					<code>/departament/*</code> и case-дубли групп не трогаются.
-					Бекап — снимок F-05 (секции выбираются чекбоксами), не полный export
-					realm (пароли, clients, mappers, IdP не входят).
+					После apply / restore — re-login пользователей. Restore правит только
+					<code> anketa_*</code> на группах и (опционально) membership /
+					direct-роли юзеров. Пароли, clients, IdP не входят в бекап.
 				</Alert>
 				<Flex gap={12} wrap="wrap">
 					<Button variant="contained" onClick={() => openModal("backup")}>
@@ -289,6 +483,13 @@ export function KeycloakRoleSyncPanel() {
 					</Button>
 					<Button variant="outlined" onClick={() => openModal("sync")}>
 						Синхронизировать роли…
+					</Button>
+					<Button
+						variant="outlined"
+						color="warning"
+						onClick={() => openModal("restore")}
+					>
+						Восстановить из бекапа…
 					</Button>
 				</Flex>
 				{lastBackup ? (
@@ -310,7 +511,33 @@ export function KeycloakRoleSyncPanel() {
 						{lastResult.groupsCreated?.join(", ") || "—"}
 					</Typography>
 				) : null}
+				{lastRestore ? (
+					<Typography variant="body2" color="text.secondary" component="div">
+						Последний restore ({lastRestore.dryRun ? "dry-run" : "apply"}):{" "}
+						{lastRestore.realm} @ {lastRestore.keycloakUrl}
+						<br />
+						{summarizeRestore(lastRestore)}
+						{lastRestore.backupExportedAt
+							? ` · backup ${lastRestore.backupExportedAt}`
+							: ""}
+						{lastRestore.warnings?.length
+							? ` · warnings: ${lastRestore.warnings.length}`
+							: ""}
+					</Typography>
+				) : null}
 			</Flex>
+
+			<input
+				ref={fileInputRef}
+				type="file"
+				accept="application/json,.json"
+				hidden
+				onChange={(e) => {
+					const file = e.target.files?.[0] ?? null;
+					void onBackupFile(file);
+					e.target.value = "";
+				}}
+			/>
 
 			<Dialog
 				open={open}
@@ -318,11 +545,7 @@ export function KeycloakRoleSyncPanel() {
 				fullWidth
 				maxWidth="sm"
 			>
-				<DialogTitle>
-					{mode === "backup"
-						? "Бекап Keycloak (скачать JSON)"
-						: "Синхронизация ролей Keycloak"}
-				</DialogTitle>
+				<DialogTitle>{dialogTitle}</DialogTitle>
 				<DialogContent>
 					<Spacer space={8} />
 					<Typography variant="body2" color="text.secondary">
@@ -336,6 +559,16 @@ export function KeycloakRoleSyncPanel() {
 							<Alert severity="warning">
 								Рекомендуется сначала «Создать бекап». Apply без бекапа можно,
 								но откат будет сложнее.
+							</Alert>
+						</>
+					) : null}
+					{mode === "restore" ? (
+						<>
+							<Spacer space={12} />
+							<Alert severity="warning">
+								Загрузите JSON, скачанный кнопкой «Создать бекап». Restore
+								выравнивает <code>anketa_*</code> и membership по снимку; юзеров
+								не создаёт и пароли не трогает.
 							</Alert>
 						</>
 					) : null}
@@ -406,6 +639,161 @@ export function KeycloakRoleSyncPanel() {
 								disabled={pending}
 							/>
 						) : null}
+						{mode === "restore" ? (
+							<Flex flexDirection="column" gap={8}>
+								<Flex gap={8} alignItems="center" wrap="wrap">
+									<Button
+										variant="outlined"
+										disabled={pending}
+										onClick={() => fileInputRef.current?.click()}
+									>
+										Выбрать JSON…
+									</Button>
+									<Typography variant="body2" color="text.secondary">
+										{backupFileName || "файл не выбран"}
+									</Typography>
+								</Flex>
+								{backupPayload ? (
+									<Typography variant="caption" color="text.secondary">
+										{(backupPayload.exportedAt as string) || "—"} · groups{" "}
+										{Array.isArray(backupPayload.groups)
+											? backupPayload.groups.length
+											: 0}{" "}
+										· users{" "}
+										{Array.isArray(backupPayload.users)
+											? backupPayload.users.length
+											: 0}{" "}
+										· realmRoles{" "}
+										{Array.isArray(backupPayload.realmRoles)
+											? backupPayload.realmRoles.length
+											: 0}
+									</Typography>
+								) : null}
+								<Typography variant="subtitle2">Секции restore</Typography>
+								<FormControlLabel
+									control={
+										<Checkbox
+											checked={restoreInclude.realmRoles}
+											onChange={(e) =>
+												setInclude("restore", "realmRoles", e.target.checked)
+											}
+											disabled={pending}
+										/>
+									}
+									label="Создать недостающие realm roles"
+								/>
+								<FormControlLabel
+									control={
+										<Checkbox
+											checked={restoreInclude.groups}
+											onChange={(e) =>
+												setInclude("restore", "groups", e.target.checked)
+											}
+											disabled={pending}
+										/>
+									}
+									label="Groups (path + anketa_* roles)"
+								/>
+								<Flex
+									flexDirection="column"
+									gap={0}
+									style={{ marginLeft: 24 }}
+								>
+									<FormControlLabel
+										control={
+											<Checkbox
+												size="small"
+												checked={restoreInclude.groupRealmRoles}
+												onChange={(e) =>
+													setInclude(
+														"restore",
+														"groupRealmRoles",
+														e.target.checked,
+													)
+												}
+												disabled={pending || !restoreInclude.groups}
+											/>
+										}
+										label="выровнять anketa_* на группах"
+									/>
+									<FormControlLabel
+										control={
+											<Checkbox
+												size="small"
+												checked={restoreInclude.groupAttributes}
+												onChange={(e) =>
+													setInclude(
+														"restore",
+														"groupAttributes",
+														e.target.checked,
+													)
+												}
+												disabled={pending || !restoreInclude.groups}
+											/>
+										}
+										label="атрибуты групп (осторожно)"
+									/>
+								</Flex>
+								<FormControlLabel
+									control={
+										<Checkbox
+											checked={restoreInclude.users}
+											onChange={(e) =>
+												setInclude("restore", "users", e.target.checked)
+											}
+											disabled={pending}
+										/>
+									}
+									label="Users (membership / direct anketa_*)"
+								/>
+								<Flex
+									flexDirection="column"
+									gap={0}
+									style={{ marginLeft: 24 }}
+								>
+									<FormControlLabel
+										control={
+											<Checkbox
+												size="small"
+												checked={restoreInclude.userGroups}
+												onChange={(e) =>
+													setInclude("restore", "userGroups", e.target.checked)
+												}
+												disabled={pending || !restoreInclude.users}
+											/>
+										}
+										label="группы юзеров (join/leave по снимку)"
+									/>
+									<FormControlLabel
+										control={
+											<Checkbox
+												size="small"
+												checked={restoreInclude.userRealmRoles}
+												onChange={(e) =>
+													setInclude(
+														"restore",
+														"userRealmRoles",
+														e.target.checked,
+													)
+												}
+												disabled={pending || !restoreInclude.users}
+											/>
+										}
+										label="direct anketa_* юзеров"
+									/>
+								</Flex>
+								{!hasRestoreSection ? (
+									<Typography variant="caption" color="error">
+										Выберите хотя бы одну секцию
+									</Typography>
+								) : null}
+								{!backupPayload ? (
+									<Typography variant="caption" color="error">
+										Загрузите JSON бекапа
+									</Typography>
+								) : null}
+							</Flex>
+						) : null}
 						{mode === "backup" ? (
 							<Flex flexDirection="column" gap={4}>
 								<Typography variant="subtitle2">Секции бекапа</Typography>
@@ -418,7 +806,7 @@ export function KeycloakRoleSyncPanel() {
 										<Checkbox
 											checked={backupInclude.realmRoles}
 											onChange={(e) =>
-												setInclude("realmRoles", e.target.checked)
+												setInclude("backup", "realmRoles", e.target.checked)
 											}
 											disabled={pending}
 										/>
@@ -442,7 +830,9 @@ export function KeycloakRoleSyncPanel() {
 									control={
 										<Checkbox
 											checked={backupInclude.groups}
-											onChange={(e) => setInclude("groups", e.target.checked)}
+											onChange={(e) =>
+												setInclude("backup", "groups", e.target.checked)
+											}
 											disabled={pending}
 										/>
 									}
@@ -455,7 +845,11 @@ export function KeycloakRoleSyncPanel() {
 												size="small"
 												checked={backupInclude.groupAttributes}
 												onChange={(e) =>
-													setInclude("groupAttributes", e.target.checked)
+													setInclude(
+														"backup",
+														"groupAttributes",
+														e.target.checked,
+													)
 												}
 												disabled={pending || !backupInclude.groups}
 											/>
@@ -468,7 +862,11 @@ export function KeycloakRoleSyncPanel() {
 												size="small"
 												checked={backupInclude.groupRealmRoles}
 												onChange={(e) =>
-													setInclude("groupRealmRoles", e.target.checked)
+													setInclude(
+														"backup",
+														"groupRealmRoles",
+														e.target.checked,
+													)
 												}
 												disabled={pending || !backupInclude.groups}
 											/>
@@ -494,7 +892,7 @@ export function KeycloakRoleSyncPanel() {
 												size="small"
 												checked={backupInclude.groupMembers}
 												onChange={(e) =>
-													setInclude("groupMembers", e.target.checked)
+													setInclude("backup", "groupMembers", e.target.checked)
 												}
 												disabled={pending || !backupInclude.groups}
 											/>
@@ -506,7 +904,9 @@ export function KeycloakRoleSyncPanel() {
 									control={
 										<Checkbox
 											checked={backupInclude.users}
-											onChange={(e) => setInclude("users", e.target.checked)}
+											onChange={(e) =>
+												setInclude("backup", "users", e.target.checked)
+											}
 											disabled={pending}
 										/>
 									}
@@ -519,7 +919,7 @@ export function KeycloakRoleSyncPanel() {
 												size="small"
 												checked={backupInclude.userProfile}
 												onChange={(e) =>
-													setInclude("userProfile", e.target.checked)
+													setInclude("backup", "userProfile", e.target.checked)
 												}
 												disabled={pending || !backupInclude.users}
 											/>
@@ -532,7 +932,11 @@ export function KeycloakRoleSyncPanel() {
 												size="small"
 												checked={backupInclude.userAttributes}
 												onChange={(e) =>
-													setInclude("userAttributes", e.target.checked)
+													setInclude(
+														"backup",
+														"userAttributes",
+														e.target.checked,
+													)
 												}
 												disabled={pending || !backupInclude.users}
 											/>
@@ -545,7 +949,7 @@ export function KeycloakRoleSyncPanel() {
 												size="small"
 												checked={backupInclude.userGroups}
 												onChange={(e) =>
-													setInclude("userGroups", e.target.checked)
+													setInclude("backup", "userGroups", e.target.checked)
 												}
 												disabled={pending || !backupInclude.users}
 											/>
@@ -558,7 +962,11 @@ export function KeycloakRoleSyncPanel() {
 												size="small"
 												checked={backupInclude.userRealmRoles}
 												onChange={(e) =>
-													setInclude("userRealmRoles", e.target.checked)
+													setInclude(
+														"backup",
+														"userRealmRoles",
+														e.target.checked,
+													)
 												}
 												disabled={pending || !backupInclude.users}
 											/>
@@ -612,6 +1020,15 @@ export function KeycloakRoleSyncPanel() {
 							</Alert>
 						</>
 					) : null}
+					{mode === "restore" && lastRestore?.dryRun ? (
+						<>
+							<Spacer space={16} />
+							<Alert severity="info">
+								Dry-run restore: изменений {restoreChanged.length}.{" "}
+								{summarizeRestore(lastRestore)}. Если ок — Apply.
+							</Alert>
+						</>
+					) : null}
 				</DialogContent>
 				<DialogActions>
 					<Button onClick={() => setOpen(false)} disabled={pending}>
@@ -625,6 +1042,24 @@ export function KeycloakRoleSyncPanel() {
 						>
 							Скачать бекап
 						</Button>
+					) : mode === "restore" ? (
+						<>
+							<Button
+								variant="outlined"
+								disabled={pending || !canSubmit}
+								onClick={() => restoreMutation.mutate(true)}
+							>
+								Dry-run
+							</Button>
+							<Button
+								variant="contained"
+								color="warning"
+								disabled={pending || !canSubmit}
+								onClick={() => restoreMutation.mutate(false)}
+							>
+								Apply restore
+							</Button>
+						</>
 					) : (
 						<>
 							<Button
