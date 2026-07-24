@@ -5,6 +5,7 @@ import {
 	V2_IMPLEMENTATION_STREAM_LABELS,
 	type V2ImplementationStreamCode,
 } from "./v2-implementation-streams.util";
+import { mapV2AdGroupLeafToRoleCodes } from "./v2-ad-domain-groups.util";
 
 /** Роли Keycloak, для которых стрим берётся из департамента / groups (как на бекенде). */
 export const V2_USER_STREAM_FILTERED_ROLE_CODES = [
@@ -70,20 +71,37 @@ const V2_IMPLEMENTATION_STREAM_LABEL_VALUES = Object.values(
 	V2_IMPLEMENTATION_STREAM_LABELS,
 );
 
+function pushUnique(acc: string[], value: string) {
+	if (value && !acc.includes(value)) acc.push(value);
+}
+
+/**
+ * Нормализация groups из токена:
+ * - `/ds/ds_lead` → `ds`, `ds_lead`
+ * - AD `sum_appadmin` / `test_sum_appadmin` / `prod_sum_appadmin` → ещё и `appadmin`
+ * - stand-prefix `dev_|test_|prod_` снимается; `sum_` — часть AD-имени, обязателен
+ */
 export function normalizeV2UserGroups(userGroups: readonly string[]): string[] {
 	const result: string[] = [];
 	for (const group of userGroups) {
 		if (typeof group !== "string") continue;
 		const normalized = group.replace(/^\//, "");
+		const leaves: string[] = [];
 		if (normalized.includes("/")) {
 			const parts = normalized.split("/");
 			if (parts[0] === "departament") {
-				result.push(parts.slice(1).join("/"));
+				leaves.push(parts.slice(1).join("/"));
 			} else {
-				result.push(...parts);
+				leaves.push(...parts.filter(Boolean));
 			}
-		} else {
-			result.push(normalized);
+		} else if (normalized) {
+			leaves.push(normalized);
+		}
+		for (const leaf of leaves) {
+			pushUnique(result, leaf);
+			for (const code of mapV2AdGroupLeafToRoleCodes(leaf)) {
+				pushUnique(result, code);
+			}
 		}
 	}
 	return result;

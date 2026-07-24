@@ -3,6 +3,12 @@ import { type V2ImplementationStreamCode } from "./v2-implementation-streams.uti
 export declare const V2_USER_STREAM_FILTERED_ROLE_CODES: readonly ["ds", "de", "data_expert", "mipm_stream", "modelops", "da_stream"];
 /** `/mipm` без департамента = Бизнес-партнёр (все стримы); с департаментом = Бизнес-партнёр стрима. */
 export declare const V2_USER_CONDITIONAL_STREAM_FILTER_ROLE_CODES: readonly ["mipm"];
+/**
+ * Нормализация groups из токена:
+ * - `/ds/ds_lead` → `ds`, `ds_lead`
+ * - AD `sum_appadmin` / `test_sum_appadmin` / `prod_sum_appadmin` → ещё и `appadmin`
+ * - stand-prefix `dev_|test_|prod_` снимается; `sum_` — часть AD-имени, обязателен
+ */
 export declare function normalizeV2UserGroups(userGroups: readonly string[]): string[];
 export declare function extractV2UserRoleCodes(userGroups: readonly string[]): string[];
 export declare function isV2UserStreamFilteredByGroups(userGroups: readonly string[]): boolean;

@@ -1,4 +1,5 @@
 import Alert from "@mui/material/Alert";
+import Autocomplete from "@mui/material/Autocomplete";
 import Button from "@mui/material/Button";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
@@ -14,6 +15,15 @@ import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { toast } from "@react-client/common/toasts";
 import { useEffect, useState } from "react";
+
+type StandPrefixOption = { value: string; label: string };
+
+const STAND_PREFIX_OPTIONS: StandPrefixOption[] = [
+	{ value: "test_", label: "test_ (ИФТ)" },
+	{ value: "dev_", label: "dev_" },
+	{ value: "prod_", label: "prod_" },
+	{ value: "", label: "(без префикса → /sum_*)" },
+];
 
 type SyncDefaults = {
 	keycloakUrl: string;
@@ -61,11 +71,13 @@ function connectionPayload(fields: {
 	keycloakUrl: string;
 	realm: string;
 	adminRealm: string;
+	standPrefix: string;
 }) {
 	return {
 		keycloakUrl: fields.keycloakUrl.trim() || undefined,
 		realm: fields.realm.trim() || undefined,
 		adminRealm: fields.adminRealm.trim() || undefined,
+		standPrefix: fields.standPrefix.trim() || undefined,
 	};
 }
 
@@ -85,6 +97,7 @@ export function KeycloakRoleSyncPanel() {
 	const [keycloakUrl, setKeycloakUrl] = useState("");
 	const [realm, setRealm] = useState("cym");
 	const [adminRealm, setAdminRealm] = useState("master");
+	const [standPrefix, setStandPrefix] = useState("test_");
 	const [username, setUsername] = useState("");
 	const [password, setPassword] = useState("");
 	const [lastResult, setLastResult] = useState<SyncResult | null>(null);
@@ -101,7 +114,12 @@ export function KeycloakRoleSyncPanel() {
 		);
 	}, [defaultsQuery.data]);
 
-	const connection = connectionPayload({ keycloakUrl, realm, adminRealm });
+	const connection = connectionPayload({
+		keycloakUrl,
+		realm,
+		adminRealm,
+		standPrefix,
+	});
 
 	const backupMutation = useMutation({
 		mutationFn: () =>
@@ -200,8 +218,13 @@ export function KeycloakRoleSyncPanel() {
 					{defaultsQuery.isError
 						? " (не удалось загрузить defaults)"
 						: null}
-					. В модалке можно переопределить, если из пода API DNS/сеть до
-					Keycloak другая.
+					. В модалке можно переопределить URL и{" "}
+					<strong>префикс стенда</strong> (
+					<code>test_</code> / <code>dev_</code> / <code>prod_</code>
+					): AD-имя всегда с <code>sum_</code> —{" "}
+					<code>/sum_appadmin</code> или{" "}
+					<code>/test_sum_appadmin</code> (+ канон{" "}
+					<code>/appadmin</code>).
 				</Alert>
 				<Alert severity="warning">
 					После apply — re-login пользователей. Кириллические{" "}
@@ -290,6 +313,49 @@ export function KeycloakRoleSyncPanel() {
 							value={adminRealm}
 							onChange={(e) => setAdminRealm(e.target.value)}
 							helperText="Обычно master — для admin-cli password grant"
+							fullWidth
+							disabled={pending}
+						/>
+						<Autocomplete
+							freeSolo
+							selectOnFocus
+							clearOnBlur={false}
+							handleHomeEndKeys
+							options={STAND_PREFIX_OPTIONS}
+							value={
+								STAND_PREFIX_OPTIONS.find((o) => o.value === standPrefix) ??
+								standPrefix
+							}
+							onChange={(_, next) => {
+								if (next == null) {
+									setStandPrefix("");
+									return;
+								}
+								setStandPrefix(
+									typeof next === "string" ? next : next.value,
+								);
+							}}
+							onInputChange={(_, next, reason) => {
+								if (reason === "input" || reason === "clear") {
+									setStandPrefix(next);
+								}
+							}}
+							getOptionLabel={(opt) =>
+								typeof opt === "string" ? opt : opt.label
+							}
+							isOptionEqualToValue={(a, b) => {
+								const av = typeof a === "string" ? a : a.value;
+								const bv = typeof b === "string" ? b : b.value;
+								return av === bv;
+							}}
+							renderInput={(params) => (
+								<TextField
+									{...params}
+									label="Префикс стенда (AD)"
+									placeholder="test_ | dev_ | prod_ | пусто"
+									helperText="Выбор или ручной ввод. ИФТ: test_ → /test_sum_appadmin. Пусто → /sum_appadmin."
+								/>
+							)}
 							fullWidth
 							disabled={pending}
 						/>

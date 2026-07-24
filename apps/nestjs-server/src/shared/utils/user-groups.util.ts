@@ -1,6 +1,8 @@
 import {
 	V2_IMPLEMENTATION_STREAM_CODES,
 	V2_IMPLEMENTATION_STREAM_LABELS,
+	mapV2AdGroupLeafToRoleCodes,
+	normalizeV2UserGroups as normalizeV2UserGroupsShared,
 } from "@smart-anketa/api-contract";
 import { DEPARTMENTS, STREAM_FILTERED_ROLES, STREAMS } from "../constants";
 
@@ -12,6 +14,11 @@ const V2_IMPLEMENTATION_STREAM_LABEL_VALUES = Object.values(
 const STREAM_SUFFIX_RE =
 	/(?:^|_)(kmbkcb|ptitpc|rnd|rb|finmdl|idsrc|mdlctl|pirm|strdat|digagt|dadm)$/i;
 
+/**
+ * Нормализация groups из JWT:
+ * - path-сегменты (`/ds/ds_lead` → ds, ds_lead)
+ * - AD-имена (`test_sum_appadmin` / `sum_appadmin` → appadmin)
+ */
 export function normalizeUserGroups(userGroups: string[]): string[] {
 	const result: string[] = [];
 
@@ -21,18 +28,13 @@ export function normalizeUserGroups(userGroups: string[]): string[] {
 			continue;
 		}
 
-		const normalized = group.replace(/^\//, "");
-
-		if (normalized.includes("/")) {
-			const parts = normalized.split("/");
-
-			if (parts[0] === "departament") {
-				result.push(parts.slice(1).join("/"));
-			} else {
-				result.push(...parts);
-			}
-		} else {
-			result.push(normalized);
+		const fromShared = normalizeV2UserGroupsShared([group]);
+		for (const leaf of fromShared) {
+			if (!result.includes(leaf)) result.push(leaf);
+		}
+		/** На случай если shared уже всё разложил — дублируем AD map для нестроковых нет. */
+		for (const code of mapV2AdGroupLeafToRoleCodes(group)) {
+			if (!result.includes(code)) result.push(code);
 		}
 	}
 

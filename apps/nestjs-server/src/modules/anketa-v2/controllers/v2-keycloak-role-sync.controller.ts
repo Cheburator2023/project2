@@ -46,7 +46,7 @@ export class V2KeycloakRoleSyncController {
 	@DomainRoles("appadmin", "sacfg")
 	@ApiOperation({
 		summary:
-			"Remap realm roles групп по F-05 (без склейки/удаления Latin-дублей; креды admin не сохраняются)",
+			"Remap realm roles групп по F-05 (+ AD-alias с standPrefix; креды admin не сохраняются)",
 	})
 	async sync(@Body() body: V2KeycloakRoleSyncDto) {
 		return this.syncService.sync({
@@ -57,6 +57,7 @@ export class V2KeycloakRoleSyncController {
 			keycloakUrl: body.keycloakUrl,
 			realm: body.realm,
 			adminRealm: body.adminRealm,
+			standPrefix: body.standPrefix,
 		});
 	}
 }

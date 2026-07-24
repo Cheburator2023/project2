@@ -40,4 +40,12 @@ export class V2KeycloakRoleSyncDto extends V2KeycloakAdminCredsDto {
 	@IsOptional()
 	@IsBoolean()
 	applyRemap?: boolean;
+
+	/**
+	 * Префикс стенда для AD-групп: `test_` / `dev_` / `prod_` / пусто.
+	 * На ИФТ: test_ → роли ещё и на `/test_sum_appadmin` (AD: всегда sum_, не test_appadmin).
+	 */
+	@IsOptional()
+	@IsString()
+	standPrefix?: string;
 }

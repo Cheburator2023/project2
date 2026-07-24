@@ -6,6 +6,7 @@ exports.extractV2UserRoleCodes = extractV2UserRoleCodes;
 exports.isV2UserStreamFilteredByGroups = isV2UserStreamFilteredByGroups;
 exports.resolveV2UserImplementationStreamsFromGroups = resolveV2UserImplementationStreamsFromGroups;
 const v2_implementation_streams_util_1 = require("./v2-implementation-streams.util");
+const v2_ad_domain_groups_util_1 = require("./v2-ad-domain-groups.util");
 /** Роли Keycloak, для которых стрим берётся из департамента / groups (как на бекенде). */
 exports.V2_USER_STREAM_FILTERED_ROLE_CODES = [
     "ds",
@@ -59,23 +60,40 @@ const DEPARTMENT_TO_V2_STREAM_CODES = {
     [v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.DIGAGT]: [v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.DIGAGT],
 };
 const V2_IMPLEMENTATION_STREAM_LABEL_VALUES = Object.values(v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM_LABELS);
+function pushUnique(acc, value) {
+    if (value && !acc.includes(value))
+        acc.push(value);
+}
+/**
+ * Нормализация groups из токена:
+ * - `/ds/ds_lead` → `ds`, `ds_lead`
+ * - AD `sum_appadmin` / `test_sum_appadmin` / `prod_sum_appadmin` → ещё и `appadmin`
+ * - stand-prefix `dev_|test_|prod_` снимается; `sum_` — часть AD-имени, обязателен
+ */
 function normalizeV2UserGroups(userGroups) {
     const result = [];
     for (const group of userGroups) {
         if (typeof group !== "string")
             continue;
         const normalized = group.replace(/^\//, "");
+        const leaves = [];
         if (normalized.includes("/")) {
             const parts = normalized.split("/");
             if (parts[0] === "departament") {
-                result.push(parts.slice(1).join("/"));
+                leaves.push(parts.slice(1).join("/"));
             }
             else {
-                result.push(...parts);
+                leaves.push(...parts.filter(Boolean));
             }
         }
-        else {
-            result.push(normalized);
+        else if (normalized) {
+            leaves.push(normalized);
+        }
+        for (const leaf of leaves) {
+            pushUnique(result, leaf);
+            for (const code of (0, v2_ad_domain_groups_util_1.mapV2AdGroupLeafToRoleCodes)(leaf)) {
+                pushUnique(result, code);
+            }
         }
     }
     return result;

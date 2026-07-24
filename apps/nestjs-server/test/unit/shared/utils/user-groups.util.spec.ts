@@ -31,6 +31,25 @@ describe("user-groups util", () => {
 			expect(normalizeUserGroups(["departament/x/y"])).toEqual(["x/y"]);
 			expect(normalizeUserGroups(["foo/bar"])).toEqual(["foo", "bar"]);
 		});
+
+		it("maps AD sum_* / stand prefix to canonical role codes", () => {
+			expect(normalizeUserGroups(["test_sum_appadmin"])).toEqual(
+				expect.arrayContaining(["test_sum_appadmin", "appadmin"]),
+			);
+			expect(normalizeUserGroups(["prod_sum_appadmin"])).toEqual(
+				expect.arrayContaining(["prod_sum_appadmin", "appadmin"]),
+			);
+			expect(normalizeUserGroups(["sum_appadmin"])).toEqual(
+				expect.arrayContaining(["sum_appadmin", "appadmin"]),
+			);
+			expect(normalizeUserGroups(["/sacfg/dev_sum_sacfg"])).toEqual(
+				expect.arrayContaining(["sacfg", "dev_sum_sacfg"]),
+			);
+			/** stand без sum_ — не AD-группа */
+			expect(normalizeUserGroups(["prod_appadmin"])).not.toContain(
+				"appadmin",
+			);
+		});
 	});
 
 	/**

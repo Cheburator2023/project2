@@ -16,14 +16,23 @@
  *   NODE_TLS_REJECT_UNAUTHORIZED=0 \
  *   KC_URL=https://keycloak-….local/auth KC_REALM=cym \
  *   KC_ADMIN=admin KC_ADMIN_PASS=… \
+ *   STAND_PREFIX=test_ \   # optional: test_ | dev_ | prod_ | empty
  *   node scripts/keycloak-remap-anketa-group-roles.mjs           # dry-run
  *   … --apply
  */
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
+const {
+	expandV2KeycloakTargetsWithAdAliases,
+} = require("../packages/api-contract/dist/cjs/v2-ad-domain-groups.util.js");
+
 const KC = (process.env.KC_URL || "").replace(/\/$/, "");
 const REALM = process.env.KC_REALM || "cym";
 const ADMIN_REALM = process.env.KC_ADMIN_REALM || "master";
 const USER = process.env.KC_ADMIN || "";
 const PASS = process.env.KC_ADMIN_PASS || "";
+const STAND_PREFIX = process.env.STAND_PREFIX || "";
 const APPLY = process.argv.includes("--apply");
 
 /** path → desired anketa* realm roles (canonical lowercase groups). */
@@ -140,7 +149,12 @@ const TARGET = {
 	],
 };
 
-/** Все path из TARGET + родители, parents first (create-only). */
+const EFFECTIVE_TARGET = expandV2KeycloakTargetsWithAdAliases(
+	TARGET,
+	STAND_PREFIX,
+);
+
+/** Все path из TARGET + AD-alias + родители, parents first (create-only). */
 function collectGroupPathsToEnsure(target) {
 	const paths = new Set();
 	for (const path of Object.keys(target)) {
@@ -156,7 +170,7 @@ function collectGroupPathsToEnsure(target) {
 	);
 }
 
-const GROUPS_TO_ENSURE = collectGroupPathsToEnsure(TARGET);
+const GROUPS_TO_ENSURE = collectGroupPathsToEnsure(EFFECTIVE_TARGET);
 
 const ROLES_TO_ENSURE = [
 	"anketa_view_all_calculations",
@@ -242,7 +256,7 @@ async function loadGroupsByPath(t) {
 
 	/** Догружаем TARGET/GROUPS_TO_ENSURE через search, если их нет в page-list. */
 	const needed = [
-		...new Set([...GROUPS_TO_ENSURE, ...Object.keys(TARGET)]),
+		...new Set([...GROUPS_TO_ENSURE, ...Object.keys(EFFECTIVE_TARGET)]),
 	];
 	for (const path of needed) {
 		if (byPath[path]) continue;
@@ -279,6 +293,8 @@ function sortUniq(arr) {
 	);
 
 	console.log(APPLY ? "MODE: APPLY" : "MODE: dry-run");
+	console.log(`STAND_PREFIX=${STAND_PREFIX || "(none)"}`);
+	console.log(`TARGET paths=${Object.keys(EFFECTIVE_TARGET).length}`);
 	console.log("\n== Ensure realm roles ==");
 	for (const name of ROLES_TO_ENSURE) {
 		if (byName[name]) {
@@ -348,7 +364,7 @@ function sortUniq(arr) {
 	}
 
 	console.log("\n== Group role mappings ==");
-	for (const [path, desired] of Object.entries(TARGET)) {
+	for (const [path, desired] of Object.entries(EFFECTIVE_TARGET)) {
 		const g = byPath[path];
 		if (!g) {
 			console.log(`  MISSING group ${path}`);

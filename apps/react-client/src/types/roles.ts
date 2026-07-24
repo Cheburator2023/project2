@@ -74,5 +74,5 @@ export enum Permission {
 }
 export type UserPermissions = Permission[];
 
-/** Доменные группы с доступом к админке (AD: sum_appadmin, sum_sacfg). */
+/** Доменные группы с доступом к админке (AD: sum_appadmin / test_sum_appadmin, sum_sacfg). */
 export const ADMIN_PANEL_DOMAIN_ROLES = [Role.APPADMIN, Role.SACFG] as const;

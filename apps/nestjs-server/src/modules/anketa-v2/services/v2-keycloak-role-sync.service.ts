@@ -5,6 +5,7 @@ import {
 	ServiceUnavailableException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { expandV2KeycloakTargetsWithAdAliases } from "@smart-anketa/api-contract";
 import {
 	V2_KEYCLOAK_GROUP_ROLE_TARGET,
 	V2_KEYCLOAK_GROUPS_TO_ENSURE,
@@ -270,6 +271,7 @@ export class V2KeycloakRoleSyncService {
 		keycloakUrl?: string;
 		realm?: string;
 		adminRealm?: string;
+		standPrefix?: string;
 	}): Promise<V2KeycloakRoleSyncResult> {
 		const { keycloakUrl, realm, adminRealm } = this.resolveConnection(options);
 
@@ -298,6 +300,7 @@ export class V2KeycloakRoleSyncService {
 				realm,
 				token,
 				apply,
+				standPrefix: options.standPrefix,
 			});
 			result.rolesCreated = remap.rolesCreated;
 			result.groupsCreated = remap.groupsCreated;
@@ -305,7 +308,7 @@ export class V2KeycloakRoleSyncService {
 		}
 
 		this.logger.log(
-			`Keycloak F-05 sync finished dryRun=${options.dryRun} roleChanges=${result.groupRoleChanges.length}`,
+			`Keycloak F-05 sync finished dryRun=${options.dryRun} standPrefix=${options.standPrefix || ""} roleChanges=${result.groupRoleChanges.length}`,
 		);
 		return result;
 	}
@@ -443,11 +446,26 @@ export class V2KeycloakRoleSyncService {
 		realm: string;
 		token: string;
 		apply: boolean;
+		standPrefix?: string;
 	}): Promise<{
 		rolesCreated: string[];
 		groupsCreated: string[];
 		groupRoleChanges: V2KeycloakRoleSyncResult["groupRoleChanges"];
 	}> {
+		const target = expandV2KeycloakTargetsWithAdAliases(
+			V2_KEYCLOAK_GROUP_ROLE_TARGET,
+			args.standPrefix,
+		);
+		const groupsToEnsure = [
+			...new Set([
+				...V2_KEYCLOAK_GROUPS_TO_ENSURE,
+				...Object.keys(target),
+			]),
+		].sort(
+			(a, b) =>
+				a.split("/").length - b.split("/").length || a.localeCompare(b),
+		);
+
 		const roles =
 			(await this.api<KcRole[]>(
 				args.keycloakUrl,
@@ -505,9 +523,9 @@ export class V2KeycloakRoleSyncService {
 			args.token,
 		);
 
-		// Создаём недостающие группы из матрицы (parents first; ничего не удаляем).
+		// Создаём недостающие группы: канон + AD-alias (parents first).
 		const groupsCreated: string[] = [];
-		for (const path of V2_KEYCLOAK_GROUPS_TO_ENSURE) {
+		for (const path of groupsToEnsure) {
 			if (byPath[path]) continue;
 			groupsCreated.push(path);
 			if (!args.apply) continue;
@@ -554,7 +572,7 @@ export class V2KeycloakRoleSyncService {
 
 		const groupRoleChanges: V2KeycloakRoleSyncResult["groupRoleChanges"] = [];
 
-		for (const [path, desired] of Object.entries(V2_KEYCLOAK_GROUP_ROLE_TARGET)) {
+		for (const [path, desired] of Object.entries(target)) {
 			const g = byPath[path];
 			if (!g) {
 				groupRoleChanges.push({
