@@ -11,6 +11,7 @@ exports.resolveLogicStreamForDbExecutor = resolveLogicStreamForDbExecutor;
 exports.resolveLogicStreamDbExecutor = resolveLogicStreamDbExecutor;
 const v2_executor_streams_util_1 = require("./v2-executor-streams.util");
 const v2_implementation_streams_util_1 = require("./v2-implementation-streams.util");
+const v2_model_stream_typical_works_constants_1 = require("./v2-model-stream-typical-works.constants");
 const LEGACY_EXECUTOR_LABEL_TO_CODE = {
     ПиРМ: v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.PIRM,
     "Источники данных": v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.IDSRC,
@@ -127,6 +128,11 @@ function resolveStreamBlockExecutorScopeStreams(executor) {
         result.push(code);
     if (!result.includes(label))
         result.push(label);
+    // Legacy umbrella: старые типовые работы привязаны к «Модельный стрим».
+    if ((0, v2_model_stream_typical_works_constants_1.isV2ModelImplementationStreamCode)(code) &&
+        !result.includes(v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_EXECUTOR)) {
+        result.push(v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_EXECUTOR);
+    }
     return result;
 }
 /** Код implementationStream для имени стрима в БД типовых работ. */

@@ -1,3 +1,4 @@
+import { V2_IMPLEMENTATION_STREAM, V2_IMPLEMENTATION_STREAM_LABELS, } from "./v2-implementation-streams.util";
 /** Эталонные id 10 типовых работ модельного стрима (factory registry). */
 export const V2_MODEL_STREAM_FACTORY_WORK_IDS = [
     "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4001",
@@ -12,6 +13,32 @@ export const V2_MODEL_STREAM_FACTORY_WORK_IDS = [
     "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4010",
 ];
 export const V2_MODEL_STREAM_EXECUTOR = "Модельный стрим";
+/**
+ * Пять модельных стримов-исполнителей (ролевка / implementationStream).
+ * Legacy-каталог «Модельный стрим» должен видеть назначения на любой из них.
+ */
+export const V2_MODEL_IMPLEMENTATION_STREAM_CODES = [
+    V2_IMPLEMENTATION_STREAM.KMBKCB,
+    V2_IMPLEMENTATION_STREAM.RB,
+    V2_IMPLEMENTATION_STREAM.PTITPC,
+    V2_IMPLEMENTATION_STREAM.FINMDL,
+    V2_IMPLEMENTATION_STREAM.RND,
+];
+export function isV2ModelImplementationStreamCode(value) {
+    return V2_MODEL_IMPLEMENTATION_STREAM_CODES.includes(value);
+}
+/** DB-имена + коды + legacy-подпись для каталога типовых работ модельного блока. */
+export function resolveModelStreamCatalogScopeDbStreams() {
+    const result = [V2_MODEL_STREAM_EXECUTOR, "Модельные стримы"];
+    for (const code of V2_MODEL_IMPLEMENTATION_STREAM_CODES) {
+        if (!result.includes(code))
+            result.push(code);
+        const label = V2_IMPLEMENTATION_STREAM_LABELS[code];
+        if (label && !result.includes(label))
+            result.push(label);
+    }
+    return result;
+}
 /** Всегда показываются в блоке типовых работ и в «Подробном расчёте». */
 export const V2_MODEL_STREAM_ALWAYS_SHOWN_WORK_IDS = new Set([
     "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4001",

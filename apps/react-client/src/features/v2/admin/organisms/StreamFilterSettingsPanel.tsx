@@ -28,7 +28,6 @@ export function StreamFilterSettingsPanel() {
 			<Typography variant="body2" color="text.secondary">
 				Для DS / DE / ModelOps (Level A) реестр на UI режется по
 				департаменту/стриму из Keycloak groups. Лид-роли видят весь список.
-				Фильтрация на Nest для v2 отключена — удобнее отлаживать в браузере.
 			</Typography>
 			{isError ? (
 				<Alert severity="error">Не удалось загрузить настройку</Alert>

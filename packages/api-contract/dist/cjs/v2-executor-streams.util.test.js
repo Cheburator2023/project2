@@ -5,6 +5,7 @@ const v2_implementation_streams_util_1 = require("./v2-implementation-streams.ut
 const v2_anketa_section_ui_util_1 = require("./v2-anketa-section-ui.util");
 const v2_stream_block_executor_util_1 = require("./v2-stream-block-executor.util");
 const v2_executor_streams_util_1 = require("./v2-executor-streams.util");
+const v2_model_stream_typical_works_constants_1 = require("./v2-model-stream-typical-works.constants");
 (0, vitest_1.describe)("v2-executor-streams.util", () => {
     (0, vitest_1.it)("lists seven executor stream labels", () => {
         (0, vitest_1.expect)(v2_executor_streams_util_1.V2_EXECUTOR_STREAM_LABELS).toEqual([
@@ -156,5 +157,29 @@ const v2_executor_streams_util_1 = require("./v2-executor-streams.util");
     (0, vitest_1.it)("typicalWorkAssignedToExecutorStream matches DB stream aliases", () => {
         (0, vitest_1.expect)((0, v2_executor_streams_util_1.typicalWorkAssignedToExecutorStream)(["ИД. Внутренний"], v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.IDSRC)).toBe(true);
         (0, vitest_1.expect)((0, v2_executor_streams_util_1.typicalWorkAssignedToExecutorStream)(["Контроль моделей"], v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.IDSRC)).toBe(false);
+    });
+    (0, vitest_1.it)("expands legacy «Модельный стрим» catalog scope to five model DB streams", () => {
+        const scope = (0, v2_executor_streams_util_1.resolveExecutorScopeDbStreams)(v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_EXECUTOR);
+        (0, vitest_1.expect)(scope).toEqual(vitest_1.expect.arrayContaining([
+            v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_EXECUTOR,
+            "Модельные стримы",
+            "Разработка моделей КМБ и КСБ",
+            "Моделирование РБ",
+            "AI-модели партнерств",
+            "Финансовое моделирование",
+            "Моделирование RnD",
+            v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.KMBKCB,
+            v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.RB,
+            v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.PTITPC,
+            v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.FINMDL,
+            v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.RND,
+        ]));
+        (0, vitest_1.expect)((0, v2_model_stream_typical_works_constants_1.resolveModelStreamCatalogScopeDbStreams)()).toEqual(scope);
+        (0, vitest_1.expect)((0, v2_executor_streams_util_1.typicalWorkAssignedToExecutorStream)(["Разработка моделей КМБ и КСБ"], v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_EXECUTOR)).toBe(true);
+        (0, vitest_1.expect)((0, v2_executor_streams_util_1.typicalWorkAssignedToExecutorStream)([v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_EXECUTOR], v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.KMBKCB)).toBe(true);
+        (0, vitest_1.expect)((0, v2_executor_streams_util_1.resolveExecutorScopeDbStreams)(v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.KMBKCB)).toEqual(vitest_1.expect.arrayContaining([
+            "Разработка моделей КМБ и КСБ",
+            v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_EXECUTOR,
+        ]));
     });
 });

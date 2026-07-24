@@ -1,5 +1,7 @@
 /** Справочник стримов-исполнителей в редакторе логики и на стримовых блоках анкеты. */
 import { normalizeStreamBlockExecutor, normalizeStreamBlockExecutors, resolveStreamBlockExecutorScopeStreams, } from "./v2-stream-block-executor.util";
+import { resolveModelStreamCatalogScopeDbStreams, V2_MODEL_STREAM_EXECUTOR, isV2ModelImplementationStreamCode, } from "./v2-model-stream-typical-works.constants";
+import { isV2ImplementationStreamCode } from "./v2-implementation-streams.util";
 export const V2_EXECUTOR_STREAM_LABELS = [
     "ДАДМ",
     "ПиРМ",
@@ -45,15 +47,32 @@ export function resolveExecutorStreamAreaLabel(stream) {
 const EXECUTOR_SCOPE_DB_STREAMS = {
     "Источники данных": ["ИД. Внутренний", "ИД. Внешний", "Источники данных"],
     ПиРМ: ["ПиРМ", "ПиРМ (правила и развитие модели)"],
-    "Модельный стрим": ["Модельный стрим"],
+    "Модельный стрим": resolveModelStreamCatalogScopeDbStreams(),
 };
 /** Стримы БД/области UI, в которых ищется назначение работы для блока typicalWork. */
 export function resolveExecutorScopeDbStreams(executorStream) {
     const trimmed = executorStream.trim();
     if (!trimmed)
         return [];
+    if (trimmed === V2_MODEL_STREAM_EXECUTOR ||
+        trimmed === "Модельные стримы") {
+        return resolveModelStreamCatalogScopeDbStreams();
+    }
     if (isV2ExecutorStreamLabel(trimmed)) {
         return EXECUTOR_SCOPE_DB_STREAMS[trimmed] ?? [trimmed];
+    }
+    // Код / DB-имя одного из 5 модельных стримов → его scope (+ legacy umbrella).
+    const asCode = (isV2ImplementationStreamCode(trimmed) ? trimmed : null) ??
+        normalizeStreamBlockExecutor(trimmed);
+    if (asCode && isV2ModelImplementationStreamCode(asCode)) {
+        const scoped = [...resolveStreamBlockExecutorScopeStreams(asCode)];
+        if (!scoped.includes(V2_MODEL_STREAM_EXECUTOR)) {
+            scoped.push(V2_MODEL_STREAM_EXECUTOR);
+        }
+        return scoped;
+    }
+    if (normalizeStreamBlockExecutor(trimmed)) {
+        return resolveStreamBlockExecutorScopeStreams(trimmed);
     }
     return [trimmed];
 }
@@ -62,13 +81,8 @@ export function typicalWorkAssignedToExecutorStream(workStreams, executorStream)
     const trimmed = executorStream.trim();
     if (!trimmed)
         return false;
-    if (normalizeStreamBlockExecutor(trimmed)) {
-        const scopeStreams = resolveStreamBlockExecutorScopeStreams(trimmed);
-        return workStreams.some((stream) => scopeStreams.includes(stream.trim()) ||
-            scopeStreams.includes(resolveExecutorStreamAreaLabel(stream)));
-    }
-    const scopeStreams = resolveExecutorScopeDbStreams(executorStream);
-    return workStreams.some((stream) => scopeStreams.includes(stream) ||
+    const scopeStreams = resolveExecutorScopeDbStreams(trimmed);
+    return workStreams.some((stream) => scopeStreams.includes(stream.trim()) ||
         scopeStreams.includes(resolveExecutorStreamAreaLabel(stream)));
 }
 /** Работа назначена хотя бы на один из стримов-исполнителей блока. */

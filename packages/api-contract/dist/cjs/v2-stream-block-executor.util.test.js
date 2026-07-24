@@ -21,6 +21,12 @@ const v2_stream_block_executor_util_1 = require("./v2-stream-block-executor.util
             "Источники данных",
             v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.IDSRC,
         ]));
+        (0, vitest_1.expect)((0, v2_stream_block_executor_util_1.resolveStreamBlockExecutorScopeStreams)(v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.KMBKCB)).toEqual(vitest_1.expect.arrayContaining([
+            "Разработка моделей КМБ и КСБ",
+            v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.KMBKCB,
+            "Модельный стрим",
+        ]));
+        (0, vitest_1.expect)((0, v2_stream_block_executor_util_1.normalizeStreamBlockExecutor)("Модельный стрим")).toBeNull();
     });
     (0, vitest_1.it)("maps db stream names to implementation stream codes", () => {
         (0, vitest_1.expect)((0, v2_stream_block_executor_util_1.resolveLogicStreamForDbExecutor)("ИД. Внутренний")).toBe(v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.IDSRC);

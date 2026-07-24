@@ -11,6 +11,10 @@ import {
 	isV2ImplementationStreamCode,
 	type V2ImplementationStreamCode,
 } from "./v2-implementation-streams.util";
+import {
+	isV2ModelImplementationStreamCode,
+	V2_MODEL_STREAM_EXECUTOR,
+} from "./v2-model-stream-typical-works.constants";
 
 /** Значение `ui:options.streamExecutor` у стрим-блока — код или массив кодов implementationStream. */
 export type V2StreamBlockExecutor = V2ImplementationStreamCode;
@@ -147,6 +151,13 @@ export function resolveStreamBlockExecutorScopeStreams(
 	const result = scoped ? [...scoped] : [];
 	if (!result.includes(code)) result.push(code);
 	if (!result.includes(label)) result.push(label);
+	// Legacy umbrella: старые типовые работы привязаны к «Модельный стрим».
+	if (
+		isV2ModelImplementationStreamCode(code) &&
+		!result.includes(V2_MODEL_STREAM_EXECUTOR)
+	) {
+		result.push(V2_MODEL_STREAM_EXECUTOR);
+	}
 	return result;
 }
 

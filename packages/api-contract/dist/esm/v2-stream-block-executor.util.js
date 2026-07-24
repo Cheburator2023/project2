@@ -1,5 +1,6 @@
 import { inferLegacyStreamExecutorForBlockKey, isV2ExecutorStreamLabel, V2_DB_STREAM_TO_EXECUTOR_AREA, } from "./v2-executor-streams.util";
 import { V2_IMPLEMENTATION_STREAM, V2_IMPLEMENTATION_STREAM_CODES, V2_IMPLEMENTATION_STREAM_LABELS, isV2ImplementationStreamCode, } from "./v2-implementation-streams.util";
+import { isV2ModelImplementationStreamCode, V2_MODEL_STREAM_EXECUTOR, } from "./v2-model-stream-typical-works.constants";
 const LEGACY_EXECUTOR_LABEL_TO_CODE = {
     ПиРМ: V2_IMPLEMENTATION_STREAM.PIRM,
     "Источники данных": V2_IMPLEMENTATION_STREAM.IDSRC,
@@ -116,6 +117,11 @@ export function resolveStreamBlockExecutorScopeStreams(executor) {
         result.push(code);
     if (!result.includes(label))
         result.push(label);
+    // Legacy umbrella: старые типовые работы привязаны к «Модельный стрим».
+    if (isV2ModelImplementationStreamCode(code) &&
+        !result.includes(V2_MODEL_STREAM_EXECUTOR)) {
+        result.push(V2_MODEL_STREAM_EXECUTOR);
+    }
     return result;
 }
 /** Код implementationStream для имени стрима в БД типовых работ. */

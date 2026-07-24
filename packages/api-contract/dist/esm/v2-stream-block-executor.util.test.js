@@ -19,6 +19,12 @@ describe("v2-stream-block-executor.util", () => {
             "Источники данных",
             V2_IMPLEMENTATION_STREAM.IDSRC,
         ]));
+        expect(resolveStreamBlockExecutorScopeStreams(V2_IMPLEMENTATION_STREAM.KMBKCB)).toEqual(expect.arrayContaining([
+            "Разработка моделей КМБ и КСБ",
+            V2_IMPLEMENTATION_STREAM.KMBKCB,
+            "Модельный стрим",
+        ]));
+        expect(normalizeStreamBlockExecutor("Модельный стрим")).toBeNull();
     });
     it("maps db stream names to implementation stream codes", () => {
         expect(resolveLogicStreamForDbExecutor("ИД. Внутренний")).toBe(V2_IMPLEMENTATION_STREAM.IDSRC);

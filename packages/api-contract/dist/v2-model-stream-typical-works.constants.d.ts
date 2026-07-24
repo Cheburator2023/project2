@@ -1,6 +1,14 @@
 /** Эталонные id 10 типовых работ модельного стрима (factory registry). */
 export declare const V2_MODEL_STREAM_FACTORY_WORK_IDS: readonly ["f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4001", "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4002", "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4003", "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4004", "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4005", "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4006", "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4007", "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4008", "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4009", "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4010"];
 export declare const V2_MODEL_STREAM_EXECUTOR = "\u041C\u043E\u0434\u0435\u043B\u044C\u043D\u044B\u0439 \u0441\u0442\u0440\u0438\u043C";
+/**
+ * Пять модельных стримов-исполнителей (ролевка / implementationStream).
+ * Legacy-каталог «Модельный стрим» должен видеть назначения на любой из них.
+ */
+export declare const V2_MODEL_IMPLEMENTATION_STREAM_CODES: readonly ["kmbkcb", "rb", "ptitpc", "finmdl", "rnd"];
+export declare function isV2ModelImplementationStreamCode(value: string): value is (typeof V2_MODEL_IMPLEMENTATION_STREAM_CODES)[number];
+/** DB-имена + коды + legacy-подпись для каталога типовых работ модельного блока. */
+export declare function resolveModelStreamCatalogScopeDbStreams(): readonly string[];
 /** Всегда показываются в блоке типовых работ и в «Подробном расчёте». */
 export declare const V2_MODEL_STREAM_ALWAYS_SHOWN_WORK_IDS: ReadonlySet<string>;
 /** Всегда активны (формула считается даже без явных триггеров). */
