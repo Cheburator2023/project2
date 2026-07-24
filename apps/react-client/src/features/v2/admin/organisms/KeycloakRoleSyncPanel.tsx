@@ -19,7 +19,7 @@ import { useEffect, useState } from "react";
 type StandPrefixOption = { value: string; label: string };
 
 const STAND_PREFIX_OPTIONS: StandPrefixOption[] = [
-	{ value: "test_", label: "test_ (ИФТ)" },
+	{ value: "test_", label: "test_" },
 	{ value: "dev_", label: "dev_" },
 	{ value: "prod_", label: "prod_" },
 	{ value: "", label: "(без префикса → /sum_*)" },
@@ -28,7 +28,6 @@ const STAND_PREFIX_OPTIONS: StandPrefixOption[] = [
 type SyncDefaults = {
 	keycloakUrl: string;
 	realm: string;
-	adminRealm: string;
 };
 
 type SyncResult = {
@@ -70,14 +69,10 @@ function downloadBackupJson(data: unknown, realm: string) {
 function connectionPayload(fields: {
 	keycloakUrl: string;
 	realm: string;
-	adminRealm: string;
-	standPrefix: string;
 }) {
 	return {
 		keycloakUrl: fields.keycloakUrl.trim() || undefined,
 		realm: fields.realm.trim() || undefined,
-		adminRealm: fields.adminRealm.trim() || undefined,
-		standPrefix: fields.standPrefix.trim() || undefined,
 	};
 }
 
@@ -96,7 +91,6 @@ export function KeycloakRoleSyncPanel() {
 	const [mode, setMode] = useState<ModalMode>("sync");
 	const [keycloakUrl, setKeycloakUrl] = useState("");
 	const [realm, setRealm] = useState("cym");
-	const [adminRealm, setAdminRealm] = useState("master");
 	const [standPrefix, setStandPrefix] = useState("test_");
 	const [username, setUsername] = useState("");
 	const [password, setPassword] = useState("");
@@ -109,17 +103,9 @@ export function KeycloakRoleSyncPanel() {
 		if (!d) return;
 		setKeycloakUrl((prev) => prev || d.keycloakUrl || "");
 		setRealm((prev) => (prev === "cym" && d.realm ? d.realm : prev));
-		setAdminRealm((prev) =>
-			prev === "master" && d.adminRealm ? d.adminRealm : prev,
-		);
 	}, [defaultsQuery.data]);
 
-	const connection = connectionPayload({
-		keycloakUrl,
-		realm,
-		adminRealm,
-		standPrefix,
-	});
+	const connection = connectionPayload({ keycloakUrl, realm });
 
 	const backupMutation = useMutation({
 		mutationFn: () =>
@@ -165,6 +151,7 @@ export function KeycloakRoleSyncPanel() {
 					dryRun,
 					applyRemap: true,
 					...connection,
+					standPrefix: standPrefix.trim() || undefined,
 				},
 			}),
 		onSuccess: (data, dryRun) => {
@@ -188,7 +175,7 @@ export function KeycloakRoleSyncPanel() {
 
 	const pending = backupMutation.isPending || syncMutation.isPending;
 	const canSubmit = Boolean(
-		username && password && keycloakUrl.trim() && realm.trim() && adminRealm.trim(),
+		username && password && keycloakUrl.trim() && realm.trim(),
 	);
 
 	const changed =
@@ -210,21 +197,16 @@ export function KeycloakRoleSyncPanel() {
 				<Typography variant="body2" color="text.secondary">
 					Сначала скачайте бекап, затем dry-run / apply. Выставляет realm roles
 					канонических групп по матрице F-05. Latin-дубли с другим регистром
-					(/DE vs /de) не трогаем. Креды admin только в модалке. Доступно
-					ролям appadmin / sacfg.
+					(/DE vs /de) не трогаем. Креды admin только в модалке. Доступно ролям
+					appadmin / sacfg.
 				</Typography>
 				<Alert severity="info">
 					URL из env Nest: <code>{envUrl}</code>
-					{defaultsQuery.isError
-						? " (не удалось загрузить defaults)"
-						: null}
-					. В модалке можно переопределить URL и{" "}
-					<strong>префикс стенда</strong> (
+					{defaultsQuery.isError ? " (не удалось загрузить defaults)" : null}. В
+					модалке можно переопределить URL и <strong>префикс стенда</strong> (
 					<code>test_</code> / <code>dev_</code> / <code>prod_</code>
-					): AD-имя всегда с <code>sum_</code> —{" "}
-					<code>/sum_appadmin</code> или{" "}
-					<code>/test_sum_appadmin</code> (+ канон{" "}
-					<code>/appadmin</code>).
+					): AD-имя всегда с <code>sum_</code> — <code>/sum_appadmin</code> или{" "}
+					<code>/test_sum_appadmin</code> (+ канон <code>/appadmin</code>).
 				</Alert>
 				<Alert severity="warning">
 					После apply — re-login пользователей. Кириллические{" "}
@@ -273,9 +255,9 @@ export function KeycloakRoleSyncPanel() {
 				<DialogContent>
 					<Spacer space={8} />
 					<Typography variant="body2" color="text.secondary">
-						Учётка Admin API (обычно realm master / admin-cli). Пароль не
-						сохраняется. Base URL — без trailing slash, часто с{" "}
-						<code>/auth</code>.
+						Учётка Keycloak Admin API (логин admin). Пароль не сохраняется. Base
+						URL — без trailing slash, часто с <code>/auth</code>. Токен берётся
+						из realm <code>master</code> на сервере.
 					</Typography>
 					{mode === "sync" && !backupDoneInSession ? (
 						<>
@@ -308,57 +290,51 @@ export function KeycloakRoleSyncPanel() {
 							fullWidth
 							disabled={pending}
 						/>
-						<TextField
-							label="Admin realm (token)"
-							value={adminRealm}
-							onChange={(e) => setAdminRealm(e.target.value)}
-							helperText="Обычно master — для admin-cli password grant"
-							fullWidth
-							disabled={pending}
-						/>
-						<Autocomplete
-							freeSolo
-							selectOnFocus
-							clearOnBlur={false}
-							handleHomeEndKeys
-							options={STAND_PREFIX_OPTIONS}
-							value={
-								STAND_PREFIX_OPTIONS.find((o) => o.value === standPrefix) ??
-								standPrefix
-							}
-							onChange={(_, next) => {
-								if (next == null) {
-									setStandPrefix("");
-									return;
+						{mode === "sync" ? (
+							<Autocomplete
+								freeSolo
+								selectOnFocus
+								clearOnBlur={false}
+								handleHomeEndKeys
+								options={STAND_PREFIX_OPTIONS}
+								value={
+									STAND_PREFIX_OPTIONS.find((o) => o.value === standPrefix) ??
+									standPrefix
 								}
-								setStandPrefix(
-									typeof next === "string" ? next : next.value,
-								);
-							}}
-							onInputChange={(_, next, reason) => {
-								if (reason === "input" || reason === "clear") {
-									setStandPrefix(next);
+								onChange={(_, next) => {
+									if (next == null) {
+										setStandPrefix("");
+										return;
+									}
+									setStandPrefix(
+										typeof next === "string" ? next : next.value,
+									);
+								}}
+								onInputChange={(_, next, reason) => {
+									if (reason === "input" || reason === "clear") {
+										setStandPrefix(next);
+									}
+								}}
+								getOptionLabel={(opt) =>
+									typeof opt === "string" ? opt : opt.label
 								}
-							}}
-							getOptionLabel={(opt) =>
-								typeof opt === "string" ? opt : opt.label
-							}
-							isOptionEqualToValue={(a, b) => {
-								const av = typeof a === "string" ? a : a.value;
-								const bv = typeof b === "string" ? b : b.value;
-								return av === bv;
-							}}
-							renderInput={(params) => (
-								<TextField
-									{...params}
-									label="Префикс стенда (AD)"
-									placeholder="test_ | dev_ | prod_ | пусто"
-									helperText="Выбор или ручной ввод. ИФТ: test_ → /test_sum_appadmin. Пусто → /sum_appadmin."
-								/>
-							)}
-							fullWidth
-							disabled={pending}
-						/>
+								isOptionEqualToValue={(a, b) => {
+									const av = typeof a === "string" ? a : a.value;
+									const bv = typeof b === "string" ? b : b.value;
+									return av === bv;
+								}}
+								renderInput={(params) => (
+									<TextField
+										{...params}
+										label="Префикс стенда (AD)"
+										placeholder="test_ | dev_ | prod_ | пусто"
+										helperText="Выбор или ручной ввод. ИФТ: test_ → /test_sum_appadmin. Пусто → /sum_appadmin."
+									/>
+								)}
+								fullWidth
+								disabled={pending}
+							/>
+						) : null}
 						<TextField
 							label="Admin username"
 							value={username}
