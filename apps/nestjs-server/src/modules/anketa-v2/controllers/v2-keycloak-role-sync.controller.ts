@@ -2,7 +2,7 @@ import { Body, Controller, Get, Post } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { DomainRoles } from "../../../shared/decorators/domain-roles.decorator";
 import {
-	V2KeycloakAdminCredsDto,
+	V2KeycloakBackupRequestDto,
 	V2KeycloakRoleSyncDto,
 } from "../dto/request/v2-keycloak-role-sync.dto";
 import { V2KeycloakRoleSyncService } from "../services/v2-keycloak-role-sync.service";
@@ -30,15 +30,16 @@ export class V2KeycloakRoleSyncController {
 	@DomainRoles("appadmin", "sacfg")
 	@ApiOperation({
 		summary:
-			"Скачать JSON-бекап групп/ролей/юзеров Keycloak перед sync (креды не сохраняются)",
+			"Скачать JSON-бекап Keycloak (секции через include.*; креды не сохраняются)",
 	})
-	async backup(@Body() body: V2KeycloakAdminCredsDto) {
+	async backup(@Body() body: V2KeycloakBackupRequestDto) {
 		return this.syncService.createBackup({
 			adminUsername: body.adminUsername,
 			adminPassword: body.adminPassword,
 			keycloakUrl: body.keycloakUrl,
 			realm: body.realm,
 			adminRealm: body.adminRealm,
+			include: body.include,
 		});
 	}
 

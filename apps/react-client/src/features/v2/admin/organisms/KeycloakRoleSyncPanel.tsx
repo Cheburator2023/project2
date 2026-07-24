@@ -1,10 +1,12 @@
 import Alert from "@mui/material/Alert";
 import Autocomplete from "@mui/material/Autocomplete";
 import Button from "@mui/material/Button";
+import Checkbox from "@mui/material/Checkbox";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
+import FormControlLabel from "@mui/material/FormControlLabel";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -24,6 +26,32 @@ const STAND_PREFIX_OPTIONS: StandPrefixOption[] = [
 	{ value: "prod_", label: "prod_" },
 	{ value: "", label: "(без префикса → /sum_*)" },
 ];
+
+type BackupInclude = {
+	realmRoles: boolean;
+	groups: boolean;
+	groupAttributes: boolean;
+	groupRealmRoles: boolean;
+	groupMembers: boolean;
+	users: boolean;
+	userProfile: boolean;
+	userAttributes: boolean;
+	userGroups: boolean;
+	userRealmRoles: boolean;
+};
+
+const DEFAULT_BACKUP_INCLUDE: BackupInclude = {
+	realmRoles: true,
+	groups: true,
+	groupAttributes: true,
+	groupRealmRoles: true,
+	groupMembers: true,
+	users: true,
+	userProfile: true,
+	userAttributes: true,
+	userGroups: true,
+	userRealmRoles: true,
+};
 
 type SyncDefaults = {
 	keycloakUrl: string;
@@ -94,6 +122,9 @@ export function KeycloakRoleSyncPanel() {
 	const [standPrefix, setStandPrefix] = useState("test_");
 	const [username, setUsername] = useState("");
 	const [password, setPassword] = useState("");
+	const [backupInclude, setBackupInclude] = useState<BackupInclude>(
+		DEFAULT_BACKUP_INCLUDE,
+	);
 	const [lastResult, setLastResult] = useState<SyncResult | null>(null);
 	const [lastBackup, setLastBackup] = useState<BackupResult | null>(null);
 	const [backupDoneInSession, setBackupDoneInSession] = useState(false);
@@ -107,6 +138,35 @@ export function KeycloakRoleSyncPanel() {
 
 	const connection = connectionPayload({ keycloakUrl, realm });
 
+	const setInclude = (key: keyof BackupInclude, value: boolean) => {
+		setBackupInclude((prev) => {
+			const next = { ...prev, [key]: value };
+			if (key === "groups" && !value) {
+				next.groupAttributes = false;
+				next.groupRealmRoles = false;
+				next.groupMembers = false;
+			}
+			if (key === "groups" && value) {
+				next.groupAttributes = true;
+				next.groupRealmRoles = true;
+				next.groupMembers = true;
+			}
+			if (key === "users" && !value) {
+				next.userProfile = false;
+				next.userAttributes = false;
+				next.userGroups = false;
+				next.userRealmRoles = false;
+			}
+			if (key === "users" && value) {
+				next.userProfile = true;
+				next.userAttributes = true;
+				next.userGroups = true;
+				next.userRealmRoles = true;
+			}
+			return next;
+		});
+	};
+
 	const backupMutation = useMutation({
 		mutationFn: () =>
 			apiClient<BackupResult & Record<string, unknown>>({
@@ -116,6 +176,7 @@ export function KeycloakRoleSyncPanel() {
 					adminUsername: username,
 					adminPassword: password,
 					...connection,
+					include: backupInclude,
 				},
 			}),
 		onSuccess: (data) => {
@@ -174,8 +235,14 @@ export function KeycloakRoleSyncPanel() {
 	});
 
 	const pending = backupMutation.isPending || syncMutation.isPending;
+	const hasBackupSection =
+		backupInclude.realmRoles || backupInclude.groups || backupInclude.users;
 	const canSubmit = Boolean(
-		username && password && keycloakUrl.trim() && realm.trim(),
+		username &&
+			password &&
+			keycloakUrl.trim() &&
+			realm.trim() &&
+			(mode !== "backup" || hasBackupSection),
 	);
 
 	const changed =
@@ -211,6 +278,8 @@ export function KeycloakRoleSyncPanel() {
 				<Alert severity="warning">
 					После apply — re-login пользователей. Кириллические{" "}
 					<code>/departament/*</code> и case-дубли групп не трогаются.
+					Бекап — снимок F-05 (секции выбираются чекбоксами), не полный export
+					realm (пароли, clients, mappers, IdP не входят).
 				</Alert>
 				<Flex gap={12} wrap="wrap">
 					<Button variant="contained" onClick={() => openModal("backup")}>
@@ -334,6 +403,143 @@ export function KeycloakRoleSyncPanel() {
 								fullWidth
 								disabled={pending}
 							/>
+						) : null}
+						{mode === "backup" ? (
+							<Flex flexDirection="column" gap={4}>
+								<Typography variant="subtitle2">Секции бекапа</Typography>
+								<FormControlLabel
+									control={
+										<Checkbox
+											checked={backupInclude.realmRoles}
+											onChange={(e) =>
+												setInclude("realmRoles", e.target.checked)
+											}
+											disabled={pending}
+										/>
+									}
+									label="Realm roles"
+								/>
+								<FormControlLabel
+									control={
+										<Checkbox
+											checked={backupInclude.groups}
+											onChange={(e) => setInclude("groups", e.target.checked)}
+											disabled={pending}
+										/>
+									}
+									label="Groups (path / name)"
+								/>
+								<Flex flexDirection="column" gap={0} style={{ marginLeft: 24 }}>
+									<FormControlLabel
+										control={
+											<Checkbox
+												size="small"
+												checked={backupInclude.groupAttributes}
+												onChange={(e) =>
+													setInclude("groupAttributes", e.target.checked)
+												}
+												disabled={pending || !backupInclude.groups}
+											/>
+										}
+										label="атрибуты групп"
+									/>
+									<FormControlLabel
+										control={
+											<Checkbox
+												size="small"
+												checked={backupInclude.groupRealmRoles}
+												onChange={(e) =>
+													setInclude("groupRealmRoles", e.target.checked)
+												}
+												disabled={pending || !backupInclude.groups}
+											/>
+										}
+										label="realm roles групп"
+									/>
+									<FormControlLabel
+										control={
+											<Checkbox
+												size="small"
+												checked={backupInclude.groupMembers}
+												onChange={(e) =>
+													setInclude("groupMembers", e.target.checked)
+												}
+												disabled={pending || !backupInclude.groups}
+											/>
+										}
+										label="участники групп"
+									/>
+								</Flex>
+								<FormControlLabel
+									control={
+										<Checkbox
+											checked={backupInclude.users}
+											onChange={(e) => setInclude("users", e.target.checked)}
+											disabled={pending}
+										/>
+									}
+									label="Users"
+								/>
+								<Flex flexDirection="column" gap={0} style={{ marginLeft: 24 }}>
+									<FormControlLabel
+										control={
+											<Checkbox
+												size="small"
+												checked={backupInclude.userProfile}
+												onChange={(e) =>
+													setInclude("userProfile", e.target.checked)
+												}
+												disabled={pending || !backupInclude.users}
+											/>
+										}
+										label="профиль (имя, email, federation…)"
+									/>
+									<FormControlLabel
+										control={
+											<Checkbox
+												size="small"
+												checked={backupInclude.userAttributes}
+												onChange={(e) =>
+													setInclude("userAttributes", e.target.checked)
+												}
+												disabled={pending || !backupInclude.users}
+											/>
+										}
+										label="атрибуты юзеров"
+									/>
+									<FormControlLabel
+										control={
+											<Checkbox
+												size="small"
+												checked={backupInclude.userGroups}
+												onChange={(e) =>
+													setInclude("userGroups", e.target.checked)
+												}
+												disabled={pending || !backupInclude.users}
+											/>
+										}
+										label="группы юзеров"
+									/>
+									<FormControlLabel
+										control={
+											<Checkbox
+												size="small"
+												checked={backupInclude.userRealmRoles}
+												onChange={(e) =>
+													setInclude("userRealmRoles", e.target.checked)
+												}
+												disabled={pending || !backupInclude.users}
+											/>
+										}
+										label="realm roles юзеров"
+									/>
+								</Flex>
+								{!hasBackupSection ? (
+									<Typography variant="caption" color="error">
+										Выберите хотя бы одну секцию
+									</Typography>
+								) : null}
+							</Flex>
 						) : null}
 						<TextField
 							label="Admin username"

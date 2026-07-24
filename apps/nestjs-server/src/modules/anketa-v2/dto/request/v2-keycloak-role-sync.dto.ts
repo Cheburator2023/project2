@@ -1,4 +1,11 @@
-import { IsBoolean, IsOptional, IsString, MinLength } from "class-validator";
+import {
+	IsBoolean,
+	IsOptional,
+	IsString,
+	MinLength,
+	ValidateNested,
+} from "class-validator";
+import { Type } from "class-transformer";
 
 /** Креды Keycloak admin + опциональный override URL (не сохраняются). */
 export class V2KeycloakAdminCredsDto {
@@ -28,6 +35,56 @@ export class V2KeycloakAdminCredsDto {
 	@IsOptional()
 	@IsString()
 	adminRealm?: string;
+}
+
+/** Что включать в JSON-бекап (по умолчанию всё true). */
+export class V2KeycloakBackupIncludeDto {
+	@IsOptional()
+	@IsBoolean()
+	realmRoles?: boolean;
+
+	@IsOptional()
+	@IsBoolean()
+	groups?: boolean;
+
+	@IsOptional()
+	@IsBoolean()
+	groupAttributes?: boolean;
+
+	@IsOptional()
+	@IsBoolean()
+	groupRealmRoles?: boolean;
+
+	@IsOptional()
+	@IsBoolean()
+	groupMembers?: boolean;
+
+	@IsOptional()
+	@IsBoolean()
+	users?: boolean;
+
+	@IsOptional()
+	@IsBoolean()
+	userProfile?: boolean;
+
+	@IsOptional()
+	@IsBoolean()
+	userAttributes?: boolean;
+
+	@IsOptional()
+	@IsBoolean()
+	userGroups?: boolean;
+
+	@IsOptional()
+	@IsBoolean()
+	userRealmRoles?: boolean;
+}
+
+export class V2KeycloakBackupRequestDto extends V2KeycloakAdminCredsDto {
+	@IsOptional()
+	@ValidateNested()
+	@Type(() => V2KeycloakBackupIncludeDto)
+	include?: V2KeycloakBackupIncludeDto;
 }
 
 export class V2KeycloakRoleSyncDto extends V2KeycloakAdminCredsDto {
