@@ -119,6 +119,13 @@ export const AdminV2DictionariesPage = lazyPage(
 		),
 	"AdminV2DictionariesPage",
 );
+export const AdminV2StreamsPage = lazyPage(
+	() =>
+		import(
+			/* webpackChunkName: "page-admin-streams" */ "@react-client/features/v2/admin/pages/AdminV2StreamsPage"
+		),
+	"AdminV2StreamsPage",
+);
 export const AdminV2DictionaryDetailPage = lazyPage(
 	() =>
 		import(

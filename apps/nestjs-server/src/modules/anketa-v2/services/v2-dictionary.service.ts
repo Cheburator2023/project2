@@ -2,9 +2,19 @@ import {
 	Injectable,
 	NotFoundException,
 	ConflictException,
+	BadRequestException,
+	Inject,
+	forwardRef,
+	Optional,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { In, Repository } from "typeorm";
+import {
+	V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE,
+	isValidImplementationStreamCodeFormat,
+	isV2ImplementationStreamCode,
+	parseImplementationStreamPayload,
+} from "@smart-anketa/api-contract";
 import { V2DictionaryEntity } from "../entities/v2-dictionary.entity";
 import { V2DictionaryItemEntity } from "../entities/v2-dictionary-item.entity";
 import { V2TemplateVersionEntity } from "../entities/v2-template-version.entity";
@@ -30,6 +40,7 @@ import type {
 	CreateV2DictionaryItemDto,
 	UpdateV2DictionaryItemDto,
 } from "../dto";
+import { V2StreamCatalogService } from "./v2-stream-catalog.service";
 
 export type V2DictionaryWithMeta = V2DictionaryEntity & {
 	isDefault: boolean;
@@ -45,6 +56,9 @@ export class V2DictionaryService {
 		private readonly itemRepository: Repository<V2DictionaryItemEntity>,
 		@InjectRepository(V2TemplateVersionEntity)
 		private readonly versionRepository: Repository<V2TemplateVersionEntity>,
+		@Optional()
+		@Inject(forwardRef(() => V2StreamCatalogService))
+		private readonly streamCatalog?: V2StreamCatalogService,
 	) {}
 
 	async findAll(): Promise<V2DictionaryEntity[]> {
@@ -208,7 +222,9 @@ export class V2DictionaryService {
 		dictionary.category = def.category;
 		dictionary.description = def.description;
 
-		return this.dictionaryRepository.save(dictionary);
+		const saved = await this.dictionaryRepository.save(dictionary);
+		this.invalidateStreamCatalogIfNeeded(dictionary.code);
+		return saved;
 	}
 
 	async bulkDelete(ids: string[]): Promise<BulkDeleteV2DictionariesResultDto> {
@@ -339,23 +355,27 @@ export class V2DictionaryService {
 			);
 		}
 
+		const normalized = this.normalizeStreamItemDto(dictionary.code, dto);
+
 		// Проверяем уникальность кода в пределах словаря
 		const existing = await this.itemRepository.findOne({
-			where: { dictionaryId, code: dto.code },
+			where: { dictionaryId, code: normalized.code },
 		});
 
 		if (existing) {
 			throw new ConflictException(
-				`Item with code ${dto.code} already exists in this dictionary`,
+				`Item with code ${normalized.code} already exists in this dictionary`,
 			);
 		}
 
 		const item = this.itemRepository.create({
 			dictionaryId,
-			...dto,
+			...normalized,
 		});
 
-		return this.itemRepository.save(item);
+		const saved = await this.itemRepository.save(item);
+		this.invalidateStreamCatalogIfNeeded(dictionary.code);
+		return saved;
 	}
 
 	async updateItem(
@@ -363,16 +383,77 @@ export class V2DictionaryService {
 		dto: UpdateV2DictionaryItemDto,
 	): Promise<V2DictionaryItemEntity> {
 		const item = await this.findItem(id);
+		const dictionary = await this.dictionaryRepository.findOne({
+			where: { id: item.dictionaryId },
+		});
+		const dictCode = dictionary?.code ?? "";
 
-		Object.assign(item, dto);
+		if (dictCode === V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE) {
+			const nextLabel =
+				typeof dto.label === "string" ? dto.label : item.label;
+			const nextPayload = parseImplementationStreamPayload(
+				dto.payload !== undefined ? dto.payload : item.payload,
+				{ label: nextLabel },
+			);
+			Object.assign(item, {
+				...dto,
+				payload: nextPayload,
+			});
+		} else {
+			Object.assign(item, dto);
+		}
 
-		return this.itemRepository.save(item);
+		const saved = await this.itemRepository.save(item);
+		this.invalidateStreamCatalogIfNeeded(dictCode);
+		return saved;
 	}
 
 	async deleteItem(id: string): Promise<void> {
 		const item = await this.findItem(id);
-
+		const dictionary = await this.dictionaryRepository.findOne({
+			where: { id: item.dictionaryId },
+		});
+		if (
+			dictionary?.code === V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE &&
+			isV2ImplementationStreamCode(item.code)
+		) {
+			throw new ConflictException(
+				"Заводской стрим нельзя удалить. Можно отключить (Активен = нет).",
+			);
+		}
 		await this.itemRepository.remove(item);
+		this.invalidateStreamCatalogIfNeeded(dictionary?.code ?? "");
+	}
+
+	private invalidateStreamCatalogIfNeeded(dictionaryCode: string): void {
+		if (dictionaryCode === V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE) {
+			this.streamCatalog?.invalidate();
+		}
+	}
+
+	private normalizeStreamItemDto(
+		dictionaryCode: string,
+		dto: CreateV2DictionaryItemDto,
+	): CreateV2DictionaryItemDto {
+		if (dictionaryCode !== V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE) {
+			return dto;
+		}
+		const code = dto.code.trim().toLowerCase();
+		if (!isValidImplementationStreamCodeFormat(code)) {
+			throw new BadRequestException(
+				"Код стрима: 1–6 символов [a-z0-9] (например rb, kmbkcb)",
+			);
+		}
+		const label = dto.label.trim();
+		if (!label) {
+			throw new BadRequestException("Подпись стрима обязательна");
+		}
+		return {
+			...dto,
+			code,
+			label,
+			payload: parseImplementationStreamPayload(dto.payload, { label }),
+		};
 	}
 
 	async getDictionaryAsJson(code: string): Promise<Record<string, unknown>> {

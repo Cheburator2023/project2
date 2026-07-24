@@ -10,12 +10,11 @@ import MenuItem from "@mui/material/MenuItem";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import {
-	isV2ImplementationStreamCode,
 	V2_IMPLEMENTATION_STREAM,
-	V2_IMPLEMENTATION_STREAM_CODES,
 	V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE,
-	V2_IMPLEMENTATION_STREAM_LABELS,
+	isValidImplementationStreamCodeFormat,
 } from "@smart-anketa/api-contract";
+import { useV2ImplementationStreamCatalog } from "@react-client/common/api/queries/v2-streams";
 import { SelectWithPlaceholder } from "@react-client/common/muiCustom/SelectWithPlaceholder";
 import {
 	WORK_ARCH_COMPONENT_TYPES,
@@ -58,6 +57,8 @@ export function CreateTypicalWorkDialog({
 	onSubmit,
 }: CreateTypicalWorkDialogProps) {
 	const isCreate = mode === "create";
+	const { codes: streamCodes, labelByCode, catalog } =
+		useV2ImplementationStreamCatalog();
 	const [name, setName] = useState("");
 	const [archComponentType, setArchComponentType] = useState<string>(
 		defaultArchComponentType ?? DEFAULT_WORK_ARCH_COMPONENT_TYPE,
@@ -79,6 +80,18 @@ export function CreateTypicalWorkDialog({
 			setStarterNorm("1.00");
 		}
 	}, [defaultArchComponentType, defaultStreamExecutor, open]);
+
+	useEffect(() => {
+		if (!open || !isCreate) return;
+		if (streamCodes.length === 0) return;
+		if (!streamCodes.includes(streamExecutor)) {
+			setStreamExecutor(
+				defaultStreamExecutor && streamCodes.includes(defaultStreamExecutor)
+					? defaultStreamExecutor
+					: (streamCodes[0] ?? V2_IMPLEMENTATION_STREAM.IDSRC),
+			);
+		}
+	}, [open, isCreate, streamCodes, streamExecutor, defaultStreamExecutor]);
 
 	const streamPresent = useMemo(
 		() => isStreamPresentInSchema?.(streamExecutor) ?? false,
@@ -129,7 +142,7 @@ export function CreateTypicalWorkDialog({
 							onChange={(e) => setStreamExecutor(String(e.target.value))}
 							helperText={`Справочник ${V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE}. Назначение создаётся сразу; блок стрима в конструкторе нужен для полей и localParams.`}
 						>
-							{V2_IMPLEMENTATION_STREAM_CODES.map((code) => (
+							{streamCodes.map((code) => (
 								<MenuItem key={code} value={code}>
 									<Box
 										sx={{
@@ -140,7 +153,7 @@ export function CreateTypicalWorkDialog({
 										}}
 									>
 										<Typography sx={{ flex: 1 }}>
-											{V2_IMPLEMENTATION_STREAM_LABELS[code]}
+											{labelByCode[code] ?? code}
 										</Typography>
 										<ExecutorStreamPresenceLabel
 											present={isStreamPresentInSchema?.(code) ?? false}
@@ -155,7 +168,7 @@ export function CreateTypicalWorkDialog({
 								size="small"
 								variant="outlined"
 								onClick={() => onCreateStreamBlock(streamExecutor)}
-								disabled={!isV2ImplementationStreamCode(streamExecutor)}
+								disabled={!isValidImplementationStreamCodeFormat(streamExecutor)}
 							>
 								Создать стримовый блок в конструкторе
 							</Button>
@@ -171,7 +184,7 @@ export function CreateTypicalWorkDialog({
 					<Typography sx={{ fontSize: 12, color: "#6b7484" }}>
 						Стрим-исполнитель (рекомендация):{" "}
 						{defaultStreamExecutor
-							? streamDisplayLabel(defaultStreamExecutor)
+							? streamDisplayLabel(defaultStreamExecutor, catalog)
 							: "—"}
 					</Typography>
 				)}
@@ -219,7 +232,11 @@ function BoxActions({
 			<Button onClick={onClose} disabled={pending}>
 				Отмена
 			</Button>
-			<Button variant="contained" disabled={!canSubmit || pending} onClick={onSubmit}>
+			<Button
+				variant="contained"
+				onClick={onSubmit}
+				disabled={pending || !canSubmit}
+			>
 				{isCreate ? "Создать работу" : "Сохранить"}
 			</Button>
 		</div>

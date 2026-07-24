@@ -39,6 +39,13 @@ export const commonRoutes = {
 		showInNavbar: true,
 		navbar: { group: "adminV2", order: 5 },
 	},
+	adminV2Streams: {
+		rootPath: "/admin/streams",
+		name: "Стримы",
+		disabled: false,
+		showInNavbar: true,
+		navbar: { group: "adminV2", order: 4 },
+	},
 	adminV2TypicalWorks: {
 		rootPath: "/admin/typical-works",
 		name: "Типовые работы",

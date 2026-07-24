@@ -9,6 +9,8 @@ const v2_stream_block_executor_util_1 = require("./v2-stream-block-executor.util
         (0, vitest_1.expect)((0, v2_stream_block_executor_util_1.normalizeStreamBlockExecutor)("Источники данных")).toBe(v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.IDSRC);
         (0, vitest_1.expect)((0, v2_stream_block_executor_util_1.normalizeStreamBlockExecutor)("ПиРМ")).toBe(v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.PIRM);
         (0, vitest_1.expect)((0, v2_stream_block_executor_util_1.normalizeStreamBlockExecutor)("ДАДМ")).toBe(v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.DADM);
+        (0, vitest_1.expect)((0, v2_stream_block_executor_util_1.normalizeStreamBlockExecutor)("newstr")).toBe("newstr");
+        (0, vitest_1.expect)((0, v2_stream_block_executor_util_1.normalizeStreamBlockExecutor)("tooLong")).toBeNull();
     });
     (0, vitest_1.it)("maps legacy block keys to implementation stream codes", () => {
         (0, vitest_1.expect)((0, v2_stream_block_executor_util_1.inferLegacyStreamBlockExecutorCode)("streamDataSources")).toBe(v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.IDSRC);

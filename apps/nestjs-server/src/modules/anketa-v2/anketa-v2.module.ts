@@ -51,6 +51,8 @@ import { V2KeycloakRoleSyncService } from "./services/v2-keycloak-role-sync.serv
 import { V2RuntimeSettingsEntity } from "./entities/v2-runtime-settings.entity";
 import { V2RuntimeSettingsService } from "./services/v2-runtime-settings.service";
 import { V2RuntimeSettingsController } from "./controllers/v2-runtime-settings.controller";
+import { V2StreamCatalogController } from "./controllers/v2-stream-catalog.controller";
+import { V2StreamCatalogService } from "./services/v2-stream-catalog.service";
 
 @Module({
 	imports: [
@@ -80,6 +82,7 @@ import { V2RuntimeSettingsController } from "./controllers/v2-runtime-settings.c
 		V2FactorySnapshotController,
 		V2TemplateVersionController,
 		V2DictionaryController,
+		V2StreamCatalogController,
 		V2AuditController,
 		V2CalculationController,
 		V2QuestionnaireController,
@@ -96,6 +99,7 @@ import { V2RuntimeSettingsController } from "./controllers/v2-runtime-settings.c
 		V2TemplateVersionService,
 		V2DictionaryService,
 		V2DictionarySeedService,
+		V2StreamCatalogService,
 		V2TemplateSeedService,
 		V2AuditService,
 		V2CalculationService,
@@ -115,6 +119,7 @@ import { V2RuntimeSettingsController } from "./controllers/v2-runtime-settings.c
 		V2FactorySnapshotService,
 		V2TemplateVersionService,
 		V2DictionaryService,
+		V2StreamCatalogService,
 		V2AuditService,
 		V2CalculationService,
 		V2QuestionnaireService,

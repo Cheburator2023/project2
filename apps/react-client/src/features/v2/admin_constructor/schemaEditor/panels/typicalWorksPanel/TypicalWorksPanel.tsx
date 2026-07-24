@@ -25,6 +25,7 @@ import {
 	useV2TypicalWorksList,
 } from "@react-client/common/api/queries/v2-works";
 import { useV2Template } from "@react-client/common/api/queries/v2-templates";
+import { useV2ImplementationStreamCatalog } from "@react-client/common/api/queries/v2-streams";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { parseTypicalWorkDeleteError } from "./typicalWorkPatchErrors";
 import { V2_TEMPLATE_VERSION_QUERY } from "@react-client/routing/common/pathHelpers";
@@ -219,7 +220,12 @@ export function TypicalWorksPanel() {
 	const [deleteUsageConflict, setDeleteUsageConflict] =
 		useState<ReturnType<typeof parseTypicalWorkDeleteError>>(null);
 
-	const scopeStreams = useMemo(() => resolveScopeStreams(scope), [scope]);
+	const { catalog, codes: streamCatalogCodes } =
+		useV2ImplementationStreamCatalog();
+	const scopeStreams = useMemo(
+		() => resolveScopeStreams(scope, catalog, streamCatalogCodes),
+		[scope, catalog, streamCatalogCodes],
+	);
 
 	useEffect(() => {
 		logSchemaEditorNav("works.panelMounted", {
@@ -465,8 +471,9 @@ export function TypicalWorksPanel() {
 			const targetCode =
 				normalizeStreamBlockExecutor(
 					payload.streamExecutor ?? scopeStreamExecutor(scope, DEFAULT_LOGIC_STREAM),
+					catalog,
 				) ?? DEFAULT_LOGIC_STREAM;
-			const dbStream = resolveLogicStreamDbExecutor(targetCode);
+			const dbStream = resolveLogicStreamDbExecutor(targetCode, catalog);
 			const created = await createWork.mutateAsync({
 				name: payload.name,
 				archComponentType: payload.archComponentType,

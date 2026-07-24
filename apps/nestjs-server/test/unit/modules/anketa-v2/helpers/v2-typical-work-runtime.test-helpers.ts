@@ -107,6 +107,12 @@ export function createInMemoryTypicalWorkRuntime(
 	const paramCatalogService = {
 		listTriggerStatusCatalog: jest.fn(async () => []),
 	};
+	const streamCatalog = {
+		getCatalog: jest.fn(async () => []),
+		getCachedCatalog: jest.fn(() => []),
+		invalidate: jest.fn(),
+		refresh: jest.fn(async () => []),
+	};
 
 	return new V2TypicalWorkRuntimeService(
 		workRepository as never,
@@ -118,6 +124,7 @@ export function createInMemoryTypicalWorkRuntime(
 		versionConfigRepository as never,
 		templateVersionRepository as never,
 		paramCatalogService as never,
+		streamCatalog as never,
 	);
 }
 

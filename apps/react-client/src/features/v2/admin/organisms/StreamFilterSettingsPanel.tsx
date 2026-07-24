@@ -11,6 +11,8 @@ import {
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { toast } from "@react-client/common/toasts";
+import { commonRoutes } from "@react-client/routing/common/routes";
+import { Link as RouterLink } from "react-router";
 
 export function StreamFilterSettingsPanel() {
 	const { data, isLoading, isError } = useV2StreamFilterSetting();
@@ -29,6 +31,15 @@ export function StreamFilterSettingsPanel() {
 				Для DS / DE / ModelOps (Level A) реестр на UI режется по
 				департаменту/стриму из Keycloak groups. Лид-роли видят весь список.
 			</Typography>
+			<Button
+				component={RouterLink}
+				to={commonRoutes.adminV2Streams.rootPath}
+				size="small"
+				variant="text"
+				sx={{ alignSelf: "flex-start", px: 0 }}
+			>
+				Реестр стримов
+			</Button>
 			{isError ? (
 				<Alert severity="error">Не удалось загрузить настройку</Alert>
 			) : null}

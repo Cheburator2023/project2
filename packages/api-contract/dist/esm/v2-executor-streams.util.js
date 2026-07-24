@@ -1,6 +1,7 @@
 /** Справочник стримов-исполнителей в редакторе логики и на стримовых блоках анкеты. */
 import { normalizeStreamBlockExecutor, normalizeStreamBlockExecutors, resolveStreamBlockExecutorScopeStreams, } from "./v2-stream-block-executor.util";
 import { resolveModelStreamCatalogScopeDbStreams, V2_MODEL_STREAM_EXECUTOR, isV2ModelImplementationStreamCode, } from "./v2-model-stream-typical-works.constants";
+import { resolveModelStreamCatalogScopeFromEntries, } from "./v2-implementation-stream-catalog.util";
 import { isV2ImplementationStreamCode } from "./v2-implementation-streams.util";
 export const V2_EXECUTOR_STREAM_LABELS = [
     "ДАДМ",
@@ -11,8 +12,11 @@ export const V2_EXECUTOR_STREAM_LABELS = [
     "Потоковые данные",
     "Модельный стрим",
 ];
-/** Код справочника v2 для привязки блока к стриму (конструктор). */
-export const V2_EXECUTOR_STREAMS_DICTIONARY_CODE = "v2.streams.executor";
+/**
+ * @deprecated Используйте `V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE`
+ * (`v2.generalInfo.implementationStream`). Константа оставлена для совместимости.
+ */
+export const V2_EXECUTOR_STREAMS_DICTIONARY_CODE = "v2.generalInfo.implementationStream";
 /** Заводские ключи корневых блоков → стрим (миграция старых шаблонов). */
 export const V2_LEGACY_STREAM_BLOCK_EXECUTOR = {
     streamDataSources: "Источники данных",
@@ -50,29 +54,37 @@ const EXECUTOR_SCOPE_DB_STREAMS = {
     "Модельный стрим": resolveModelStreamCatalogScopeDbStreams(),
 };
 /** Стримы БД/области UI, в которых ищется назначение работы для блока typicalWork. */
-export function resolveExecutorScopeDbStreams(executorStream) {
+export function resolveExecutorScopeDbStreams(executorStream, catalog) {
     const trimmed = executorStream.trim();
     if (!trimmed)
         return [];
     if (trimmed === V2_MODEL_STREAM_EXECUTOR ||
         trimmed === "Модельные стримы") {
+        if (catalog?.length) {
+            return resolveModelStreamCatalogScopeFromEntries(catalog);
+        }
         return resolveModelStreamCatalogScopeDbStreams();
     }
     if (isV2ExecutorStreamLabel(trimmed)) {
+        if (trimmed === V2_MODEL_STREAM_EXECUTOR && catalog?.length) {
+            return resolveModelStreamCatalogScopeFromEntries(catalog);
+        }
         return EXECUTOR_SCOPE_DB_STREAMS[trimmed] ?? [trimmed];
     }
-    // Код / DB-имя одного из 5 модельных стримов → его scope (+ legacy umbrella).
+    // Код / DB-имя модельного стрима → его scope (+ legacy umbrella).
     const asCode = (isV2ImplementationStreamCode(trimmed) ? trimmed : null) ??
-        normalizeStreamBlockExecutor(trimmed);
+        normalizeStreamBlockExecutor(trimmed, catalog);
     if (asCode && isV2ModelImplementationStreamCode(asCode)) {
-        const scoped = [...resolveStreamBlockExecutorScopeStreams(asCode)];
+        const scoped = [
+            ...resolveStreamBlockExecutorScopeStreams(asCode, catalog),
+        ];
         if (!scoped.includes(V2_MODEL_STREAM_EXECUTOR)) {
             scoped.push(V2_MODEL_STREAM_EXECUTOR);
         }
         return scoped;
     }
-    if (normalizeStreamBlockExecutor(trimmed)) {
-        return resolveStreamBlockExecutorScopeStreams(trimmed);
+    if (normalizeStreamBlockExecutor(trimmed, catalog)) {
+        return resolveStreamBlockExecutorScopeStreams(trimmed, catalog);
     }
     return [trimmed];
 }

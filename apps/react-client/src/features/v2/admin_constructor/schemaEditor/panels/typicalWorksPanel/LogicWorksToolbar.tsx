@@ -10,9 +10,9 @@ import Paper from "@mui/material/Paper";
 import Popper from "@mui/material/Popper";
 import Typography from "@mui/material/Typography";
 import { useRef, useState } from "react";
+import { useV2ImplementationStreamCatalog } from "@react-client/common/api/queries/v2-streams";
 import {
 	ALL_LOGIC_WORKS_SCOPE,
-	LOGIC_EXECUTOR_STREAMS,
 	LOGIC_STREAM_BLOCK_ROLES,
 	type LogicWorksScope,
 	isAllLogicWorksScope,
@@ -42,6 +42,7 @@ export function LogicWorksToolbar({
 	onScopeChange,
 }: LogicWorksToolbarProps) {
 	const { uiSchema, typicalWorkSaveDisplay } = useSchemaEditor();
+	const { codes: logicStreams, catalog } = useV2ImplementationStreamCatalog();
 	const anchorRef = useRef<HTMLButtonElement>(null);
 	const [pickerOpen, setPickerOpen] = useState(false);
 	const scopePresence = scopeStreamsPresentInSchema(
@@ -95,7 +96,7 @@ export function LogicWorksToolbar({
 						whiteSpace: "nowrap",
 					}}
 				>
-					{scopeLabel(scope)}
+					{scopeLabel(scope, catalog)}
 				</Typography>
 				<Typography component="span" sx={{ fontSize: 11, color: "#aab1c0" }}>
 					▾
@@ -176,7 +177,7 @@ export function LogicWorksToolbar({
 								</Typography>
 							</MenuItem>
 							<Divider sx={{ my: 0.5 }} />
-							{LOGIC_EXECUTOR_STREAMS.map((stream) => {
+							{logicStreams.map((stream) => {
 								const selected = isStreamSelectedInScope(scope, stream);
 								const present = isExecutorStreamPresentInSchema(
 									uiSchema,
@@ -200,7 +201,7 @@ export function LogicWorksToolbar({
 										<ListItemText
 											primary={
 												<ExecutorStreamMenuRow
-													stream={streamDisplayLabel(stream)}
+													stream={streamDisplayLabel(stream, catalog)}
 													color={streamColor(stream)}
 													present={present}
 													selected={selected}

@@ -45,6 +45,7 @@ import { V2TypicalWorkVersionConfigEntity } from "../entities/v2-typical-work-ve
 import { V2TypicalWorkEntity } from "../entities/v2-typical-work.entity";
 import { V2TemplateVersionEntity } from "../entities/v2-template-version.entity";
 import { V2TypicalWorkParamCatalogService } from "./v2-typical-work-param-catalog.service";
+import { V2StreamCatalogService } from "./v2-stream-catalog.service";
 import { V2_FACTORY_TEMPLATE_TYPICAL_WORKS_REGISTRY } from "../constants/v2-factory-template-typical-works-registry";
 
 export type CatalogGeneratedTask = {
@@ -305,6 +306,7 @@ export class V2TypicalWorkRuntimeService {
 		@InjectRepository(V2TemplateVersionEntity)
 		private readonly templateVersionRepository: Repository<V2TemplateVersionEntity>,
 		private readonly paramCatalogService: V2TypicalWorkParamCatalogService,
+		private readonly streamCatalog: V2StreamCatalogService,
 	) {}
 
 	async buildSourceCatalogTasks(
@@ -331,7 +333,8 @@ export class V2TypicalWorkRuntimeService {
 		if (!stream || !archComponentType) return [];
 		if (params.allowedWorkIds?.length === 0) return [];
 
-		const scopeStreams = [...resolveExecutorScopeDbStreams(stream)];
+		const catalog = await this.streamCatalog.getCatalog({ activeOnly: false });
+		const scopeStreams = [...resolveExecutorScopeDbStreams(stream, catalog)];
 		const streamScope =
 			scopeStreams.length > 0 ? scopeStreams : [stream];
 

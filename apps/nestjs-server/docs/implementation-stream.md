@@ -29,9 +29,17 @@ Legacy-подписи executor-стримов (`ДАДМ`, `ПиРМ`, `Исто
 
 ## 2. Справочник: коды и подписи
 
-Источник истины: `packages/api-contract/src/v2-implementation-streams.util.ts`.
+**Runtime source of truth:** items словаря `v2.generalInfo.implementationStream` в БД
+(админка → **Стримы** `/admin/streams`, API `GET /v2/streams`).
 
-| Код (≤ 6 символов) | Подпись |
+**Factory defaults** (seed + именованные константы для тестов):
+`packages/api-contract/src/v2-implementation-streams.util.ts` и
+`buildFactoryImplementationStreamCatalog()` в `v2-implementation-stream-catalog.util.ts`.
+
+Seed для этого словаря — **soft-sync**: добавляет отсутствующие factory-коды, **не**
+перезаписывает label/payload и **не** удаляет стримы, созданные в UI.
+
+| Код (≤ 6 символов) | Подпись (factory) |
 |--------------------|---------|
 | `kmbkcb` | Разработка моделей КМБ и КСБ |
 | `rb` | Моделирование РБ |
@@ -53,20 +61,35 @@ v2.generalInfo.implementationStream
 
 Константа: `V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE`.
 
+### Payload item (метаданные для логики / фильтра)
+
+| Поле | Назначение |
+|------|------------|
+| `storeCode: true` | в formData пишется code |
+| `dbNames[]` | имена в БД типовых работ; первое — канон при назначении |
+| `legacyLabels[]` | старые UI-подписи (`ДАДМ`, …) |
+| `keycloakAliases[]` | dept/group → allow-list stream filter |
+| `isModelStream` | участие в umbrella «Модельный стрим» |
+| `v1Labels[]` | aliases v1 `streamExecutor` |
+
+> Создание стрима в UI **не** создаёт группу Keycloak/AD — только aliases в каталоге.
+
 ### Где ещё живёт справочник
 
 | Место | Роль |
 |-------|------|
-| `v2-default-anketa.snapshot.json` | `enum` = коды, `enumNames` = подписи |
-| `v2-default-organizational-dictionaries.ts` | seed items (`code` / `label`, `payload.storeCode: true`) |
-| `parseDictionaryJsonToEnumPair` (react-client) | для этого справочника в форму кладётся **code**, не label |
+| `/admin/streams` | реестр CRUD (AG Grid) |
+| `GET /v2/streams` | resolved catalog для клиента |
+| `v2-default-anketa.snapshot.json` | factory enum / enumNames |
+| `v2-default-organizational-dictionaries.ts` | soft-seed items + payload |
+| `parseDictionaryJsonToEnumPair` (react-client) | в форму кладётся **code** |
 
 Хелперы:
 
-- `isV2ImplementationStreamCode(value)`
-- `resolveImplementationStreamLabel(code)`
-- `buildImplementationStreamEnumPair()` → `{ enums, enumNames }`
-- `V2_IMPLEMENTATION_STREAM` — именованные константы кодов (`V2_IMPLEMENTATION_STREAM.RB`, …)
+- `isV2ImplementationStreamCode(value)` — factory-коды (тесты / миграции)
+- `buildFactoryImplementationStreamCatalog()` / `parseImplementationStreamPayload`
+- `resolveStreamBlockExecutorScopeStreams(code, catalog?)`
+- `V2_IMPLEMENTATION_STREAM` — именованные константы factory-кодов
 
 ### Логика анкеты
 

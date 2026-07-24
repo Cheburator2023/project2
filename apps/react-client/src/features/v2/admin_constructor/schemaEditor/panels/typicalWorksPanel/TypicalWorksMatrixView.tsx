@@ -2,12 +2,12 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import type { V2TypicalWorkListItemDto } from "@smart-anketa/api-contract";
 import { usePatchV2TypicalWork } from "@react-client/common/api/queries/v2-works";
+import { useV2ImplementationStreamCatalog } from "@react-client/common/api/queries/v2-streams";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { toast } from "@react-client/common/toasts";
 import { ARCH_COMPONENT_DOT } from "./typicalWorksUi";
 import {
 	isWorkAssignedToLogicStream,
-	LOGIC_EXECUTOR_STREAMS,
 	pickDbStreamForLogicStream,
 	shortenStreamLabel,
 	streamColor,
@@ -41,12 +41,17 @@ export function TypicalWorksMatrixView({
 	onOpenWork,
 }: TypicalWorksMatrixViewProps) {
 	const patch = usePatchV2TypicalWork();
+	const { codes: logicStreams, catalog } = useV2ImplementationStreamCatalog();
 
 	const handleAssign = async (
 		work: V2TypicalWorkListItemDto,
 		logicStream: string,
 	) => {
-		const streamExecutor = pickDbStreamForLogicStream(logicStream, work.streams);
+		const streamExecutor = pickDbStreamForLogicStream(
+			logicStream,
+			work.streams,
+			catalog,
+		);
 		if (work.streams.includes(streamExecutor)) return;
 		try {
 			await patch.mutateAsync({
@@ -57,7 +62,7 @@ export function TypicalWorksMatrixView({
 				},
 			});
 			toast.success(
-				`«${work.name}» назначена на «${streamDisplayLabel(logicStream)}»`,
+				`«${work.name}» назначена на «${streamDisplayLabel(logicStream, catalog)}»`,
 			);
 			onOpenWork(work.id, streamExecutor);
 		} catch (err) {
@@ -98,7 +103,7 @@ export function TypicalWorksMatrixView({
 					>
 						Типовая работа
 					</Box>
-					{LOGIC_EXECUTOR_STREAMS.map((stream) => (
+					{logicStreams.map((stream) => (
 						<Box
 							key={stream}
 							sx={{
@@ -128,7 +133,7 @@ export function TypicalWorksMatrixView({
 										bgcolor: streamColor(stream),
 									}}
 								/>
-								{shortenStreamLabel(stream)}
+								{shortenStreamLabel(stream, 16, catalog)}
 							</Box>
 						</Box>
 					))}
@@ -170,7 +175,7 @@ export function TypicalWorksMatrixView({
 								</Box>
 							</Box>
 
-							{LOGIC_EXECUTOR_STREAMS.map((logicStream) => {
+							{logicStreams.map((logicStream) => {
 								const assigned = isWorkAssignedToLogicStream(
 									work.streams,
 									logicStream,
@@ -178,6 +183,7 @@ export function TypicalWorksMatrixView({
 								const dbStream = pickDbStreamForLogicStream(
 									logicStream,
 									work.streams,
+									catalog,
 								);
 								const norm =
 									work.normsByStream?.[dbStream] ??

@@ -82,40 +82,58 @@ const ARCH_COMPONENT_RECOMMENDED_STREAMS: Record<
 	],
 };
 
-export function streamDisplayLabel(stream: string): string {
-	return resolveStreamBlockExecutorLabel(stream);
+export function streamDisplayLabel(
+	stream: string,
+	catalog?: readonly import("@smart-anketa/api-contract").V2ImplementationStreamCatalogEntry[],
+): string {
+	return resolveStreamBlockExecutorLabel(stream, catalog);
 }
 
 /** Код implementationStream для DB-имени или кода стрима. */
-export function streamAreaKey(stream: string): string {
-	return resolveLogicStreamForDbExecutor(stream) ?? stream;
+export function streamAreaKey(
+	stream: string,
+	catalog?: readonly import("@smart-anketa/api-contract").V2ImplementationStreamCatalogEntry[],
+): string {
+	return resolveLogicStreamForDbExecutor(stream, catalog) ?? stream;
 }
 
-export function resolveScopeStreams(scope: LogicWorksScope): string[] {
+export function resolveScopeStreams(
+	scope: LogicWorksScope,
+	catalog?: readonly import("@smart-anketa/api-contract").V2ImplementationStreamCatalogEntry[],
+	streamCodes: readonly string[] = LOGIC_EXECUTOR_STREAMS,
+): string[] {
 	if (scope.kind === "all") {
-		return LOGIC_EXECUTOR_STREAMS.flatMap((code) => [
-			...resolveStreamBlockExecutorScopeStreams(code),
+		return streamCodes.flatMap((code) => [
+			...resolveStreamBlockExecutorScopeStreams(code, catalog),
 		]);
 	}
 	return scope.streams.flatMap((stream) => [
-		...resolveStreamBlockExecutorScopeStreams(stream),
+		...resolveStreamBlockExecutorScopeStreams(stream, catalog),
 	]);
 }
 
 export function workMatchesLogicScope(
 	workStreams: string[],
 	scope: LogicWorksScope,
+	catalog?: readonly import("@smart-anketa/api-contract").V2ImplementationStreamCatalogEntry[],
+	streamCodes?: readonly string[],
 ): boolean {
 	if (scope.kind === "all") return true;
-	return workAssignedToScope(workStreams, resolveScopeStreams(scope));
+	return workAssignedToScope(
+		workStreams,
+		resolveScopeStreams(scope, catalog, streamCodes),
+	);
 }
 
-export function scopeLabel(scope: LogicWorksScope): string {
+export function scopeLabel(
+	scope: LogicWorksScope,
+	catalog?: readonly import("@smart-anketa/api-contract").V2ImplementationStreamCatalogEntry[],
+): string {
 	if (scope.kind === "all") return "Все области";
 	const streamPart =
 		scope.streams.length === 1
-			? streamDisplayLabel(scope.streams[0])
-			: resolveStreamBlockExecutorsLabel(scope.streams);
+			? streamDisplayLabel(scope.streams[0]!, catalog)
+			: resolveStreamBlockExecutorsLabel(scope.streams, catalog);
 	const rolePart =
 		scope.roles.length > 0 ? resolveStreamBlockRolesLabel(scope.roles) : "";
 	if (streamPart && rolePart) return `${streamPart} · ${rolePart}`;
@@ -280,24 +298,30 @@ export function isWorkAssignedToLogicStream(
 export function pickDbStreamForLogicStream(
 	logicStream: string,
 	workStreams: string[],
+	catalog?: readonly import("@smart-anketa/api-contract").V2ImplementationStreamCatalogEntry[],
 ): string {
-	const code = normalizeStreamBlockExecutor(logicStream);
+	const code = normalizeStreamBlockExecutor(logicStream, catalog);
 	if (!code) return logicStream.trim();
-	const scope = resolveStreamBlockExecutorScopeStreams(code);
+	const scope = resolveStreamBlockExecutorScopeStreams(code, catalog);
 	const existing = workStreams.find(
 		(stream) =>
-			scope.includes(stream) || resolveLogicStreamForDbExecutor(stream) === code,
+			scope.includes(stream) ||
+			resolveLogicStreamForDbExecutor(stream, catalog) === code,
 	);
 	if (existing) return existing;
-	return resolveLogicStreamDbExecutor(code);
+	return resolveLogicStreamDbExecutor(code, catalog);
 }
 
 export function resolveDbStreamsForScope(scopeStreams: string[]): string[] {
 	return scopeStreams;
 }
 
-export function shortenStreamLabel(stream: string, max = 16): string {
-	const label = streamDisplayLabel(stream);
+export function shortenStreamLabel(
+	stream: string,
+	max = 16,
+	catalog?: readonly import("@smart-anketa/api-contract").V2ImplementationStreamCatalogEntry[],
+): string {
+	const label = streamDisplayLabel(stream, catalog);
 	return label.length > max ? `${label.slice(0, max - 1)}…` : label;
 }
 

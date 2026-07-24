@@ -1,5 +1,6 @@
 import { inferLegacyStreamExecutorForBlockKey, isV2ExecutorStreamLabel, V2_DB_STREAM_TO_EXECUTOR_AREA, } from "./v2-executor-streams.util";
 import { V2_IMPLEMENTATION_STREAM, V2_IMPLEMENTATION_STREAM_CODES, V2_IMPLEMENTATION_STREAM_LABELS, isV2ImplementationStreamCode, } from "./v2-implementation-streams.util";
+import { findImplementationStreamCatalogEntry, isValidImplementationStreamCodeFormat, resolveCatalogDbExecutorName, resolveCatalogEntryScopeStreams, } from "./v2-implementation-stream-catalog.util";
 import { isV2ModelImplementationStreamCode, V2_MODEL_STREAM_EXECUTOR, } from "./v2-model-stream-typical-works.constants";
 const LEGACY_EXECUTOR_LABEL_TO_CODE = {
     ПиРМ: V2_IMPLEMENTATION_STREAM.PIRM,
@@ -27,7 +28,7 @@ const IMPLEMENTATION_STREAM_DB_SCOPE = {
         "ИД. Внешний",
         "Источники данных",
     ],
-    [V2_IMPLEMENTATION_STREAM.PIRM]: ["ПиРМ", "ПiРМ (правила и развитие модели)"],
+    [V2_IMPLEMENTATION_STREAM.PIRM]: ["ПиРМ", "ПиРМ (правила и развитие модели)"],
     [V2_IMPLEMENTATION_STREAM.MDLCTL]: ["Контроль моделей"],
     [V2_IMPLEMENTATION_STREAM.DADM]: [
         "ДАДМ",
@@ -40,8 +41,8 @@ const IMPLEMENTATION_STREAM_DB_SCOPE = {
     [V2_IMPLEMENTATION_STREAM.STRDAT]: ["Потоковые данные"],
     [V2_IMPLEMENTATION_STREAM.DIGAGT]: ["Цифровые агенты"],
 };
-/** Нормализует код или legacy-подпись стрима → код V2_IMPLEMENTATION_STREAM. */
-export function normalizeStreamBlockExecutor(value) {
+/** Нормализует код или legacy-подпись стрима → код V2_IMPLEMENTATION_STREAM / каталога. */
+export function normalizeStreamBlockExecutor(value, catalog) {
     const trimmed = value.trim();
     if (!trimmed)
         return null;
@@ -54,12 +55,22 @@ export function normalizeStreamBlockExecutor(value) {
     if (isV2ExecutorStreamLabel(trimmed)) {
         return LEGACY_EXECUTOR_LABEL_TO_CODE[trimmed] ?? null;
     }
+    if (catalog?.length) {
+        const entry = findImplementationStreamCatalogEntry(trimmed, catalog);
+        if (entry) {
+            return entry.code;
+        }
+    }
+    // DB-owned каталог: любой валидный код (1–6 [a-z0-9]) принимаем как стрим.
+    if (isValidImplementationStreamCodeFormat(trimmed)) {
+        return trimmed;
+    }
     return null;
 }
 /** Нормализует одно значение или массив в уникальный список кодов (порядок сохраняется). */
-export function normalizeStreamBlockExecutors(value) {
+export function normalizeStreamBlockExecutors(value, catalog) {
     if (typeof value === "string") {
-        const code = normalizeStreamBlockExecutor(value);
+        const code = normalizeStreamBlockExecutor(value, catalog);
         return code ? [code] : [];
     }
     if (!Array.isArray(value))
@@ -68,7 +79,7 @@ export function normalizeStreamBlockExecutors(value) {
     for (const item of value) {
         if (typeof item !== "string")
             continue;
-        const code = normalizeStreamBlockExecutor(item);
+        const code = normalizeStreamBlockExecutor(item, catalog);
         if (code && !result.includes(code))
             result.push(code);
     }
@@ -82,11 +93,18 @@ export function serializeStreamBlockExecutors(executors) {
         return executors[0];
     return [...executors];
 }
-export function resolveStreamBlockExecutorsLabel(value) {
-    const codes = normalizeStreamBlockExecutors(value);
+export function resolveStreamBlockExecutorsLabel(value, catalog) {
+    const codes = normalizeStreamBlockExecutors(value, catalog);
     if (codes.length === 0)
         return "";
-    return codes.map((code) => V2_IMPLEMENTATION_STREAM_LABELS[code]).join(", ");
+    return codes
+        .map((code) => {
+        const entry = catalog
+            ? findImplementationStreamCatalogEntry(code, catalog)
+            : null;
+        return entry?.label ?? V2_IMPLEMENTATION_STREAM_LABELS[code] ?? code;
+    })
+        .join(", ");
 }
 export function inferLegacyStreamBlockExecutorCode(blockKey) {
     const direct = LEGACY_BLOCK_KEY_TO_CODE[blockKey];
@@ -97,14 +115,25 @@ export function inferLegacyStreamBlockExecutorCode(blockKey) {
         return normalizeStreamBlockExecutor(legacyLabel);
     return null;
 }
-export function resolveStreamBlockExecutorLabel(value) {
+export function resolveStreamBlockExecutorLabel(value, catalog) {
+    if (catalog?.length) {
+        const entry = findImplementationStreamCatalogEntry(value, catalog);
+        if (entry)
+            return entry.label;
+    }
     const code = normalizeStreamBlockExecutor(value);
-    if (code)
-        return V2_IMPLEMENTATION_STREAM_LABELS[code];
+    if (code) {
+        return V2_IMPLEMENTATION_STREAM_LABELS[code] ?? code;
+    }
     return value.trim();
 }
 /** Стримы БД / подписи, в которых ищется назначение работы для блока. */
-export function resolveStreamBlockExecutorScopeStreams(executor) {
+export function resolveStreamBlockExecutorScopeStreams(executor, catalog) {
+    if (catalog?.length) {
+        const entry = findImplementationStreamCatalogEntry(executor, catalog);
+        if (entry)
+            return resolveCatalogEntryScopeStreams(entry);
+    }
     const code = normalizeStreamBlockExecutor(executor);
     if (!code) {
         const trimmed = executor.trim();
@@ -115,7 +144,7 @@ export function resolveStreamBlockExecutorScopeStreams(executor) {
     const result = scoped ? [...scoped] : [];
     if (!result.includes(code))
         result.push(code);
-    if (!result.includes(label))
+    if (label && !result.includes(label))
         result.push(label);
     // Legacy umbrella: старые типовые работы привязаны к «Модельный стрим».
     if (isV2ModelImplementationStreamCode(code) &&
@@ -125,10 +154,15 @@ export function resolveStreamBlockExecutorScopeStreams(executor) {
     return result;
 }
 /** Код implementationStream для имени стрима в БД типовых работ. */
-export function resolveLogicStreamForDbExecutor(dbStream) {
+export function resolveLogicStreamForDbExecutor(dbStream, catalog) {
     const trimmed = dbStream.trim();
     if (!trimmed)
         return null;
+    if (catalog?.length) {
+        const entry = findImplementationStreamCatalogEntry(trimmed, catalog);
+        if (entry)
+            return entry.code;
+    }
     const direct = normalizeStreamBlockExecutor(trimmed);
     if (direct)
         return direct;
@@ -143,15 +177,20 @@ export function resolveLogicStreamForDbExecutor(dbStream) {
     return null;
 }
 /** Каноническое имя стрима в БД типовых работ для кода / legacy-значения. */
-export function resolveLogicStreamDbExecutor(codeOrValue) {
+export function resolveLogicStreamDbExecutor(codeOrValue, catalog) {
+    if (catalog?.length) {
+        const entry = findImplementationStreamCatalogEntry(codeOrValue, catalog);
+        if (entry)
+            return resolveCatalogDbExecutorName(entry);
+    }
     const code = normalizeStreamBlockExecutor(codeOrValue);
     if (!code)
         return codeOrValue.trim();
     const scoped = IMPLEMENTATION_STREAM_DB_SCOPE[code];
     const label = V2_IMPLEMENTATION_STREAM_LABELS[code];
-    if (scoped?.includes(label))
+    if (label && scoped?.includes(label))
         return label;
     if (scoped?.length)
         return scoped[0];
-    return label;
+    return label ?? code;
 }

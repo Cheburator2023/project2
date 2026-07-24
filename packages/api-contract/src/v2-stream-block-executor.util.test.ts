@@ -28,6 +28,8 @@ describe("v2-stream-block-executor.util", () => {
 		expect(normalizeStreamBlockExecutor("ДАДМ")).toBe(
 			V2_IMPLEMENTATION_STREAM.DADM,
 		);
+		expect(normalizeStreamBlockExecutor("newstr")).toBe("newstr");
+		expect(normalizeStreamBlockExecutor("tooLong")).toBeNull();
 	});
 
 	it("maps legacy block keys to implementation stream codes", () => {

@@ -22,6 +22,7 @@ export * from "./v2-anketa-workflow.types";
 export * from "./v2-anketa-workflow.util";
 export * from "./v2-executor-streams.util";
 export * from "./v2-implementation-streams.util";
+export * from "./v2-implementation-stream-catalog.util";
 export * from "./v2-stream-block-executor.util";
 export * from "./v2-stream-block-role.util";
 export * from "./v2-anketa-section-ui.util";

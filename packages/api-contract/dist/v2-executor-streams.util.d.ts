@@ -1,7 +1,11 @@
+import { type V2ImplementationStreamCatalogEntry } from "./v2-implementation-stream-catalog.util";
 export declare const V2_EXECUTOR_STREAM_LABELS: readonly ["ДАДМ", "ПиРМ", "Источники данных", "Контроль моделей", "Цифровые агенты", "Потоковые данные", "Модельный стрим"];
 export type V2ExecutorStreamLabel = (typeof V2_EXECUTOR_STREAM_LABELS)[number];
-/** Код справочника v2 для привязки блока к стриму (конструктор). */
-export declare const V2_EXECUTOR_STREAMS_DICTIONARY_CODE = "v2.streams.executor";
+/**
+ * @deprecated Используйте `V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE`
+ * (`v2.generalInfo.implementationStream`). Константа оставлена для совместимости.
+ */
+export declare const V2_EXECUTOR_STREAMS_DICTIONARY_CODE = "v2.generalInfo.implementationStream";
 /** Заводские ключи корневых блоков → стрим (миграция старых шаблонов). */
 export declare const V2_LEGACY_STREAM_BLOCK_EXECUTOR: Partial<Record<string, V2ExecutorStreamLabel>>;
 /** Имена стримов в БД типовых работ → область UI. */
@@ -10,7 +14,7 @@ export declare function isV2ExecutorStreamLabel(value: string): value is V2Execu
 export declare function inferLegacyStreamExecutorForBlockKey(blockKey: string): V2ExecutorStreamLabel | null;
 export declare function resolveExecutorStreamAreaLabel(stream: string): string;
 /** Стримы БД/области UI, в которых ищется назначение работы для блока typicalWork. */
-export declare function resolveExecutorScopeDbStreams(executorStream: string): readonly string[];
+export declare function resolveExecutorScopeDbStreams(executorStream: string, catalog?: readonly V2ImplementationStreamCatalogEntry[]): readonly string[];
 /** Работа назначена на стрим-исполнитель блока typicalWork (legacy без boundWorkIds). */
 export declare function typicalWorkAssignedToExecutorStream(workStreams: readonly string[], executorStream: string): boolean;
 /** Работа назначена хотя бы на один из стримов-исполнителей блока. */

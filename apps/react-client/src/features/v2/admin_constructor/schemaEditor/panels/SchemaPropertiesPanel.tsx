@@ -42,6 +42,7 @@ import {
 import {
 	isExecutorStreamPresentInSchema,
 	isV2AnketaHiddenUiNode,
+	collectExecutorStreamBlocks,
 	readV2AnketaSectionUiOptions,
 	resolveStreamExecutorForTypicalWorkOutputPath,
 	resolveV2AnketaStreamBlockOptions,
@@ -50,10 +51,7 @@ import {
 	V2_ANKETA_SECTION_ROLE_VALUES,
 	V2_ARCH_COMPONENT_LABELS,
 	V2_IMPLEMENTATION_STREAM,
-	V2_IMPLEMENTATION_STREAM_CODES,
 	V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE,
-	V2_IMPLEMENTATION_STREAM_LABELS,
-	normalizeStreamBlockExecutor,
 	normalizeStreamBlockExecutors,
 	normalizeStreamBlockRoles,
 	resolveStreamBlockExecutorLabel,
@@ -67,6 +65,7 @@ import type { ReactNode } from "react";
 import { useCallback, useMemo } from "react";
 import { useParams, useSearchParams } from "react-router";
 import { useV2TypicalWorksList } from "@react-client/common/api/queries/v2-works";
+import { useV2ImplementationStreamCatalog } from "@react-client/common/api/queries/v2-streams";
 import {
 	BIND_POINTER_QUERY,
 	NEW_WORK_QUERY,
@@ -883,11 +882,37 @@ export function SchemaPropertiesPanel() {
 		const explicit = normalizeStreamBlockExecutors(
 			sectionUiOptions.streamExecutor,
 		);
-		if (explicit.length > 0) return explicit;
-		return streamBlockOptions.streamExecutors;
+		if (explicit.length > 0) return [explicit[0]!];
+		const fromOpts = streamBlockOptions.streamExecutors;
+		return fromOpts.length > 0 ? [fromOpts[0]!] : [];
 	}, [
 		sectionUiOptions.streamExecutor,
 		streamBlockOptions.streamExecutors,
+	]);
+	const streamsAssignedToOtherBlocks = useMemo(() => {
+		const used = new Set<string>();
+		for (const block of collectExecutorStreamBlocks(uiSchema)) {
+			if (block.blockKey === rootBlockKey) continue;
+			for (const code of block.streamExecutors) {
+				used.add(code);
+			}
+		}
+		return [...used];
+	}, [uiSchema, rootBlockKey]);
+	const { codes: catalogStreamCodes } = useV2ImplementationStreamCatalog();
+	const defaultFreeStreamExecutor = useMemo(() => {
+		const current = streamBlockExecutors[0];
+		if (current && !streamsAssignedToOtherBlocks.includes(current)) {
+			return current;
+		}
+		const free = catalogStreamCodes.find(
+			(code) => !streamsAssignedToOtherBlocks.includes(code),
+		);
+		return (free ?? V2_IMPLEMENTATION_STREAM.IDSRC) as V2ImplementationStreamCode;
+	}, [
+		streamBlockExecutors,
+		streamsAssignedToOtherBlocks,
+		catalogStreamCodes,
 	]);
 	const streamBlockRoleCodes = useMemo(() => {
 		const explicit = normalizeStreamBlockRoles(
@@ -1269,11 +1294,9 @@ export function SchemaPropertiesPanel() {
 											if (e.target.checked) {
 												patchSectionUi({
 													streamBlock: true,
-													streamExecutor: streamExecutorsToUiValue(
-														streamBlockExecutors.length > 0
-															? streamBlockExecutors
-															: [V2_IMPLEMENTATION_STREAM.IDSRC],
-													),
+													streamExecutor: streamExecutorsToUiValue([
+														defaultFreeStreamExecutor,
+													]),
 													sectionRole: sectionUiOptions.sectionRole ?? "main",
 												});
 												return;
@@ -1290,15 +1313,19 @@ export function SchemaPropertiesPanel() {
 							{streamBlockOptions.streamBlock ? (
 								<Box>
 									<StreamExecutorMultiSelect
+										multiple={false}
 										value={streamBlockExecutors}
+										excludedCodes={streamsAssignedToOtherBlocks}
 										uiSchema={uiSchema}
 										onChange={(codes) =>
 											patchSectionUi({
 												streamBlock: true,
-												streamExecutor: streamExecutorsToUiValue(codes),
+												streamExecutor: streamExecutorsToUiValue(
+													codes.slice(0, 1),
+												),
 											})
 										}
-										helperText={`Справочник ${V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE}. Используется в логике типовых и нетиповых работ и ролевке секций.`}
+										helperText={`Один стрим на блок. Уже занятые другими стрим-блоками скрыты. Справочник ${V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE}.`}
 									/>
 									<StreamBlockRoleMultiSelect
 										value={streamBlockRoleCodes}

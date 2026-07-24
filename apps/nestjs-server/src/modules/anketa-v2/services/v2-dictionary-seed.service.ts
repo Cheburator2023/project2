@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
+import { V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE } from "@smart-anketa/api-contract";
 import { Repository } from "typeorm";
 import { V2_ALL_DEFAULT_DICTIONARIES } from "../constants/v2-default-dictionary-codes";
 import { isV2DefaultDictionaryCode } from "../constants/v2-default-dictionary-codes";
@@ -38,7 +39,11 @@ export class V2DictionarySeedService implements OnModuleInit {
 		await this.syncDefaultMetadata();
 	}
 
-	/** Полностью приводит items всех заводских справочников к factory bundle. */
+	/**
+	 * Приводит items заводских справочников к factory bundle.
+	 * `implementationStream` — soft-sync: только добавить отсутствующие коды,
+	 * не перезаписывать label/payload и не удалять admin-added.
+	 */
 	async syncDefaultDictionaryItems(): Promise<void> {
 		let updated = 0;
 		for (const def of V2_ALL_DEFAULT_DICTIONARIES) {
@@ -46,6 +51,10 @@ export class V2DictionarySeedService implements OnModuleInit {
 				where: { code: def.code },
 			});
 			if (!dictionary) continue;
+
+			const isStreamCatalog =
+				def.code === V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE;
+
 			const existing = await this.itemRepository.find({
 				where: { dictionaryId: dictionary.id },
 				order: { order: "ASC" },
@@ -71,6 +80,10 @@ export class V2DictionarySeedService implements OnModuleInit {
 					dictionaryChanged = true;
 					continue;
 				}
+				if (isStreamCatalog) {
+					// Soft: не трогаем существующие стримы (DB-owned каталог).
+					continue;
+				}
 				const nextPayload = expected.payload ?? null;
 				if (
 					current.label !== expected.label ||
@@ -89,10 +102,12 @@ export class V2DictionarySeedService implements OnModuleInit {
 				}
 			}
 
-			const stale = existing.filter((item) => !expectedCodes.has(item.code));
-			if (stale.length > 0) {
-				await this.itemRepository.remove(stale);
-				dictionaryChanged = true;
+			if (!isStreamCatalog) {
+				const stale = existing.filter((item) => !expectedCodes.has(item.code));
+				if (stale.length > 0) {
+					await this.itemRepository.remove(stale);
+					dictionaryChanged = true;
+				}
 			}
 			if (dictionaryChanged) updated++;
 		}
