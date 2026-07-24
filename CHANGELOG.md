@@ -1,5 +1,14 @@
 # Semantic Versioning Changelog
 
+# [1.44.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.43.0...v1.44.0) (2026-07-24)
+
+
+### Features
+
+* enhance model stream implementation and catalog resolution ([251e64b](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/251e64bceab42127e3876fac5573fdb6ef9be31c))
+* enhance stream catalog integration and payload handling ([a64901d](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/a64901dc1e047650829da44d437694513b37aacf))
+* implement v2 stream catalog management and UI integration ([ed31aff](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/ed31affe775f649d14cb1f58697c8ecd55df86d4))
+
 # [1.43.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.42.0...v1.43.0) (2026-07-24)
 
 
