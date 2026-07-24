@@ -135,10 +135,11 @@ export function resolveExecutorScopeDbStreams(
 export function typicalWorkAssignedToExecutorStream(
 	workStreams: readonly string[],
 	executorStream: string,
+	catalog?: readonly V2ImplementationStreamCatalogEntry[],
 ): boolean {
 	const trimmed = executorStream.trim();
 	if (!trimmed) return false;
-	const scopeStreams = resolveExecutorScopeDbStreams(trimmed);
+	const scopeStreams = resolveExecutorScopeDbStreams(trimmed, catalog);
 	return workStreams.some(
 		(stream) =>
 			scopeStreams.includes(stream.trim()) ||
@@ -150,10 +151,11 @@ export function typicalWorkAssignedToExecutorStream(
 export function typicalWorkAssignedToAnyExecutorStream(
 	workStreams: readonly string[],
 	executorStreams: string | readonly string[],
+	catalog?: readonly V2ImplementationStreamCatalogEntry[],
 ): boolean {
-	const executors = normalizeStreamBlockExecutors(executorStreams);
+	const executors = normalizeStreamBlockExecutors(executorStreams, catalog);
 	if (executors.length === 0) return false;
 	return executors.some((executor) =>
-		typicalWorkAssignedToExecutorStream(workStreams, executor),
+		typicalWorkAssignedToExecutorStream(workStreams, executor, catalog),
 	);
 }

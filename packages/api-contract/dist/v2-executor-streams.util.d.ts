@@ -16,6 +16,6 @@ export declare function resolveExecutorStreamAreaLabel(stream: string): string;
 /** Стримы БД/области UI, в которых ищется назначение работы для блока typicalWork. */
 export declare function resolveExecutorScopeDbStreams(executorStream: string, catalog?: readonly V2ImplementationStreamCatalogEntry[]): readonly string[];
 /** Работа назначена на стрим-исполнитель блока typicalWork (legacy без boundWorkIds). */
-export declare function typicalWorkAssignedToExecutorStream(workStreams: readonly string[], executorStream: string): boolean;
+export declare function typicalWorkAssignedToExecutorStream(workStreams: readonly string[], executorStream: string, catalog?: readonly V2ImplementationStreamCatalogEntry[]): boolean;
 /** Работа назначена хотя бы на один из стримов-исполнителей блока. */
-export declare function typicalWorkAssignedToAnyExecutorStream(workStreams: readonly string[], executorStreams: string | readonly string[]): boolean;
+export declare function typicalWorkAssignedToAnyExecutorStream(workStreams: readonly string[], executorStreams: string | readonly string[], catalog?: readonly V2ImplementationStreamCatalogEntry[]): boolean;

@@ -7,6 +7,7 @@ import {
 	V2_IMPLEMENTATION_STREAM_CODES,
 	V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE,
 	V2_IMPLEMENTATION_STREAM_LABELS,
+	isV2ImplementationStreamCode,
 	type V2ImplementationStreamCode,
 } from "./v2-implementation-streams.util";
 import {
@@ -156,15 +157,21 @@ export function buildFactoryImplementationStreamCatalog(): V2ImplementationStrea
 
 export function parseImplementationStreamPayload(
 	raw: unknown,
-	options?: { label?: string },
+	options?: { label?: string; code?: string },
 ): V2ImplementationStreamPayload {
 	const record =
 		raw && typeof raw === "object" && !Array.isArray(raw)
 			? (raw as Record<string, unknown>)
 			: {};
 	const label = options?.label?.trim() ?? "";
+	const code = options?.code?.trim() ?? "";
 	let dbNames = asStringArray(record.dbNames);
-	if (dbNames.length === 0 && label) dbNames = [label];
+	if (dbNames.length === 0) {
+		// Канон для назначений типовых работ: код (как в uiSchema.streamExecutor),
+		// плюс подпись для обратной совместимости / отображения.
+		if (code) dbNames.push(code);
+		if (label && !dbNames.includes(label)) dbNames.push(label);
+	}
 	return {
 		storeCode: true,
 		fieldPointer:
@@ -196,7 +203,7 @@ export function normalizeImplementationStreamCatalogEntry(input: {
 			? input.order
 			: 0,
 		isActive: input.isActive !== false,
-		payload: parseImplementationStreamPayload(input.payload, { label }),
+		payload: parseImplementationStreamPayload(input.payload, { label, code }),
 	};
 }
 
@@ -259,6 +266,11 @@ export function resolveModelStreamCatalogScopeFromEntries(
 export function resolveCatalogDbExecutorName(
 	entry: V2ImplementationStreamCatalogEntry,
 ): string {
+	// Кастомные стримы: код совпадает с ui:options.streamExecutor стрим-блока.
+	// Заводские — первое dbNames (исторические русские имена в БД).
+	if (!isV2ImplementationStreamCode(entry.code)) {
+		return entry.code;
+	}
 	return entry.payload.dbNames[0] ?? entry.label;
 }
 

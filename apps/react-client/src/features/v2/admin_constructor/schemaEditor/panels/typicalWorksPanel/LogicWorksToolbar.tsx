@@ -48,7 +48,7 @@ export function LogicWorksToolbar({
 	const scopePresence = scopeStreamsPresentInSchema(
 		uiSchema,
 		scope,
-		(stream) => isExecutorStreamPresentInSchema(uiSchema, stream),
+		(stream) => isExecutorStreamPresentInSchema(uiSchema, stream, catalog),
 	);
 
 	return (
@@ -182,6 +182,7 @@ export function LogicWorksToolbar({
 								const present = isExecutorStreamPresentInSchema(
 									uiSchema,
 									stream,
+									catalog,
 								);
 								return (
 									<MenuItem

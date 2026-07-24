@@ -393,7 +393,7 @@ export class V2DictionaryService {
 				typeof dto.label === "string" ? dto.label : item.label;
 			const nextPayload = parseImplementationStreamPayload(
 				dto.payload !== undefined ? dto.payload : item.payload,
-				{ label: nextLabel },
+				{ label: nextLabel, code: item.code },
 			);
 			Object.assign(item, {
 				...dto,
@@ -452,7 +452,7 @@ export class V2DictionaryService {
 			...dto,
 			code,
 			label,
-			payload: parseImplementationStreamPayload(dto.payload, { label }),
+			payload: parseImplementationStreamPayload(dto.payload, { label, code }),
 		};
 	}
 

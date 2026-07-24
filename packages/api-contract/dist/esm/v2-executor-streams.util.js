@@ -89,18 +89,18 @@ export function resolveExecutorScopeDbStreams(executorStream, catalog) {
     return [trimmed];
 }
 /** Работа назначена на стрим-исполнитель блока typicalWork (legacy без boundWorkIds). */
-export function typicalWorkAssignedToExecutorStream(workStreams, executorStream) {
+export function typicalWorkAssignedToExecutorStream(workStreams, executorStream, catalog) {
     const trimmed = executorStream.trim();
     if (!trimmed)
         return false;
-    const scopeStreams = resolveExecutorScopeDbStreams(trimmed);
+    const scopeStreams = resolveExecutorScopeDbStreams(trimmed, catalog);
     return workStreams.some((stream) => scopeStreams.includes(stream.trim()) ||
         scopeStreams.includes(resolveExecutorStreamAreaLabel(stream)));
 }
 /** Работа назначена хотя бы на один из стримов-исполнителей блока. */
-export function typicalWorkAssignedToAnyExecutorStream(workStreams, executorStreams) {
-    const executors = normalizeStreamBlockExecutors(executorStreams);
+export function typicalWorkAssignedToAnyExecutorStream(workStreams, executorStreams, catalog) {
+    const executors = normalizeStreamBlockExecutors(executorStreams, catalog);
     if (executors.length === 0)
         return false;
-    return executors.some((executor) => typicalWorkAssignedToExecutorStream(workStreams, executor));
+    return executors.some((executor) => typicalWorkAssignedToExecutorStream(workStreams, executor, catalog));
 }

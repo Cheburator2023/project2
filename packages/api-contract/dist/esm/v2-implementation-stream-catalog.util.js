@@ -2,7 +2,7 @@
  * Каталог стрим-исполнителей (DB-owned): payload items словаря
  * `v2.generalInfo.implementationStream` + resolved DTO для клиента/Nest.
  */
-import { V2_IMPLEMENTATION_STREAM, V2_IMPLEMENTATION_STREAM_CODES, V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE, V2_IMPLEMENTATION_STREAM_LABELS, } from "./v2-implementation-streams.util";
+import { V2_IMPLEMENTATION_STREAM, V2_IMPLEMENTATION_STREAM_CODES, V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE, V2_IMPLEMENTATION_STREAM_LABELS, isV2ImplementationStreamCode, } from "./v2-implementation-streams.util";
 import { V2_MODEL_IMPLEMENTATION_STREAM_CODES, V2_MODEL_STREAM_EXECUTOR, } from "./v2-model-stream-typical-works.constants";
 export { V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE };
 const FIELD_POINTER = "/generalInfo/implementationStream";
@@ -110,9 +110,16 @@ export function parseImplementationStreamPayload(raw, options) {
         ? raw
         : {};
     const label = options?.label?.trim() ?? "";
+    const code = options?.code?.trim() ?? "";
     let dbNames = asStringArray(record.dbNames);
-    if (dbNames.length === 0 && label)
-        dbNames = [label];
+    if (dbNames.length === 0) {
+        // Канон для назначений типовых работ: код (как в uiSchema.streamExecutor),
+        // плюс подпись для обратной совместимости / отображения.
+        if (code)
+            dbNames.push(code);
+        if (label && !dbNames.includes(label))
+            dbNames.push(label);
+    }
     return {
         storeCode: true,
         fieldPointer: typeof record.fieldPointer === "string" && record.fieldPointer.trim()
@@ -137,7 +144,7 @@ export function normalizeImplementationStreamCatalogEntry(input) {
             ? input.order
             : 0,
         isActive: input.isActive !== false,
-        payload: parseImplementationStreamPayload(input.payload, { label }),
+        payload: parseImplementationStreamPayload(input.payload, { label, code }),
     };
 }
 /** Валидация кода стрима (formData / streamExecutor): 1–6 символов, [a-z0-9]. */
@@ -198,6 +205,11 @@ export function resolveModelStreamCatalogScopeFromEntries(catalog) {
 }
 /** Каноническое DB-имя для назначения типовой работы. */
 export function resolveCatalogDbExecutorName(entry) {
+    // Кастомные стримы: код совпадает с ui:options.streamExecutor стрим-блока.
+    // Заводские — первое dbNames (исторические русские имена в БД).
+    if (!isV2ImplementationStreamCode(entry.code)) {
+        return entry.code;
+    }
     return entry.payload.dbNames[0] ?? entry.label;
 }
 /** Alias-map для stream filter: keycloak/dept → [code, label, v1…]. */

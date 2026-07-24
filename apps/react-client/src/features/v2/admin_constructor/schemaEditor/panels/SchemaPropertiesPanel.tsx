@@ -380,6 +380,9 @@ export function SchemaPropertiesPanel() {
 		monacoError,
 	} = useSchemaEditor();
 
+	const { codes: catalogStreamCodes, catalog } =
+		useV2ImplementationStreamCatalog();
+
 	const leafUiBranch = useMemo(
 		() =>
 			selectedPointer && uiSchema
@@ -507,10 +510,10 @@ export function SchemaPropertiesPanel() {
 			return { all: false, missing: [] as V2ImplementationStreamCode[] };
 		}
 		const missing = typicalWorkStreamExecutors.filter(
-			(code) => !isExecutorStreamPresentInSchema(uiSchema, code),
+			(code) => !isExecutorStreamPresentInSchema(uiSchema, code, catalog),
 		);
 		return { all: missing.length === 0, missing };
-	}, [typicalWorkStreamExecutors, uiSchema]);
+	}, [typicalWorkStreamExecutors, uiSchema, catalog]);
 	const atypicalWorkStreamExecutors = useMemo(() => {
 		if (!isAtypicalWorkBlock || !typicalWorkOutputPath) return [];
 		const explicit = normalizeStreamBlockExecutors(
@@ -548,10 +551,10 @@ export function SchemaPropertiesPanel() {
 			return { all: false, missing: [] as V2ImplementationStreamCode[] };
 		}
 		const missing = atypicalWorkStreamExecutors.filter(
-			(code) => !isExecutorStreamPresentInSchema(uiSchema, code),
+			(code) => !isExecutorStreamPresentInSchema(uiSchema, code, catalog),
 		);
 		return { all: missing.length === 0, missing };
-	}, [atypicalWorkStreamExecutors, uiSchema]);
+	}, [atypicalWorkStreamExecutors, uiSchema, catalog]);
 	const handleCreateAtypicalWorkStreamBlock = useCallback(() => {
 		const code =
 			atypicalWorkStreamPresence.missing[0] ?? atypicalWorkStreamExecutors[0];
@@ -899,7 +902,6 @@ export function SchemaPropertiesPanel() {
 		}
 		return [...used];
 	}, [uiSchema, rootBlockKey]);
-	const { codes: catalogStreamCodes } = useV2ImplementationStreamCatalog();
 	const defaultFreeStreamExecutor = useMemo(() => {
 		const current = streamBlockExecutors[0];
 		if (current && !streamsAssignedToOtherBlocks.includes(current)) {

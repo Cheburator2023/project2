@@ -98,18 +98,18 @@ function resolveExecutorScopeDbStreams(executorStream, catalog) {
     return [trimmed];
 }
 /** Работа назначена на стрим-исполнитель блока typicalWork (legacy без boundWorkIds). */
-function typicalWorkAssignedToExecutorStream(workStreams, executorStream) {
+function typicalWorkAssignedToExecutorStream(workStreams, executorStream, catalog) {
     const trimmed = executorStream.trim();
     if (!trimmed)
         return false;
-    const scopeStreams = resolveExecutorScopeDbStreams(trimmed);
+    const scopeStreams = resolveExecutorScopeDbStreams(trimmed, catalog);
     return workStreams.some((stream) => scopeStreams.includes(stream.trim()) ||
         scopeStreams.includes(resolveExecutorStreamAreaLabel(stream)));
 }
 /** Работа назначена хотя бы на один из стримов-исполнителей блока. */
-function typicalWorkAssignedToAnyExecutorStream(workStreams, executorStreams) {
-    const executors = (0, v2_stream_block_executor_util_1.normalizeStreamBlockExecutors)(executorStreams);
+function typicalWorkAssignedToAnyExecutorStream(workStreams, executorStreams, catalog) {
+    const executors = (0, v2_stream_block_executor_util_1.normalizeStreamBlockExecutors)(executorStreams, catalog);
     if (executors.length === 0)
         return false;
-    return executors.some((executor) => typicalWorkAssignedToExecutorStream(workStreams, executor));
+    return executors.some((executor) => typicalWorkAssignedToExecutorStream(workStreams, executor, catalog));
 }

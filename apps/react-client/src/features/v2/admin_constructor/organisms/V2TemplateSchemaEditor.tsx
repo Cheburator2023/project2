@@ -75,6 +75,7 @@ import { useSyncV2TypicalWorksSchemaField, useBulkSyncV2TypicalWorksSchemaFields
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../testIds";
 import { dependencyCycleWarnings } from "../utils/logicGraphAnalysis";
 import { useDebouncedV2Calculation } from "../hooks/useDebouncedV2Calculation";
+import { useV2ImplementationStreamCatalog } from "@react-client/common/api/queries/v2-streams";
 import { derivePreviewSchemas } from "../utils/logicPreview";
 import { mapCalculationResult } from "../utils/mapCalculationResult";
 import {
@@ -226,6 +227,8 @@ export const V2TemplateSchemaEditor = ({
 }: V2TemplateSchemaEditorProps) => {
 	const navigate = useNavigate();
 	const [searchParams, setSearchParams] = useSearchParams();
+	const { catalog: implementationStreamCatalog } =
+		useV2ImplementationStreamCatalog();
 	const skipLeaveGuardRef = useRef(false);
 	const migratedLogicUrlParamsRef = useRef(false);
 
@@ -1671,6 +1674,7 @@ export const V2TemplateSchemaEditor = ({
 				uiSchema as Record<string, unknown>,
 				streamExecutor,
 				preferredPointer,
+				implementationStreamCatalog,
 			);
 			if (!result) return null;
 			pushDraftHistory();
@@ -1679,7 +1683,7 @@ export const V2TemplateSchemaEditor = ({
 			setSelectedPointer(result.typicalWorkPointer);
 			return result.typicalWorkPointer;
 		},
-		[jsonSchema, uiSchema, pushDraftHistory],
+		[jsonSchema, uiSchema, pushDraftHistory, implementationStreamCatalog],
 	);
 
 	const handleAddFieldPresetAt = useCallback(

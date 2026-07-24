@@ -253,20 +253,21 @@ function collectPresentExecutorStreamLabels(uiSchema) {
     return new Set(collectExecutorStreamBlocks(uiSchema).flatMap((block) => block.streamExecutors));
 }
 /** Есть ли в конструкторе корневой streamBlock для стрима (код или legacy-имя БД). */
-function isExecutorStreamPresentInSchema(uiSchema, stream) {
+function isExecutorStreamPresentInSchema(uiSchema, stream, catalog) {
     const trimmed = stream.trim();
     if (!trimmed)
         return false;
     const present = collectPresentExecutorStreamLabels(uiSchema);
-    const streamCode = (0, v2_stream_block_executor_util_1.normalizeStreamBlockExecutor)(trimmed);
+    const streamCode = (0, v2_stream_block_executor_util_1.normalizeStreamBlockExecutor)(trimmed, catalog);
     if (streamCode && present.has(streamCode))
         return true;
     for (const code of present) {
-        if ((0, v2_executor_streams_util_1.typicalWorkAssignedToExecutorStream)([trimmed], code))
+        if ((0, v2_executor_streams_util_1.typicalWorkAssignedToExecutorStream)([trimmed], code, catalog)) {
             return true;
+        }
     }
     const area = (0, v2_executor_streams_util_1.resolveExecutorStreamAreaLabel)(trimmed);
-    const areaCode = (0, v2_stream_block_executor_util_1.normalizeStreamBlockExecutor)(area);
+    const areaCode = (0, v2_stream_block_executor_util_1.normalizeStreamBlockExecutor)(area, catalog);
     return areaCode != null && present.has(areaCode);
 }
 function readUiBranchAtDotPath(uiSchema, dotPath) {

@@ -31,6 +31,7 @@ export declare function buildFactoryImplementationStreamPayload(code: V2Implemen
 export declare function buildFactoryImplementationStreamCatalog(): V2ImplementationStreamCatalogEntry[];
 export declare function parseImplementationStreamPayload(raw: unknown, options?: {
     label?: string;
+    code?: string;
 }): V2ImplementationStreamPayload;
 export declare function normalizeImplementationStreamCatalogEntry(input: {
     code: string;

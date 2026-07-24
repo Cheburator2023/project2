@@ -48,6 +48,7 @@ import {
 	useV2TypicalWorkAssignments,
 	useV2WorkParametersCatalog,
 } from "@react-client/common/api/queries/v2-works";
+import { useV2ImplementationStreamCatalog } from "@react-client/common/api/queries/v2-streams";
 import { useSchemaEditor } from "../../SchemaEditorContext";
 import {
 	buildSchemaWorkParameters,
@@ -170,6 +171,7 @@ export function TypicalWorkEditableCard({
 		requestCalculationRefresh,
 		registerTypicalWorkSaveGate,
 	} = useSchemaEditor();
+	const { catalog } = useV2ImplementationStreamCatalog();
 	const { data: assignmentsList } = useV2TypicalWorkAssignments({
 		templateVersionId,
 	});
@@ -787,7 +789,7 @@ export function TypicalWorkEditableCard({
 		effectiveArchComponentType,
 	);
 	const otherStreams = availableStreams.filter(
-		(s) => !recommended.includes(streamAreaKey(s) as LogicStreamCode),
+		(s) => !recommended.includes(streamAreaKey(s, catalog) as LogicStreamCode),
 	);
 
 	return (
@@ -1090,7 +1092,7 @@ export function TypicalWorkEditableCard({
 									{availableStreams
 										.filter((s) =>
 											recommended.includes(
-												streamAreaKey(s) as LogicStreamCode,
+												streamAreaKey(s, catalog) as LogicStreamCode,
 											),
 										)
 										.map((stream) => (
@@ -1109,6 +1111,7 @@ export function TypicalWorkEditableCard({
 													present={isExecutorStreamPresentInSchema(
 														uiSchema,
 														stream,
+														catalog,
 													)}
 													selected={streamExecutor === stream}
 												/>
@@ -1146,6 +1149,7 @@ export function TypicalWorkEditableCard({
 														present={isExecutorStreamPresentInSchema(
 															uiSchema,
 															stream,
+															catalog,
 														)}
 														selected={streamExecutor === stream}
 													/>
@@ -1165,6 +1169,7 @@ export function TypicalWorkEditableCard({
 							present={isExecutorStreamPresentInSchema(
 								uiSchema,
 								streamExecutor,
+								catalog,
 							)}
 						/>
 					</Box>

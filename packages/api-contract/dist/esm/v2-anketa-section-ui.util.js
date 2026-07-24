@@ -223,20 +223,21 @@ export function collectPresentExecutorStreamLabels(uiSchema) {
     return new Set(collectExecutorStreamBlocks(uiSchema).flatMap((block) => block.streamExecutors));
 }
 /** Есть ли в конструкторе корневой streamBlock для стрима (код или legacy-имя БД). */
-export function isExecutorStreamPresentInSchema(uiSchema, stream) {
+export function isExecutorStreamPresentInSchema(uiSchema, stream, catalog) {
     const trimmed = stream.trim();
     if (!trimmed)
         return false;
     const present = collectPresentExecutorStreamLabels(uiSchema);
-    const streamCode = normalizeStreamBlockExecutor(trimmed);
+    const streamCode = normalizeStreamBlockExecutor(trimmed, catalog);
     if (streamCode && present.has(streamCode))
         return true;
     for (const code of present) {
-        if (typicalWorkAssignedToExecutorStream([trimmed], code))
+        if (typicalWorkAssignedToExecutorStream([trimmed], code, catalog)) {
             return true;
+        }
     }
     const area = resolveExecutorStreamAreaLabel(trimmed);
-    const areaCode = normalizeStreamBlockExecutor(area);
+    const areaCode = normalizeStreamBlockExecutor(area, catalog);
     return areaCode != null && present.has(areaCode);
 }
 function readUiBranchAtDotPath(uiSchema, dotPath) {

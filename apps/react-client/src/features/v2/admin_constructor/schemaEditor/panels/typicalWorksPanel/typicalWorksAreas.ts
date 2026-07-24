@@ -122,6 +122,7 @@ export function workMatchesLogicScope(
 	return workAssignedToScope(
 		workStreams,
 		resolveScopeStreams(scope, catalog, streamCodes),
+		catalog,
 	);
 }
 
@@ -224,18 +225,19 @@ export function toggleStreamInScope(
 export function workAssignedToScope(
 	streams: string[],
 	scopeStreams: readonly string[],
+	catalog?: readonly import("@smart-anketa/api-contract").V2ImplementationStreamCatalogEntry[],
 ): boolean {
 	const scopeCodes = new Set(
 		scopeStreams
-			.map((value) => normalizeStreamBlockExecutor(value))
+			.map((value) => normalizeStreamBlockExecutor(value, catalog))
 			.filter((value): value is V2ImplementationStreamCode => value != null),
 	);
 	return streams.some((stream) => {
-		const code = resolveLogicStreamForDbExecutor(stream);
+		const code = resolveLogicStreamForDbExecutor(stream, catalog);
 		if (code && scopeCodes.has(code)) return true;
 		return (
 			scopeStreams.includes(stream) ||
-			scopeStreams.includes(streamAreaKey(stream))
+			scopeStreams.includes(streamAreaKey(stream, catalog))
 		);
 	});
 }
@@ -244,12 +246,13 @@ export function pickStreamForScope(
 	workStreams: string[],
 	scopeStreams: string[],
 	preferred: string | null,
+	catalog?: readonly import("@smart-anketa/api-contract").V2ImplementationStreamCatalogEntry[],
 ): string | null {
 	if (preferred && workStreams.includes(preferred)) return preferred;
 	const hit = workStreams.find(
 		(s) =>
 			scopeStreams.includes(s) ||
-			scopeStreams.includes(streamAreaKey(s)),
+			scopeStreams.includes(streamAreaKey(s, catalog)),
 	);
 	return hit ?? workStreams[0] ?? null;
 }
@@ -287,10 +290,12 @@ export function recommendedStreamsForComponent(
 export function isWorkAssignedToLogicStream(
 	workStreams: string[],
 	logicStream: string,
+	catalog?: readonly import("@smart-anketa/api-contract").V2ImplementationStreamCatalogEntry[],
 ): boolean {
 	return workAssignedToScope(
 		workStreams,
-		resolveStreamBlockExecutorScopeStreams(logicStream),
+		resolveStreamBlockExecutorScopeStreams(logicStream, catalog),
+		catalog,
 	);
 }
 

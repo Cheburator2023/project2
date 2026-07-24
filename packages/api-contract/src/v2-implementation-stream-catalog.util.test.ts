@@ -41,6 +41,22 @@ describe("v2-implementation-stream-catalog.util", () => {
 		expect(payload.keycloakAliases).toEqual(["Dept A"]);
 	});
 
+	it("parses empty dbNames with code as canonical assignment name", () => {
+		const payload = parseImplementationStreamPayload(
+			{ isModelStream: false },
+			{ label: "СМЯЧМСЧМ", code: "dfdaf" },
+		);
+		expect(payload.dbNames).toEqual(["dfdaf", "СМЯЧМСЧМ"]);
+		const entry = {
+			code: "dfdaf",
+			label: "СМЯЧМСЧМ",
+			order: 0,
+			isActive: true,
+			payload,
+		};
+		expect(resolveCatalogDbExecutorName(entry)).toBe("dfdaf");
+	});
+
 	it("validates code format", () => {
 		expect(isValidImplementationStreamCodeFormat("rb")).toBe(true);
 		expect(isValidImplementationStreamCodeFormat("kmbkcb")).toBe(true);

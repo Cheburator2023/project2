@@ -22,6 +22,18 @@ const v2_model_stream_typical_works_constants_1 = require("./v2-model-stream-typ
         (0, vitest_1.expect)(payload.isModelStream).toBe(true);
         (0, vitest_1.expect)(payload.keycloakAliases).toEqual(["Dept A"]);
     });
+    (0, vitest_1.it)("parses empty dbNames with code as canonical assignment name", () => {
+        const payload = (0, v2_implementation_stream_catalog_util_1.parseImplementationStreamPayload)({ isModelStream: false }, { label: "СМЯЧМСЧМ", code: "dfdaf" });
+        (0, vitest_1.expect)(payload.dbNames).toEqual(["dfdaf", "СМЯЧМСЧМ"]);
+        const entry = {
+            code: "dfdaf",
+            label: "СМЯЧМСЧМ",
+            order: 0,
+            isActive: true,
+            payload,
+        };
+        (0, vitest_1.expect)((0, v2_implementation_stream_catalog_util_1.resolveCatalogDbExecutorName)(entry)).toBe("dfdaf");
+    });
     (0, vitest_1.it)("validates code format", () => {
         (0, vitest_1.expect)((0, v2_implementation_stream_catalog_util_1.isValidImplementationStreamCodeFormat)("rb")).toBe(true);
         (0, vitest_1.expect)((0, v2_implementation_stream_catalog_util_1.isValidImplementationStreamCodeFormat)("kmbkcb")).toBe(true);

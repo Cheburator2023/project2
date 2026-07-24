@@ -79,7 +79,7 @@ export type ExecutorStreamBlockRef = {
 export declare function collectExecutorStreamBlocks(uiSchema: unknown): ExecutorStreamBlockRef[];
 export declare function collectPresentExecutorStreamLabels(uiSchema: unknown): Set<V2StreamBlockExecutor>;
 /** Есть ли в конструкторе корневой streamBlock для стрима (код или legacy-имя БД). */
-export declare function isExecutorStreamPresentInSchema(uiSchema: unknown, stream: string): boolean;
+export declare function isExecutorStreamPresentInSchema(uiSchema: unknown, stream: string, catalog?: readonly import("./v2-implementation-stream-catalog.util").V2ImplementationStreamCatalogEntry[]): boolean;
 /**
  * Стримы-исполнители для блока typicalWork: явный ui:options.streamExecutor,
  * иначе стримы корневого streamBlock по пути вывода.

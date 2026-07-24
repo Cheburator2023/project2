@@ -2,6 +2,7 @@ import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import {
 	collectExecutorStreamBlocks,
 	normalizeStreamBlockExecutor,
+	type V2ImplementationStreamCatalogEntry,
 } from "@smart-anketa/api-contract";
 import { nanoid } from "nanoid";
 import { ARCH_COMPONENT_PRESET_DEFS } from "./archComponentPresets";
@@ -32,8 +33,9 @@ function isPointerUnderParent(pointer: string, parentPointer: string): boolean {
 export function resolveStreamBlockPointer(
 	uiSchema: unknown,
 	streamExecutor: string,
+	catalog?: readonly V2ImplementationStreamCatalogEntry[],
 ): string | null {
-	const code = normalizeStreamBlockExecutor(streamExecutor);
+	const code = normalizeStreamBlockExecutor(streamExecutor, catalog);
 	if (!code) return null;
 	return (
 		collectExecutorStreamBlocks(uiSchema).find((block) =>
@@ -69,13 +71,14 @@ export function placeTypicalWorkInStream(
 	uiSchema: Record<string, unknown>,
 	streamExecutor: string,
 	preferredPointer?: string | null,
+	catalog?: readonly V2ImplementationStreamCatalogEntry[],
 ): PlaceTypicalWorkInStreamResult | null {
-	const code = normalizeStreamBlockExecutor(streamExecutor);
+	const code = normalizeStreamBlockExecutor(streamExecutor, catalog);
 	if (!code) return null;
 	let schema = jsonSchema;
 	let ui = uiSchema;
 
-	let streamPointer = resolveStreamBlockPointer(ui, code);
+	let streamPointer = resolveStreamBlockPointer(ui, code, catalog);
 	if (!streamPointer) {
 		const streamKey = `field_${nanoid(8)}`;
 		const streamIndex = clampCanvasInsertIndex(

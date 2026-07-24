@@ -368,17 +368,20 @@ export function collectPresentExecutorStreamLabels(
 export function isExecutorStreamPresentInSchema(
 	uiSchema: unknown,
 	stream: string,
+	catalog?: readonly import("./v2-implementation-stream-catalog.util").V2ImplementationStreamCatalogEntry[],
 ): boolean {
 	const trimmed = stream.trim();
 	if (!trimmed) return false;
 	const present = collectPresentExecutorStreamLabels(uiSchema);
-	const streamCode = normalizeStreamBlockExecutor(trimmed);
+	const streamCode = normalizeStreamBlockExecutor(trimmed, catalog);
 	if (streamCode && present.has(streamCode)) return true;
 	for (const code of present) {
-		if (typicalWorkAssignedToExecutorStream([trimmed], code)) return true;
+		if (typicalWorkAssignedToExecutorStream([trimmed], code, catalog)) {
+			return true;
+		}
 	}
 	const area = resolveExecutorStreamAreaLabel(trimmed);
-	const areaCode = normalizeStreamBlockExecutor(area);
+	const areaCode = normalizeStreamBlockExecutor(area, catalog);
 	return areaCode != null && present.has(areaCode);
 }
 

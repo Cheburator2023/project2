@@ -78,6 +78,7 @@ const emptyForm = (): StreamRegistryItemInput => ({
 function itemToForm(item: V2DictionaryItemDto): StreamRegistryItemInput {
 	const payload = parseImplementationStreamPayload(item.payload, {
 		label: item.label,
+		code: item.code,
 	});
 	return {
 		code: item.code,
@@ -111,6 +112,7 @@ export function AdminV2StreamsPage() {
 			items.map((item) => {
 				const payload = parseImplementationStreamPayload(item.payload, {
 					label: item.label,
+					code: item.code,
 				});
 				const isFactory = isV2ImplementationStreamCode(item.code);
 				return {
@@ -253,7 +255,7 @@ export function AdminV2StreamsPage() {
 			</Header>
 			<Spacer space={8} />
 			<Card padding="12px" height="100%" overflow="hidden">
-				<Flex flexDirection="column" gap={8} height="100%" minHeight={0}>
+				<Flex flexDirection="column" gap={8} height="100%" minHeight="0">
 					<Typography variant="body2" color="text.secondary">
 						Стримы для анкеты, конструктора и типовых работ. Колонка
 						«Источник»: <strong>Из поставки</strong> — системные (удалить
@@ -283,10 +285,20 @@ export function AdminV2StreamsPage() {
 								if (e.data) openEdit(e.data);
 							}}
 							onGridReady={gridPersistence.onGridReady}
-							onColumnMoved={gridPersistence.onColumnMoved}
-							onColumnResized={gridPersistence.onColumnResized}
-							onColumnVisible={gridPersistence.onColumnVisible}
-							onColumnPinned={gridPersistence.onColumnPinned}
+							onColumnMoved={(event) =>
+								gridPersistence.onColumnMoved(event.api)
+							}
+							onColumnResized={(event) => {
+								if (event.finished) {
+									gridPersistence.onColumnResized(event.api);
+								}
+							}}
+							onColumnVisible={(event) =>
+								gridPersistence.onColumnVisible(event.api)
+							}
+							onColumnPinned={(event) =>
+								gridPersistence.onColumnPinned(event.api)
+							}
 							getMainMenuItems={getAgGridMainMenuItems}
 							defaultColDef={{
 								sortable: true,

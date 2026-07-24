@@ -125,9 +125,16 @@ function parseImplementationStreamPayload(raw, options) {
         ? raw
         : {};
     const label = options?.label?.trim() ?? "";
+    const code = options?.code?.trim() ?? "";
     let dbNames = asStringArray(record.dbNames);
-    if (dbNames.length === 0 && label)
-        dbNames = [label];
+    if (dbNames.length === 0) {
+        // Канон для назначений типовых работ: код (как в uiSchema.streamExecutor),
+        // плюс подпись для обратной совместимости / отображения.
+        if (code)
+            dbNames.push(code);
+        if (label && !dbNames.includes(label))
+            dbNames.push(label);
+    }
     return {
         storeCode: true,
         fieldPointer: typeof record.fieldPointer === "string" && record.fieldPointer.trim()
@@ -152,7 +159,7 @@ function normalizeImplementationStreamCatalogEntry(input) {
             ? input.order
             : 0,
         isActive: input.isActive !== false,
-        payload: parseImplementationStreamPayload(input.payload, { label }),
+        payload: parseImplementationStreamPayload(input.payload, { label, code }),
     };
 }
 /** Валидация кода стрима (formData / streamExecutor): 1–6 символов, [a-z0-9]. */
@@ -213,6 +220,11 @@ function resolveModelStreamCatalogScopeFromEntries(catalog) {
 }
 /** Каноническое DB-имя для назначения типовой работы. */
 function resolveCatalogDbExecutorName(entry) {
+    // Кастомные стримы: код совпадает с ui:options.streamExecutor стрим-блока.
+    // Заводские — первое dbNames (исторические русские имена в БД).
+    if (!(0, v2_implementation_streams_util_1.isV2ImplementationStreamCode)(entry.code)) {
+        return entry.code;
+    }
     return entry.payload.dbNames[0] ?? entry.label;
 }
 /** Alias-map для stream filter: keycloak/dept → [code, label, v1…]. */

@@ -94,7 +94,7 @@ export function StreamExecutorMultiSelect({
 						{showPresence && uiSchema ? (
 							<Flex sx={{ ml: 1 }}>
 								<ExecutorStreamPresenceLabel
-									present={isExecutorStreamPresentInSchema(uiSchema, code)}
+									present={isExecutorStreamPresentInSchema(uiSchema, code, catalog)}
 								/>
 							</Flex>
 						) : null}
@@ -145,7 +145,7 @@ export function StreamExecutorMultiSelect({
 					{showPresence && uiSchema ? (
 						<Flex sx={{ ml: 1 }}>
 							<ExecutorStreamPresenceLabel
-								present={isExecutorStreamPresentInSchema(uiSchema, code)}
+								present={isExecutorStreamPresentInSchema(uiSchema, code, catalog)}
 							/>
 						</Flex>
 					) : null}
