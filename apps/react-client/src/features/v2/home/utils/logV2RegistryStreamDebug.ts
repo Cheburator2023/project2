@@ -1,11 +1,11 @@
 import type { V2QuestionnaireDto } from "@smart-anketa/api-contract";
 import {
+	isV2UserStreamFilterExemptLead,
 	isV2UserStreamFilteredByGroups,
 	normalizeV2UserGroups,
+	resolveV2UserAllowedStreamFilterValues,
 	resolveV2UserImplementationStreamsFromGroups,
 } from "@smart-anketa/api-contract";
-
-const LEAD_EXEMPT = ["ds_lead", "de_lead", "modelops_lead"] as const;
 
 const STREAM_SUFFIX_RE =
 	/(?:^|_)(kmbkcb|ptitpc|rnd|rb|finmdl|idsrc|mdlctl|pirm|strdat|digagt|dadm)$/i;
@@ -33,17 +33,21 @@ function resolveImplementationStream(q: V2QuestionnaireDto): string {
 export function logV2RegistryStreamDebug(args: {
 	username: string | null;
 	groups: readonly string[];
+	/** Список после UI-фильтра (то, что в гриде). */
 	questionnaires: V2QuestionnaireDto[] | undefined;
+	/** Полный ответ API до UI-фильтра. */
+	allQuestionnaires?: V2QuestionnaireDto[] | undefined;
+	streamFilterEnabled?: boolean;
 	isLoading: boolean;
 }): void {
 	if (!isDebugEnabled() || args.isLoading) return;
 
 	const groups = [...args.groups];
 	const normalized = normalizeV2UserGroups(groups);
-	const leadExempt = LEAD_EXEMPT.filter((r) => normalized.includes(r));
-	const clientWouldFilter =
-		leadExempt.length === 0 && isV2UserStreamFilteredByGroups(groups);
+	const leadExempt = isV2UserStreamFilterExemptLead(groups);
+	const clientWouldFilter = isV2UserStreamFilteredByGroups(groups);
 	const allowedStreams = resolveV2UserImplementationStreamsFromGroups(groups);
+	const allowedFilterValues = resolveV2UserAllowedStreamFilterValues(groups);
 	const suffixHits = normalized
 		.map((g) => {
 			const m = g.match(STREAM_SUFFIX_RE);
@@ -51,60 +55,51 @@ export function logV2RegistryStreamDebug(args: {
 		})
 		.filter(Boolean);
 
-	const rows = (args.questionnaires ?? []).map((q) => ({
+	const visible = args.questionnaires ?? [];
+	const all = args.allQuestionnaires ?? visible;
+	const rows = visible.map((q) => ({
 		id: q.id,
 		readableId: q.readableId,
 		calcName: q.calcName,
 		implementationStream: resolveImplementationStream(q),
 	}));
-
-	const byStream = new Map<string, typeof rows>();
-	for (const row of rows) {
-		const key = row.implementationStream;
-		const list = byStream.get(key) ?? [];
-		list.push(row);
-		byStream.set(key, list);
+	const allByStream = new Map<string, string[]>();
+	for (const q of all) {
+		const stream = resolveImplementationStream(q);
+		const list = allByStream.get(stream) ?? [];
+		list.push(String(q.calcName || q.readableId || q.id));
+		allByStream.set(stream, list);
 	}
 
 	const summary = {
 		username: args.username,
+		streamFilterEnabled: args.streamFilterEnabled ?? true,
 		groupsRaw: groups,
 		groupsNormalized: normalized,
 		leadExempt,
-		/** Как на сервере: lead → фильтр выкл.; иначе Level A по role. */
 		serverLikelyFilters: clientWouldFilter,
 		allowedStreamsFromGroups: allowedStreams,
+		allowedFilterValues,
 		streamSuffixHitsInGroups: suffixHits,
-		apiReturnedCount: rows.length,
+		apiReturnedCount: all.length,
+		afterUiFilterCount: visible.length,
 		hint:
-			clientWouldFilter && allowedStreams.length === 0
-				? "Level A без департамента/суффикса стрима → API должен отдать []. Добавь /departament/… или STREAM_FILTER_DISABLED=true"
-				: leadExempt.length > 0
-					? "Lead exempt → реестр без жёсткого фильтра по стриму"
-					: allowedStreams.length > 0
-						? "Фильтр по стримам из groups; в таблице ниже — что вернул API (уже после фильтра сервера)"
-						: "Фильтр по стриму для этой роли не ожидается",
+			!(args.streamFilterEnabled ?? true)
+				? "UI-фильтр выключен (админка / STREAM_FILTER_DISABLED) — показан полный API-список"
+				: clientWouldFilter && allowedStreams.length === 0
+					? "Level A без департамента/суффикса стрима → UI отдаёт []. Добавь /departament/… или выключи фильтр в админке"
+					: leadExempt
+						? "Lead exempt → реестр без жёсткого фильтра по стриму"
+						: allowedStreams.length > 0
+							? "UI фильтрует по стримам из groups"
+							: "Фильтр по стриму для этой роли не ожидается",
 	};
 
 	console.groupCollapsed(
-		`[v2-stream-filter] ${args.username ?? "?"} · API ${rows.length} анкет`,
+		`[v2-stream-filter] ${args.username ?? "?"} · API ${all.length} → UI ${visible.length}`,
 	);
 	console.info("summary", summary);
+	console.info("allByStream (до UI-фильтра)", Object.fromEntries(allByStream));
 	console.table(rows);
-	console.info(
-		"byStream",
-		Object.fromEntries(
-			[...byStream.entries()].map(([stream, list]) => [
-				stream,
-				list.map((r) => r.calcName || r.readableId || r.id),
-			]),
-		),
-	);
-	if (rows.length === 0 && clientWouldFilter && allowedStreams.length === 0) {
-		console.warn(
-			"[v2-stream-filter] Список пуст: сервер отрезал всё (нет allow-list). " +
-				"Анкеты со стримами увидишь под de_lead / appadmin или с DEBUG после STREAM_FILTER_DISABLED.",
-		);
-	}
 	console.groupEnd();
 }

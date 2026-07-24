@@ -48,6 +48,9 @@ import { V2DataTransferController } from "./controllers/v2-data-transfer.control
 import { V2DataTransferService } from "./services/v2-data-transfer.service";
 import { V2KeycloakRoleSyncController } from "./controllers/v2-keycloak-role-sync.controller";
 import { V2KeycloakRoleSyncService } from "./services/v2-keycloak-role-sync.service";
+import { V2RuntimeSettingsEntity } from "./entities/v2-runtime-settings.entity";
+import { V2RuntimeSettingsService } from "./services/v2-runtime-settings.service";
+import { V2RuntimeSettingsController } from "./controllers/v2-runtime-settings.controller";
 
 @Module({
 	imports: [
@@ -69,6 +72,7 @@ import { V2KeycloakRoleSyncService } from "./services/v2-keycloak-role-sync.serv
 			V2TypicalWorkParamEntity,
 			V2TypicalWorkParamValueEntity,
 			V2FactorySnapshotSettingEntity,
+			V2RuntimeSettingsEntity,
 		]),
 	],
 	controllers: [
@@ -82,6 +86,7 @@ import { V2KeycloakRoleSyncService } from "./services/v2-keycloak-role-sync.serv
 		V2TypicalWorkController,
 		V2DataTransferController,
 		V2KeycloakRoleSyncController,
+		V2RuntimeSettingsController,
 	],
 	providers: [
 		StreamMappingService,
@@ -103,6 +108,7 @@ import { V2KeycloakRoleSyncService } from "./services/v2-keycloak-role-sync.serv
 		V2TypicalWorkParamCatalogService,
 		V2DataTransferService,
 		V2KeycloakRoleSyncService,
+		V2RuntimeSettingsService,
 	],
 	exports: [
 		V2TemplateService,
@@ -115,6 +121,7 @@ import { V2KeycloakRoleSyncService } from "./services/v2-keycloak-role-sync.serv
 		V2TypicalWorkService,
 		V2TypicalWorkRuntimeService,
 		V2TypicalWorkParamCatalogService,
+		V2RuntimeSettingsService,
 	],
 })
 export class AnketaV2Module {}

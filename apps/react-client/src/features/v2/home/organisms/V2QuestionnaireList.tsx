@@ -26,7 +26,9 @@ import { usePermissions } from "@react-client/hooks/usePermissions";
 import { toast } from "@react-client/common/toasts";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { Flex } from "@react-client/common/primitives/Flex";
+import { Spacer } from "@react-client/common/primitives/Spacer";
 import { Header } from "@react-client/common/navigation/organisms/Header";
+import { SearchInput } from "@react-client/common/navigation/organisms/SearchInput";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
 import { getAgGridMainMenuItems } from "@react-client/common/tableStuff/agGridMainMenuItems";
 import { AG_GRID_SET_FILTER_PARAMS } from "@react-client/common/tableStuff/agGridSetFilterParams";
@@ -68,6 +70,8 @@ import {
 } from "@react-client/theme/ag-grid/agGridCustomTheme";
 import { agGridIconSet } from "@react-client/theme/ag-grid/agGridIconSet";
 import { useUserStore } from "@react-client/common/store/userStore";
+import { useV2StreamFilterSetting } from "@react-client/common/api/queries/v2-runtime-settings";
+import { filterV2QuestionnairesByUserStreamGroups } from "@smart-anketa/api-contract";
 import { logV2RegistryStreamDebug } from "../utils/logV2RegistryStreamDebug";
 import {
 	buildV2QuestionnaireColumnDefsFromTree,
@@ -346,6 +350,9 @@ export function V2QuestionnaireList() {
 	const { mode } = useColorScheme();
 	const navigate = useNavigate();
 	const gridRef = useRef<AgGridReact<V2QuestionnaireGridRow>>(null);
+	const [gridApi, setGridApi] = useState<GridApi<V2QuestionnaireGridRow> | null>(
+		null,
+	);
 	const {
 		canCreateCalculation,
 		canDeleteCalculation,
@@ -368,24 +375,46 @@ export function V2QuestionnaireList() {
 	const { data: questionnaires, isLoading } = useV2Questionnaires();
 	const username = useUserStore((s) => s.username);
 	const groups = useUserStore((s) => s.groups);
+	const streamFilterSetting = useV2StreamFilterSetting();
+	const streamFilterEnabled = streamFilterSetting.data?.enabled ?? true;
+
+	const filteredQuestionnaires = useMemo(
+		() =>
+			filterV2QuestionnairesByUserStreamGroups(
+				questionnaires ?? [],
+				groups,
+				streamFilterEnabled,
+			),
+		[questionnaires, groups, streamFilterEnabled],
+	);
 
 	useEffect(() => {
 		logV2RegistryStreamDebug({
 			username,
 			groups,
-			questionnaires,
-			isLoading,
+			questionnaires: filteredQuestionnaires,
+			allQuestionnaires: questionnaires,
+			streamFilterEnabled,
+			isLoading: isLoading || streamFilterSetting.isLoading,
 		});
-	}, [username, groups, questionnaires, isLoading]);
+	}, [
+		username,
+		groups,
+		filteredQuestionnaires,
+		questionnaires,
+		streamFilterEnabled,
+		isLoading,
+		streamFilterSetting.isLoading,
+	]);
 
 	const rowData = useMemo<V2QuestionnaireVersionRow[]>(() => {
-		if (!questionnaires?.length) return [];
-		return questionnaires.map((q) => ({
+		if (!filteredQuestionnaires.length) return [];
+		return filteredQuestionnaires.map((q) => ({
 			...q,
 			rowKind: "version" as const,
 			displayLabel: q.calcName,
 		}));
-	}, [questionnaires]);
+	}, [filteredQuestionnaires]);
 
 	const columnTree = useMemo(
 		() => registryConfig?.columnTree ?? [],
@@ -471,6 +500,7 @@ export function V2QuestionnaireList() {
 
 	const onGridReady = useCallback(
 		(e: GridReadyEvent) => {
+			setGridApi(e.api);
 			const basicPreset = getFactoryGridPresetFromTree(
 				FACTORY_PRESET_IDS.default,
 				columnTree,
@@ -489,29 +519,40 @@ export function V2QuestionnaireList() {
 		saveAgGridColumnState(GRID_COLUMN_STATE_KEY, api.getColumnState());
 	}, []);
 
-	const handleExportXlsx = useCallback(async (ids?: string[]) => {
-		setIsExporting(true);
-		try {
-			const blob = await v2QuestionnairesExportXlsx({ ids });
-			const date = new Date().toISOString().slice(0, 10);
-			const suffix =
-				ids && ids.length > 0 ? `selected-${ids.length}` : "all";
-			downloadBlob(blob, `v2-questionnaires-${suffix}-${date}.xlsx`);
-			if (ids && ids.length > 0) {
-				toast.success(
-					ids.length === 1
-						? "Анкета экспортирована"
-						: `Экспортировано анкет: ${ids.length}`,
-				);
+	const handleExportXlsx = useCallback(
+		async (ids?: string[]) => {
+			setIsExporting(true);
+			try {
+				const exportIds =
+					ids && ids.length > 0
+						? ids
+						: filteredQuestionnaires.map((q) => q.id);
+				const blob = await v2QuestionnairesExportXlsx({
+					ids: exportIds.length > 0 ? exportIds : undefined,
+				});
+				const date = new Date().toISOString().slice(0, 10);
+				const suffix =
+					ids && ids.length > 0
+						? `selected-${ids.length}`
+						: `filtered-${exportIds.length}`;
+				downloadBlob(blob, `v2-questionnaires-${suffix}-${date}.xlsx`);
+				if (ids && ids.length > 0) {
+					toast.success(
+						ids.length === 1
+							? "Анкета экспортирована"
+							: `Экспортировано анкет: ${ids.length}`,
+					);
+				}
+			} catch (err) {
+				toast.error("Ошибка экспорта", {
+					description: apiErrorMessage(err),
+				});
+			} finally {
+				setIsExporting(false);
 			}
-		} catch (err) {
-			toast.error("Ошибка экспорта", {
-				description: apiErrorMessage(err),
-			});
-		} finally {
-			setIsExporting(false);
-		}
-	}, []);
+		},
+		[filteredQuestionnaires],
+	);
 
 	const getContextMenuItems = useCallback(
 		(
@@ -598,7 +639,16 @@ export function V2QuestionnaireList() {
 			width="100%"
 		>
 			<Header>
-				<Stack direction="row" spacing={1} alignItems="center">
+				<Flex gap={8} alignItems="center" wrap="wrap" width="100%">
+					<Flex width="100%" maxWidth="420px" minWidth="200px" flexGrow={1}>
+						<SearchInput
+							gridApi={gridApi}
+							placeholder="Поиск по реестру"
+							inputId="v2_registry_quick_filter"
+						/>
+					</Flex>
+					<Spacer />
+					<Stack direction="row" spacing={1} alignItems="center">
 					{canExportReports ? (
 						<>
 							<Button
@@ -653,7 +703,8 @@ export function V2QuestionnaireList() {
 							Создать анкету
 						</Button>
 					)}
-				</Stack>
+					</Stack>
+				</Flex>
 			</Header>
 			<Dialog
 				open={deleteDialogOpen}

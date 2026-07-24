@@ -86,7 +86,11 @@ v2.generalInfo.implementationStream
 
 Остальные роли видят полный реестр без фильтрации по стриму.
 
-**Отключение:** `STREAM_FILTER_DISABLED=true` в env Nest — фильтр по департаменту/стриму не применяется (весь список для всех ролей с доступом к реестру).
+**Отключение:** `STREAM_FILTER_DISABLED=true` в env Nest — default для UI-фильтра
+(админка → «Фильтр реестра по стриму» может переопределить). Фильтрация v2-реестра
+выполняется на **клиенте** (`filterV2QuestionnairesByUserStreamGroups`); Nest
+`@StreamFilter()` на `GET /v2/questionnaires` снят. Для v1 calculation list
+interceptor по-прежнему учитывает `STREAM_FILTER_DISABLED`.
 
 ### Как работает
 

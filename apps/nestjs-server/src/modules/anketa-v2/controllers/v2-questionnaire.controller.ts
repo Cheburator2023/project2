@@ -10,7 +10,6 @@ import {
 	Patch,
 	Post,
 	Res,
-	UseInterceptors,
 } from "@nestjs/common";
 import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
@@ -35,13 +34,10 @@ import { V2QuestionnaireService } from "../services/v2-questionnaire.service";
 import { V2QuestionnaireCommentService } from "../services/v2-questionnaire-comment.service";
 import { CurrentUser } from "../../../shared/decorators/user.decorator";
 import { RealmRole } from "../../../shared/decorators/realm-role.decorator";
-import { StreamFilter } from "../../../shared/decorators/stream-filter.decorator";
-import { StreamFilterInterceptor } from "../../../shared/interceptors/stream-filter.interceptor";
 import { Permission } from "../../../shared/types/permissions";
 
 @ApiTags("v2-questionnaires")
 @Controller("v2/questionnaires")
-@UseInterceptors(StreamFilterInterceptor)
 export class V2QuestionnaireController {
 	constructor(
 		private readonly questionnaireService: V2QuestionnaireService,
@@ -58,8 +54,10 @@ export class V2QuestionnaireController {
 	}
 
 	@Get()
-	@StreamFilter()
-	@ApiOperation({ summary: "Реестр анкет v2 (отдельно от реестра схем)" })
+	@ApiOperation({
+		summary:
+			"Реестр анкет v2 (полный список; фильтр по стриму — на UI, см. /v2/runtime-settings/stream-filter)",
+	})
 	async findAll(): Promise<V2QuestionnaireDto[]> {
 		return this.questionnaireService.findAll();
 	}

@@ -1,10 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.V2_USER_CONDITIONAL_STREAM_FILTER_ROLE_CODES = exports.V2_USER_STREAM_FILTERED_ROLE_CODES = void 0;
+exports.V2_USER_CONDITIONAL_STREAM_FILTER_ROLE_CODES = exports.V2_USER_STREAM_FILTER_EXEMPT_LEAD_CODES = exports.V2_USER_STREAM_FILTERED_ROLE_CODES = void 0;
 exports.normalizeV2UserGroups = normalizeV2UserGroups;
 exports.extractV2UserRoleCodes = extractV2UserRoleCodes;
+exports.isV2UserStreamFilterExemptLead = isV2UserStreamFilterExemptLead;
 exports.isV2UserStreamFilteredByGroups = isV2UserStreamFilteredByGroups;
 exports.resolveV2UserImplementationStreamsFromGroups = resolveV2UserImplementationStreamsFromGroups;
+exports.resolveV2UserAllowedStreamFilterValues = resolveV2UserAllowedStreamFilterValues;
+exports.filterV2QuestionnairesByUserStreamGroups = filterV2QuestionnairesByUserStreamGroups;
 const v2_implementation_streams_util_1 = require("./v2-implementation-streams.util");
 const v2_ad_domain_groups_util_1 = require("./v2-ad-domain-groups.util");
 /** Роли Keycloak, для которых стрим берётся из департамента / groups (как на бекенде). */
@@ -16,6 +19,15 @@ exports.V2_USER_STREAM_FILTERED_ROLE_CODES = [
     "modelops",
     /** Аналитик качества модельных данных стрима (sum_da_<стрим>). */
     "da_stream",
+];
+/**
+ * Lead-роли (F-05 уровень B): реестр без жёсткого фильтра по стриму.
+ * Синхронно с Nest `STREAM_FILTER_EXEMPT_LEAD_ROLES`.
+ */
+exports.V2_USER_STREAM_FILTER_EXEMPT_LEAD_CODES = [
+    "ds_lead",
+    "de_lead",
+    "modelops_lead",
 ];
 /** `/mipm` без департамента = Бизнес-партнёр (все стримы); с департаментом = Бизнес-партнёр стрима. */
 exports.V2_USER_CONDITIONAL_STREAM_FILTER_ROLE_CODES = ["mipm"];
@@ -102,7 +114,13 @@ function extractV2UserRoleCodes(userGroups) {
     const normalized = normalizeV2UserGroups(userGroups);
     return normalized.filter((group) => exports.V2_USER_STREAM_FILTERED_ROLE_CODES.includes(group));
 }
+function isV2UserStreamFilterExemptLead(userGroups) {
+    const normalized = normalizeV2UserGroups(userGroups);
+    return exports.V2_USER_STREAM_FILTER_EXEMPT_LEAD_CODES.some((role) => normalized.includes(role));
+}
 function isV2UserStreamFilteredByGroups(userGroups) {
+    if (isV2UserStreamFilterExemptLead(userGroups))
+        return false;
     if (extractV2UserRoleCodes(userGroups).length > 0)
         return true;
     const normalized = normalizeV2UserGroups(userGroups);
@@ -154,4 +172,44 @@ function resolveV2UserImplementationStreamsFromGroups(userGroups) {
     const mapped = departmentsAndStreams.flatMap((group) => DEPARTMENT_TO_V2_STREAM_CODES[group] ?? []);
     const directCodes = departmentsAndStreams.filter((group) => (0, v2_implementation_streams_util_1.isV2ImplementationStreamCode)(group));
     return expandStreamCodeAliases([...mapped, ...directCodes]);
+}
+/** Allow-list для фильтра реестра: коды + подписи (как Nest expandStreamAliases). */
+function resolveV2UserAllowedStreamFilterValues(userGroups) {
+    const codes = resolveV2UserImplementationStreamsFromGroups(userGroups);
+    const expanded = new Set();
+    for (const code of codes) {
+        expanded.add(code);
+        expanded.add(v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM_LABELS[code]);
+    }
+    return [...expanded];
+}
+function readImplementationStream(formData) {
+    if (!formData || typeof formData !== "object")
+        return undefined;
+    const generalInfo = formData.generalInfo;
+    if (!generalInfo || typeof generalInfo !== "object")
+        return undefined;
+    const raw = generalInfo.implementationStream;
+    if (typeof raw === "string" && raw.trim())
+        return raw.trim();
+    return undefined;
+}
+/**
+ * Фильтр списка анкет по стриму пользователя (логика бывшего Nest StreamFilterInterceptor).
+ * `filterEnabled=false` → список без изменений.
+ */
+function filterV2QuestionnairesByUserStreamGroups(items, userGroups, filterEnabled) {
+    if (!filterEnabled)
+        return [...items];
+    if (!isV2UserStreamFilteredByGroups(userGroups))
+        return [...items];
+    const allowed = resolveV2UserAllowedStreamFilterValues(userGroups);
+    if (allowed.length === 0)
+        return [];
+    return items.filter((item) => {
+        const primary = readImplementationStream(item.formData);
+        if (!primary)
+            return true;
+        return allowed.includes(primary);
+    });
 }
