@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post } from "@nestjs/common";
+import { Body, Controller, Post } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { DomainRoles } from "../../../shared/decorators/domain-roles.decorator";
 import {
@@ -11,16 +11,6 @@ import { V2KeycloakRoleSyncService } from "../services/v2-keycloak-role-sync.ser
 @Controller("v2/admin/keycloak-role-sync")
 export class V2KeycloakRoleSyncController {
 	constructor(private readonly syncService: V2KeycloakRoleSyncService) {}
-
-	@Get("status")
-	@DomainRoles("appadmin", "sacfg")
-	@ApiOperation({
-		summary:
-			"Доступна ли кнопка синхронизации ролей Keycloak (ИФТ/dev)",
-	})
-	status(): { enabled: boolean } {
-		return { enabled: this.syncService.isEnabled() };
-	}
 
 	@Post("backup")
 	@DomainRoles("appadmin", "sacfg")

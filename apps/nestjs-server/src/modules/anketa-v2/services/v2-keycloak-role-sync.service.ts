@@ -78,25 +78,10 @@ export class V2KeycloakRoleSyncService {
 
 	constructor(private readonly config: ConfigService) {}
 
-	isEnabled(): boolean {
-		// Явный opt-in. На проде флаг НЕ выставлять (даже при NODE_ENV=production на ИФТ).
-		return this.config.get<string>("KEYCLOAK_ADMIN_SYNC_ENABLED") === "true";
-	}
-
-	assertEnabled(): void {
-		if (!this.isEnabled()) {
-			throw new ForbiddenException(
-				"Синхронизация Keycloak отключена. Нужен KEYCLOAK_ADMIN_SYNC_ENABLED=true (только ИФТ/dev; на проде не включать).",
-			);
-		}
-	}
-
 	async createBackup(options: {
 		adminUsername: string;
 		adminPassword: string;
 	}): Promise<V2KeycloakBackupDto> {
-		this.assertEnabled();
-
 		const keycloakUrl = (
 			this.config.get<string>("KEYCLOAK_URL") || ""
 		).replace(/\/$/, "");
@@ -252,8 +237,6 @@ export class V2KeycloakRoleSyncService {
 		dryRun: boolean;
 		applyRemap: boolean;
 	}): Promise<V2KeycloakRoleSyncResult> {
-		this.assertEnabled();
-
 		const keycloakUrl = (
 			this.config.get<string>("KEYCLOAK_URL") || ""
 		).replace(/\/$/, "");

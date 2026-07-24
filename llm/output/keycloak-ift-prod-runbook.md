@@ -48,12 +48,11 @@ node scripts/keycloak-remap-anketa-group-roles.mjs --apply
 
 ## ИФТ: кнопка в UI
 
-1. В values/env ИФТ Nest: `KEYCLOAK_ADMIN_SYNC_ENABLED=true` (**на проде не ставить**).
-2. Pod Nest должен достучаться до Keycloak Admin API (`KEYCLOAK_URL` = нужный контур).
-3. Пользователь с `anketa_admin_panel` → **Админка → Настройки** → «Keycloak · роли F-05».
-4. Сначала **«Создать бекап Keycloak»**, затем dry-run → apply.
-5. Креды **не сохраняются**; без флага кнопка скрыта, POST → 403.
-6. Sync делает **только remap** ролей — без склейки/удаления case-дублей.
+1. Pod Nest должен достучаться до Keycloak Admin API (`KEYCLOAK_URL` = нужный контур).
+2. Пользователь с доменной группой `appadmin` / `sacfg` → **Админка → Настройки** → «Keycloak · роли F-05».
+3. Сначала **«Создать бекап Keycloak»**, затем dry-run → apply.
+4. Креды **не сохраняются**.
+5. Sync делает **только remap** ролей — без склейки/удаления case-дублей.
 
 ---
 

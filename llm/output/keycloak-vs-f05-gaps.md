@@ -122,7 +122,7 @@ Realm → Roles → Create role. Имена **точно** как в табли�
 node scripts/keycloak-remap-anketa-group-roles.mjs --apply
 ```
 
-Или UI: Админка → Настройки → «Keycloak · роли F-05» при `KEYCLOAK_ADMIN_SYNC_ENABLED=true`.
+Или UI: Админка → Настройки → «Keycloak · роли F-05» (доступ appadmin / sacfg).
 
 `keycloak-merge-case-duplicate-groups.mjs` **отключён** — дубли `/DE` vs `/de` не трогаем.
 

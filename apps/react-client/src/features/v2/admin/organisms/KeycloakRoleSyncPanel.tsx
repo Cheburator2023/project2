@@ -6,7 +6,7 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { apiClient } from "@react-client/common/api/helpers/apiClient";
 import { downloadBlob } from "@react-client/common/api/queries/kanban-board";
@@ -14,8 +14,6 @@ import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { toast } from "@react-client/common/toasts";
 import { useState } from "react";
-
-type SyncStatus = { enabled: boolean };
 
 type SyncResult = {
 	dryRun: boolean;
@@ -54,16 +52,6 @@ function downloadBackupJson(data: unknown, realm: string) {
 }
 
 export function KeycloakRoleSyncPanel() {
-	const statusQuery = useQuery({
-		queryKey: ["v2-keycloak-role-sync-status"],
-		queryFn: () =>
-			apiClient<SyncStatus>({
-				url: "/v2/admin/keycloak-role-sync/status",
-				method: "GET",
-			}),
-		staleTime: 60_000,
-	});
-
 	const [open, setOpen] = useState(false);
 	const [mode, setMode] = useState<ModalMode>("sync");
 	const [username, setUsername] = useState("");
@@ -137,9 +125,6 @@ export function KeycloakRoleSyncPanel() {
 
 	const pending = backupMutation.isPending || syncMutation.isPending;
 
-	if (statusQuery.isLoading) return null;
-	if (!statusQuery.data?.enabled) return null;
-
 	const changed =
 		lastResult?.groupRoleChanges.filter(
 			(c) => c.add.length || c.remove.length || c.status === "missing_group",
@@ -153,12 +138,12 @@ export function KeycloakRoleSyncPanel() {
 	return (
 		<>
 			<Flex flexDirection="column" gap={8}>
-				<Typography variant="h6">Keycloak · роли F-05 (ИФТ)</Typography>
+				<Typography variant="h6">Keycloak · роли F-05</Typography>
 				<Typography variant="body2" color="text.secondary">
 					Сначала скачайте бекап, затем dry-run / apply. Выставляет realm roles
 					канонических групп по матрице F-05. Latin-дубли с другим регистром
-					(/DE vs /de) не трогаем. Креды admin только в модалке. Нужен{" "}
-					<code>KEYCLOAK_ADMIN_SYNC_ENABLED=true</code>.
+					(/DE vs /de) не трогаем. Креды admin только в модалке. Доступно
+					ролям appadmin / sacfg.
 				</Typography>
 				<Alert severity="warning">
 					После apply — re-login пользователей. Кириллические{" "}
@@ -191,7 +176,12 @@ export function KeycloakRoleSyncPanel() {
 				) : null}
 			</Flex>
 
-			<Dialog open={open} onClose={() => !pending && setOpen(false)} fullWidth maxWidth="sm">
+			<Dialog
+				open={open}
+				onClose={() => !pending && setOpen(false)}
+				fullWidth
+				maxWidth="sm"
+			>
 				<DialogTitle>
 					{mode === "backup"
 						? "Бекап Keycloak (скачать JSON)"
@@ -208,7 +198,7 @@ export function KeycloakRoleSyncPanel() {
 							<Spacer space={12} />
 							<Alert severity="warning">
 								Рекомендуется сначала «Создать бекап». Apply без бекапа можно,
-								но откат на ИФТ будет сложнее.
+								но откат будет сложнее.
 							</Alert>
 						</>
 					) : null}
@@ -248,30 +238,25 @@ export function KeycloakRoleSyncPanel() {
 					{mode === "backup" ? (
 						<Button
 							variant="contained"
-							disabled={!username.trim() || !password || pending}
+							disabled={pending || !username || !password}
 							onClick={() => backupMutation.mutate()}
 						>
-							{backupMutation.isPending ? "Выгрузка…" : "Скачать бекап"}
+							Скачать бекап
 						</Button>
 					) : (
 						<>
 							<Button
 								variant="outlined"
-								disabled={!username.trim() || !password || pending}
+								disabled={pending || !username || !password}
 								onClick={() => syncMutation.mutate(true)}
 							>
-								{syncMutation.isPending ? "…" : "Dry-run"}
+								Dry-run
 							</Button>
 							<Button
 								variant="contained"
 								color="warning"
-								disabled={!username.trim() || !password || pending}
+								disabled={pending || !username || !password}
 								onClick={() => syncMutation.mutate(false)}
-								title={
-									backupDoneInSession
-										? undefined
-										: "Сначала лучше скачать бекап"
-								}
 							>
 								Apply
 							</Button>
