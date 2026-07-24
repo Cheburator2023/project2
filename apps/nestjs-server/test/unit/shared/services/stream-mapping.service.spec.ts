@@ -11,12 +11,30 @@ import {
 
 describe("StreamMappingService", () => {
 	let service: StreamMappingService;
+	const prevEnv = process.env.STREAM_FILTER_DISABLED;
 
 	beforeEach(() => {
+		delete process.env.STREAM_FILTER_DISABLED;
 		service = new StreamMappingService();
 	});
 
+	afterAll(() => {
+		if (prevEnv === undefined) {
+			delete process.env.STREAM_FILTER_DISABLED;
+		} else {
+			process.env.STREAM_FILTER_DISABLED = prevEnv;
+		}
+	});
+
 	describe("isStreamFilteredUser", () => {
+		it("returns false when STREAM_FILTER_DISABLED=true", () => {
+			process.env.STREAM_FILTER_DISABLED = "true";
+			expect(service.isStreamFilteredUser([STREAM_FILTERED_ROLES[0]])).toBe(
+				false,
+			);
+			expect(service.isStreamFilterDisabled()).toBe(true);
+		});
+
 		it("returns false for non-array inputs", () => {
 			expect(service.isStreamFilteredUser(null as any)).toBe(false);
 		});

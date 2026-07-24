@@ -64,7 +64,18 @@ const DEPARTMENT_TO_STREAM_MAPPING: Record<string, readonly string[]> = {
  */
 @Injectable()
 export class StreamMappingService {
+	/**
+	 * STREAM_FILTER_DISABLED=true — не резать реестр по департаменту/стриму
+	 * (Level A для ds/de/modelops и т.п. отключён).
+	 */
+	isStreamFilterDisabled(): boolean {
+		return process.env.STREAM_FILTER_DISABLED === "true";
+	}
+
 	isStreamFilteredUser(userGroups: string[]): boolean {
+		if (this.isStreamFilterDisabled()) {
+			return false;
+		}
 		if (!Array.isArray(userGroups)) {
 			return false;
 		}

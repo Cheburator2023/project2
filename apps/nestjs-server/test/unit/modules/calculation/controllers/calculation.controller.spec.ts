@@ -94,6 +94,7 @@ describe("CalculationController", () => {
 				{
 					provide: StreamMappingService,
 					useValue: {
+						isStreamFilterDisabled: jest.fn().mockReturnValue(false),
 						isStreamFilteredUser: jest.fn().mockReturnValue(false),
 						getGroupsAfterMapping: jest.fn().mockReturnValue([]),
 					},

@@ -60,13 +60,15 @@ import {
 	SideBarModule,
 } from "ag-grid-enterprise";
 import { AgGridReact } from "ag-grid-react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import {
 	agGridCustomMUITheme,
 	agGridCustomMUIThemeDark,
 } from "@react-client/theme/ag-grid/agGridCustomTheme";
 import { agGridIconSet } from "@react-client/theme/ag-grid/agGridIconSet";
+import { useUserStore } from "@react-client/common/store/userStore";
+import { logV2RegistryStreamDebug } from "../utils/logV2RegistryStreamDebug";
 import {
 	buildV2QuestionnaireColumnDefsFromTree,
 } from "../utils/v2QuestionnaireGridColumns";
@@ -364,6 +366,17 @@ export function V2QuestionnaireList() {
 			: agGridCustomMUIThemeDark;
 
 	const { data: questionnaires, isLoading } = useV2Questionnaires();
+	const username = useUserStore((s) => s.username);
+	const groups = useUserStore((s) => s.groups);
+
+	useEffect(() => {
+		logV2RegistryStreamDebug({
+			username,
+			groups,
+			questionnaires,
+			isLoading,
+		});
+	}, [username, groups, questionnaires, isLoading]);
 
 	const rowData = useMemo<V2QuestionnaireVersionRow[]>(() => {
 		if (!questionnaires?.length) return [];

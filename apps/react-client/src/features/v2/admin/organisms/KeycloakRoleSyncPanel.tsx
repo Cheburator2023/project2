@@ -60,11 +60,11 @@ const DEFAULT_RESTORE_INCLUDE: BackupInclude = {
 	groupAttributes: false,
 	groupRealmRoles: true,
 	groupMembers: false,
-	users: true,
+	users: false,
 	userProfile: false,
 	userAttributes: false,
-	userGroups: true,
-	userRealmRoles: true,
+	userGroups: false,
+	userRealmRoles: false,
 };
 
 type SyncDefaults = {
@@ -269,13 +269,20 @@ export function KeycloakRoleSyncPanel() {
 				setKeycloakUrl((prev) => prev || fromBackup);
 			}
 			if (obj.include && typeof obj.include === "object") {
-				setRestoreInclude((prev) => ({
-					...prev,
-					...(obj.include as Partial<BackupInclude>),
+				const fromFile = obj.include as Partial<BackupInclude>;
+				setRestoreInclude({
+					...DEFAULT_RESTORE_INCLUDE,
+					realmRoles: fromFile.realmRoles !== false,
+					groups: fromFile.groups !== false,
+					groupRealmRoles: fromFile.groupRealmRoles !== false,
+					groupAttributes: false,
 					groupMembers: false,
+					users: false,
 					userProfile: false,
 					userAttributes: false,
-				}));
+					userGroups: false,
+					userRealmRoles: false,
+				});
 			}
 			toast.success(`Файл бекапа загружен: ${file.name}`);
 		} catch (err) {

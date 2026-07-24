@@ -450,10 +450,26 @@ export class V2KeycloakRoleSyncService {
 		include?: Partial<V2KeycloakBackupInclude> | null;
 	}): Promise<V2KeycloakRestoreResult> {
 		const parsed = this.parseBackupPayload(options.backup);
-		const include = resolveBackupInclude({
+		const requested = resolveBackupInclude({
 			...parsed.include,
 			...(options.include ?? {}),
 		});
+		/** Не откатываем секцию, если в бекапе она была выключена (пустые массивы = риск wipe). */
+		const include: V2KeycloakBackupInclude = {
+			...requested,
+			groupRealmRoles:
+				requested.groupRealmRoles && parsed.include.groupRealmRoles !== false,
+			groupAttributes:
+				requested.groupAttributes &&
+				parsed.include.groupAttributes !== false,
+			userGroups:
+				requested.userGroups && parsed.include.userGroups !== false,
+			userRealmRoles:
+				requested.userRealmRoles && parsed.include.userRealmRoles !== false,
+			userProfile: false,
+			userAttributes: false,
+			groupMembers: false,
+		};
 		if (!include.realmRoles && !include.groups && !include.users) {
 			throw new BadRequestException(
 				"Выберите хотя бы одну секцию restore: realm roles / groups / users",
@@ -487,6 +503,24 @@ export class V2KeycloakRoleSyncService {
 			userRoleChanges: [],
 			warnings: [...parsed.warnings],
 		};
+		if (
+			requested.groupRealmRoles &&
+			parsed.include.groupRealmRoles === false
+		) {
+			result.warnings.push(
+				"groupRealmRoles пропущены: в бекапе секция была выключена",
+			);
+		}
+		if (requested.userGroups && parsed.include.userGroups === false) {
+			result.warnings.push(
+				"userGroups пропущены: в бекапе секция была выключена",
+			);
+		}
+		if (requested.userRealmRoles && parsed.include.userRealmRoles === false) {
+			result.warnings.push(
+				"userRealmRoles пропущены: в бекапе секция была выключена",
+			);
+		}
 
 		let byName = await this.loadRolesByName(keycloakUrl, realm, token);
 
