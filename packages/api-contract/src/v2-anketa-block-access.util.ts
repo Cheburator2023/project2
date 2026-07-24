@@ -1,10 +1,11 @@
 import {
-	readV2AnketaSectionUiOptions,
 	resolveStreamBlockRolesForTypicalWorkOutputPath,
 	resolveStreamExecutorForTypicalWorkOutputPath,
 	resolveV2AnketaArchComponent,
 	resolveV2AnketaStreamBlockOptions,
+	collectRequiredWorkflowTargets,
 } from "./v2-anketa-section-ui.util";
+import type { V2AnketaRequiredWorkflowTarget } from "./v2-anketa-workflow.util";
 import {
 	normalizeStreamBlockExecutor,
 	type V2StreamBlockExecutor,
@@ -12,7 +13,6 @@ import {
 import {
 	isV2StreamBlockRoleCode,
 	normalizeStreamBlockRole,
-	normalizeStreamBlockRoles,
 	type V2StreamBlockRoleCode,
 } from "./v2-stream-block-role.util";
 
@@ -23,6 +23,78 @@ export const V2_ANKETA_LEAD_ROLE_CODES = [
 ] as const;
 
 export type V2AnketaLeadRoleCode = (typeof V2_ANKETA_LEAD_ROLE_CODES)[number];
+
+/**
+ * Уровень B (§2): в чужих стримах скрывать оценки типовых/нетиповых работ.
+ * Лиды + архитектор / аналитики / sarep.
+ */
+export const V2_ANKETA_MASK_FOREIGN_ESTIMATES_ROLE_CODES = [
+	...V2_ANKETA_LEAD_ROLE_CODES,
+	"architect",
+	"mntranlst",
+	"da",
+	"sarep",
+] as const;
+
+/** Валидатор / руководитель валидации — без оценок работ вообще. */
+export const V2_ANKETA_MASK_ALL_ESTIMATES_ROLE_CODES = [
+	"validator",
+	"validator_lead",
+] as const;
+
+/**
+ * Уровень A (§2): жёсткий фильтр **реестра** (анкеты своего стрима).
+ * Вкладки в карточке не режутся — «полная детализация» (§2).
+ * DS, DE, ModelOps, бизнес-партнёр стрима, аналитик качества данных стрима.
+ */
+export const V2_ANKETA_OWN_STREAM_BLOCK_FILTER_ROLE_CODES = [
+	"ds",
+	"de",
+	"modelops",
+	"da_stream",
+	"mipm_stream",
+	"data_expert",
+] as const;
+
+/**
+ * Уровни B+C (§2): все стрим-вкладки видны (как у лида).
+ * B — с маскировкой чужих оценок; C — полная детализация.
+ */
+export const V2_ANKETA_SEE_ALL_STREAM_BLOCKS_ROLE_CODES = [
+	...V2_ANKETA_MASK_FOREIGN_ESTIMATES_ROLE_CODES,
+	...V2_ANKETA_MASK_ALL_ESTIMATES_ROLE_CODES,
+	"mipm",
+	"appadmin",
+	"auditor",
+	"auditor_lead",
+	"auditorib",
+	"saprg",
+	"sacfg",
+] as const;
+
+/** Роли доменных групп Keycloak, учитываемые в viewerAccess (кроме Permission). */
+export const V2_ANKETA_VIEWER_ROLE_CODES = [
+	...V2_ANKETA_MASK_FOREIGN_ESTIMATES_ROLE_CODES,
+	...V2_ANKETA_MASK_ALL_ESTIMATES_ROLE_CODES,
+	"ds",
+	"de",
+	"modelops",
+	"mipm",
+	"mipm_stream",
+	"da_stream",
+	"data_expert",
+	"saprg",
+	"sacfg",
+	"appadmin",
+	"admin_it",
+	"admin_it_lead",
+	"business_customer",
+	"auditor",
+	"auditor_lead",
+	"auditorib",
+	"prjtoffice",
+	"project_office",
+] as const;
 
 export type V2AnketaViewerAccessContext = {
 	roles: readonly string[];
@@ -75,6 +147,47 @@ export function userHasV2AnketaStreamBlockFilteredRole(
 export function userIsV2AnketaLead(roles: readonly string[]): boolean {
 	return roles.some((role) =>
 		(V2_ANKETA_LEAD_ROLE_CODES as readonly string[]).includes(role.trim()),
+	);
+}
+
+/** Уровни B/C / лиды: все стрим-блоки карточки, без жёсткого фильтра вкладок. */
+export function userSeesAllAnketaStreamBlocks(
+	roles: readonly string[],
+): boolean {
+	return roles.some((role) =>
+		(
+			V2_ANKETA_SEE_ALL_STREAM_BLOCKS_ROLE_CODES as readonly string[]
+		).includes(role.trim()),
+	);
+}
+
+/** Уровень A: фильтровать вкладки по своему стриму/роли (и нет роли B/C). */
+export function userIsRestrictedToOwnStreamBlocks(
+	roles: readonly string[],
+): boolean {
+	if (userSeesAllAnketaStreamBlocks(roles)) return false;
+	return roles.some((role) =>
+		(
+			V2_ANKETA_OWN_STREAM_BLOCK_FILTER_ROLE_CODES as readonly string[]
+		).includes(role.trim()),
+	);
+}
+
+export function userMasksAllWorkEstimates(roles: readonly string[]): boolean {
+	return roles.some((role) =>
+		(V2_ANKETA_MASK_ALL_ESTIMATES_ROLE_CODES as readonly string[]).includes(
+			role.trim(),
+		),
+	);
+}
+
+export function userMasksForeignWorkEstimates(
+	roles: readonly string[],
+): boolean {
+	return roles.some((role) =>
+		(V2_ANKETA_MASK_FOREIGN_ESTIMATES_ROLE_CODES as readonly string[]).includes(
+			role.trim(),
+		),
 	);
 }
 
@@ -156,17 +269,38 @@ export function shouldApplyV2AnketaBlockAccessAtPath(
 	return resolveV2AnketaStreamBlockOptions(leaf, rootKey).streamBlock;
 }
 
+/**
+ * Блок «свой» для Level A (реестр / complete / правка секции).
+ * Пересечение роли или стрима с ограничениями блока.
+ */
+export function isBlockInViewerOwnStreamScope(
+	viewer: V2AnketaViewerAccessContext,
+	restrictions: V2AnketaBlockAccessRestrictions,
+): boolean {
+	if (!blockHasV2AnketaAccessRestrictions(restrictions)) return true;
+	if (userSeesAllAnketaStreamBlocks(viewer.roles)) return true;
+	if (!userIsRestrictedToOwnStreamBlocks(viewer.roles)) return true;
+	return (
+		rolesIntersectViewerAndBlock(viewer.roles, restrictions.streamBlockRoles) ||
+		streamsIntersectViewerAndBlock(viewer.streams, restrictions.streamExecutors)
+	);
+}
+
+/**
+ * Видимость вкладки в карточке.
+ * F-05 §2: Level A — жёсткий фильтр на **реестр/чужие анкеты**, а в доступной
+ * карточке — «полная детализация» (все стрим-блоки видны). Маскировка оценок
+ * для Level B — отдельно (`shouldMaskWorkEstimatesForUser`).
+ */
 export function isBlockVisibleForUser(
 	viewer: V2AnketaViewerAccessContext,
 	restrictions: V2AnketaBlockAccessRestrictions,
 ): boolean {
 	if (!blockHasV2AnketaAccessRestrictions(restrictions)) return true;
-	if (!userHasV2AnketaStreamBlockFilteredRole(viewer.roles)) return true;
-	if (userIsV2AnketaLead(viewer.roles)) return true;
-	return (
-		rolesIntersectViewerAndBlock(viewer.roles, restrictions.streamBlockRoles) ||
-		streamsIntersectViewerAndBlock(viewer.streams, restrictions.streamExecutors)
-	);
+	if (userSeesAllAnketaStreamBlocks(viewer.roles)) return true;
+	/** Level A: вкладки не режем — только реестр фильтрует анкеты. */
+	if (userIsRestrictedToOwnStreamBlocks(viewer.roles)) return true;
+	return isBlockInViewerOwnStreamScope(viewer, restrictions);
 }
 
 export function isV2AnketaBlockVisibleForViewer(
@@ -184,13 +318,43 @@ export function isV2AnketaBlockVisibleForViewer(
 	return isBlockVisibleForUser(viewer, restrictions);
 }
 
-/** Маскировать оценки в блоке типовых/нетиповых работ для лида (чужие стримы). */
+/**
+ * Обязательные цели для «Завершить заполнение анкеты» с учётом ролевой видимости:
+ * скрытые стрим-блоки не блокируют кнопку.
+ */
+export function collectRequiredWorkflowTargetsForViewer(
+	uiSchema: unknown,
+	formData: Record<string, unknown> | null | undefined,
+	viewer: V2AnketaViewerAccessContext | undefined,
+	options?: { applyAccessRules?: boolean },
+): V2AnketaRequiredWorkflowTarget[] {
+	const targets = collectRequiredWorkflowTargets(uiSchema, formData);
+	if (options?.applyAccessRules === false || !viewer) return targets;
+	return targets.filter((target) => {
+		const path = target.kind === "main" ? target.sectionId : target.pathKey;
+		if (options?.applyAccessRules === false) return true;
+		if (!shouldApplyV2AnketaBlockAccessAtPath(uiSchema, path)) return true;
+		const restrictions = resolveV2AnketaBlockAccessRestrictionsForOutputPath(
+			uiSchema,
+			path,
+		);
+		/** Complete: Level A обязан только по «своим» блокам, даже если вкладки видны. */
+		return isBlockInViewerOwnStreamScope(viewer, restrictions);
+	});
+}
+
+/**
+ * Маскировать оценки в блоке типовых/нетиповых работ (уровень B / валидатор).
+ * Свой стрим — видно; чужой — скрыто. Без своего стрима все блоки со streamExecutor — «чужие».
+ */
 export function shouldMaskWorkEstimatesForUser(
 	viewer: V2AnketaViewerAccessContext,
 	blockStreamExecutors: readonly V2StreamBlockExecutor[],
 ): boolean {
-	if (!userIsV2AnketaLead(viewer.roles)) return false;
+	if (userMasksAllWorkEstimates(viewer.roles)) return true;
+	if (!userMasksForeignWorkEstimates(viewer.roles)) return false;
 	if (blockStreamExecutors.length === 0) return false;
+	if (viewer.streams.length === 0) return true;
 	return !blockStreamExecutors.every((code) =>
 		streamsIntersectViewerAndBlock(viewer.streams, [code]),
 	);

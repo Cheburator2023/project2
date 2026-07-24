@@ -1,18 +1,20 @@
 export const STREAM_FILTERED_ROLES = [
 	"ds",
 	"de",
-	"sarep",
 	"data_expert",
 	"mipm_stream",
 	"modelops",
-	/** Аналитик качества модельных данных — жёсткий фильтр по своему стриму (матрица 2026-07). */
-	"da",
+	/**
+	 * Аналитик качества модельных данных стрима (sum_da_<стрим>).
+	 * sum_da без стрима (/da) — уровень B, без жёсткого фильтра.
+	 */
+	"da_stream",
 ] as const;
 
 export type StreamFilteredRole = (typeof STREAM_FILTERED_ROLES)[number];
 
 /**
- * Lead-роли (F-05 §2.2): видят реестр всех стримов.
+ * Lead-роли (F-05 §2 уровень B): видят реестр всех стримов.
  * Путь `/ds/ds_lead` нормализуется и в `ds`, и в `ds_lead` — без exemption
  * лид ошибочно попадал под жёсткий stream-filter рядового исполнителя.
  */

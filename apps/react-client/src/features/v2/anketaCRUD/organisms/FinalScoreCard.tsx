@@ -18,6 +18,7 @@ export const FinalScoreCard = ({
 	uiSchema,
 	liveFormData,
 	onExportExcel,
+	hideWorkEstimates = false,
 }: {
 	summary?: V2SummaryFormSlice | null;
 	formData?: Record<string, unknown> | null;
@@ -28,6 +29,8 @@ export const FinalScoreCard = ({
 	uiSchema?: Record<string, unknown>;
 	liveFormData?: Record<string, unknown> | null;
 	onExportExcel?: () => void;
+	/** Валидатор: скрыть оценки работ (§2 уровень B / без оценок). */
+	hideWorkEstimates?: boolean;
 }) => {
 	const devCaption =
 		IS_DEV && (calculationItems?.length || taskTriggerItems?.length)
@@ -36,15 +39,16 @@ export const FinalScoreCard = ({
 
 	return (
 		<V2FinalEvaluationPanel
-			summary={summary}
-			formData={formData}
+			summary={hideWorkEstimates ? null : summary}
+			formData={hideWorkEstimates ? null : formData}
 			calculationError={calculationError}
 			isLoading={isLoading}
 			compact
 			engineCaption={devCaption}
-			uiSchema={uiSchema}
-			liveFormData={liveFormData}
+			uiSchema={hideWorkEstimates ? undefined : uiSchema}
+			liveFormData={hideWorkEstimates ? null : liveFormData}
 			onExportExcel={onExportExcel}
+			hideDetailedEstimates={hideWorkEstimates}
 		/>
 	);
 };

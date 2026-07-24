@@ -1,4 +1,5 @@
 import Alert from "@mui/material/Alert";
+import Autocomplete from "@mui/material/Autocomplete";
 import Button from "@mui/material/Button";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
@@ -13,9 +14,22 @@ import { downloadBlob } from "@react-client/common/api/queries/kanban-board";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { toast } from "@react-client/common/toasts";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-type SyncStatus = { enabled: boolean };
+type StandPrefixOption = { value: string; label: string };
+
+const STAND_PREFIX_OPTIONS: StandPrefixOption[] = [
+	{ value: "test_", label: "test_ (ИФТ)" },
+	{ value: "dev_", label: "dev_" },
+	{ value: "prod_", label: "prod_" },
+	{ value: "", label: "(без префикса → /sum_*)" },
+];
+
+type SyncDefaults = {
+	keycloakUrl: string;
+	realm: string;
+	adminRealm: string;
+};
 
 type SyncResult = {
 	dryRun: boolean;
@@ -53,12 +67,26 @@ function downloadBackupJson(data: unknown, realm: string) {
 	downloadBlob(blob, `keycloak-${realm}-backup-${stamp}.json`);
 }
 
+function connectionPayload(fields: {
+	keycloakUrl: string;
+	realm: string;
+	adminRealm: string;
+	standPrefix: string;
+}) {
+	return {
+		keycloakUrl: fields.keycloakUrl.trim() || undefined,
+		realm: fields.realm.trim() || undefined,
+		adminRealm: fields.adminRealm.trim() || undefined,
+		standPrefix: fields.standPrefix.trim() || undefined,
+	};
+}
+
 export function KeycloakRoleSyncPanel() {
-	const statusQuery = useQuery({
-		queryKey: ["v2-keycloak-role-sync-status"],
+	const defaultsQuery = useQuery({
+		queryKey: ["v2-keycloak-role-sync-defaults"],
 		queryFn: () =>
-			apiClient<SyncStatus>({
-				url: "/v2/admin/keycloak-role-sync/status",
+			apiClient<SyncDefaults>({
+				url: "/v2/admin/keycloak-role-sync/defaults",
 				method: "GET",
 			}),
 		staleTime: 60_000,
@@ -66,11 +94,32 @@ export function KeycloakRoleSyncPanel() {
 
 	const [open, setOpen] = useState(false);
 	const [mode, setMode] = useState<ModalMode>("sync");
+	const [keycloakUrl, setKeycloakUrl] = useState("");
+	const [realm, setRealm] = useState("cym");
+	const [adminRealm, setAdminRealm] = useState("master");
+	const [standPrefix, setStandPrefix] = useState("test_");
 	const [username, setUsername] = useState("");
 	const [password, setPassword] = useState("");
 	const [lastResult, setLastResult] = useState<SyncResult | null>(null);
 	const [lastBackup, setLastBackup] = useState<BackupResult | null>(null);
 	const [backupDoneInSession, setBackupDoneInSession] = useState(false);
+
+	useEffect(() => {
+		const d = defaultsQuery.data;
+		if (!d) return;
+		setKeycloakUrl((prev) => prev || d.keycloakUrl || "");
+		setRealm((prev) => (prev === "cym" && d.realm ? d.realm : prev));
+		setAdminRealm((prev) =>
+			prev === "master" && d.adminRealm ? d.adminRealm : prev,
+		);
+	}, [defaultsQuery.data]);
+
+	const connection = connectionPayload({
+		keycloakUrl,
+		realm,
+		adminRealm,
+		standPrefix,
+	});
 
 	const backupMutation = useMutation({
 		mutationFn: () =>
@@ -80,6 +129,7 @@ export function KeycloakRoleSyncPanel() {
 				data: {
 					adminUsername: username,
 					adminPassword: password,
+					...connection,
 				},
 			}),
 		onSuccess: (data) => {
@@ -114,6 +164,7 @@ export function KeycloakRoleSyncPanel() {
 					adminPassword: password,
 					dryRun,
 					applyRemap: true,
+					...connection,
 				},
 			}),
 		onSuccess: (data, dryRun) => {
@@ -136,9 +187,9 @@ export function KeycloakRoleSyncPanel() {
 	});
 
 	const pending = backupMutation.isPending || syncMutation.isPending;
-
-	if (statusQuery.isLoading) return null;
-	if (!statusQuery.data?.enabled) return null;
+	const canSubmit = Boolean(
+		username && password && keycloakUrl.trim() && realm.trim() && adminRealm.trim(),
+	);
 
 	const changed =
 		lastResult?.groupRoleChanges.filter(
@@ -150,16 +201,31 @@ export function KeycloakRoleSyncPanel() {
 		setOpen(true);
 	};
 
+	const envUrl = defaultsQuery.data?.keycloakUrl || "—";
+
 	return (
 		<>
 			<Flex flexDirection="column" gap={8}>
-				<Typography variant="h6">Keycloak · роли F-05 (ИФТ)</Typography>
+				<Typography variant="h6">Keycloak · роли F-05</Typography>
 				<Typography variant="body2" color="text.secondary">
 					Сначала скачайте бекап, затем dry-run / apply. Выставляет realm roles
 					канонических групп по матрице F-05. Latin-дубли с другим регистром
-					(/DE vs /de) не трогаем. Креды admin только в модалке. Нужен{" "}
-					<code>KEYCLOAK_ADMIN_SYNC_ENABLED=true</code>.
+					(/DE vs /de) не трогаем. Креды admin только в модалке. Доступно
+					ролям appadmin / sacfg.
 				</Typography>
+				<Alert severity="info">
+					URL из env Nest: <code>{envUrl}</code>
+					{defaultsQuery.isError
+						? " (не удалось загрузить defaults)"
+						: null}
+					. В модалке можно переопределить URL и{" "}
+					<strong>префикс стенда</strong> (
+					<code>test_</code> / <code>dev_</code> / <code>prod_</code>
+					): AD-имя всегда с <code>sum_</code> —{" "}
+					<code>/sum_appadmin</code> или{" "}
+					<code>/test_sum_appadmin</code> (+ канон{" "}
+					<code>/appadmin</code>).
+				</Alert>
 				<Alert severity="warning">
 					После apply — re-login пользователей. Кириллические{" "}
 					<code>/departament/*</code> и case-дубли групп не трогаются.
@@ -177,6 +243,8 @@ export function KeycloakRoleSyncPanel() {
 						Последний бекап: {lastBackup.exportedAt} · {lastBackup.realm} ·{" "}
 						{lastBackup.counts.users} users / {lastBackup.counts.groups} groups
 						/ {lastBackup.counts.anketaRoles} anketa roles
+						<br />
+						URL: {lastBackup.keycloakUrl}
 					</Typography>
 				) : null}
 				{lastResult ? (
@@ -191,7 +259,12 @@ export function KeycloakRoleSyncPanel() {
 				) : null}
 			</Flex>
 
-			<Dialog open={open} onClose={() => !pending && setOpen(false)} fullWidth maxWidth="sm">
+			<Dialog
+				open={open}
+				onClose={() => !pending && setOpen(false)}
+				fullWidth
+				maxWidth="sm"
+			>
 				<DialogTitle>
 					{mode === "backup"
 						? "Бекап Keycloak (скачать JSON)"
@@ -201,19 +274,91 @@ export function KeycloakRoleSyncPanel() {
 					<Spacer space={8} />
 					<Typography variant="body2" color="text.secondary">
 						Учётка Admin API (обычно realm master / admin-cli). Пароль не
-						сохраняется.
+						сохраняется. Base URL — без trailing slash, часто с{" "}
+						<code>/auth</code>.
 					</Typography>
 					{mode === "sync" && !backupDoneInSession ? (
 						<>
 							<Spacer space={12} />
 							<Alert severity="warning">
 								Рекомендуется сначала «Создать бекап». Apply без бекапа можно,
-								но откат на ИФТ будет сложнее.
+								но откат будет сложнее.
 							</Alert>
 						</>
 					) : null}
 					<Spacer space={16} />
 					<Flex flexDirection="column" gap={12}>
+						<TextField
+							label="Keycloak URL"
+							value={keycloakUrl}
+							onChange={(e) => setKeycloakUrl(e.target.value)}
+							placeholder="https://keycloak…/auth"
+							helperText={
+								defaultsQuery.data?.keycloakUrl
+									? `Env: ${defaultsQuery.data.keycloakUrl}`
+									: "Из KEYCLOAK_URL Nest или свой reachable URL"
+							}
+							fullWidth
+							disabled={pending}
+						/>
+						<TextField
+							label="Realm (анкета)"
+							value={realm}
+							onChange={(e) => setRealm(e.target.value)}
+							fullWidth
+							disabled={pending}
+						/>
+						<TextField
+							label="Admin realm (token)"
+							value={adminRealm}
+							onChange={(e) => setAdminRealm(e.target.value)}
+							helperText="Обычно master — для admin-cli password grant"
+							fullWidth
+							disabled={pending}
+						/>
+						<Autocomplete
+							freeSolo
+							selectOnFocus
+							clearOnBlur={false}
+							handleHomeEndKeys
+							options={STAND_PREFIX_OPTIONS}
+							value={
+								STAND_PREFIX_OPTIONS.find((o) => o.value === standPrefix) ??
+								standPrefix
+							}
+							onChange={(_, next) => {
+								if (next == null) {
+									setStandPrefix("");
+									return;
+								}
+								setStandPrefix(
+									typeof next === "string" ? next : next.value,
+								);
+							}}
+							onInputChange={(_, next, reason) => {
+								if (reason === "input" || reason === "clear") {
+									setStandPrefix(next);
+								}
+							}}
+							getOptionLabel={(opt) =>
+								typeof opt === "string" ? opt : opt.label
+							}
+							isOptionEqualToValue={(a, b) => {
+								const av = typeof a === "string" ? a : a.value;
+								const bv = typeof b === "string" ? b : b.value;
+								return av === bv;
+							}}
+							renderInput={(params) => (
+								<TextField
+									{...params}
+									label="Префикс стенда (AD)"
+									placeholder="test_ | dev_ | prod_ | пусто"
+									helperText="Выбор или ручной ввод. ИФТ: test_ → /test_sum_appadmin. Пусто → /sum_appadmin."
+								/>
+							)}
+							fullWidth
+							disabled={pending}
+						/>
 						<TextField
 							label="Admin username"
 							value={username}
@@ -248,30 +393,25 @@ export function KeycloakRoleSyncPanel() {
 					{mode === "backup" ? (
 						<Button
 							variant="contained"
-							disabled={!username.trim() || !password || pending}
+							disabled={pending || !canSubmit}
 							onClick={() => backupMutation.mutate()}
 						>
-							{backupMutation.isPending ? "Выгрузка…" : "Скачать бекап"}
+							Скачать бекап
 						</Button>
 					) : (
 						<>
 							<Button
 								variant="outlined"
-								disabled={!username.trim() || !password || pending}
+								disabled={pending || !canSubmit}
 								onClick={() => syncMutation.mutate(true)}
 							>
-								{syncMutation.isPending ? "…" : "Dry-run"}
+								Dry-run
 							</Button>
 							<Button
 								variant="contained"
 								color="warning"
-								disabled={!username.trim() || !password || pending}
+								disabled={pending || !canSubmit}
 								onClick={() => syncMutation.mutate(false)}
-								title={
-									backupDoneInSession
-										? undefined
-										: "Сначала лучше скачать бекап"
-								}
 							>
 								Apply
 							</Button>

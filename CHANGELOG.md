@@ -1,5 +1,31 @@
 # Semantic Versioning Changelog
 
+# [1.40.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.39.0...v1.40.0) (2026-07-24)
+
+
+### Features
+
+* enhance Vite configuration and scripts for improved dependency management ([7dc48a2](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/7dc48a2aa9b29fa9e42156e897d31b0141fc32b2))
+* refactor group creation logic for Keycloak synchronization ([5ca5acd](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/5ca5acd8f4bb96a6262bc86a742763b951d14e1e))
+
+# [1.39.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.38.0...v1.39.0) (2026-07-23)
+
+
+### Features
+
+* add image upload functionality and line count script ([d1a4fba](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/d1a4fba68e37011181313712438a230325b45039))
+* add unit tests for anketa modal form validation ([7cf85fb](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/7cf85fba4cc29014d30f73980041756fc24978f1))
+* enhance anketa block access rules and viewer context ([5fdcc38](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/5fdcc388255a96158784fcf05a43cb5513326d48))
+* enhance anketa block access rules and visibility logic ([02e82d8](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/02e82d8a0bf5f7a1a9273d232752713f67ab22b2))
+* enhance anketa modal form validation and UI interactions ([677dbfe](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/677dbfecf864bd8f67066bc484640de30ce2d7b5))
+* enhance form validation by omitting unset optional fields ([4148ded](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/4148ded667c80610fd4a99f8cf95cf9cb428b4f2))
+* enhance StreamFilterInterceptor and routing components ([f6cd0b4](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/f6cd0b4112e963e382da061f284819177b35b266))
+* implement hold functionality for questionnaires and enhance audit access ([7fc7a47](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/7fc7a475e427479d7e1c0d21b389ece6e3d24ec5))
+* implement Keycloak role synchronization functionality ([5880e72](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/5880e72d1b1536ba2b9b5e3d963b1112b0189419))
+* integrate Keycloak user data into global state management ([f7ae984](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/f7ae984045120ba266d88d04d97eb4174b869e88))
+* refine UI components and export functionality ([957ebbf](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/957ebbfda53c160094479f971aa6be5bcd5f7bf9))
+* update routing to include MainLayout and enhance page handling ([20bc190](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/20bc190855fcb012b8d816fc31252c6abfee6c19))
+
 # [1.38.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.37.0...v1.38.0) (2026-07-22)
 
 

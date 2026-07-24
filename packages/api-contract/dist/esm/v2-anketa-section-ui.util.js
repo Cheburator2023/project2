@@ -4,7 +4,7 @@ import { isV2ExecutorStreamLabel, resolveExecutorStreamAreaLabel, typicalWorkAss
 import { isV2ImplementationStreamCode } from "./v2-implementation-streams.util";
 import { V2_MODEL_STREAM_EXECUTOR } from "./v2-model-stream-typical-works.constants";
 import { V2_ANKETA_MAIN_SECTION_IDS, } from "./v2-anketa-workflow.types";
-import { V2_ANKETA_MAIN_SECTION_TITLES } from "./v2-anketa-workflow.util";
+import { V2_ANKETA_MAIN_SECTION_TITLES, } from "./v2-anketa-workflow.util";
 export const V2_ANKETA_SECTION_ROLE_VALUES = [
     "main",
     "subsection",
@@ -406,5 +406,47 @@ export function resolveAnketaSectionWorkflowBinding(pathKey, uiOptions) {
 export function resolveV2AnketaSectionTitleVariant(uiNode, fallback = "h6") {
     const opts = readV2AnketaSectionUiOptions(uiNode);
     return opts.titleVariant ?? fallback;
+}
+function readUiRecord(value) {
+    return value && typeof value === "object" && !Array.isArray(value)
+        ? value
+        : undefined;
+}
+/**
+ * Обязательные цели workflow для кнопки «Завершить заполнение анкеты»:
+ * корневые секции uiSchema с привязкой к workflow (main/panel),
+ * кроме деактивированных `groupActivatable` групп.
+ */
+export function collectRequiredWorkflowTargets(uiSchema, formData) {
+    const root = readUiRecord(uiSchema);
+    if (!root)
+        return [];
+    const activation = readUiRecord(formData?.groupActivation) ?? {};
+    const out = [];
+    const seen = new Set();
+    for (const key of Object.keys(root)) {
+        if (key.startsWith("ui:"))
+            continue;
+        const node = root[key];
+        const opts = readV2AnketaSectionUiOptions(node);
+        if (opts.groupActivatable) {
+            const active = key in activation
+                ? activation[key] === true
+                : opts.groupActive !== false;
+            if (!active)
+                continue;
+        }
+        const binding = resolveAnketaSectionWorkflowBinding(key, opts);
+        if (binding.kind === "none")
+            continue;
+        const dedupeKey = binding.kind === "main"
+            ? `main:${binding.sectionId}`
+            : `panel:${binding.pathKey}`;
+        if (seen.has(dedupeKey))
+            continue;
+        seen.add(dedupeKey);
+        out.push(binding);
+    }
+    return out;
 }
 export { STREAM_SECTION_IDS as V2_ANKETA_STREAM_SECTION_IDS };

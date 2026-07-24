@@ -40,11 +40,33 @@ export function normalizeV2AnketaWorkflow(raw) {
         ...(Object.keys(panelSections).length > 0 ? { panelSections } : {}),
     };
 }
-export function allRequiredSectionsCompleted(workflow) {
+export function isWorkflowTargetCompleted(workflow, target) {
+    if (target.kind === "main") {
+        return workflow.sections[target.sectionId] === "Заполнено";
+    }
+    return readPanelSectionStatus(workflow, target.pathKey) === "Заполнено";
+}
+/**
+ * Все обязательные разделы подтверждены.
+ * Без `requiredTargets` — legacy: все `V2_ANKETA_MAIN_SECTION_IDS`.
+ * С `requiredTargets` (из uiSchema) — только реально присутствующие/активные секции,
+ * включая кастомные stream-блоки в `panelSections`.
+ */
+export function allRequiredSectionsCompleted(workflow, requiredTargets) {
+    if (requiredTargets) {
+        if (requiredTargets.length === 0)
+            return false;
+        return requiredTargets.every((target) => isWorkflowTargetCompleted(workflow, target));
+    }
     return V2_ANKETA_MAIN_SECTION_IDS.every((id) => workflow.sections[id] === "Заполнено");
 }
+/** Анкета заблокирована для правок (заполнена или зафиксирован срез). */
+export function isAnketaGloballyLocked(workflow) {
+    return (workflow.globalStatus === "Заполнено" ||
+        workflow.globalStatus === "Утверждена");
+}
 export function markSectionInProgress(workflow, sectionId) {
-    if (workflow.globalStatus === "Заполнено")
+    if (isAnketaGloballyLocked(workflow))
         return workflow;
     const status = workflow.sections[sectionId];
     if (status !== "Создано")
@@ -55,7 +77,7 @@ export function markSectionInProgress(workflow, sectionId) {
     };
 }
 export function completeSection(workflow, sectionId) {
-    if (workflow.globalStatus === "Заполнено")
+    if (isAnketaGloballyLocked(workflow))
         return workflow;
     return {
         ...workflow,
@@ -70,7 +92,7 @@ export function readPanelSectionStatus(workflow, pathKey) {
     return workflow.panelSections?.[pathKey] ?? "Создано";
 }
 export function completePanelSection(workflow, pathKey) {
-    if (workflow.globalStatus === "Заполнено")
+    if (isAnketaGloballyLocked(workflow))
         return workflow;
     const trimmed = pathKey.trim();
     if (!trimmed)
@@ -84,12 +106,18 @@ export function completePanelSection(workflow, pathKey) {
     };
 }
 /** Глобальное «Заполнено» — только когда все разделы подтверждены (кнопка в шапке). */
-export function completeGlobalQuestionnaire(workflow) {
-    if (workflow.globalStatus === "Заполнено")
+export function completeGlobalQuestionnaire(workflow, requiredTargets) {
+    if (isAnketaGloballyLocked(workflow))
         return workflow;
-    if (!allRequiredSectionsCompleted(workflow))
+    if (!allRequiredSectionsCompleted(workflow, requiredTargets))
         return workflow;
     return { ...workflow, globalStatus: "Заполнено" };
+}
+/** Фиксация среза (§3.13): Заполнено → Утверждена. */
+export function holdQuestionnaire(workflow) {
+    if (workflow.globalStatus !== "Заполнено")
+        return workflow;
+    return { ...workflow, globalStatus: "Утверждена" };
 }
 export function mainSectionIdForFormPath(path) {
     const root = path.split(".")[0]?.trim();
@@ -101,7 +129,7 @@ export function mainSectionIdForFormPath(path) {
 }
 /** Поле/арх-компонент недоступен для редактирования после завершения раздела или анкеты. */
 export function isAnketaFormPathLocked(workflow, pathKey) {
-    if (workflow.globalStatus === "Заполнено")
+    if (isAnketaGloballyLocked(workflow))
         return true;
     const trimmed = pathKey.trim();
     if (!trimmed)
@@ -124,6 +152,7 @@ export function isAnketaFormPathLocked(workflow, pathKey) {
     return false;
 }
 export const V2_ANKETA_GLOBAL_COMPLETE_LABEL = "Завершить заполнение анкеты";
+export const V2_ANKETA_HOLD_LABEL = "Зафиксировать срез";
 export const V2_ANKETA_SECTION_COMPLETE_LABELS = {
     generalInfo: "Завершить заполнение общей информации",
     detailInfo: "Завершить заполнение детальной информации",
@@ -144,4 +173,5 @@ export const V2_ANKETA_SECTION_STATUS_CHIP_COLOR = {
 export const V2_ANKETA_GLOBAL_STATUS_CHIP_COLOR = {
     Черновик: "default",
     Заполнено: "success",
+    Утверждена: "primary",
 };

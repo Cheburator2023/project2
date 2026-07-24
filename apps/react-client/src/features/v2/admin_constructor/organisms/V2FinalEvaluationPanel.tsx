@@ -120,6 +120,8 @@ type Props = {
 	uiSchema?: Record<string, unknown>;
 	/** Свежие данные расчёта с сервера (массивы типовых работ). */
 	liveFormData?: Record<string, unknown> | null;
+	/** Скрыть оценки работ (валидатор и т.п.). */
+	hideDetailedEstimates?: boolean;
 };
 
 export function V2FinalEvaluationPanel({
@@ -132,9 +134,14 @@ export function V2FinalEvaluationPanel({
 	engineCaption,
 	uiSchema,
 	liveFormData,
+	hideDetailedEstimates = false,
 }: Props) {
-	const uncertaintySummary = formData ? uncertaintySummaryText(formData) : null;
-	const effectiveSummary = calculationError ? null : summary;
+	const uncertaintySummary =
+		!hideDetailedEstimates && formData
+			? uncertaintySummaryText(formData)
+			: null;
+	const effectiveSummary =
+		calculationError || hideDetailedEstimates ? null : summary;
 	const rows = effectiveSummary?.detailedCalculation ?? [];
 	const platformRows = effectiveSummary?.platformStreams ?? [];
 	const typicalWorkGroups = useMemo(
@@ -187,9 +194,10 @@ export function V2FinalEvaluationPanel({
 				platformRows.length > 0)) ||
 		typicalWorkRowCount > 0;
 	const showDetailedSection =
-		showModelStreamSection ||
-		platformRows.length > 0 ||
-		otherTypicalWorkGroups.length > 0;
+		!hideDetailedEstimates &&
+		(showModelStreamSection ||
+			platformRows.length > 0 ||
+			otherTypicalWorkGroups.length > 0);
 
 	return (
 		<Box sx={{ width: "100%", minWidth: 0 }}>
@@ -294,8 +302,9 @@ export function V2FinalEvaluationPanel({
 				<CardContent sx={{ p: compact ? 3 : 4, pt: compact ? 5 : 6 }}>
 					{!hasData && !isLoading && typicalWorkRowCount === 0 ? (
 						<Typography variant="body2" color="text.secondary">
-							Заполните анкету — здесь появится расчёт поэтапам и платформенным
-							стримам.
+							{hideDetailedEstimates
+								? "Оценки работ недоступны для вашей роли."
+								: "Заполните анкету — здесь появится расчёт поэтапам и платформенным стримам."}
 						</Typography>
 					) : null}
 

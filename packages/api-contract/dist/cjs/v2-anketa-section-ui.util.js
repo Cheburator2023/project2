@@ -26,6 +26,7 @@ exports.resolveV2AnketaDefaultExpanded = resolveV2AnketaDefaultExpanded;
 exports.resolveV2AnketaWorkflowSectionId = resolveV2AnketaWorkflowSectionId;
 exports.resolveAnketaSectionWorkflowBinding = resolveAnketaSectionWorkflowBinding;
 exports.resolveV2AnketaSectionTitleVariant = resolveV2AnketaSectionTitleVariant;
+exports.collectRequiredWorkflowTargets = collectRequiredWorkflowTargets;
 const v2_stream_block_role_util_1 = require("./v2-stream-block-role.util");
 const v2_stream_block_executor_util_1 = require("./v2-stream-block-executor.util");
 const v2_executor_streams_util_1 = require("./v2-executor-streams.util");
@@ -435,4 +436,46 @@ function resolveAnketaSectionWorkflowBinding(pathKey, uiOptions) {
 function resolveV2AnketaSectionTitleVariant(uiNode, fallback = "h6") {
     const opts = readV2AnketaSectionUiOptions(uiNode);
     return opts.titleVariant ?? fallback;
+}
+function readUiRecord(value) {
+    return value && typeof value === "object" && !Array.isArray(value)
+        ? value
+        : undefined;
+}
+/**
+ * Обязательные цели workflow для кнопки «Завершить заполнение анкеты»:
+ * корневые секции uiSchema с привязкой к workflow (main/panel),
+ * кроме деактивированных `groupActivatable` групп.
+ */
+function collectRequiredWorkflowTargets(uiSchema, formData) {
+    const root = readUiRecord(uiSchema);
+    if (!root)
+        return [];
+    const activation = readUiRecord(formData?.groupActivation) ?? {};
+    const out = [];
+    const seen = new Set();
+    for (const key of Object.keys(root)) {
+        if (key.startsWith("ui:"))
+            continue;
+        const node = root[key];
+        const opts = readV2AnketaSectionUiOptions(node);
+        if (opts.groupActivatable) {
+            const active = key in activation
+                ? activation[key] === true
+                : opts.groupActive !== false;
+            if (!active)
+                continue;
+        }
+        const binding = resolveAnketaSectionWorkflowBinding(key, opts);
+        if (binding.kind === "none")
+            continue;
+        const dedupeKey = binding.kind === "main"
+            ? `main:${binding.sectionId}`
+            : `panel:${binding.pathKey}`;
+        if (seen.has(dedupeKey))
+            continue;
+        seen.add(dedupeKey);
+        out.push(binding);
+    }
+    return out;
 }

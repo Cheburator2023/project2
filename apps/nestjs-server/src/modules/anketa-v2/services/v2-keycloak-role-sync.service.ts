@@ -5,6 +5,7 @@ import {
 	ServiceUnavailableException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { expandV2KeycloakTargetsWithAdAliases } from "@smart-anketa/api-contract";
 import {
 	V2_KEYCLOAK_GROUP_ROLE_TARGET,
 	V2_KEYCLOAK_GROUPS_TO_ENSURE,
@@ -78,35 +79,51 @@ export class V2KeycloakRoleSyncService {
 
 	constructor(private readonly config: ConfigService) {}
 
-	isEnabled(): boolean {
-		// Явный opt-in. На проде флаг НЕ выставлять (даже при NODE_ENV=production на ИФТ).
-		return this.config.get<string>("KEYCLOAK_ADMIN_SYNC_ENABLED") === "true";
+	/** Дефолты из env — для префилла в UI. */
+	getDefaults(): {
+		keycloakUrl: string;
+		realm: string;
+		adminRealm: string;
+	} {
+		return {
+			keycloakUrl: (this.config.get<string>("KEYCLOAK_URL") || "").replace(
+				/\/$/,
+				"",
+			),
+			realm: this.config.get<string>("KEYCLOAK_REALMS") || "cym",
+			adminRealm: this.config.get<string>("KEYCLOAK_ADMIN_REALM") || "master",
+		};
 	}
 
-	assertEnabled(): void {
-		if (!this.isEnabled()) {
-			throw new ForbiddenException(
-				"Синхронизация Keycloak отключена. Нужен KEYCLOAK_ADMIN_SYNC_ENABLED=true (только ИФТ/dev; на проде не включать).",
+	private resolveConnection(options: {
+		keycloakUrl?: string;
+		realm?: string;
+		adminRealm?: string;
+	}): { keycloakUrl: string; realm: string; adminRealm: string } {
+		const defaults = this.getDefaults();
+		const keycloakUrl = (
+			options.keycloakUrl?.trim() ||
+			defaults.keycloakUrl ||
+			""
+		).replace(/\/$/, "");
+		const realm = options.realm?.trim() || defaults.realm;
+		const adminRealm = options.adminRealm?.trim() || defaults.adminRealm;
+		if (!keycloakUrl) {
+			throw new ServiceUnavailableException(
+				"Keycloak URL не задан (KEYCLOAK_URL / поле в UI)",
 			);
 		}
+		return { keycloakUrl, realm, adminRealm };
 	}
 
 	async createBackup(options: {
 		adminUsername: string;
 		adminPassword: string;
+		keycloakUrl?: string;
+		realm?: string;
+		adminRealm?: string;
 	}): Promise<V2KeycloakBackupDto> {
-		this.assertEnabled();
-
-		const keycloakUrl = (
-			this.config.get<string>("KEYCLOAK_URL") || ""
-		).replace(/\/$/, "");
-		const realm = this.config.get<string>("KEYCLOAK_REALMS") || "cym";
-		const adminRealm =
-			this.config.get<string>("KEYCLOAK_ADMIN_REALM") || "master";
-
-		if (!keycloakUrl) {
-			throw new ServiceUnavailableException("KEYCLOAK_URL не задан");
-		}
+		const { keycloakUrl, realm, adminRealm } = this.resolveConnection(options);
 
 		const token = await this.fetchAdminToken({
 			keycloakUrl,
@@ -251,19 +268,12 @@ export class V2KeycloakRoleSyncService {
 		adminPassword: string;
 		dryRun: boolean;
 		applyRemap: boolean;
+		keycloakUrl?: string;
+		realm?: string;
+		adminRealm?: string;
+		standPrefix?: string;
 	}): Promise<V2KeycloakRoleSyncResult> {
-		this.assertEnabled();
-
-		const keycloakUrl = (
-			this.config.get<string>("KEYCLOAK_URL") || ""
-		).replace(/\/$/, "");
-		const realm = this.config.get<string>("KEYCLOAK_REALMS") || "cym";
-		const adminRealm =
-			this.config.get<string>("KEYCLOAK_ADMIN_REALM") || "master";
-
-		if (!keycloakUrl) {
-			throw new ServiceUnavailableException("KEYCLOAK_URL не задан");
-		}
+		const { keycloakUrl, realm, adminRealm } = this.resolveConnection(options);
 
 		const token = await this.fetchAdminToken({
 			keycloakUrl,
@@ -290,6 +300,7 @@ export class V2KeycloakRoleSyncService {
 				realm,
 				token,
 				apply,
+				standPrefix: options.standPrefix,
 			});
 			result.rolesCreated = remap.rolesCreated;
 			result.groupsCreated = remap.groupsCreated;
@@ -297,9 +308,33 @@ export class V2KeycloakRoleSyncService {
 		}
 
 		this.logger.log(
-			`Keycloak F-05 sync finished dryRun=${options.dryRun} roleChanges=${result.groupRoleChanges.length}`,
+			`Keycloak F-05 sync finished dryRun=${options.dryRun} standPrefix=${options.standPrefix || ""} roleChanges=${result.groupRoleChanges.length}`,
 		);
 		return result;
+	}
+
+	private describeFetchError(url: string, err: unknown): string {
+		const e = err as {
+			message?: string;
+			cause?: { code?: string; hostname?: string; message?: string };
+		};
+		const code = e?.cause?.code || "";
+		const host = e?.cause?.hostname || "";
+		const detail = [code, host, e?.cause?.message || e?.message]
+			.filter(Boolean)
+			.join(" · ");
+		return `Не удалось достучаться до Keycloak (${url}): ${detail || "fetch failed"}. Проверьте URL (DNS/сеть из пода API) или переопределите в UI.`;
+	}
+
+	private async safeFetch(
+		url: string,
+		init?: RequestInit,
+	): Promise<Response> {
+		try {
+			return await fetch(url, init);
+		} catch (err) {
+			throw new ServiceUnavailableException(this.describeFetchError(url, err));
+		}
 	}
 
 	private async fetchAdminToken(args: {
@@ -314,17 +349,15 @@ export class V2KeycloakRoleSyncService {
 			password: args.password,
 			grant_type: "password",
 		});
-		const res = await fetch(
-			`${args.keycloakUrl}/realms/${args.adminRealm}/protocol/openid-connect/token`,
-			{
-				method: "POST",
-				headers: { "Content-Type": "application/x-www-form-urlencoded" },
-				body,
-			},
-		);
+		const tokenUrl = `${args.keycloakUrl}/realms/${args.adminRealm}/protocol/openid-connect/token`;
+		const res = await this.safeFetch(tokenUrl, {
+			method: "POST",
+			headers: { "Content-Type": "application/x-www-form-urlencoded" },
+			body,
+		});
 		if (!res.ok) {
 			throw new ForbiddenException(
-				`Не удалось получить admin token (${res.status}). Проверьте креды и KEYCLOAK_ADMIN_REALM.`,
+				`Не удалось получить admin token (${res.status}) с ${tokenUrl}. Проверьте креды и admin realm.`,
 			);
 		}
 		const json = (await res.json()) as { access_token?: string };
@@ -342,7 +375,8 @@ export class V2KeycloakRoleSyncService {
 		path: string,
 		body?: unknown,
 	): Promise<T | null> {
-		const res = await fetch(`${keycloakUrl}/admin/realms/${realm}${path}`, {
+		const url = `${keycloakUrl}/admin/realms/${realm}${path}`;
+		const res = await this.safeFetch(url, {
 			method,
 			headers: {
 				Authorization: `Bearer ${token}`,
@@ -412,11 +446,26 @@ export class V2KeycloakRoleSyncService {
 		realm: string;
 		token: string;
 		apply: boolean;
+		standPrefix?: string;
 	}): Promise<{
 		rolesCreated: string[];
 		groupsCreated: string[];
 		groupRoleChanges: V2KeycloakRoleSyncResult["groupRoleChanges"];
 	}> {
+		const target = expandV2KeycloakTargetsWithAdAliases(
+			V2_KEYCLOAK_GROUP_ROLE_TARGET,
+			args.standPrefix,
+		);
+		const groupsToEnsure = [
+			...new Set([
+				...V2_KEYCLOAK_GROUPS_TO_ENSURE,
+				...Object.keys(target),
+			]),
+		].sort(
+			(a, b) =>
+				a.split("/").length - b.split("/").length || a.localeCompare(b),
+		);
+
 		const roles =
 			(await this.api<KcRole[]>(
 				args.keycloakUrl,
@@ -474,17 +523,46 @@ export class V2KeycloakRoleSyncService {
 			args.token,
 		);
 
-		// Создаём недостающие top-level группы из матрицы (ничего не удаляем).
+		// Создаём недостающие группы: канон + AD-alias (parents first).
 		const groupsCreated: string[] = [];
-		for (const path of V2_KEYCLOAK_GROUPS_TO_ENSURE) {
+		for (const path of groupsToEnsure) {
 			if (byPath[path]) continue;
 			groupsCreated.push(path);
 			if (!args.apply) continue;
-			await this.api(args.keycloakUrl, args.realm, args.token, "POST", "/groups", {
-				name: path.replace(/^\//, ""),
-			});
-		}
-		if (args.apply && groupsCreated.length) {
+
+			const parts = path.split("/").filter(Boolean);
+			const name = parts[parts.length - 1];
+			try {
+				if (parts.length === 1) {
+					await this.api(
+						args.keycloakUrl,
+						args.realm,
+						args.token,
+						"POST",
+						"/groups",
+						{ name },
+					);
+				} else {
+					const parentPath = `/${parts.slice(0, -1).join("/")}`;
+					const parent = byPath[parentPath];
+					if (!parent?.id) {
+						throw new ServiceUnavailableException(
+							`Нельзя создать ${path}: нет родителя ${parentPath}`,
+						);
+					}
+					await this.api(
+						args.keycloakUrl,
+						args.realm,
+						args.token,
+						"POST",
+						`/groups/${parent.id}/children`,
+						{ name },
+					);
+				}
+			} catch (e) {
+				const msg = String(e);
+				if (!msg.includes("409")) throw e;
+			}
 			byPath = await this.loadGroupsByPath(
 				args.keycloakUrl,
 				args.realm,
@@ -494,7 +572,7 @@ export class V2KeycloakRoleSyncService {
 
 		const groupRoleChanges: V2KeycloakRoleSyncResult["groupRoleChanges"] = [];
 
-		for (const [path, desired] of Object.entries(V2_KEYCLOAK_GROUP_ROLE_TARGET)) {
+		for (const [path, desired] of Object.entries(target)) {
 			const g = byPath[path];
 			if (!g) {
 				groupRoleChanges.push({

@@ -5,11 +5,30 @@ import {
 	createAnketaModalCustomValidate,
 	isAnketaModalFormValid,
 	isFilledRequiredValue,
+	omitUnsetOptionalFields,
 } from "./anketaModalFormValidation.util";
 
 const nameSchema: RJSFSchema = {
 	type: "object",
 	properties: { name: { type: "string" } },
+	required: ["name"],
+};
+
+const sourceLikeSchema: RJSFSchema = {
+	type: "object",
+	properties: {
+		name: { type: "string", title: "Название источника" },
+		type: {
+			type: "string",
+			title: "Тип системы-источника",
+			enum: ["Внутренний", "Внешний"],
+		},
+		risk: {
+			type: "string",
+			title: "Риск",
+			enum: ["Низкий", "Средний", "Высокий"],
+		},
+	},
 	required: ["name"],
 };
 
@@ -60,5 +79,51 @@ describe("anketaModalFormValidation.util", () => {
 				"Поле обязательно для заполнения",
 			]);
 		}
+	});
+
+	it("omits empty optional strings but keeps required empties", () => {
+		expect(
+			omitUnsetOptionalFields(
+				{ name: "CRM", type: "", risk: "   " },
+				sourceLikeSchema,
+			),
+		).toEqual({ name: "CRM" });
+		expect(
+			omitUnsetOptionalFields({ name: "", type: "" }, sourceLikeSchema),
+		).toEqual({ name: "" });
+		expect(
+			omitUnsetOptionalFields(
+				{ name: "CRM", type: null, risk: undefined },
+				sourceLikeSchema,
+			),
+		).toEqual({ name: "CRM" });
+	});
+
+	it("allows save when required name is set and optional enums are empty strings", () => {
+		expect(
+			isAnketaModalFormValid(
+				{
+					name: "CRM",
+					type: "",
+					risk: "",
+				},
+				sourceLikeSchema,
+				{},
+			),
+		).toBe(true);
+		expect(
+			isAnketaModalFormValid(
+				{ name: "CRM", type: "Внутренний" },
+				sourceLikeSchema,
+				{},
+			),
+		).toBe(true);
+		expect(
+			isAnketaModalFormValid(
+				{ name: "", type: "Внутренний" },
+				sourceLikeSchema,
+				{},
+			),
+		).toBe(false);
 	});
 });

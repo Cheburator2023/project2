@@ -13,6 +13,7 @@ export function clearMfeAuthState(): void {
 	setGroups([]);
 	setRoles([]);
 	setPermissions([]);
+	useUserStore.getState().setProfileHydrated(false);
 
 	if (typeof window === "undefined") {
 		return;

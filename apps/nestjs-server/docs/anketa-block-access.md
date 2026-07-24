@@ -105,28 +105,24 @@ Keycloak groups
 
 ## 4. Правила видимости блоков
 
-### Обычный пользователь (роль ∈ `RoleStreamBlock`, не лид)
+### Обычный пользователь уровня A (только свой стрим в **реестре**)
 
-```text
-нет ограничений на блоке          → блок виден
-есть streamExecutor и/или roles   → виден, если:
-    роль пользователя ∩ block.streamBlockRoles ≠ ∅
-    ИЛИ
-    стрим пользователя ∩ block.streamExecutor ≠ ∅
-иначе                             → блок скрыт (не рендерится секция / массив)
-```
+Роли: `ds`, `de`, `modelops`, `da_stream`, `mipm_stream`, `data_expert` — и **нет** роли уровня B/C.
 
-### Лиды (`RoleLead`)
+F-05 §2: жёсткий фильтр действует на **список анкет** (и 403 на чужие).  
+В **карточке** доступной анкеты — полная детализация: **все стрим-вкладки видны** (как у лида по составу блоков). Оценки у Level A не маскируются.
 
-1. Блоки **не скрываются** по стримам/ролям — все стрим-блоки и массивы typical/atypical **отображаются**.
-2. **Стрим-блок без вложенных typical/atypical** — полностью виден, маскировки нет.
-3. В блоках **типовых и нетиповых работ**:
-   - оценки **своих** стримов — видны;
-   - оценки **чужих** стримов — скрыты (`—` в UI, пусто в экспорте).
+Для кнопки «Завершить заполнение анкеты» обязательны только блоки своего стрима/роли (`isBlockInViewerOwnStreamScope`).
 
-«Оценки» — поля `estimateHoursPerDay`, `coefficient`, `total`, а также «Суммарный итог» типовых работ.
+### Уровни B/C и лиды (`userSeesAllAnketaStreamBlocks`)
 
-Маскировка для лида: если **не все** стримы, настроенные на блоке, входят в стримы пользователя — числовые колонки и итог блока маскируются. Блок с одним «чужим» стримом (`pirm`) при стриме пользователя `idsrc` — структура видна, цифры скрыты.
+Все стрим-блоки и typical/atypical **видны** (как у лида). Маскировка оценок:
+
+| Роли | Оценки |
+|------|--------|
+| Лиды, architect, mntranlst, da, sarep | чужие стримы скрыты |
+| validator / validator_lead | все оценки скрыты |
+| mipm, sacfg, saprg, appadmin, auditor* | полная детализация |
 
 ### Примеры
 
@@ -184,7 +180,8 @@ useUserStore (groups, roles)
 |---------|------------|
 | `resolveV2AnketaBlockAccessRestrictionsForOutputPath(uiSchema, path)` | стримы + роли блока по dot-пути |
 | `shouldApplyV2AnketaBlockAccessAtPath(uiSchema, path)` | нужна ли проверка (streamBlock / typicalWork / atypicalWork) |
-| `isBlockVisibleForUser(viewer, restrictions)` | видимость для обычного пользователя и лидов (лиды → always true) |
+| `isBlockVisibleForUser(viewer, restrictions)` | видимость: уровень A — фильтр; B/C/лиды → always true |
+| `collectRequiredWorkflowTargetsForViewer(...)` | обязательные секции для «Завершить анкету» **без скрытых** ролевкой блоков |
 | `isV2AnketaBlockVisibleForViewer(viewer, uiSchema, path, opts)` | обёртка для UI/экспорта |
 | `shouldMaskWorkEstimatesForUser(viewer, blockStreamExecutors)` | маскировка оценок для лидов |
 | `shouldMaskWorkEstimatesForViewerAtPath(...)` | маскировка по пути массива работ |

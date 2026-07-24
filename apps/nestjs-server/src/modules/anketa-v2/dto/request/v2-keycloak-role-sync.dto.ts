@@ -1,6 +1,6 @@
 import { IsBoolean, IsOptional, IsString, MinLength } from "class-validator";
 
-/** Креды Keycloak admin (не сохраняются). */
+/** Креды Keycloak admin + опциональный override URL (не сохраняются). */
 export class V2KeycloakAdminCredsDto {
 	@IsString()
 	@MinLength(1)
@@ -9,6 +9,25 @@ export class V2KeycloakAdminCredsDto {
 	@IsString()
 	@MinLength(1)
 	adminPassword!: string;
+
+	/**
+	 * Base URL Keycloak Admin/OpenID (без trailing slash), напр.
+	 * https://keycloak-….local/auth
+	 * Если пусто — берётся KEYCLOAK_URL с сервера.
+	 */
+	@IsOptional()
+	@IsString()
+	keycloakUrl?: string;
+
+	/** Realm приложения (по умолчанию KEYCLOAK_REALMS / cym). */
+	@IsOptional()
+	@IsString()
+	realm?: string;
+
+	/** Realm админа для admin-cli token (по умолчанию KEYCLOAK_ADMIN_REALM / master). */
+	@IsOptional()
+	@IsString()
+	adminRealm?: string;
 }
 
 export class V2KeycloakRoleSyncDto extends V2KeycloakAdminCredsDto {
@@ -21,4 +40,12 @@ export class V2KeycloakRoleSyncDto extends V2KeycloakAdminCredsDto {
 	@IsOptional()
 	@IsBoolean()
 	applyRemap?: boolean;
+
+	/**
+	 * Префикс стенда для AD-групп: `test_` / `dev_` / `prod_` / пусто.
+	 * На ИФТ: test_ → роли ещё и на `/test_sum_appadmin` (AD: всегда sum_, не test_appadmin).
+	 */
+	@IsOptional()
+	@IsString()
+	standPrefix?: string;
 }

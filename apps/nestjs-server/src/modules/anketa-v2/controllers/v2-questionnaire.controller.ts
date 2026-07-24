@@ -493,6 +493,18 @@ export class V2QuestionnaireController {
         }
     }
 
+	@Post(":id/hold")
+	@HttpCode(200)
+	@RealmRole(Permission.ANKETA_HOLD)
+	@ApiOperation({
+		summary: "Зафиксировать срез анкеты (Заполнено → Утверждена)",
+	})
+	async hold(
+		@Param("id", ParseUUIDPipe) id: string,
+	): Promise<V2QuestionnaireDto> {
+		return this.questionnaireService.hold(id);
+	}
+
 	@Post(":id/new-version")
 	@RealmRole(Permission.ANKETA_CREATE_CALCULATION)
 	@ApiOperation({

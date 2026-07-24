@@ -27,7 +27,10 @@ import {
 	V2_ANKETA_MAIN_SECTION_IDS,
 	type V2AnketaMainSectionId,
 } from "./v2-anketa-workflow.types";
-import { V2_ANKETA_MAIN_SECTION_TITLES } from "./v2-anketa-workflow.util";
+import {
+	V2_ANKETA_MAIN_SECTION_TITLES,
+	type V2AnketaRequiredWorkflowTarget,
+} from "./v2-anketa-workflow.util";
 
 export const V2_ANKETA_SECTION_ROLE_VALUES = [
 	"main",
@@ -633,6 +636,55 @@ export function resolveV2AnketaSectionTitleVariant(
 ): V2AnketaSectionTitleVariant {
 	const opts = readV2AnketaSectionUiOptions(uiNode);
 	return opts.titleVariant ?? fallback;
+}
+
+function readUiRecord(value: unknown): Record<string, unknown> | undefined {
+	return value && typeof value === "object" && !Array.isArray(value)
+		? (value as Record<string, unknown>)
+		: undefined;
+}
+
+/**
+ * Обязательные цели workflow для кнопки «Завершить заполнение анкеты»:
+ * корневые секции uiSchema с привязкой к workflow (main/panel),
+ * кроме деактивированных `groupActivatable` групп.
+ */
+export function collectRequiredWorkflowTargets(
+	uiSchema: unknown,
+	formData?: Record<string, unknown> | null,
+): V2AnketaRequiredWorkflowTarget[] {
+	const root = readUiRecord(uiSchema);
+	if (!root) return [];
+
+	const activation = readUiRecord(formData?.groupActivation) ?? {};
+	const out: V2AnketaRequiredWorkflowTarget[] = [];
+	const seen = new Set<string>();
+
+	for (const key of Object.keys(root)) {
+		if (key.startsWith("ui:")) continue;
+		const node = root[key];
+		const opts = readV2AnketaSectionUiOptions(node);
+		if (opts.groupActivatable) {
+			const active =
+				key in activation
+					? activation[key] === true
+					: opts.groupActive !== false;
+			if (!active) continue;
+		}
+
+		const binding = resolveAnketaSectionWorkflowBinding(key, opts);
+		if (binding.kind === "none") continue;
+
+		const dedupeKey =
+			binding.kind === "main"
+				? `main:${binding.sectionId}`
+				: `panel:${binding.pathKey}`;
+		if (seen.has(dedupeKey)) continue;
+		seen.add(dedupeKey);
+		out.push(binding);
+	}
+
+	return out;
 }
 
 export { STREAM_SECTION_IDS as V2_ANKETA_STREAM_SECTION_IDS };

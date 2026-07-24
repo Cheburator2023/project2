@@ -4,7 +4,9 @@ import {
 	ModuleRegistry,
 } from "ag-grid-community";
 import {
+	ColumnMenuModule,
 	ColumnsToolPanelModule,
+	ContextMenuModule,
 	FiltersToolPanelModule,
 	RowGroupingModule,
 	SideBarModule,
@@ -12,7 +14,7 @@ import {
 
 let registered = false;
 
-/** Регистрирует community + sidebar tool panels (enterprise) один раз. */
+/** Регистрирует community + sidebar/menu modules (enterprise) один раз. */
 export function registerAgGridTableModules(): void {
 	if (registered) return;
 	ModuleRegistry.registerModules([
@@ -22,6 +24,8 @@ export function registerAgGridTableModules(): void {
 		ColumnsToolPanelModule,
 		FiltersToolPanelModule,
 		RowGroupingModule,
+		ColumnMenuModule,
+		ContextMenuModule,
 	]);
 	registered = true;
 }

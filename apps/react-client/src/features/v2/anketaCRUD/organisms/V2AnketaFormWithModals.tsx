@@ -59,7 +59,11 @@ export function V2AnketaFormWithModals({
 		completePanelSectionByPath,
 		touchMainSection,
 		isSectionLocked,
-	} = useAnketaWorkflow(engine.formData, engine.setFormData);
+	} = useAnketaWorkflow(
+		engine.formData,
+		engine.setFormData,
+		engine.previewUiSchema,
+	);
 
 	const modalBindingSets = useMemo(
 		() =>

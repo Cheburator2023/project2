@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
  * Заливка ролей и групп Смарт-Анкеты в Keycloak под матрицу F-05
- * (редакция 2026-07, llm/feature_roles_fresh/требования_матрица_ролей.csv).
+ * (ТИС 2026-07, llm/feature_roles_fresh/требования_матрица_ролей.csv).
  *
  * Делает:
- *  1) создаёт недостающие realm roles anketa_*;
- *  2) создаёт недостающие top-level группы из матрицы (/mntranlst, /da, /auditorib, /project_office);
+ *  1) создаёт недостающие realm roles anketa_* (в т.ч. anketa_complete_anketa);
+ *  2) создаёт недостающие группы из TARGET (в т.ч. /sacfg, nested lead-подгруппы);
  *  3) выставляет anketa_* realm-role mappings канонических групп ровно по TARGET.
  *
  * НЕ делает:
@@ -16,14 +16,23 @@
  *   NODE_TLS_REJECT_UNAUTHORIZED=0 \
  *   KC_URL=https://keycloak-….local/auth KC_REALM=cym \
  *   KC_ADMIN=admin KC_ADMIN_PASS=… \
+ *   STAND_PREFIX=test_ \   # optional: test_ | dev_ | prod_ | empty
  *   node scripts/keycloak-remap-anketa-group-roles.mjs           # dry-run
  *   … --apply
  */
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
+const {
+	expandV2KeycloakTargetsWithAdAliases,
+} = require("../packages/api-contract/dist/cjs/v2-ad-domain-groups.util.js");
+
 const KC = (process.env.KC_URL || "").replace(/\/$/, "");
 const REALM = process.env.KC_REALM || "cym";
 const ADMIN_REALM = process.env.KC_ADMIN_REALM || "master";
 const USER = process.env.KC_ADMIN || "";
 const PASS = process.env.KC_ADMIN_PASS || "";
+const STAND_PREFIX = process.env.STAND_PREFIX || "";
 const APPLY = process.argv.includes("--apply");
 
 /** path → desired anketa* realm roles (canonical lowercase groups). */
@@ -36,6 +45,7 @@ const TARGET = {
 		"anketa_delete_calculation",
 		"anketa_export_reports",
 		"anketa_workflow_approve",
+		"anketa_complete_anketa",
 	],
 	"/de": ["anketa_view_all_calculations", "anketa_export_reports"],
 	"/de/de_lead": [
@@ -43,6 +53,7 @@ const TARGET = {
 		"anketa_edit_calculation",
 		"anketa_export_reports",
 		"anketa_workflow_approve",
+		"anketa_complete_anketa",
 	],
 	"/modelops": ["anketa_view_all_calculations", "anketa_export_reports"],
 	"/modelops/modelops_lead": [
@@ -52,10 +63,9 @@ const TARGET = {
 		"anketa_delete_calculation",
 		"anketa_export_reports",
 		"anketa_workflow_approve",
+		"anketa_complete_anketa",
 	],
 	"/business_customer": [],
-	// Бизнес-партнёр / Бизнес-партнёр стрима: только просмотр + экспорт
-	// (в прошлой редакции у /mipm были edit+approve — убираем).
 	"/mipm": ["anketa_view_all_calculations", "anketa_export_reports"],
 	"/validator": ["anketa_view_all_calculations", "anketa_export_reports"],
 	"/validator/validator_lead": [
@@ -68,29 +78,34 @@ const TARGET = {
 		"anketa_export_reports",
 		"anketa_workflow_approve",
 	],
-	// Аналитик качества работы моделей ДАДМ (новая группа)
 	"/mntranlst": [
 		"anketa_view_all_calculations",
 		"anketa_edit_calculation",
 		"anketa_export_reports",
 		"anketa_workflow_approve",
 	],
-	// Аналитик качества модельных данных (новая группа, без approve)
 	"/da": [
 		"anketa_view_all_calculations",
 		"anketa_edit_calculation",
 		"anketa_export_reports",
+		"anketa_complete_anketa",
 	],
-	"/admin_it": [
+	"/da_stream": [
 		"anketa_view_all_calculations",
-		"anketa_admin_panel",
+		"anketa_edit_calculation",
+		"anketa_export_reports",
+	],
+	/**
+	 * Прикладной администратор: AD sum_appadmin → /appadmin.
+	 * Админка в UI/API — по доменной группе appadmin/sacfg, без anketa_admin_*.
+	 * /admin_it* — legacy, anketa_* снимаем.
+	 */
+	"/appadmin": [
+		"anketa_view_all_calculations",
 		"anketa_audit_view",
 	],
-	"/admin_it/admin_it_lead": [
-		"anketa_view_all_calculations",
-		"anketa_admin_panel",
-		"anketa_audit_view",
-	],
+	"/admin_it": [],
+	"/admin_it/admin_it_lead": [],
 	"/auditor": [
 		"anketa_view_all_calculations",
 		"anketa_export_reports",
@@ -101,13 +116,13 @@ const TARGET = {
 		"anketa_export_reports",
 		"anketa_audit_view",
 	],
-	// Аудитор ИБ (новая группа)
 	"/auditorib": [
 		"anketa_view_all_calculations",
 		"anketa_export_reports",
 		"anketa_audit_view",
 	],
-	// Сотрудник Проектного офиса — доступ не предоставляется
+	/** AD sum_prjtoffice → /prjtoffice; /project_office — legacy alias. */
+	"/prjtoffice": [],
 	"/project_office": [],
 	"/sacfg": [
 		"anketa_view_all_calculations",
@@ -116,14 +131,13 @@ const TARGET = {
 		"anketa_delete_calculation",
 		"anketa_export_reports",
 		"anketa_workflow_approve",
-		"anketa_admin_panel",
+		"anketa_complete_anketa",
 	],
 	"/saprg": [
 		"anketa_view_all_calculations",
 		"anketa_export_reports",
 		"anketa_hold",
 	],
-	// Представитель стрима-не участника ЖЦМ: + approve по блокам своего стрима
 	"/sarep": [
 		"anketa_view_all_calculations",
 		"anketa_create_calculation",
@@ -131,27 +145,49 @@ const TARGET = {
 		"anketa_delete_calculation",
 		"anketa_export_reports",
 		"anketa_workflow_approve",
+		"anketa_complete_anketa",
 	],
 };
 
-/** Top-level группы из матрицы, которых может не быть на стенде — создаём. */
-const GROUPS_TO_ENSURE = ["/mntranlst", "/da", "/auditorib", "/project_office"];
+const EFFECTIVE_TARGET = expandV2KeycloakTargetsWithAdAliases(
+	TARGET,
+	STAND_PREFIX,
+);
+
+/** Все path из TARGET + AD-alias + родители, parents first (create-only). */
+function collectGroupPathsToEnsure(target) {
+	const paths = new Set();
+	for (const path of Object.keys(target)) {
+		const parts = path.split("/").filter(Boolean);
+		let cur = "";
+		for (const part of parts) {
+			cur += `/${part}`;
+			paths.add(cur);
+		}
+	}
+	return [...paths].sort(
+		(a, b) => a.split("/").length - b.split("/").length || a.localeCompare(b),
+	);
+}
+
+const GROUPS_TO_ENSURE = collectGroupPathsToEnsure(EFFECTIVE_TARGET);
 
 const ROLES_TO_ENSURE = [
 	"anketa_view_all_calculations",
 	"anketa_create_calculation",
 	"anketa_edit_calculation",
 	"anketa_export_reports",
-	"anketa_admin_panel",
 	"anketa_audit_view",
 	"anketa_delete_calculation",
 	"anketa_workflow_approve",
+	"anketa_complete_anketa",
 	"anketa_hold",
 ];
 
 const ROLE_DESCRIPTIONS = {
 	anketa_delete_calculation: "Delete questionnaires (Smart Anketa)",
-	anketa_workflow_approve: "Complete/approve anketa block workflow",
+	anketa_workflow_approve: "Complete anketa section/block (§3.10)",
+	anketa_complete_anketa: "Complete whole anketa fill (§3.12)",
 	anketa_hold: "Hold / freeze anketa snapshot (saprg)",
 };
 
@@ -200,8 +236,42 @@ function flattenGroups(nodes, acc = []) {
 }
 
 async function loadGroupsByPath(t) {
-	const tree = await api(t, "GET", "/groups?briefRepresentation=false&max=1000");
-	return Object.fromEntries(flattenGroups(tree).map((g) => [g.path, g]));
+	/** Без `first=` Keycloak на SUMD иногда отдаёт усечённый список (без свежих групп). */
+	const byPath = {};
+	const pageSize = 100;
+	let first = 0;
+	for (;;) {
+		const page = await api(
+			t,
+			"GET",
+			`/groups?briefRepresentation=false&first=${first}&max=${pageSize}`,
+		);
+		if (!Array.isArray(page) || page.length === 0) break;
+		for (const g of flattenGroups(page)) {
+			if (g?.path) byPath[g.path] = g;
+		}
+		first += page.length;
+		if (page.length < pageSize) break;
+	}
+
+	/** Догружаем TARGET/GROUPS_TO_ENSURE через search, если их нет в page-list. */
+	const needed = [
+		...new Set([...GROUPS_TO_ENSURE, ...Object.keys(EFFECTIVE_TARGET)]),
+	];
+	for (const path of needed) {
+		if (byPath[path]) continue;
+		const leaf = path.split("/").filter(Boolean).pop();
+		if (!leaf) continue;
+		const found = await api(
+			t,
+			"GET",
+			`/groups?search=${encodeURIComponent(leaf)}&exact=true&briefRepresentation=false&max=50`,
+		);
+		for (const g of flattenGroups(found || [])) {
+			if (g?.path) byPath[g.path] = g;
+		}
+	}
+	return byPath;
 }
 
 function sortUniq(arr) {
@@ -223,9 +293,21 @@ function sortUniq(arr) {
 	);
 
 	console.log(APPLY ? "MODE: APPLY" : "MODE: dry-run");
+	console.log(`STAND_PREFIX=${STAND_PREFIX || "(none)"}`);
+	console.log(`TARGET paths=${Object.keys(EFFECTIVE_TARGET).length}`);
 	console.log("\n== Ensure realm roles ==");
 	for (const name of ROLES_TO_ENSURE) {
 		if (byName[name]) {
+			console.log(`  ok ${name}`);
+			continue;
+		}
+		/** Список /roles?max=N на SUMD иногда не отдаёт роль, хотя GET /roles/{name} 200. */
+		const existing =
+			(await api(t, "GET", `/roles/${encodeURIComponent(name)}`).catch(
+				() => null,
+			)) || null;
+		if (existing?.id) {
+			byName[name] = existing;
 			console.log(`  ok ${name}`);
 			continue;
 		}
@@ -253,22 +335,36 @@ function sortUniq(arr) {
 	let byPath = await loadGroupsByPath(t);
 
 	console.log("\n== Ensure groups (create-only, никого не удаляем) ==");
-	let createdAny = false;
 	for (const path of GROUPS_TO_ENSURE) {
 		if (byPath[path]) {
 			console.log(`  ok ${path}`);
 			continue;
 		}
 		console.log(`  CREATE ${path}`);
-		if (APPLY) {
-			await api(t, "POST", "/groups", { name: path.replace(/^\//, "") });
-			createdAny = true;
+		if (!APPLY) continue;
+		const parts = path.split("/").filter(Boolean);
+		const name = parts[parts.length - 1];
+		try {
+			if (parts.length === 1) {
+				await api(t, "POST", "/groups", { name });
+			} else {
+				const parentPath = `/${parts.slice(0, -1).join("/")}`;
+				const parent = byPath[parentPath];
+				if (!parent?.id) {
+					throw new Error(`cannot create ${path}: missing parent ${parentPath}`);
+				}
+				await api(t, "POST", `/groups/${parent.id}/children`, { name });
+			}
+		} catch (e) {
+			const msg = String(e.message || e);
+			if (!msg.includes("409")) throw e;
+			console.log(`  (already exists) ${path}`);
 		}
+		byPath = await loadGroupsByPath(t);
 	}
-	if (createdAny) byPath = await loadGroupsByPath(t);
 
 	console.log("\n== Group role mappings ==");
-	for (const [path, desired] of Object.entries(TARGET)) {
+	for (const [path, desired] of Object.entries(EFFECTIVE_TARGET)) {
 		const g = byPath[path];
 		if (!g) {
 			console.log(`  MISSING group ${path}`);
@@ -300,12 +396,19 @@ function sortUniq(arr) {
 			await api(t, "POST", `/groups/${g.id}/role-mappings/realm`, reps);
 		}
 		if (toRemove.length) {
-			const reps = toRemove.map((name) => {
-				const full =
+			const reps = [];
+			for (const name of toRemove) {
+				let full =
 					byName[name] || (existingRoles || []).find((r) => r.name === name);
-				if (!full) throw new Error(`cannot resolve role ${name}`);
-				return { id: full.id, name: full.name };
-			});
+				if (!full) {
+					full = await api(t, "GET", `/roles/${encodeURIComponent(name)}`).catch(
+						() => null,
+					);
+					if (full?.id) byName[name] = full;
+				}
+				if (!full?.id) throw new Error(`cannot resolve role ${name}`);
+				reps.push({ id: full.id, name: full.name });
+			}
 			await api(t, "DELETE", `/groups/${g.id}/role-mappings/realm`, reps);
 		}
 	}

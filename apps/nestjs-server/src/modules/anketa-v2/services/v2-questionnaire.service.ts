@@ -36,7 +36,11 @@ import {
 	migrateV2AnketaFormData,
 	resetWorkflowForCopy,
 } from "../utils/v2-form-data-migration.util";
-import { normalizeV2AnketaWorkflow } from "../utils/v2-anketa-workflow.util";
+import {
+	holdQuestionnaire,
+	isAnketaGloballyLocked,
+	normalizeV2AnketaWorkflow,
+} from "../utils/v2-anketa-workflow.util";
 import { buildV2QuestionnaireRegistryXlsx } from "../utils/v2-questionnaire-registry-export.util";
 import { V2_DEFAULT_TEMPLATE_SNAPSHOT } from "../constants/v2-default-template-snapshot";
 import { buildV2AnketaViewerAccessFromUser } from "../utils/v2-anketa-viewer-access.util";
@@ -171,7 +175,7 @@ export class V2QuestionnaireService {
 		const workflow = normalizeV2AnketaWorkflow(dto.formData.workflow);
 		const readOnly =
 			dto.schemaBinding.status === "unavailable" ||
-			workflow.globalStatus === "Заполнено";
+			isAnketaGloballyLocked(workflow);
 
 		return {
 			questionnaire: dto,
@@ -228,6 +232,17 @@ export class V2QuestionnaireService {
 		dto: UpdateV2QuestionnaireRequestDto,
 	): Promise<V2QuestionnaireDto> {
 		const row = await this.loadWithRelations(id);
+		const currentWorkflow = normalizeV2AnketaWorkflow(
+			migrateV2AnketaFormData(row.formData ?? {}).workflow,
+		);
+		if (
+			currentWorkflow.globalStatus === "Утверждена" &&
+			(dto.formData !== undefined || dto.finalCoefficient !== undefined)
+		) {
+			throw new ConflictException(
+				"Утверждённая анкета неизменяема. Создайте новую версию копированием.",
+			);
+		}
 		if (dto.calcName !== undefined) {
 			row.calcName = dto.calcName.trim() || row.calcName;
 		}
@@ -240,6 +255,25 @@ export class V2QuestionnaireService {
 		if (dto.status !== undefined) {
 			row.status = dto.status;
 		}
+		await this.questionnaireRepository.save(row);
+		return this.findOne(id);
+	}
+
+	/** Фиксация среза (§3.13): Заполнено → Утверждена. */
+	async hold(id: string): Promise<V2QuestionnaireDto> {
+		const row = await this.loadWithRelations(id);
+		const formData = migrateV2AnketaFormData(row.formData ?? {});
+		const workflow = normalizeV2AnketaWorkflow(formData.workflow);
+		if (workflow.globalStatus !== "Заполнено") {
+			throw new ConflictException(
+				"Фиксация среза доступна только для анкеты в статусе «Заполнено»",
+			);
+		}
+		const next = holdQuestionnaire(workflow);
+		if (next === workflow) {
+			throw new ConflictException("Не удалось зафиксировать срез анкеты");
+		}
+		row.formData = { ...formData, workflow: next };
 		await this.questionnaireRepository.save(row);
 		return this.findOne(id);
 	}
