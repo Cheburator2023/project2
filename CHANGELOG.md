@@ -1,5 +1,13 @@
 # Semantic Versioning Changelog
 
+# [1.40.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.39.0...v1.40.0) (2026-07-24)
+
+
+### Features
+
+* enhance Vite configuration and scripts for improved dependency management ([7dc48a2](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/7dc48a2aa9b29fa9e42156e897d31b0141fc32b2))
+* refactor group creation logic for Keycloak synchronization ([5ca5acd](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/5ca5acd8f4bb96a6262bc86a742763b951d14e1e))
+
 # [1.39.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.38.0...v1.39.0) (2026-07-23)
 
 
