@@ -6,7 +6,7 @@ import {
 	ServiceUnavailableException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { expandV2KeycloakTargetsWithAdAliases } from "@smart-anketa/api-contract";
+import { expandV2KeycloakTargetsWithAdAliases, resolveV2KeycloakGroupPath } from "@smart-anketa/api-contract";
 import {
 	V2_KEYCLOAK_GROUP_ROLE_TARGET,
 	V2_KEYCLOAK_GROUPS_TO_ENSURE,
@@ -568,11 +568,13 @@ export class V2KeycloakRoleSyncService {
 	/**
 	 * Дерево групп через `/groups` + flatten subGroups.
 	 * GET `/groups/{id}/children` на старых KC (SUMD) → 405 — не используем.
+	 * Недостающие TARGET leaf догружаем через `?search=&exact=true`.
 	 */
 	private async loadGroupsByPath(
 		keycloakUrl: string,
 		realm: string,
 		token: string,
+		neededPaths: readonly string[] = [],
 	): Promise<Record<string, KcGroup>> {
 		const byPath: Record<string, KcGroup> = {};
 		const pageSize = 100;
@@ -591,6 +593,23 @@ export class V2KeycloakRoleSyncService {
 				if (g?.path) byPath[g.path] = g;
 			}
 			if (batch.length < pageSize) break;
+		}
+
+		for (const path of neededPaths) {
+			if (resolveV2KeycloakGroupPath(path, Object.keys(byPath))) continue;
+			const leaf = path.split("/").filter(Boolean).pop();
+			if (!leaf) continue;
+			const found =
+				(await this.api<KcGroup[]>(
+					keycloakUrl,
+					realm,
+					token,
+					"GET",
+					`/groups?search=${encodeURIComponent(leaf)}&exact=true&briefRepresentation=false&max=50`,
+				)) || [];
+			for (const g of this.flattenGroups(found)) {
+				if (g?.path) byPath[g.path] = g;
+			}
 		}
 
 		return byPath;
@@ -698,12 +717,18 @@ export class V2KeycloakRoleSyncService {
 			args.keycloakUrl,
 			args.realm,
 			args.token,
+			groupsToEnsure,
 		);
 
 		// Создаём недостающие группы: канон + AD-alias (parents first).
+		// Leaf уже есть под другим path (`/sarep/dev_sum_sarep_dadm`) — не дублируем.
 		const groupsCreated: string[] = [];
 		for (const path of groupsToEnsure) {
-			if (byPath[path]) continue;
+			const existingPath = resolveV2KeycloakGroupPath(
+				path,
+				Object.keys(byPath),
+			);
+			if (existingPath) continue;
 			groupsCreated.push(path);
 			if (!args.apply) continue;
 
@@ -721,7 +746,10 @@ export class V2KeycloakRoleSyncService {
 					);
 				} else {
 					const parentPath = `/${parts.slice(0, -1).join("/")}`;
-					const parent = byPath[parentPath];
+					const resolvedParent =
+						resolveV2KeycloakGroupPath(parentPath, Object.keys(byPath)) ??
+						parentPath;
+					const parent = byPath[resolvedParent];
 					if (!parent?.id) {
 						throw new ServiceUnavailableException(
 							`Нельзя создать ${path}: нет родителя ${parentPath}`,
@@ -744,13 +772,18 @@ export class V2KeycloakRoleSyncService {
 				args.keycloakUrl,
 				args.realm,
 				args.token,
+				groupsToEnsure,
 			);
 		}
 
 		const groupRoleChanges: V2KeycloakRoleSyncResult["groupRoleChanges"] = [];
+		/** Один KK group id — один remap (alias paths могут сходиться). */
+		const remappedGroupIds = new Set<string>();
 
 		for (const [path, desired] of Object.entries(target)) {
-			const g = byPath[path];
+			const resolvedPath =
+				resolveV2KeycloakGroupPath(path, Object.keys(byPath)) ?? path;
+			const g = byPath[resolvedPath];
 			if (!g) {
 				groupRoleChanges.push({
 					path,
@@ -760,6 +793,21 @@ export class V2KeycloakRoleSyncService {
 				});
 				continue;
 			}
+			if (remappedGroupIds.has(g.id)) {
+				if (resolvedPath !== path) {
+					groupRoleChanges.push({
+						path: `${path} → ${resolvedPath}`,
+						add: [],
+						remove: [],
+						status: "ok",
+					});
+				}
+				continue;
+			}
+			remappedGroupIds.add(g.id);
+
+			const reportPath =
+				resolvedPath === path ? path : `${path} → ${resolvedPath}`;
 			const current =
 				(await this.api<KcRole[]>(
 					args.keycloakUrl,
@@ -776,12 +824,17 @@ export class V2KeycloakRoleSyncService {
 			const add = want.filter((n) => !have.includes(n));
 			const remove = have.filter((n) => !want.includes(n));
 			if (!add.length && !remove.length) {
-				groupRoleChanges.push({ path, add: [], remove: [], status: "ok" });
+				groupRoleChanges.push({
+					path: reportPath,
+					add: [],
+					remove: [],
+					status: "ok",
+				});
 				continue;
 			}
 			if (!args.apply) {
 				groupRoleChanges.push({
-					path,
+					path: reportPath,
 					add,
 					remove,
 					status: "would_update",
@@ -820,7 +873,12 @@ export class V2KeycloakRoleSyncService {
 					}),
 				);
 			}
-			groupRoleChanges.push({ path, add, remove, status: "updated" });
+			groupRoleChanges.push({
+				path: reportPath,
+				add,
+				remove,
+				status: "updated",
+			});
 		}
 
 		return { rolesCreated, groupsCreated, groupRoleChanges };

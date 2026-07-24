@@ -20,11 +20,13 @@
  * - sum_da → da; sum_da_kmbkcb → da_stream
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.V2_KEYCLOAK_PATH_TO_AD_GROUPS = exports.V2_AD_SAREP_STREAM_SUFFIXES = exports.V2_AD_MODEL_STREAM_SUFFIXES = exports.V2_AD_STAND_PREFIX_RE = void 0;
+exports.V2_AD_NEST_PARENT_BY_TARGET = exports.V2_KEYCLOAK_PATH_TO_AD_GROUPS = exports.V2_AD_SAREP_STREAM_SUFFIXES = exports.V2_AD_MODEL_STREAM_SUFFIXES = exports.V2_AD_STAND_PREFIX_RE = void 0;
 exports.stripV2AdStandPrefix = stripV2AdStandPrefix;
 exports.mapV2AdGroupLeafToRoleCodes = mapV2AdGroupLeafToRoleCodes;
 exports.normalizeV2AdStandPrefix = normalizeV2AdStandPrefix;
 exports.expandV2KeycloakTargetsWithAdAliases = expandV2KeycloakTargetsWithAdAliases;
+exports.v2KeycloakGroupLeaf = v2KeycloakGroupLeaf;
+exports.resolveV2KeycloakGroupPath = resolveV2KeycloakGroupPath;
 /** Префиксы стенда в AD/Keycloak (единственное, что игнорим при метчинге). */
 exports.V2_AD_STAND_PREFIX_RE = /^(dev|test|prod)_/i;
 exports.V2_AD_MODEL_STREAM_SUFFIXES = [
@@ -186,6 +188,18 @@ exports.V2_KEYCLOAK_PATH_TO_AD_GROUPS = {
     "/prjtoffice": ["sum_prjtoffice"],
     "/project_office": ["sum_prjtoffice"],
 };
+/**
+ * Target-path → родитель(и) в KK, под которыми лежит AD-лист (не top-level).
+ * SUMD: sarep/sacfg/saprg/project_office; appadmin → `/admin_it/{stand}sum_appadmin`.
+ */
+exports.V2_AD_NEST_PARENT_BY_TARGET = {
+    "/sarep": ["/sarep"],
+    "/sacfg": ["/sacfg"],
+    "/saprg": ["/saprg"],
+    "/prjtoffice": ["/prjtoffice", "/project_office"],
+    "/project_office": ["/project_office", "/prjtoffice"],
+    "/appadmin": ["/admin_it"],
+};
 /** Нормализовать ввод UI: `test` / `test_` / `TEST_` → `test_`. */
 function normalizeV2AdStandPrefix(raw) {
     const t = (raw ?? "").trim().toLowerCase().replace(/_+$/, "");
@@ -198,8 +212,10 @@ function normalizeV2AdStandPrefix(raw) {
     return `${t}_`;
 }
 /**
- * Развернуть TARGET: канон + AD-alias path с stand-prefix.
- * `standPrefix="test_"` → `/test_sum_appadmin` с теми же roles что `/appadmin`.
+ * Развернуть TARGET: канон + AD-alias.
+ *
+ * - nested (см. V2_AD_NEST_PARENT_BY_TARGET): только `/{parent}/{stand}sum_*`
+ * - остальные: top-level `/{stand}sum_*` + опционально под каноном
  */
 function expandV2KeycloakTargetsWithAdAliases(target, standPrefixRaw) {
     const standPrefix = normalizeV2AdStandPrefix(standPrefixRaw);
@@ -214,9 +230,43 @@ function expandV2KeycloakTargetsWithAdAliases(target, standPrefixRaw) {
         const adNames = exports.V2_KEYCLOAK_PATH_TO_AD_GROUPS[path];
         if (!adNames?.length)
             continue;
+        const canon = path.startsWith("/") ? path : `/${path}`;
+        const nestParents = exports.V2_AD_NEST_PARENT_BY_TARGET[canon];
         for (const ad of adNames) {
-            add(`/${standPrefix}${ad}`, roles);
+            const leaf = `${standPrefix}${ad}`;
+            if (nestParents?.length) {
+                for (const parent of nestParents) {
+                    add(`${parent}/${leaf}`, roles);
+                }
+            }
+            else {
+                add(`/${leaf}`, roles);
+                add(`${canon}/${leaf}`, roles);
+            }
         }
     }
     return out;
+}
+/** Последний сегмент path: `/sarep/dev_sum_sarep_dadm` → `dev_sum_sarep_dadm`. */
+function v2KeycloakGroupLeaf(path) {
+    return path.replace(/^\//, "").split("/").filter(Boolean).pop() ?? "";
+}
+/**
+ * Найти группу: точный path, иначе любой path с тем же leaf
+ * (не создавать `/dev_sum_sarep_dadm`, если уже есть `/sarep/dev_sum_sarep_dadm`).
+ */
+function resolveV2KeycloakGroupPath(wantedPath, existingPaths) {
+    const wanted = wantedPath.startsWith("/") ? wantedPath : `/${wantedPath}`;
+    if (existingPaths.includes(wanted))
+        return wanted;
+    const leaf = v2KeycloakGroupLeaf(wanted);
+    if (!leaf)
+        return null;
+    const matches = existingPaths.filter((p) => v2KeycloakGroupLeaf(p).toLowerCase() === leaf.toLowerCase());
+    if (!matches.length)
+        return null;
+    /** Предпочитаем более вложенный path (реальный AD под каноном). */
+    matches.sort((a, b) => b.split("/").filter(Boolean).length -
+        a.split("/").filter(Boolean).length || a.localeCompare(b));
+    return matches[0] ?? null;
 }

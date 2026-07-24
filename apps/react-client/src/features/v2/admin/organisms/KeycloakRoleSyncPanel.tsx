@@ -272,8 +272,10 @@ export function KeycloakRoleSyncPanel() {
 					{defaultsQuery.isError ? " (не удалось загрузить defaults)" : null}. В
 					модалке можно переопределить URL и <strong>префикс стенда</strong> (
 					<code>test_</code> / <code>dev_</code> / <code>prod_</code>
-					): AD-имя всегда с <code>sum_</code> — <code>/sum_appadmin</code> или{" "}
-					<code>/test_sum_appadmin</code> (+ канон <code>/appadmin</code>).
+					): AD-имя всегда с <code>sum_</code> — например{" "}
+					<code>/admin_it/test_sum_appadmin</code>,{" "}
+					<code>/sarep/test_sum_sarep_dadm</code> (+ канон{" "}
+					<code>/appadmin</code>).
 				</Alert>
 				<Alert severity="warning">
 					После apply — re-login пользователей. Кириллические{" "}
@@ -397,7 +399,7 @@ export function KeycloakRoleSyncPanel() {
 										{...params}
 										label="Префикс стенда (AD)"
 										placeholder="test_ | dev_ | prod_ | пусто"
-										helperText="Выбор или ручной ввод. ИФТ: test_ → /test_sum_appadmin. Пусто → /sum_appadmin."
+										helperText="Выбор или ручной ввод. ИФТ: test_ → /admin_it/test_sum_appadmin. Пусто → /admin_it/sum_appadmin."
 									/>
 								)}
 								fullWidth

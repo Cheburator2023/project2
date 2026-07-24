@@ -1,4 +1,5 @@
 import { useUserStore } from "@react-client/common/store/userStore";
+import { isNoRolesGodMode } from "@react-client/common/auth/godMode";
 import {
 	ADMIN_PANEL_DOMAIN_ROLES,
 	Permission,
@@ -7,12 +8,14 @@ import {
 import { normalizeV2UserGroups } from "@smart-anketa/api-contract";
 
 const isDev = process.env.NODE_ENV === "development";
+const godMode = isNoRolesGodMode();
 
 function hasDomainRole(
 	groups: readonly string[],
 	roles: readonly string[],
 	wanted: readonly string[],
 ): boolean {
+	if (godMode) return true;
 	if (wanted.some((code) => roles.includes(code))) return true;
 	const normalized = normalizeV2UserGroups(groups);
 	return wanted.some((code) => normalized.includes(code));
@@ -42,6 +45,7 @@ export const usePermissions = () => {
 		canAccessAudit: hasPermission(Permission.ANKETA_AUDIT_VIEW),
 		canHoldCalculation: hasPermission(Permission.ANKETA_HOLD),
 		canAccessTracker:
+			godMode ||
 			isDev ||
 			(hasPermission(Permission.DEVELOPER) &&
 				window.location.hostname.toLowerCase().includes("dev") &&

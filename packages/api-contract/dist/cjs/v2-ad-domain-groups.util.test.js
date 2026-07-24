@@ -51,12 +51,42 @@ const v2_user_stream_mapping_util_1 = require("./v2-user-stream-mapping.util");
         const target = {
             "/appadmin": ["anketa_view_all_calculations", "anketa_audit_view"],
             "/sacfg": ["anketa_view_all_calculations"],
+            "/sarep": ["anketa_view_all_calculations"],
+            "/saprg": ["anketa_hold"],
+            "/prjtoffice": [],
         };
-        const expanded = (0, v2_ad_domain_groups_util_1.expandV2KeycloakTargetsWithAdAliases)(target, "test_");
+        const expanded = (0, v2_ad_domain_groups_util_1.expandV2KeycloakTargetsWithAdAliases)(target, "dev_");
         (0, vitest_1.expect)(expanded["/appadmin"]).toEqual(vitest_1.expect.arrayContaining(["anketa_audit_view"]));
-        (0, vitest_1.expect)(expanded["/test_sum_appadmin"]).toEqual(vitest_1.expect.arrayContaining(["anketa_audit_view"]));
-        (0, vitest_1.expect)(expanded["/test_sum_sacfg"]).toEqual(vitest_1.expect.arrayContaining(["anketa_view_all_calculations"]));
-        const noStand = (0, v2_ad_domain_groups_util_1.expandV2KeycloakTargetsWithAdAliases)(target, "");
-        (0, vitest_1.expect)(noStand["/sum_appadmin"]).toEqual(vitest_1.expect.arrayContaining(["anketa_audit_view"]));
+        /** appadmin AD → под /admin_it, не top-level */
+        (0, vitest_1.expect)(expanded["/dev_sum_appadmin"]).toBeUndefined();
+        (0, vitest_1.expect)(expanded["/admin_it/dev_sum_appadmin"]).toEqual(vitest_1.expect.arrayContaining(["anketa_audit_view"]));
+        /** nested canons — без top-level */
+        (0, vitest_1.expect)(expanded["/dev_sum_sacfg"]).toBeUndefined();
+        (0, vitest_1.expect)(expanded["/dev_sum_sarep_dadm"]).toBeUndefined();
+        (0, vitest_1.expect)(expanded["/dev_sum_saprg"]).toBeUndefined();
+        (0, vitest_1.expect)(expanded["/dev_sum_prjtoffice"]).toBeUndefined();
+        (0, vitest_1.expect)(expanded["/sacfg/dev_sum_sacfg"]).toEqual(vitest_1.expect.arrayContaining(["anketa_view_all_calculations"]));
+        (0, vitest_1.expect)(expanded["/sarep/dev_sum_sarep_dadm"]).toEqual(vitest_1.expect.arrayContaining(["anketa_view_all_calculations"]));
+        (0, vitest_1.expect)(expanded["/saprg/dev_sum_saprg"]).toEqual(vitest_1.expect.arrayContaining(["anketa_hold"]));
+        (0, vitest_1.expect)(expanded["/project_office/dev_sum_prjtoffice"]).toEqual([]);
+        (0, vitest_1.expect)(expanded["/prjtoffice/dev_sum_prjtoffice"]).toEqual([]);
+        const noStand = (0, v2_ad_domain_groups_util_1.expandV2KeycloakTargetsWithAdAliases)({ "/appadmin": ["anketa_audit_view"] }, "");
+        (0, vitest_1.expect)(noStand["/admin_it/sum_appadmin"]).toEqual(vitest_1.expect.arrayContaining(["anketa_audit_view"]));
+        (0, vitest_1.expect)(noStand["/sum_appadmin"]).toBeUndefined();
+    });
+    (0, vitest_1.it)("resolves AD leaf under nested canon path", () => {
+        (0, vitest_1.expect)((0, v2_ad_domain_groups_util_1.resolveV2KeycloakGroupPath)("/dev_sum_sarep_dadm", [
+            "/sarep",
+            "/sarep/dev_sum_sarep_dadm",
+            "/sarep/dev_sum_sarep_idsrc",
+        ])).toBe("/sarep/dev_sum_sarep_dadm");
+        (0, vitest_1.expect)((0, v2_ad_domain_groups_util_1.resolveV2KeycloakGroupPath)("/admin_it/dev_sum_appadmin", [
+            "/admin_it",
+            "/admin_it/dev_sum_appadmin",
+        ])).toBe("/admin_it/dev_sum_appadmin");
+        (0, vitest_1.expect)((0, v2_ad_domain_groups_util_1.resolveV2KeycloakGroupPath)("/dev_sum_appadmin", [
+            "/admin_it/dev_sum_appadmin",
+        ])).toBe("/admin_it/dev_sum_appadmin");
+        (0, vitest_1.expect)((0, v2_ad_domain_groups_util_1.resolveV2KeycloakGroupPath)("/dev_sum_appadmin", ["/appadmin"])).toBe(null);
     });
 });

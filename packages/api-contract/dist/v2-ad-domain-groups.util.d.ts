@@ -37,10 +37,24 @@ export declare function mapV2AdGroupLeafToRoleCodes(rawLeaf: string): string[];
  * Для sync: `/appadmin` + prefix `test_` → `/test_sum_appadmin`.
  */
 export declare const V2_KEYCLOAK_PATH_TO_AD_GROUPS: Record<string, readonly string[]>;
+/**
+ * Target-path → родитель(и) в KK, под которыми лежит AD-лист (не top-level).
+ * SUMD: sarep/sacfg/saprg/project_office; appadmin → `/admin_it/{stand}sum_appadmin`.
+ */
+export declare const V2_AD_NEST_PARENT_BY_TARGET: Record<string, readonly string[]>;
 /** Нормализовать ввод UI: `test` / `test_` / `TEST_` → `test_`. */
 export declare function normalizeV2AdStandPrefix(raw: string | undefined | null): string;
 /**
- * Развернуть TARGET: канон + AD-alias path с stand-prefix.
- * `standPrefix="test_"` → `/test_sum_appadmin` с теми же roles что `/appadmin`.
+ * Развернуть TARGET: канон + AD-alias.
+ *
+ * - nested (см. V2_AD_NEST_PARENT_BY_TARGET): только `/{parent}/{stand}sum_*`
+ * - остальные: top-level `/{stand}sum_*` + опционально под каноном
  */
 export declare function expandV2KeycloakTargetsWithAdAliases(target: Record<string, readonly string[]>, standPrefixRaw?: string | null): Record<string, readonly string[]>;
+/** Последний сегмент path: `/sarep/dev_sum_sarep_dadm` → `dev_sum_sarep_dadm`. */
+export declare function v2KeycloakGroupLeaf(path: string): string;
+/**
+ * Найти группу: точный path, иначе любой path с тем же leaf
+ * (не создавать `/dev_sum_sarep_dadm`, если уже есть `/sarep/dev_sum_sarep_dadm`).
+ */
+export declare function resolveV2KeycloakGroupPath(wantedPath: string, existingPaths: readonly string[]): string | null;

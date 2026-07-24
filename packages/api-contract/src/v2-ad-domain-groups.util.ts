@@ -187,6 +187,19 @@ export const V2_KEYCLOAK_PATH_TO_AD_GROUPS: Record<string, readonly string[]> = 
 	"/project_office": ["sum_prjtoffice"],
 };
 
+/**
+ * Target-path → родитель(и) в KK, под которыми лежит AD-лист (не top-level).
+ * SUMD: sarep/sacfg/saprg/project_office; appadmin → `/admin_it/{stand}sum_appadmin`.
+ */
+export const V2_AD_NEST_PARENT_BY_TARGET: Record<string, readonly string[]> = {
+	"/sarep": ["/sarep"],
+	"/sacfg": ["/sacfg"],
+	"/saprg": ["/saprg"],
+	"/prjtoffice": ["/prjtoffice", "/project_office"],
+	"/project_office": ["/project_office", "/prjtoffice"],
+	"/appadmin": ["/admin_it"],
+};
+
 /** Нормализовать ввод UI: `test` / `test_` / `TEST_` → `test_`. */
 export function normalizeV2AdStandPrefix(raw: string | undefined | null): string {
 	const t = (raw ?? "").trim().toLowerCase().replace(/_+$/, "");
@@ -199,8 +212,10 @@ export function normalizeV2AdStandPrefix(raw: string | undefined | null): string
 }
 
 /**
- * Развернуть TARGET: канон + AD-alias path с stand-prefix.
- * `standPrefix="test_"` → `/test_sum_appadmin` с теми же roles что `/appadmin`.
+ * Развернуть TARGET: канон + AD-alias.
+ *
+ * - nested (см. V2_AD_NEST_PARENT_BY_TARGET): только `/{parent}/{stand}sum_*`
+ * - остальные: top-level `/{stand}sum_*` + опционально под каноном
  */
 export function expandV2KeycloakTargetsWithAdAliases(
 	target: Record<string, readonly string[]>,
@@ -219,10 +234,51 @@ export function expandV2KeycloakTargetsWithAdAliases(
 		add(path, roles);
 		const adNames = V2_KEYCLOAK_PATH_TO_AD_GROUPS[path];
 		if (!adNames?.length) continue;
+		const canon = path.startsWith("/") ? path : `/${path}`;
+		const nestParents = V2_AD_NEST_PARENT_BY_TARGET[canon];
+
 		for (const ad of adNames) {
-			add(`/${standPrefix}${ad}`, roles);
+			const leaf = `${standPrefix}${ad}`;
+			if (nestParents?.length) {
+				for (const parent of nestParents) {
+					add(`${parent}/${leaf}`, roles);
+				}
+			} else {
+				add(`/${leaf}`, roles);
+				add(`${canon}/${leaf}`, roles);
+			}
 		}
 	}
 
 	return out;
+}
+
+/** Последний сегмент path: `/sarep/dev_sum_sarep_dadm` → `dev_sum_sarep_dadm`. */
+export function v2KeycloakGroupLeaf(path: string): string {
+	return path.replace(/^\//, "").split("/").filter(Boolean).pop() ?? "";
+}
+
+/**
+ * Найти группу: точный path, иначе любой path с тем же leaf
+ * (не создавать `/dev_sum_sarep_dadm`, если уже есть `/sarep/dev_sum_sarep_dadm`).
+ */
+export function resolveV2KeycloakGroupPath(
+	wantedPath: string,
+	existingPaths: readonly string[],
+): string | null {
+	const wanted = wantedPath.startsWith("/") ? wantedPath : `/${wantedPath}`;
+	if (existingPaths.includes(wanted)) return wanted;
+	const leaf = v2KeycloakGroupLeaf(wanted);
+	if (!leaf) return null;
+	const matches = existingPaths.filter(
+		(p) => v2KeycloakGroupLeaf(p).toLowerCase() === leaf.toLowerCase(),
+	);
+	if (!matches.length) return null;
+	/** Предпочитаем более вложенный path (реальный AD под каноном). */
+	matches.sort(
+		(a, b) =>
+			b.split("/").filter(Boolean).length -
+				a.split("/").filter(Boolean).length || a.localeCompare(b),
+	);
+	return matches[0] ?? null;
 }

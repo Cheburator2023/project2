@@ -1,4 +1,5 @@
 import { ensureKeycloakSession, syncMfeAuthFromHost } from "@react-client/common/auth/syncMfeAuth";
+import { applyKeycloakUserToStore } from "@react-client/common/auth/applyKeycloakUserToStore";
 import {
 	GOD_MODE_ACCESS_TOKEN,
 	isNoRolesGodMode,
@@ -26,6 +27,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
 	useLayoutEffect(() => {
 		if (godMode) {
 			setAccessToken(GOD_MODE_ACCESS_TOKEN);
+			applyKeycloakUserToStore(null);
 			return;
 		}
 

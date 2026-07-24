@@ -6,6 +6,7 @@ import {
 	type UserRoles,
 } from "@react-client/types/roles";
 import { normalizeV2UserGroups } from "@smart-anketa/api-contract";
+import { isNoRolesGodMode } from "@react-client/common/auth/godMode";
 import { useUserStore } from "@react-client/common/store/userStore";
 
 /** Пишет groups/roles/permissions из Keycloak user в zustand (+ profileHydrated). */
@@ -21,6 +22,18 @@ export function applyKeycloakUserToStore(
 	} = useUserStore.getState();
 
 	if (!user) {
+		/**
+		 * God mode (`NO_ROLES`): нет Keycloak user — не сбрасываем hydrated,
+		 * иначе PermissionGuard вечно крутит лоадер при живом меню.
+		 */
+		if (isNoRolesGodMode()) {
+			setUsername("god");
+			setGroups([]);
+			setRoles([]);
+			setPermissions([]);
+			setProfileHydrated(true);
+			return;
+		}
 		setUsername("");
 		setGroups([]);
 		setRoles([]);

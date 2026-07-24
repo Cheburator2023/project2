@@ -3,6 +3,7 @@ import {
 	expandV2KeycloakTargetsWithAdAliases,
 	mapV2AdGroupLeafToRoleCodes,
 	normalizeV2AdStandPrefix,
+	resolveV2KeycloakGroupPath,
 	stripV2AdStandPrefix,
 } from "./v2-ad-domain-groups.util";
 import { normalizeV2UserGroups } from "./v2-user-stream-mapping.util";
@@ -66,21 +67,67 @@ describe("v2-ad-domain-groups", () => {
 		const target = {
 			"/appadmin": ["anketa_view_all_calculations", "anketa_audit_view"],
 			"/sacfg": ["anketa_view_all_calculations"],
+			"/sarep": ["anketa_view_all_calculations"],
+			"/saprg": ["anketa_hold"],
+			"/prjtoffice": [],
 		};
-		const expanded = expandV2KeycloakTargetsWithAdAliases(target, "test_");
+		const expanded = expandV2KeycloakTargetsWithAdAliases(target, "dev_");
 		expect(expanded["/appadmin"]).toEqual(
 			expect.arrayContaining(["anketa_audit_view"]),
 		);
-		expect(expanded["/test_sum_appadmin"]).toEqual(
+		/** appadmin AD → под /admin_it, не top-level */
+		expect(expanded["/dev_sum_appadmin"]).toBeUndefined();
+		expect(expanded["/admin_it/dev_sum_appadmin"]).toEqual(
 			expect.arrayContaining(["anketa_audit_view"]),
 		);
-		expect(expanded["/test_sum_sacfg"]).toEqual(
+		/** nested canons — без top-level */
+		expect(expanded["/dev_sum_sacfg"]).toBeUndefined();
+		expect(expanded["/dev_sum_sarep_dadm"]).toBeUndefined();
+		expect(expanded["/dev_sum_saprg"]).toBeUndefined();
+		expect(expanded["/dev_sum_prjtoffice"]).toBeUndefined();
+		expect(expanded["/sacfg/dev_sum_sacfg"]).toEqual(
 			expect.arrayContaining(["anketa_view_all_calculations"]),
 		);
+		expect(expanded["/sarep/dev_sum_sarep_dadm"]).toEqual(
+			expect.arrayContaining(["anketa_view_all_calculations"]),
+		);
+		expect(expanded["/saprg/dev_sum_saprg"]).toEqual(
+			expect.arrayContaining(["anketa_hold"]),
+		);
+		expect(expanded["/project_office/dev_sum_prjtoffice"]).toEqual([]);
+		expect(expanded["/prjtoffice/dev_sum_prjtoffice"]).toEqual([]);
 
-		const noStand = expandV2KeycloakTargetsWithAdAliases(target, "");
-		expect(noStand["/sum_appadmin"]).toEqual(
+		const noStand = expandV2KeycloakTargetsWithAdAliases(
+			{ "/appadmin": ["anketa_audit_view"] },
+			"",
+		);
+		expect(noStand["/admin_it/sum_appadmin"]).toEqual(
 			expect.arrayContaining(["anketa_audit_view"]),
+		);
+		expect(noStand["/sum_appadmin"]).toBeUndefined();
+	});
+
+	it("resolves AD leaf under nested canon path", () => {
+		expect(
+			resolveV2KeycloakGroupPath("/dev_sum_sarep_dadm", [
+				"/sarep",
+				"/sarep/dev_sum_sarep_dadm",
+				"/sarep/dev_sum_sarep_idsrc",
+			]),
+		).toBe("/sarep/dev_sum_sarep_dadm");
+		expect(
+			resolveV2KeycloakGroupPath("/admin_it/dev_sum_appadmin", [
+				"/admin_it",
+				"/admin_it/dev_sum_appadmin",
+			]),
+		).toBe("/admin_it/dev_sum_appadmin");
+		expect(
+			resolveV2KeycloakGroupPath("/dev_sum_appadmin", [
+				"/admin_it/dev_sum_appadmin",
+			]),
+		).toBe("/admin_it/dev_sum_appadmin");
+		expect(resolveV2KeycloakGroupPath("/dev_sum_appadmin", ["/appadmin"])).toBe(
+			null,
 		);
 	});
 });

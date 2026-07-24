@@ -25,6 +25,7 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const {
 	expandV2KeycloakTargetsWithAdAliases,
+	resolveV2KeycloakGroupPath,
 } = require("../packages/api-contract/dist/cjs/v2-ad-domain-groups.util.js");
 
 const KC = (process.env.KC_URL || "").replace(/\/$/, "");
@@ -336,8 +337,11 @@ function sortUniq(arr) {
 
 	console.log("\n== Ensure groups (create-only, никого не удаляем) ==");
 	for (const path of GROUPS_TO_ENSURE) {
-		if (byPath[path]) {
-			console.log(`  ok ${path}`);
+		const existing = resolveV2KeycloakGroupPath(path, Object.keys(byPath));
+		if (existing) {
+			console.log(
+				existing === path ? `  ok ${path}` : `  ok ${path} → ${existing}`,
+			);
 			continue;
 		}
 		console.log(`  CREATE ${path}`);
@@ -349,7 +353,10 @@ function sortUniq(arr) {
 				await api(t, "POST", "/groups", { name });
 			} else {
 				const parentPath = `/${parts.slice(0, -1).join("/")}`;
-				const parent = byPath[parentPath];
+				const resolvedParent =
+					resolveV2KeycloakGroupPath(parentPath, Object.keys(byPath)) ||
+					parentPath;
+				const parent = byPath[resolvedParent];
 				if (!parent?.id) {
 					throw new Error(`cannot create ${path}: missing parent ${parentPath}`);
 				}
@@ -364,12 +371,21 @@ function sortUniq(arr) {
 	}
 
 	console.log("\n== Group role mappings ==");
+	const remappedIds = new Set();
 	for (const [path, desired] of Object.entries(EFFECTIVE_TARGET)) {
-		const g = byPath[path];
+		const resolved =
+			resolveV2KeycloakGroupPath(path, Object.keys(byPath)) || path;
+		const g = byPath[resolved];
 		if (!g) {
 			console.log(`  MISSING group ${path}`);
 			continue;
 		}
+		if (remappedIds.has(g.id)) {
+			if (resolved !== path) console.log(`  skip alias ${path} → ${resolved}`);
+			continue;
+		}
+		remappedIds.add(g.id);
+		const label = resolved === path ? path : `${path} → ${resolved}`;
 		const current = (
 			(await api(t, "GET", `/groups/${g.id}/role-mappings/realm`)) || []
 		).map((r) => r.name);
@@ -379,10 +395,10 @@ function sortUniq(arr) {
 		const toAdd = want.filter((n) => !have.includes(n));
 		const toRemove = have.filter((n) => !want.includes(n));
 		if (!toAdd.length && !toRemove.length) {
-			console.log(`  ok ${path}`);
+			console.log(`  ok ${label}`);
 			continue;
 		}
-		console.log(`  ${path}`);
+		console.log(`  ${label}`);
 		if (toAdd.length) console.log(`    + ${toAdd.join(", ")}`);
 		if (toRemove.length) console.log(`    - ${toRemove.join(", ")}`);
 		if (!APPLY) continue;
