@@ -1,5 +1,17 @@
 # Semantic Versioning Changelog
 
+# [1.41.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.40.0...v1.41.0) (2026-07-24)
+
+
+### Features
+
+* add defaults endpoint and enhance Keycloak role sync functionality ([00744bb](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/00744bb36aec242a866e33567408e2de95b547bf))
+* add V2TemplateSeedService for factory template initialization ([0a5d68d](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/0a5d68d4c2a3e7287929b2a85707efa19dcdb518))
+* enhance Keycloak backup functionality with customizable include options ([237383c](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/237383ca625446c8d6380b9bac7012d7e0295182))
+* enhance Keycloak role synchronization and UI clarity ([3963ed6](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/3963ed6cd6d2699678d791e738a0ce2f97cf2b48))
+* enhance Keycloak role synchronization with AD alias support ([9fb88c1](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/9fb88c12fb37e56d9433f5e2e1d5610079cbe34a))
+* enhance Keycloak role synchronization with nested group resolution ([d2d04e4](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/d2d04e4e40f05ed4aeb34d6c5b598b03e261c4fd))
+
 # [1.40.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.39.0...v1.40.0) (2026-07-24)
 
 
