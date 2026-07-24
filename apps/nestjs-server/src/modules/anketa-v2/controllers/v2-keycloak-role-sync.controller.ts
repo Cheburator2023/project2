@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from "@nestjs/common";
+import { Body, Controller, Get, Post } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { DomainRoles } from "../../../shared/decorators/domain-roles.decorator";
 import {
@@ -12,6 +12,20 @@ import { V2KeycloakRoleSyncService } from "../services/v2-keycloak-role-sync.ser
 export class V2KeycloakRoleSyncController {
 	constructor(private readonly syncService: V2KeycloakRoleSyncService) {}
 
+	@Get("defaults")
+	@DomainRoles("appadmin", "sacfg")
+	@ApiOperation({
+		summary:
+			"Дефолтный Keycloak URL / realm из env Nest (для префилла в UI)",
+	})
+	defaults(): {
+		keycloakUrl: string;
+		realm: string;
+		adminRealm: string;
+	} {
+		return this.syncService.getDefaults();
+	}
+
 	@Post("backup")
 	@DomainRoles("appadmin", "sacfg")
 	@ApiOperation({
@@ -22,6 +36,9 @@ export class V2KeycloakRoleSyncController {
 		return this.syncService.createBackup({
 			adminUsername: body.adminUsername,
 			adminPassword: body.adminPassword,
+			keycloakUrl: body.keycloakUrl,
+			realm: body.realm,
+			adminRealm: body.adminRealm,
 		});
 	}
 
@@ -37,6 +54,9 @@ export class V2KeycloakRoleSyncController {
 			adminPassword: body.adminPassword,
 			dryRun: body.dryRun !== false,
 			applyRemap: body.applyRemap !== false,
+			keycloakUrl: body.keycloakUrl,
+			realm: body.realm,
+			adminRealm: body.adminRealm,
 		});
 	}
 }

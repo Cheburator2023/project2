@@ -6,14 +6,20 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { apiClient } from "@react-client/common/api/helpers/apiClient";
 import { downloadBlob } from "@react-client/common/api/queries/kanban-board";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { toast } from "@react-client/common/toasts";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+type SyncDefaults = {
+	keycloakUrl: string;
+	realm: string;
+	adminRealm: string;
+};
 
 type SyncResult = {
 	dryRun: boolean;
@@ -51,14 +57,51 @@ function downloadBackupJson(data: unknown, realm: string) {
 	downloadBlob(blob, `keycloak-${realm}-backup-${stamp}.json`);
 }
 
+function connectionPayload(fields: {
+	keycloakUrl: string;
+	realm: string;
+	adminRealm: string;
+}) {
+	return {
+		keycloakUrl: fields.keycloakUrl.trim() || undefined,
+		realm: fields.realm.trim() || undefined,
+		adminRealm: fields.adminRealm.trim() || undefined,
+	};
+}
+
 export function KeycloakRoleSyncPanel() {
+	const defaultsQuery = useQuery({
+		queryKey: ["v2-keycloak-role-sync-defaults"],
+		queryFn: () =>
+			apiClient<SyncDefaults>({
+				url: "/v2/admin/keycloak-role-sync/defaults",
+				method: "GET",
+			}),
+		staleTime: 60_000,
+	});
+
 	const [open, setOpen] = useState(false);
 	const [mode, setMode] = useState<ModalMode>("sync");
+	const [keycloakUrl, setKeycloakUrl] = useState("");
+	const [realm, setRealm] = useState("cym");
+	const [adminRealm, setAdminRealm] = useState("master");
 	const [username, setUsername] = useState("");
 	const [password, setPassword] = useState("");
 	const [lastResult, setLastResult] = useState<SyncResult | null>(null);
 	const [lastBackup, setLastBackup] = useState<BackupResult | null>(null);
 	const [backupDoneInSession, setBackupDoneInSession] = useState(false);
+
+	useEffect(() => {
+		const d = defaultsQuery.data;
+		if (!d) return;
+		setKeycloakUrl((prev) => prev || d.keycloakUrl || "");
+		setRealm((prev) => (prev === "cym" && d.realm ? d.realm : prev));
+		setAdminRealm((prev) =>
+			prev === "master" && d.adminRealm ? d.adminRealm : prev,
+		);
+	}, [defaultsQuery.data]);
+
+	const connection = connectionPayload({ keycloakUrl, realm, adminRealm });
 
 	const backupMutation = useMutation({
 		mutationFn: () =>
@@ -68,6 +111,7 @@ export function KeycloakRoleSyncPanel() {
 				data: {
 					adminUsername: username,
 					adminPassword: password,
+					...connection,
 				},
 			}),
 		onSuccess: (data) => {
@@ -102,6 +146,7 @@ export function KeycloakRoleSyncPanel() {
 					adminPassword: password,
 					dryRun,
 					applyRemap: true,
+					...connection,
 				},
 			}),
 		onSuccess: (data, dryRun) => {
@@ -124,6 +169,9 @@ export function KeycloakRoleSyncPanel() {
 	});
 
 	const pending = backupMutation.isPending || syncMutation.isPending;
+	const canSubmit = Boolean(
+		username && password && keycloakUrl.trim() && realm.trim() && adminRealm.trim(),
+	);
 
 	const changed =
 		lastResult?.groupRoleChanges.filter(
@@ -135,6 +183,8 @@ export function KeycloakRoleSyncPanel() {
 		setOpen(true);
 	};
 
+	const envUrl = defaultsQuery.data?.keycloakUrl || "—";
+
 	return (
 		<>
 			<Flex flexDirection="column" gap={8}>
@@ -145,6 +195,14 @@ export function KeycloakRoleSyncPanel() {
 					(/DE vs /de) не трогаем. Креды admin только в модалке. Доступно
 					ролям appadmin / sacfg.
 				</Typography>
+				<Alert severity="info">
+					URL из env Nest: <code>{envUrl}</code>
+					{defaultsQuery.isError
+						? " (не удалось загрузить defaults)"
+						: null}
+					. В модалке можно переопределить, если из пода API DNS/сеть до
+					Keycloak другая.
+				</Alert>
 				<Alert severity="warning">
 					После apply — re-login пользователей. Кириллические{" "}
 					<code>/departament/*</code> и case-дубли групп не трогаются.
@@ -162,6 +220,8 @@ export function KeycloakRoleSyncPanel() {
 						Последний бекап: {lastBackup.exportedAt} · {lastBackup.realm} ·{" "}
 						{lastBackup.counts.users} users / {lastBackup.counts.groups} groups
 						/ {lastBackup.counts.anketaRoles} anketa roles
+						<br />
+						URL: {lastBackup.keycloakUrl}
 					</Typography>
 				) : null}
 				{lastResult ? (
@@ -191,7 +251,8 @@ export function KeycloakRoleSyncPanel() {
 					<Spacer space={8} />
 					<Typography variant="body2" color="text.secondary">
 						Учётка Admin API (обычно realm master / admin-cli). Пароль не
-						сохраняется.
+						сохраняется. Base URL — без trailing slash, часто с{" "}
+						<code>/auth</code>.
 					</Typography>
 					{mode === "sync" && !backupDoneInSession ? (
 						<>
@@ -204,6 +265,34 @@ export function KeycloakRoleSyncPanel() {
 					) : null}
 					<Spacer space={16} />
 					<Flex flexDirection="column" gap={12}>
+						<TextField
+							label="Keycloak URL"
+							value={keycloakUrl}
+							onChange={(e) => setKeycloakUrl(e.target.value)}
+							placeholder="https://keycloak…/auth"
+							helperText={
+								defaultsQuery.data?.keycloakUrl
+									? `Env: ${defaultsQuery.data.keycloakUrl}`
+									: "Из KEYCLOAK_URL Nest или свой reachable URL"
+							}
+							fullWidth
+							disabled={pending}
+						/>
+						<TextField
+							label="Realm (анкета)"
+							value={realm}
+							onChange={(e) => setRealm(e.target.value)}
+							fullWidth
+							disabled={pending}
+						/>
+						<TextField
+							label="Admin realm (token)"
+							value={adminRealm}
+							onChange={(e) => setAdminRealm(e.target.value)}
+							helperText="Обычно master — для admin-cli password grant"
+							fullWidth
+							disabled={pending}
+						/>
 						<TextField
 							label="Admin username"
 							value={username}
@@ -238,7 +327,7 @@ export function KeycloakRoleSyncPanel() {
 					{mode === "backup" ? (
 						<Button
 							variant="contained"
-							disabled={pending || !username || !password}
+							disabled={pending || !canSubmit}
 							onClick={() => backupMutation.mutate()}
 						>
 							Скачать бекап
@@ -247,7 +336,7 @@ export function KeycloakRoleSyncPanel() {
 						<>
 							<Button
 								variant="outlined"
-								disabled={pending || !username || !password}
+								disabled={pending || !canSubmit}
 								onClick={() => syncMutation.mutate(true)}
 							>
 								Dry-run
@@ -255,7 +344,7 @@ export function KeycloakRoleSyncPanel() {
 							<Button
 								variant="contained"
 								color="warning"
-								disabled={pending || !username || !password}
+								disabled={pending || !canSubmit}
 								onClick={() => syncMutation.mutate(false)}
 							>
 								Apply

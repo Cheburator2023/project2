@@ -78,20 +78,51 @@ export class V2KeycloakRoleSyncService {
 
 	constructor(private readonly config: ConfigService) {}
 
+	/** Дефолты из env — для префилла в UI. */
+	getDefaults(): {
+		keycloakUrl: string;
+		realm: string;
+		adminRealm: string;
+	} {
+		return {
+			keycloakUrl: (this.config.get<string>("KEYCLOAK_URL") || "").replace(
+				/\/$/,
+				"",
+			),
+			realm: this.config.get<string>("KEYCLOAK_REALMS") || "cym",
+			adminRealm: this.config.get<string>("KEYCLOAK_ADMIN_REALM") || "master",
+		};
+	}
+
+	private resolveConnection(options: {
+		keycloakUrl?: string;
+		realm?: string;
+		adminRealm?: string;
+	}): { keycloakUrl: string; realm: string; adminRealm: string } {
+		const defaults = this.getDefaults();
+		const keycloakUrl = (
+			options.keycloakUrl?.trim() ||
+			defaults.keycloakUrl ||
+			""
+		).replace(/\/$/, "");
+		const realm = options.realm?.trim() || defaults.realm;
+		const adminRealm = options.adminRealm?.trim() || defaults.adminRealm;
+		if (!keycloakUrl) {
+			throw new ServiceUnavailableException(
+				"Keycloak URL не задан (KEYCLOAK_URL / поле в UI)",
+			);
+		}
+		return { keycloakUrl, realm, adminRealm };
+	}
+
 	async createBackup(options: {
 		adminUsername: string;
 		adminPassword: string;
+		keycloakUrl?: string;
+		realm?: string;
+		adminRealm?: string;
 	}): Promise<V2KeycloakBackupDto> {
-		const keycloakUrl = (
-			this.config.get<string>("KEYCLOAK_URL") || ""
-		).replace(/\/$/, "");
-		const realm = this.config.get<string>("KEYCLOAK_REALMS") || "cym";
-		const adminRealm =
-			this.config.get<string>("KEYCLOAK_ADMIN_REALM") || "master";
-
-		if (!keycloakUrl) {
-			throw new ServiceUnavailableException("KEYCLOAK_URL не задан");
-		}
+		const { keycloakUrl, realm, adminRealm } = this.resolveConnection(options);
 
 		const token = await this.fetchAdminToken({
 			keycloakUrl,
@@ -236,17 +267,11 @@ export class V2KeycloakRoleSyncService {
 		adminPassword: string;
 		dryRun: boolean;
 		applyRemap: boolean;
+		keycloakUrl?: string;
+		realm?: string;
+		adminRealm?: string;
 	}): Promise<V2KeycloakRoleSyncResult> {
-		const keycloakUrl = (
-			this.config.get<string>("KEYCLOAK_URL") || ""
-		).replace(/\/$/, "");
-		const realm = this.config.get<string>("KEYCLOAK_REALMS") || "cym";
-		const adminRealm =
-			this.config.get<string>("KEYCLOAK_ADMIN_REALM") || "master";
-
-		if (!keycloakUrl) {
-			throw new ServiceUnavailableException("KEYCLOAK_URL не задан");
-		}
+		const { keycloakUrl, realm, adminRealm } = this.resolveConnection(options);
 
 		const token = await this.fetchAdminToken({
 			keycloakUrl,
@@ -285,6 +310,30 @@ export class V2KeycloakRoleSyncService {
 		return result;
 	}
 
+	private describeFetchError(url: string, err: unknown): string {
+		const e = err as {
+			message?: string;
+			cause?: { code?: string; hostname?: string; message?: string };
+		};
+		const code = e?.cause?.code || "";
+		const host = e?.cause?.hostname || "";
+		const detail = [code, host, e?.cause?.message || e?.message]
+			.filter(Boolean)
+			.join(" · ");
+		return `Не удалось достучаться до Keycloak (${url}): ${detail || "fetch failed"}. Проверьте URL (DNS/сеть из пода API) или переопределите в UI.`;
+	}
+
+	private async safeFetch(
+		url: string,
+		init?: RequestInit,
+	): Promise<Response> {
+		try {
+			return await fetch(url, init);
+		} catch (err) {
+			throw new ServiceUnavailableException(this.describeFetchError(url, err));
+		}
+	}
+
 	private async fetchAdminToken(args: {
 		keycloakUrl: string;
 		adminRealm: string;
@@ -297,17 +346,15 @@ export class V2KeycloakRoleSyncService {
 			password: args.password,
 			grant_type: "password",
 		});
-		const res = await fetch(
-			`${args.keycloakUrl}/realms/${args.adminRealm}/protocol/openid-connect/token`,
-			{
-				method: "POST",
-				headers: { "Content-Type": "application/x-www-form-urlencoded" },
-				body,
-			},
-		);
+		const tokenUrl = `${args.keycloakUrl}/realms/${args.adminRealm}/protocol/openid-connect/token`;
+		const res = await this.safeFetch(tokenUrl, {
+			method: "POST",
+			headers: { "Content-Type": "application/x-www-form-urlencoded" },
+			body,
+		});
 		if (!res.ok) {
 			throw new ForbiddenException(
-				`Не удалось получить admin token (${res.status}). Проверьте креды и KEYCLOAK_ADMIN_REALM.`,
+				`Не удалось получить admin token (${res.status}) с ${tokenUrl}. Проверьте креды и admin realm.`,
 			);
 		}
 		const json = (await res.json()) as { access_token?: string };
@@ -325,7 +372,8 @@ export class V2KeycloakRoleSyncService {
 		path: string,
 		body?: unknown,
 	): Promise<T | null> {
-		const res = await fetch(`${keycloakUrl}/admin/realms/${realm}${path}`, {
+		const url = `${keycloakUrl}/admin/realms/${realm}${path}`;
+		const res = await this.safeFetch(url, {
 			method,
 			headers: {
 				Authorization: `Bearer ${token}`,
