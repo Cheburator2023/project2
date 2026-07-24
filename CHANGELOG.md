@@ -1,5 +1,13 @@
 # Semantic Versioning Changelog
 
+# [1.43.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.42.0...v1.43.0) (2026-07-24)
+
+
+### Features
+
+* add created_at and created_by fields to kanban entities and update related logic ([0ab241f](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/0ab241f003af47e907561095efa0181d437a4fa1))
+* implement v2 runtime settings for stream filter management ([0b1bffc](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/0b1bffc61628fea73cf93d99894bd25035230e61))
+
 # [1.42.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.41.0...v1.42.0) (2026-07-24)
 
 
