@@ -437,13 +437,17 @@ export function TypicalWorkEditableCard({
 			paramCode,
 		[methodologyCatalog, paramOptions],
 	);
-	const unusedLaborParams = laborParamOptions.filter(
-		(p) => !draft?.laborParams.some((g) => isSchemaLaborParamUsed([g], p)),
-	);
+	const isLaborParamLinked = (param: V2TypicalWorkParameterDto) =>
+		Boolean(
+			draft?.laborParams.some((g) => isSchemaLaborParamUsed([g], param)),
+		);
+	const unusedLaborParamsCount = laborParamOptions.filter(
+		(p) => !isLaborParamLinked(p),
+	).length;
 	const laborPickerHint = schemaWorkParameterEmptyPickerMessage(
 		fieldPathHints.length,
 		draft?.laborParams.length ?? 0,
-		unusedLaborParams.length,
+		unusedLaborParamsCount,
 	);
 
 	const coefficientCatalog = useMemo(() => {
@@ -638,11 +642,10 @@ export function TypicalWorkEditableCard({
 			values: picked.values,
 			name: paramName,
 		});
+		/** any_of — для numeric/текста; справочник всегда by_value (коэфф. по значениям). */
 		const useAnyOf =
 			!useNumericByValue &&
-			(picked.numeric ||
-				isSchemaTextualParam(picked) ||
-				(Boolean(picked.dictionaryCode) && picked.values.length === 0));
+			(picked.numeric || isSchemaTextualParam(picked));
 		const newGroup = useAnyOf
 			? {
 					schemaFieldUid: picked.schemaFieldUid ?? null,
@@ -1275,10 +1278,10 @@ export function TypicalWorkEditableCard({
 									<FuzzyAutocomplete<V2TypicalWorkParameterDto>
 										key={laborPickerKey}
 										data-test-id="labor-param-kind-select"
-										options={unusedLaborParams}
+										options={laborParamOptions}
 										value={null}
 										onChange={(param) => {
-											if (!param) return;
+											if (!param || isLaborParamLinked(param)) return;
 											addLaborParam(param);
 										}}
 										getOptionLabel={(param) => param.name}
@@ -1286,25 +1289,32 @@ export function TypicalWorkEditableCard({
 										getOptionSecondaryText={(param) =>
 											schemaLaborParamPickerCaption(param)
 										}
+										getOptionDisabled={isLaborParamLinked}
 										label="Параметр трудоёмкости"
 										placeholder="Выберите поле схемы…"
 										emptyLabel="Выберите поле схемы…"
 										searchPlaceholder="поиск параметра…"
 										noMatchesText="Параметры не найдены"
 										allowEmpty
-										disabled={unusedLaborParams.length === 0}
+										disabled={laborParamOptions.length === 0}
 										helperText={
-											unusedLaborParams.length === 0
+											unusedLaborParamsCount === 0
 												? laborPickerHint
 												: undefined
 										}
 										statusAlert={
-											unusedLaborParams.length === 0
+											unusedLaborParamsCount === 0 &&
+											laborParamOptions.length > 0
 												? {
 														severity: "info",
 														message: laborPickerHint,
 													}
-												: null
+												: laborParamOptions.length === 0
+													? {
+															severity: "info",
+															message: laborPickerHint,
+														}
+													: null
 										}
 									/>
 								</Box>

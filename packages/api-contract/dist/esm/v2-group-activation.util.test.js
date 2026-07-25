@@ -35,6 +35,23 @@ describe("v2-group-activation.util", () => {
         expect(isCalculationPathActive(formData, "/streamDigitalAgents/localParams")).toBe(false);
         expect(isCalculationPathActive(formData, "/summary/total")).toBe(true);
     });
+    it("seeds inactive defaults for Источники данных and Контроль моделей", () => {
+        const ui = {
+            streamDataSources: {
+                "ui:options": { groupActivatable: true, groupActive: false },
+            },
+            streamModelControl: {
+                "ui:options": { groupActivatable: true, groupActive: false },
+            },
+        };
+        const seeded = ensureGroupActivationDefaults({}, ui);
+        expect(seeded.groupActivation).toEqual({
+            streamDataSources: false,
+            streamModelControl: false,
+        });
+        expect(isCalculationPathActive(seeded, "/streamDataSources/field_u-7AkDrP")).toBe(false);
+        expect(isCalculationPathActive(seeded, "/streamModelControl/field_G0AoYAl8")).toBe(false);
+    });
     it("finds trigger-gated activatable ancestor for typical work path", () => {
         const ui = {
             streamDataSources: {

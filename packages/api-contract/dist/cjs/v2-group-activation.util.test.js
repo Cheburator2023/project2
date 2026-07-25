@@ -37,6 +37,23 @@ const v2_group_activation_util_1 = require("./v2-group-activation.util");
         (0, vitest_1.expect)((0, v2_group_activation_util_1.isCalculationPathActive)(formData, "/streamDigitalAgents/localParams")).toBe(false);
         (0, vitest_1.expect)((0, v2_group_activation_util_1.isCalculationPathActive)(formData, "/summary/total")).toBe(true);
     });
+    (0, vitest_1.it)("seeds inactive defaults for Источники данных and Контроль моделей", () => {
+        const ui = {
+            streamDataSources: {
+                "ui:options": { groupActivatable: true, groupActive: false },
+            },
+            streamModelControl: {
+                "ui:options": { groupActivatable: true, groupActive: false },
+            },
+        };
+        const seeded = (0, v2_group_activation_util_1.ensureGroupActivationDefaults)({}, ui);
+        (0, vitest_1.expect)(seeded.groupActivation).toEqual({
+            streamDataSources: false,
+            streamModelControl: false,
+        });
+        (0, vitest_1.expect)((0, v2_group_activation_util_1.isCalculationPathActive)(seeded, "/streamDataSources/field_u-7AkDrP")).toBe(false);
+        (0, vitest_1.expect)((0, v2_group_activation_util_1.isCalculationPathActive)(seeded, "/streamModelControl/field_G0AoYAl8")).toBe(false);
+    });
     (0, vitest_1.it)("finds trigger-gated activatable ancestor for typical work path", () => {
         const ui = {
             streamDataSources: {

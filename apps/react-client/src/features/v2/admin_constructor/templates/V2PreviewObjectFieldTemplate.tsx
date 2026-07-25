@@ -711,6 +711,7 @@ export function V2PreviewArrayFieldTemplate({
 					sectionTitle={sectionTitle}
 					sectionHint={sectionHint}
 					formContext={registry.formContext}
+					forceTypicalWorkLayout={archComponent === "typicalWork"}
 				/>
 				{/* <AnketaCalculationDevHint
 					pathKey={pathKey}

@@ -13,6 +13,7 @@ import type {
 import {
 	clearStaleGeneratedTypicalWorkPaths,
 	dedupeTypicalWorkRowsByWorkId,
+	ensureGroupActivationDefaults,
 	isCalculationPathActive,
 	mergeTypicalCoefficientContext,
 	parseParamDependencyGraphFromLogic,
@@ -387,6 +388,8 @@ export class V2CalculationService {
 		const taskTriggers = rules.filter((r) => r.kind === "task_trigger");
 
 		let liveData = migrateV2AnketaFormData({ ...(formData ?? {}) });
+		/** Неактивные groupActivatable-стримы (в т.ч. Источники/Контроль по умолчанию). */
+		liveData = ensureGroupActivationDefaults(liveData, options?.uiSchema);
 
 		// 1) task_trigger/generated_rows — материализуем автозадачи до расчёта строк.
 		for (const rule of taskTriggers) {

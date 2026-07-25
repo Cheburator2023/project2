@@ -54,6 +54,11 @@ const v2_user_stream_mapping_util_1 = require("./v2-user-stream-mapping.util");
             "/sarep": ["anketa_view_all_calculations"],
             "/saprg": ["anketa_hold"],
             "/prjtoffice": [],
+            "/de": ["anketa_view_all_calculations"],
+            "/de/de_lead": [
+                "anketa_view_all_calculations",
+                "anketa_edit_calculation",
+            ],
         };
         const expanded = (0, v2_ad_domain_groups_util_1.expandV2KeycloakTargetsWithAdAliases)(target, "dev_");
         (0, vitest_1.expect)(expanded["/appadmin"]).toEqual(vitest_1.expect.arrayContaining(["anketa_audit_view"]));
@@ -70,6 +75,13 @@ const v2_user_stream_mapping_util_1 = require("./v2-user-stream-mapping.util");
         (0, vitest_1.expect)(expanded["/saprg/dev_sum_saprg"]).toEqual(vitest_1.expect.arrayContaining(["anketa_hold"]));
         (0, vitest_1.expect)(expanded["/project_office/dev_sum_prjtoffice"]).toEqual([]);
         (0, vitest_1.expect)(expanded["/prjtoffice/dev_sum_prjtoffice"]).toEqual([]);
+        /** /de — папка; AD и de_lead только внутри неё, не top-level */
+        (0, vitest_1.expect)(expanded["/dev_sum_de_kmbkcb"]).toBeUndefined();
+        (0, vitest_1.expect)(expanded["/dev_sum_Lde_kmbkcb"]).toBeUndefined();
+        (0, vitest_1.expect)(expanded["/de"]).toEqual(vitest_1.expect.arrayContaining(["anketa_view_all_calculations"]));
+        (0, vitest_1.expect)(expanded["/de/de_lead"]).toEqual(vitest_1.expect.arrayContaining(["anketa_edit_calculation"]));
+        (0, vitest_1.expect)(expanded["/de/dev_sum_de_kmbkcb"]).toEqual(vitest_1.expect.arrayContaining(["anketa_view_all_calculations"]));
+        (0, vitest_1.expect)(expanded["/de/de_lead/dev_sum_Lde_rb"]).toEqual(vitest_1.expect.arrayContaining(["anketa_edit_calculation"]));
         const noStand = (0, v2_ad_domain_groups_util_1.expandV2KeycloakTargetsWithAdAliases)({ "/appadmin": ["anketa_audit_view"] }, "");
         (0, vitest_1.expect)(noStand["/admin_it/sum_appadmin"]).toEqual(vitest_1.expect.arrayContaining(["anketa_audit_view"]));
         (0, vitest_1.expect)(noStand["/sum_appadmin"]).toBeUndefined();

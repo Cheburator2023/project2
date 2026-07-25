@@ -733,7 +733,7 @@ export function KeycloakRoleSyncPanel() {
 										placeholder="test_ | dev_ | prod_ | пусто"
 										helperText={
 											mode === "test-users"
-												? "Логины test_*, группы ролей — AD с этим префиксом: /dev_sum_de_*, /sacfg/dev_sum_sacfg, /admin_it/dev_sum_appadmin. Пусто → sum_* без стенда."
+												? "Логины test_*. Папки ролей: /de → /de/de_lead; AD-листы: /de/dev_sum_de_*, /sacfg/dev_sum_sacfg, /admin_it/dev_sum_appadmin. Пусто → sum_* без стенда."
 												: "Выбор или ручной ввод. ИФТ: test_ → /admin_it/test_sum_appadmin. Пусто → /admin_it/sum_appadmin."
 										}
 									/>

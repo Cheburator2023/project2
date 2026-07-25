@@ -8,6 +8,8 @@ import { InjectRepository } from "@nestjs/typeorm";
 import {
 	patchV2TypicalWorksLogicRules,
 	buildV2QuestionnaireRegistryConfig,
+	canUserDeleteV2Questionnaire,
+	resolveV2QuestionnaireDeleteAction,
 	type BulkDeleteV2QuestionnairesResultDto,
 	type CreateV2QuestionnaireRequestDto,
 	type CreateV2QuestionnaireVersionRequestDto,
@@ -50,6 +52,7 @@ type TUserLike = {
 	family_name?: string;
 	preferred_username?: string;
 	email?: string;
+	groups?: string[];
 };
 
 @Injectable()
@@ -318,10 +321,15 @@ export class V2QuestionnaireService {
 		return this.findOne(saved.id);
 	}
 
-	async bulkDelete(ids: string[]): Promise<BulkDeleteV2QuestionnairesResultDto> {
+	async bulkDelete(
+		ids: string[],
+		user?: TUserLike | null,
+	): Promise<BulkDeleteV2QuestionnairesResultDto> {
 		const uniqueIds = [...new Set(ids)];
 		const deletedIds: string[] = [];
+		const deactivatedIds: string[] = [];
 		const failed: BulkDeleteV2QuestionnairesResultDto["failed"] = [];
+		const groups = Array.isArray(user?.groups) ? user.groups : [];
 
 		for (const id of uniqueIds) {
 			try {
@@ -336,8 +344,48 @@ export class V2QuestionnaireService {
 					});
 					continue;
 				}
-				await this.questionnaireRepository.remove(row);
-				deletedIds.push(id);
+
+				const access = canUserDeleteV2Questionnaire(groups, row.formData);
+				if (!access.ok) {
+					failed.push({
+						id,
+						reason: access.reason,
+						message:
+							access.reason === "wrong_stream"
+								? "Удаление доступно только для анкет своего стрима"
+								: "Недостаточно прав для удаления анкеты",
+					});
+					continue;
+				}
+
+				const workflow = normalizeV2AnketaWorkflow(
+					migrateV2AnketaFormData(row.formData ?? {}).workflow,
+				);
+				const resolved = resolveV2QuestionnaireDeleteAction(
+					workflow.globalStatus,
+					row.status,
+				);
+				if (resolved.action === "deny") {
+					failed.push({
+						id,
+						reason: resolved.reason,
+						message:
+							resolved.reason === "already_inactive"
+								? "Анкета уже неактивна"
+								: "Удаление недоступно",
+					});
+					continue;
+				}
+
+				if (resolved.action === "hard_delete") {
+					await this.questionnaireRepository.remove(row);
+					deletedIds.push(id);
+					continue;
+				}
+
+				row.status = "inactive";
+				await this.questionnaireRepository.save(row);
+				deactivatedIds.push(id);
 			} catch {
 				failed.push({
 					id,
@@ -347,7 +395,7 @@ export class V2QuestionnaireService {
 			}
 		}
 
-		return { deletedIds, failed };
+		return { deletedIds, deactivatedIds, failed };
 	}
 
 	async seedTestQuestionnaires(

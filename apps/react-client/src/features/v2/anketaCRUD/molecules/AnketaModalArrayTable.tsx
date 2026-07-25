@@ -15,12 +15,13 @@ import { readAnketaFormContext } from "../utils/anketaFormContext";
 import { isAnketaArchPathReadOnly } from "../utils/anketaPathLock.util";
 import {
 	arrayTableShowsRowActions,
-	adjustTypicalWorkTableColumns,
 	collectTypicalWorkSourceNames,
 	filterTypicalWorkItems,
 	getArrayAtPath,
+	getTypicalWorkFactoryTableColumns,
 	isTypicalWorkArrayPath,
 	resolveArrayTableColumns,
+	schemaItemsLookLikeTypicalWork,
 	sumTypicalWorkTotals,
 	type AnketaArrayTableColumn,
 } from "../utils/anketaModalArrayTableConfig";
@@ -48,14 +49,20 @@ type Props = {
 	sectionTitle: string;
 	/** Подсказка под заголовком (ui:description массива). */
 	sectionHint?: string;
+	/** Явно: блок archComponent=typicalWork (надёжнее path-детекции). */
+	forceTypicalWorkLayout?: boolean;
 };
 
 function gridTemplate(
 	columns: AnketaArrayTableColumn[],
 	showRowActions: boolean,
+	showRowIndex = false,
 ): string {
+	const indexCol = showRowIndex ? "28px " : "";
 	const cols = columns.map((col) => col.width ?? "1fr").join(" ");
-	return showRowActions ? `${cols} 72px` : cols;
+	return showRowActions
+		? `${indexCol}${cols} 72px`
+		: `${indexCol}${cols}`;
 }
 
 function CellValue({
@@ -123,20 +130,30 @@ export function AnketaModalArrayTable({
 	pathKey,
 	sectionTitle,
 	sectionHint,
+	forceTypicalWorkLayout = false,
 	formContext,
 }: Props & { formContext: unknown }) {
 	const ctx = readAnketaFormContext(formContext);
-	const columns = resolveArrayTableColumns(
-		pathKey,
-		ctx.previewSchema,
-		ctx.previewUiSchema,
-	);
-	const readOnly = isAnketaArchPathReadOnly(formContext, pathKey);
-	const showRowActions = arrayTableShowsRowActions(pathKey, formContext);
 	const previewUiSchema = ctx.previewUiSchema as
 		| Record<string, unknown>
 		| undefined;
-	const isTypicalWorks = isTypicalWorkArrayPath(pathKey, previewUiSchema);
+	const isTypicalWorks =
+		forceTypicalWorkLayout ||
+		isTypicalWorkArrayPath(pathKey, previewUiSchema) ||
+		schemaItemsLookLikeTypicalWork(
+			ctx.previewSchema,
+			ctx.previewUiSchema,
+			pathKey,
+		);
+	const columns = isTypicalWorks
+		? getTypicalWorkFactoryTableColumns()
+		: resolveArrayTableColumns(
+				pathKey,
+				ctx.previewSchema,
+				ctx.previewUiSchema,
+			);
+	const readOnly = isAnketaArchPathReadOnly(formContext, pathKey);
+	const showRowActions = arrayTableShowsRowActions(pathKey, formContext);
 	const items = useMemo(() => {
 		const rawItems = getArrayAtPath(ctx.formData ?? {}, pathKey);
 		if (!isTypicalWorks) return rawItems;
@@ -188,11 +205,7 @@ export function AnketaModalArrayTable({
 				bgcolor: "rgba(255, 193, 7, 0.08)",
 			}
 		: undefined;
-	const displayColumns = useMemo(() => {
-		if (!columns) return null;
-		if (!isTypicalWorks) return columns;
-		return adjustTypicalWorkTableColumns(columns, items);
-	}, [columns, isTypicalWorks, items]);
+	const displayColumns = columns;
 
 	const tableTestId = anketaMoleculeTestIdForPath(
 		ANKETA_MOLECULE_TEST_IDS.arrayTable,
@@ -273,7 +286,7 @@ export function AnketaModalArrayTable({
 						))}
 					</Box>
 				)}
-				{isTypicalWorks ? (
+				{isTypicalWorks && visibleItems.length > 1 ? (
 					<TypicalWorkSummaryTotal
 						total={typicalTotal}
 						loading={calculationLoading}
@@ -366,13 +379,18 @@ export function AnketaModalArrayTable({
 						data-test-id={`${tableTestId}--columns-header`}
 						sx={{
 							display: "grid",
-							gridTemplateColumns: gridTemplate(displayColumns, showRowActions),
+							gridTemplateColumns: gridTemplate(
+								displayColumns,
+								showRowActions,
+								isTypicalWorks,
+							),
 							gap: 1,
 							px: 1.5,
 							py: 0.75,
 							minWidth: showRowActions ? 720 : 640,
 						}}
 					>
+						{isTypicalWorks ? <Box /> : null}
 						{displayColumns.map((column) => (
 							<Typography
 								key={column.key}
@@ -413,12 +431,22 @@ export function AnketaModalArrayTable({
 										gridTemplateColumns: gridTemplate(
 											displayColumns,
 											showRowActions,
+											isTypicalWorks,
 										),
 										gap: 1,
 										alignItems: "center",
 										minWidth: showRowActions ? 720 : 640,
 									}}
 								>
+									{isTypicalWorks ? (
+										<Typography
+											variant="body2"
+											color="text.secondary"
+											sx={{ lineHeight: 1.4 }}
+										>
+											{index + 1}
+										</Typography>
+									) : null}
 									{displayColumns.map((column) => {
 										const rawValue = column.render
 											? column.render(item)
@@ -479,7 +507,7 @@ export function AnketaModalArrayTable({
 				</ListEmptyPlaceholder>
 			)}
 
-			{isTypicalWorks ? (
+			{isTypicalWorks && visibleItems.length > 1 ? (
 				<TypicalWorkSummaryTotal
 					total={typicalTotal}
 					loading={calculationLoading}

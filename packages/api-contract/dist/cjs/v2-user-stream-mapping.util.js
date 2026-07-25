@@ -5,6 +5,7 @@ exports.normalizeV2UserGroups = normalizeV2UserGroups;
 exports.extractV2UserRoleCodes = extractV2UserRoleCodes;
 exports.isV2UserStreamFilterExemptLead = isV2UserStreamFilterExemptLead;
 exports.isV2UserStreamFilteredByGroups = isV2UserStreamFilteredByGroups;
+exports.resolveV2UserScopedStreamsFromGroups = resolveV2UserScopedStreamsFromGroups;
 exports.resolveV2UserImplementationStreamsFromGroups = resolveV2UserImplementationStreamsFromGroups;
 exports.resolveV2UserAllowedStreamFilterValues = resolveV2UserAllowedStreamFilterValues;
 exports.filterV2QuestionnairesByUserStreamGroups = filterV2QuestionnairesByUserStreamGroups;
@@ -163,15 +164,22 @@ function expandStreamCodeAliases(streams) {
     }
     return [...expanded];
 }
+/**
+ * Коды implementationStream из groups (департаменты + AD-суффиксы),
+ * без учёта lead-exemption фильтра реестра.
+ */
+function resolveV2UserScopedStreamsFromGroups(userGroups) {
+    const departmentsAndStreams = extractDepartmentsAndStreamGroups(userGroups);
+    const mapped = departmentsAndStreams.flatMap((group) => DEPARTMENT_TO_V2_STREAM_CODES[group] ?? []);
+    const directCodes = departmentsAndStreams.filter((group) => (0, v2_implementation_streams_util_1.isV2ImplementationStreamCode)(group));
+    return expandStreamCodeAliases([...mapped, ...directCodes]);
+}
 /** Коды implementationStream пользователя из groups Keycloak. */
 function resolveV2UserImplementationStreamsFromGroups(userGroups) {
     if (!isV2UserStreamFilteredByGroups(userGroups)) {
         return [];
     }
-    const departmentsAndStreams = extractDepartmentsAndStreamGroups(userGroups);
-    const mapped = departmentsAndStreams.flatMap((group) => DEPARTMENT_TO_V2_STREAM_CODES[group] ?? []);
-    const directCodes = departmentsAndStreams.filter((group) => (0, v2_implementation_streams_util_1.isV2ImplementationStreamCode)(group));
-    return expandStreamCodeAliases([...mapped, ...directCodes]);
+    return resolveV2UserScopedStreamsFromGroups(userGroups);
 }
 /** Allow-list для фильтра реестра: коды + подписи (как Nest expandStreamAliases). */
 function resolveV2UserAllowedStreamFilterValues(userGroups) {

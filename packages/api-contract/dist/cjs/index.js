@@ -22,6 +22,7 @@ __exportStar(require("./coefficient.types"), exports);
 __exportStar(require("./questionnaire.types"), exports);
 __exportStar(require("./v2-template.types"), exports);
 __exportStar(require("./v2-questionnaire.types"), exports);
+__exportStar(require("./v2-questionnaire-delete.util"), exports);
 __exportStar(require("./v2-questionnaire-calc-name.util"), exports);
 __exportStar(require("./v2-questionnaire-uncertainty-coefficient.util"), exports);
 __exportStar(require("./v2-overall-uncertainty-config.util"), exports);

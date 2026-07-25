@@ -188,13 +188,13 @@ function expandStreamCodeAliases(
 	return [...expanded];
 }
 
-/** Коды implementationStream пользователя из groups Keycloak. */
-export function resolveV2UserImplementationStreamsFromGroups(
+/**
+ * Коды implementationStream из groups (департаменты + AD-суффиксы),
+ * без учёта lead-exemption фильтра реестра.
+ */
+export function resolveV2UserScopedStreamsFromGroups(
 	userGroups: readonly string[],
 ): V2ImplementationStreamCode[] {
-	if (!isV2UserStreamFilteredByGroups(userGroups)) {
-		return [];
-	}
 	const departmentsAndStreams = extractDepartmentsAndStreamGroups(userGroups);
 	const mapped = departmentsAndStreams.flatMap(
 		(group) => DEPARTMENT_TO_V2_STREAM_CODES[group] ?? [],
@@ -204,6 +204,16 @@ export function resolveV2UserImplementationStreamsFromGroups(
 			isV2ImplementationStreamCode(group),
 	);
 	return expandStreamCodeAliases([...mapped, ...directCodes]);
+}
+
+/** Коды implementationStream пользователя из groups Keycloak. */
+export function resolveV2UserImplementationStreamsFromGroups(
+	userGroups: readonly string[],
+): V2ImplementationStreamCode[] {
+	if (!isV2UserStreamFilteredByGroups(userGroups)) {
+		return [];
+	}
+	return resolveV2UserScopedStreamsFromGroups(userGroups);
 }
 
 /** Allow-list для фильтра реестра: коды + подписи (как Nest expandStreamAliases). */

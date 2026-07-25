@@ -7,6 +7,7 @@ import {
 	dedupeTypicalWorkRowsByWorkId,
 	listAllGeneratedTypicalWorkArrayPaths,
 	resolveTypicalWorkCatalogStreamLabel,
+	resolveV2AnketaArchComponent,
 	sortModelStreamTypicalWorkRows,
 	V2_MODEL_STREAM_EXECUTOR,
 } from "@smart-anketa/api-contract";
@@ -85,25 +86,26 @@ const FACTORY_TYPICAL_WORK_COLUMNS: AnketaArrayTableColumn[] = [
 	{
 		key: "name",
 		header: "Название типовой работы",
-		width: "1.6fr",
+		width: "2fr",
+		multiline: true,
 		render: (item) => text(item, "name"),
 	},
 	{
 		key: "estimate",
 		header: "Базовая оценка",
-		width: "1fr",
+		width: "0.85fr",
 		render: (item) => formatTypicalWorkNumber(item, "estimateHoursPerDay"),
 	},
 	{
 		key: "coefficient",
 		header: "Коэффициент",
-		width: "0.8fr",
+		width: "0.85fr",
 		render: (item) => formatTypicalWorkNumber(item, "coefficient"),
 	},
 	{
 		key: "total",
 		header: "Итог",
-		width: "0.8fr",
+		width: "0.85fr",
 		render: (item) => formatTypicalWorkNumber(item, "total"),
 	},
 ];
@@ -438,13 +440,49 @@ export function getTypicalWorkFactoryTableColumns(): AnketaArrayTableColumn[] {
 	return FACTORY_TYPICAL_WORK_COLUMNS.map((column) => ({ ...column }));
 }
 
+/** Элемент массива похож на типовую работу (в т.ч. legacy reason/workType). */
+export function schemaItemsLookLikeTypicalWork(
+	rootSchema: RJSFSchema | undefined,
+	rootUi: UiSchema | undefined,
+	path: string,
+): boolean {
+	if (!rootSchema || !rootUi) return false;
+	const slice = getArrayItemSchemaSliceForModal(rootSchema, rootUi, path);
+	const props = slice?.schema.properties as
+		| Record<string, RJSFSchema>
+		| undefined;
+	if (!props) return false;
+	const keys = new Set(Object.keys(props));
+	if (keys.has("estimateHoursPerDay") && keys.has("total")) return true;
+	if (keys.has("reason") && keys.has("workType") && keys.has("total")) {
+		return true;
+	}
+	return false;
+}
+
+function readUiBranchAtDotPath(
+	uiSchema: unknown,
+	dotPath: string,
+): Record<string, unknown> | undefined {
+	const segments = dotPath.split(".").filter(Boolean);
+	let cur: unknown = uiSchema;
+	for (const segment of segments) {
+		if (!cur || typeof cur !== "object" || Array.isArray(cur)) return undefined;
+		cur = (cur as Record<string, unknown>)[segment];
+	}
+	return cur && typeof cur === "object" && !Array.isArray(cur)
+		? (cur as Record<string, unknown>)
+		: undefined;
+}
+
 export function resolveArrayTableColumns(
 	path: string,
 	rootSchema?: RJSFSchema,
 	rootUi?: UiSchema,
 ): AnketaArrayTableColumn[] | null {
 	if (
-		isTypicalWorkArrayPath(path, rootUi as Record<string, unknown> | undefined)
+		isTypicalWorkArrayPath(path, rootUi as Record<string, unknown> | undefined) ||
+		schemaItemsLookLikeTypicalWork(rootSchema, rootUi, path)
 	) {
 		return getTypicalWorkFactoryTableColumns();
 	}
@@ -476,7 +514,11 @@ export function isTypicalWorkArrayPath(
 ): boolean {
 	if (TYPICAL_WORK_ARRAY_PATHS.has(path)) return true;
 	if (!uiSchema) return false;
-	return collectGeneratedTypicalWorkArrayPaths(uiSchema).includes(path);
+	if (collectGeneratedTypicalWorkArrayPaths(uiSchema).includes(path)) {
+		return true;
+	}
+	const branch = readUiBranchAtDotPath(uiSchema, path);
+	return resolveV2AnketaArchComponent(branch) === "typicalWork";
 }
 
 export function sumTypicalWorkTotals(
@@ -650,23 +692,12 @@ export function collectAppearedTypicalWorkGroups(
 	return groups;
 }
 
-const FACTORY_TYPICAL_WORK_COLUMN_KEYS = [
-	"name",
-	"estimate",
-	"coefficient",
-	"total",
-] as const;
-
-/** Колонки таблицы типовых работ: заводской шаблон из четырёх столбцов. */
+/** Колонки таблицы типовых работ: всегда заводской шаблон (игнор legacy schema). */
 export function adjustTypicalWorkTableColumns(
-	columns: AnketaArrayTableColumn[],
+	_columns: AnketaArrayTableColumn[],
 	_items: Record<string, unknown>[],
 ): AnketaArrayTableColumn[] {
-	const byKey = new Map(columns.map((col) => [col.key, col]));
-	const factory = getTypicalWorkFactoryTableColumns();
-	return FACTORY_TYPICAL_WORK_COLUMN_KEYS.map(
-		(key) => byKey.get(key) ?? factory.find((col) => col.key === key)!,
-	);
+	return getTypicalWorkFactoryTableColumns();
 }
 
 export function getArrayAtPath(

@@ -4,8 +4,9 @@
  *
  * Пароль для новых = username. Статусы из md не используются.
  *
- * Группы ролей — AD-alias с standPrefix (`/dev_sum_de_kmbkcb`, `/sacfg/dev_sum_sacfg`).
- * Логины остаются `test_*`. Департаменты (`/departament/…`) без префикса.
+ * Иерархия: `/de` — папка, внутри `/de/de_lead` и AD-листы `/de/{stand}sum_de_*`.
+ * AD с standPrefix: `/de/dev_sum_de_kmbkcb`, `/sacfg/dev_sum_sacfg`, `/admin_it/dev_sum_appadmin`.
+ * Логины `test_*`. Департаменты (`/departament/…`) без префикса.
  */
 import {
 	V2_AD_NEST_PARENT_BY_TARGET,
@@ -18,7 +19,7 @@ import { DEPARTMENTS } from "../../../shared/constants/departments.constant";
 export type V2KeycloakTestUserDef = {
 	username: string;
 	label: string;
-	/** Канон path → AD-группы с standPrefix. */
+	/** Канон path → AD-группы с standPrefix (или сам канон при canonOnly). */
 	rolePaths: readonly string[];
 	/** Доп. группы без AD-префикса (обычно /departament/…). */
 	extraGroups?: readonly string[];
@@ -26,7 +27,7 @@ export type V2KeycloakTestUserDef = {
 	adFilter?: (adName: string) => boolean;
 	/**
 	 * Только канон path (без AD-alias).
-	 * Для umbrella `/sarep`, `/business_customer` и т.п.
+	 * Для папок `/de`, `/de/de_lead`, umbrella `/sarep`, `/business_customer`.
 	 */
 	canonOnly?: boolean;
 };
@@ -69,7 +70,7 @@ export function resolveAdGroupPathsForCanon(
 				out.push(`${parent}/${leaf}`);
 			}
 		} else {
-			/** Top-level AD-alias: `/dev_sum_de_kmbkcb` — лист начинается с префикса стенда. */
+			/** Top-level AD-alias (если нет nest-parent): `/{stand}sum_*`. */
 			out.push(`/${leaf}`);
 		}
 	}
@@ -84,17 +85,20 @@ export const V2_KEYCLOAK_TEST_USER_DEFS: readonly V2KeycloakTestUserDef[] = [
 		username: "test_ds",
 		label: "DS",
 		rolePaths: ["/ds"],
+		canonOnly: true,
 		extraGroups: ALL_MODEL_DEPARTMENTS,
 	},
 	{
 		username: "test_ds_lead",
 		label: "Руководитель DS",
 		rolePaths: ["/ds", "/ds/ds_lead"],
+		canonOnly: true,
 	},
 	{
 		username: "test_de",
 		label: "DE (все модельные департаменты)",
 		rolePaths: ["/de"],
+		canonOnly: true,
 		extraGroups: ALL_MODEL_DEPARTMENTS,
 	},
 	{
@@ -121,18 +125,22 @@ export const V2_KEYCLOAK_TEST_USER_DEFS: readonly V2KeycloakTestUserDef[] = [
 	{
 		username: "test_de_lead",
 		label: "Руководитель DE",
+		/** Папка `/de` + вложенная `/de/de_lead` (не top-level AD). */
 		rolePaths: ["/de", "/de/de_lead"],
+		canonOnly: true,
 	},
 	{
 		username: "test_modelops",
 		label: "ModelOps",
 		rolePaths: ["/modelops"],
+		canonOnly: true,
 		extraGroups: ALL_MODEL_DEPARTMENTS,
 	},
 	{
 		username: "test_modelops_lead",
 		label: "Руководитель ModelOps",
 		rolePaths: ["/modelops", "/modelops/modelops_lead"],
+		canonOnly: true,
 	},
 	{
 		username: "test_mipm",
@@ -151,11 +159,13 @@ export const V2_KEYCLOAK_TEST_USER_DEFS: readonly V2KeycloakTestUserDef[] = [
 		username: "test_validator",
 		label: "Валидатор",
 		rolePaths: ["/validator"],
+		canonOnly: true,
 	},
 	{
 		username: "test_validator_lead",
 		label: "Руководитель валидации",
 		rolePaths: ["/validator", "/validator/validator_lead"],
+		canonOnly: true,
 	},
 	{
 		username: "test_architect",

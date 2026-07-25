@@ -393,6 +393,118 @@ describe("buildSchemaWorkParameters", () => {
 			"v2.detailInfo.sourceSystems.items.field_wuYlhnu0",
 		);
 		expect(param?.values).toEqual([]);
+		expect(param?.textual).not.toBe(true);
+		expect(isSchemaLaborParamCandidate(param!)).toBe(true);
+	});
+
+	it("includes multi-select dictionary fields (array of string) as labor params", () => {
+		const dictCode = "v2.detailInfo.dataMart.tags";
+		const hints: FieldPathHint[] = [
+			{
+				pointer: "/detailInfo/dataMart/tags",
+				key: "tags",
+				title: "Теги витрины",
+				varPath: "detailInfo.dataMart.tags",
+				dictionaryCode: dictCode,
+				codesPreview: null,
+			},
+		];
+
+		const params = buildSchemaWorkParameters({
+			fieldPathHints: hints,
+			uiSchema: {
+				detailInfo: {
+					dataMart: {
+						"ui:options": { archComponent: "dataMart" },
+						tags: {
+							"ui:options": {
+								dictionaryCode: dictCode,
+								multiple: true,
+							},
+						},
+					},
+				},
+			},
+			jsonSchema: {
+				type: "object",
+				properties: {
+					detailInfo: {
+						type: "object",
+						properties: {
+							dataMart: {
+								type: "object",
+								properties: {
+									tags: {
+										type: "array",
+										title: "Теги витрины",
+										items: { type: "string" },
+									},
+								},
+							},
+						},
+					},
+				},
+			} as RJSFSchema,
+			enumMapByCode: {
+				[dictCode]: {
+					enums: ["simple", "complex"],
+					enumNames: ["Простой", "Сложный"],
+				},
+			},
+		});
+
+		const param = params.find((p) => p.code === "tags");
+		expect(param).toBeDefined();
+		expect(param?.dictionaryCode).toBe(dictCode);
+		expect(param?.values.map((v) => v.code)).toEqual(["simple", "complex"]);
+		expect(isSchemaLaborParamCandidate(param!)).toBe(true);
+	});
+
+	it("still excludes plain object arrays without dictionary binding", () => {
+		const hints: FieldPathHint[] = [
+			{
+				pointer: "/detailInfo/sourceSystems",
+				key: "sourceSystems",
+				title: "Системы-источники",
+				varPath: "detailInfo.sourceSystems",
+				dictionaryCode: null,
+				codesPreview: null,
+			},
+		];
+
+		const params = buildSchemaWorkParameters({
+			fieldPathHints: hints,
+			uiSchema: {
+				detailInfo: {
+					sourceSystems: {
+						"ui:options": { archComponent: "sourceSystem" },
+					},
+				},
+			},
+			jsonSchema: {
+				type: "object",
+				properties: {
+					detailInfo: {
+						type: "object",
+						properties: {
+							sourceSystems: {
+								type: "array",
+								title: "Системы-источники",
+								items: {
+									type: "object",
+									properties: {
+										name: { type: "string", title: "Название" },
+									},
+								},
+							},
+						},
+					},
+				},
+			} as RJSFSchema,
+			enumMapByCode: {},
+		});
+
+		expect(params.find((p) => p.code === "sourceSystems")).toBeUndefined();
 	});
 
 	it("includes plain string schema fields without enum or dictionary", () => {

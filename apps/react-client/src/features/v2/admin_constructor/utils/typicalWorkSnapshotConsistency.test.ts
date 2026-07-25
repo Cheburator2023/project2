@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import type { RJSFSchema } from "@rjsf/utils";
 import type { V2LogicGraphDto, V2LogicRuleDto } from "@smart-anketa/api-contract";
 import {
+	collectGeneratedTypicalWorkArrayPaths,
 	collectTypicalWorkBlockBindings,
 	patchV2AnketaCalculationLogicRules,
 	patchV2TypicalWorksLogicRules,
@@ -13,6 +14,7 @@ import {
 	V2_IMPLEMENTATION_STREAM,
 } from "@smart-anketa/api-contract";
 import { describe, expect, it } from "vitest";
+import { ARCH_COMPONENT_PRESET_DEFS } from "../schemaEditor/archComponentPresets";
 import { placeTypicalWorkInStream } from "../schemaEditor/placeTypicalWorkInStream";
 import {
 	appendBoundWorkIdAtPointer,
@@ -162,7 +164,7 @@ describe("typicalWork snapshot consistency", () => {
 		expect(after).toBe(before);
 	});
 
-	it("factory default snapshot: legacy typicalWork blocks stay unbound after coerce", () => {
+	it("factory default snapshot: boundWorkIds survive coerceUiSchema", () => {
 		const snapshot = loadDefaultSnapshot();
 		const uiSchema = roundtripUiSchema(
 			snapshot.uiSchema,
@@ -171,9 +173,8 @@ describe("typicalWork snapshot consistency", () => {
 		const bindings = collectTypicalWorkBlockBindings(uiSchema);
 
 		expect(bindings.length).toBeGreaterThan(0);
-		for (const binding of bindings) {
-			expect(binding.boundWorkIds).toBeUndefined();
-		}
+		const bound = bindings.filter((b) => (b.boundWorkIds?.length ?? 0) > 0);
+		expect(bound.length).toBeGreaterThan(0);
 
 		const patched = patchV2TypicalWorksLogicRules(snapshot.logic, {
 			jsonSchema: snapshot.jsonSchema,
@@ -185,7 +186,43 @@ describe("typicalWork snapshot consistency", () => {
 		expect(catalogRules.length).toBeGreaterThan(0);
 		for (const rule of catalogRules) {
 			const payload = rule.payload as Record<string, unknown>;
-			expect(payload.allowedWorkIds).toBeUndefined();
+			const allowed = payload.allowedWorkIds;
+			if (Array.isArray(allowed)) {
+				expect(allowed.length).toBeGreaterThan(0);
+			}
+		}
+	});
+
+	it("factory default snapshot: typicalWork item fields match constructor preset", () => {
+		const snapshot = loadDefaultSnapshot();
+		const presetItems = ARCH_COMPONENT_PRESET_DEFS.typicalWork.make()
+			.items as RJSFSchema;
+		const expectedTitles = Object.fromEntries(
+			Object.entries(
+				(presetItems.properties ?? {}) as Record<string, RJSFSchema>,
+			).map(([key, field]) => [key, field.title]),
+		);
+		const expectedKeys = Object.keys(expectedTitles).sort();
+
+		const paths = collectGeneratedTypicalWorkArrayPaths(snapshot.uiSchema);
+		expect(paths.length).toBeGreaterThan(0);
+
+		for (const path of paths) {
+			const segments = path.split(".");
+			let node: unknown = snapshot.jsonSchema;
+			for (const segment of segments) {
+				node = (node as RJSFSchema).properties?.[segment];
+			}
+			const items = (node as RJSFSchema | undefined)?.items as
+				| RJSFSchema
+				| undefined;
+			const props = (items?.properties ?? {}) as Record<string, RJSFSchema>;
+			expect(Object.keys(props).sort()).toEqual(expectedKeys);
+			for (const key of expectedKeys) {
+				expect(props[key]?.title).toBe(expectedTitles[key]);
+			}
+			expect(props).not.toHaveProperty("reason");
+			expect(props).not.toHaveProperty("workType");
 		}
 	});
 

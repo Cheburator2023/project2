@@ -81,13 +81,6 @@ import {
 	type TypicalWorkCatalogItem,
 } from "../typicalWorkBlockBinding";
 import { useSchemaEditor } from "../SchemaEditorContext";
-import { ensureAnketaFormDataWithWorkflow } from "@react-client/features/v2/anketaCRUD/hooks/useAnketaWorkflow";
-import { mergeAnketaDisplayFormData } from "@react-client/features/v2/anketaCRUD/utils/mergeAnketaDisplayFormData";
-import {
-	getArrayAtPath,
-	sumTypicalWorkTotals,
-} from "@react-client/features/v2/anketaCRUD/utils/anketaModalArrayTableConfig";
-import { TypicalWorkSummaryTotal } from "@react-client/features/v2/anketaCRUD/molecules/TypicalWorkSummaryTotal";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../../testIds";
 import { PanelChrome } from "./PanelChrome";
 import { SchemaCanvasFieldSearch } from "./SchemaCanvasFieldSearch";
@@ -333,9 +326,6 @@ function SchemaCanvasFieldRow({
 		setSelectedPointer,
 		setUiSchema,
 		duplicateCanvasField,
-		formData,
-		liveFormData,
-		calculationLoading,
 	} = useSchemaEditor();
 
 	const { draggingTypicalWork, excludePointer } = useDragLayer((monitor) => {
@@ -380,19 +370,6 @@ function SchemaCanvasFieldRow({
 		excludePointer,
 	]);
 
-	const typicalWorkSummaryTotal = useMemo(() => {
-		if (node.data?.kind !== "typical-work-summary") return null;
-		const parentPointer = node.data.parentPointer;
-		if (!parentPointer) return null;
-		const dotPath = pointerSegments(parentPointer).join(".");
-		const displayData = mergeAnketaDisplayFormData(
-			ensureAnketaFormDataWithWorkflow(formData),
-			liveFormData,
-			uiSchema as Record<string, unknown>,
-		);
-		return sumTypicalWorkTotals(getArrayAtPath(displayData, dotPath));
-	}, [node.data, formData, liveFormData, uiSchema]);
-
 	if (node.data?.kind === "system-divider") {
 		return (
 			<Box
@@ -413,30 +390,6 @@ function SchemaCanvasFieldRow({
 				>
 					{node.text}
 				</Typography>
-			</Box>
-		);
-	}
-
-	if (node.data?.kind === "typical-work-summary") {
-		return (
-			<Box
-				sx={{
-					ml: `${depth * DEPTH_INDENT_PX}px`,
-					mr: 1,
-					my: 0.5,
-					px: 1,
-					py: 0.75,
-					borderRadius: 1,
-					border: 1,
-					borderStyle: "dashed",
-					borderColor: "divider",
-					bgcolor: alpha(theme.palette.text.secondary, 0.04),
-				}}
-			>
-				<TypicalWorkSummaryTotal
-					total={typicalWorkSummaryTotal}
-					loading={calculationLoading}
-				/>
 			</Box>
 		);
 	}

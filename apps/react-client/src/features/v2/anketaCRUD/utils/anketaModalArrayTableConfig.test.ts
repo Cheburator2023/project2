@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import {
 	adjustTypicalWorkTableColumns,
 	collectAppearedTypicalWorkRows,
@@ -6,7 +7,9 @@ import {
 	filterTypicalWorkItems,
 	formatTypicalWorkSummaryTotal,
 	getTypicalWorkFactoryTableColumns,
+	isTypicalWorkArrayPath,
 	resolveArrayTableColumns,
+	schemaItemsLookLikeTypicalWork,
 	sumTypicalWorkTotals,
 	typicalWorkItemDisplayName,
 } from "./anketaModalArrayTableConfig";
@@ -68,8 +71,64 @@ describe("typical work table helpers", () => {
 					{ key: "total", header: "Итог" },
 				],
 				[{ name: "Уточнение требований", total: 1 }],
-			).map((col) => col.key),
-		).toEqual(["name", "estimate", "coefficient", "total"]);
+			).map((col) => col.header),
+		).toEqual([
+			"Название типовой работы",
+			"Базовая оценка",
+			"Коэффициент",
+			"Итог",
+		]);
+	});
+
+	it("forces factory columns for custom typicalWork path with legacy item schema", () => {
+		const path = "field_custom.sourceTypicalTasks";
+		const rootSchema: RJSFSchema = {
+			type: "object",
+			properties: {
+				field_custom: {
+					type: "object",
+					properties: {
+						sourceTypicalTasks: {
+							type: "array",
+							items: {
+								type: "object",
+								properties: {
+									name: { type: "string", title: "Наименование" },
+									total: { type: "number", title: "Итог" },
+									reason: { type: "string", title: "Причина" },
+									workType: { type: "string", title: "Тип работ" },
+									coefficient: { type: "number", title: "Коэф." },
+									estimateHoursPerDay: {
+										type: "number",
+										title: "Базовая оценка (ч/д)",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		};
+		const rootUi: UiSchema = {
+			field_custom: {
+				sourceTypicalTasks: {
+					"ui:options": { archComponent: "typicalWork" },
+				},
+			},
+		};
+
+		expect(isTypicalWorkArrayPath(path, rootUi as Record<string, unknown>)).toBe(
+			true,
+		);
+		expect(schemaItemsLookLikeTypicalWork(rootSchema, rootUi, path)).toBe(true);
+		expect(
+			resolveArrayTableColumns(path, rootSchema, rootUi)?.map((col) => col.header),
+		).toEqual([
+			"Название типовой работы",
+			"Базовая оценка",
+			"Коэффициент",
+			"Итог",
+		]);
 	});
 
 	it("shows only numeric coefficient in coefficient column", () => {

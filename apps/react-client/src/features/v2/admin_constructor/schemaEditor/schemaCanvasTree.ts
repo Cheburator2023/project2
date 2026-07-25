@@ -14,7 +14,6 @@ import {
 	resolveSchemaNode,
 } from "../utils/schemaMutators";
 import { pointerSegments } from "../utils/schemaPaths";
-import { resolveArchComponentAtPointer } from "./propertiesFieldKind";
 
 export const UNCERTAINTY_CALCULATION_ROOT_POINTER = "/uncertaintyCalculation";
 
@@ -22,13 +21,11 @@ export const SCHEMA_CANVAS_ROOT_ID = "schema-root";
 export const SCHEMA_CANVAS_SYSTEM_DIVIDER_ID = "schema-canvas-system-divider";
 export const PALETTE_DRAG_TYPE = "schema-editor-palette-preset";
 export const ARRAY_ITEMS_NODE_SUFFIX = "/@items";
-export const TYPICAL_WORK_SUMMARY_NODE_SUFFIX = "/@summaryTotal";
 
 export type SchemaCanvasNodeKind =
 	| "field"
 	| "array-items-section"
-	| "system-divider"
-	| "typical-work-summary";
+	| "system-divider";
 
 export type SchemaCanvasNodeData = {
 	kind: SchemaCanvasNodeKind;
@@ -418,24 +415,6 @@ function appendFieldNodes(
 				fieldPointer,
 				options,
 			);
-			if (
-				uiSchema &&
-				resolveArchComponentAtPointer(uiSchema, fieldPointer) === "typicalWork"
-			) {
-				const summaryPointer = `${fieldPointer}${TYPICAL_WORK_SUMMARY_NODE_SUFFIX}`;
-				nodes.push({
-					id: summaryPointer,
-					parent: fieldPointer,
-					text: "Суммарный итог",
-					droppable: false,
-					data: {
-						kind: "typical-work-summary",
-						fieldPointer: summaryPointer,
-						fieldKey: "summaryTotal",
-						parentPointer: fieldPointer,
-					},
-				});
-			}
 		}
 	}
 }

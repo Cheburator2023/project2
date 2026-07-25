@@ -1,3 +1,4 @@
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import BugReportOutlinedIcon from "@mui/icons-material/BugReportOutlined";
 import Alert from "@mui/material/Alert";
@@ -15,6 +16,8 @@ import {
 } from "@mui/material";
 import type { V2SchemaBindingDto } from "@smart-anketa/api-contract";
 import {
+	canUserDeleteV2Questionnaire,
+	resolveV2QuestionnaireDeleteAction,
 	schemaHasUncertaintyModalWidget,
 	userMasksAllWorkEstimates,
 	V2_ANKETA_GLOBAL_COMPLETE_LABEL,
@@ -49,6 +52,7 @@ import type { AnketaFormContextValue } from "../utils/anketaFormContext";
 import { useAnketaViewerAccess } from "../utils/anketaViewerAccess";
 import { AnketaFormPageLayout } from "./AnketaFormPageLayout";
 import {
+	useBulkDeleteV2Questionnaires,
 	useCreateV2QuestionnaireVersion,
 	useHoldV2Questionnaire,
 	v2QuestionnairesExportXlsx,
@@ -60,6 +64,7 @@ import { v2Routes } from "@react-client/routing/version/v2/routes";
 import { toast } from "@react-client/common/toasts";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { usePermissions } from "@react-client/hooks/usePermissions";
+import { useUserStore } from "@react-client/common/store/userStore";
 import { IS_DEV } from "@react-client/common/constants/dev";
 import { buildQuestionnaireCopyCalcName, stripQuestionnaireCalcNameFromFormData } from "../utils/anketaQuestionnaireMeta.util";
 
@@ -76,6 +81,8 @@ type Props = {
 	headerExtra?: ReactNode;
 	questionnaireId?: string;
 	questionnaireCalcName?: string;
+	/** Статус записи анкеты (active / inactive / archived). */
+	questionnaireStatus?: "active" | "archived" | "inactive";
 	onRenameQuestionnaire?: (calcName: string) => void;
 	renamePending?: boolean;
 	/** Внешняя загрузка (например, form-package с сервера). */
@@ -98,6 +105,7 @@ export function AnketaFormShell({
 	headerExtra,
 	questionnaireId,
 	questionnaireCalcName,
+	questionnaireStatus = "active",
 	onRenameQuestionnaire,
 	renamePending = false,
 	loading: externalLoading = false,
@@ -106,6 +114,7 @@ export function AnketaFormShell({
 	"data-test-id": dataTestId = "anketa-form-shell",
 }: Props) {
 	const navigate = useNavigate();
+	const groups = useUserStore((s) => s.groups);
 	const {
 		canCreateCalculation,
 		canEditCalculation,
@@ -117,7 +126,9 @@ export function AnketaFormShell({
 
 	const createCopy = useCreateV2QuestionnaireVersion();
 	const holdMutation = useHoldV2Questionnaire();
+	const bulkDelete = useBulkDeleteV2Questionnaires();
 	const [holdDialogOpen, setHoldDialogOpen] = useState(false);
+	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 	const internalEngine = useV2AnketaSchemaEngine(engineProp ? null : source);
 	const engine = engineProp ?? internalEngine;
 	const setFormData = (next: Record<string, unknown>) =>
@@ -155,6 +166,51 @@ export function AnketaFormShell({
 		setCompleteDialogPhase("confirm");
 		setCompleteDialogOpen(true);
 	}, []);
+
+	const deleteAccess = useMemo(
+		() => canUserDeleteV2Questionnaire(groups, engine.formData),
+		[groups, engine.formData],
+	);
+	const deleteResolved = useMemo(
+		() =>
+			resolveV2QuestionnaireDeleteAction(
+				workflow.globalStatus,
+				questionnaireStatus,
+			),
+		[workflow.globalStatus, questionnaireStatus],
+	);
+	const canShowDelete =
+		Boolean(questionnaireId) &&
+		deleteAccess.ok &&
+		deleteResolved.action !== "deny";
+	const deleteIsHard = deleteResolved.action === "hard_delete";
+
+	const confirmDelete = useCallback(() => {
+		if (!questionnaireId) return;
+		bulkDelete.mutate(
+			{ ids: [questionnaireId] },
+			{
+				onSuccess: (result) => {
+					setDeleteDialogOpen(false);
+					const failed = result.failed[0];
+					if (failed) {
+						toast.error(failed.message || "Не удалось удалить анкету");
+						return;
+					}
+					if (result.deactivatedIds.includes(questionnaireId)) {
+						toast.success("Анкета переведена в статус «Неактивная»");
+					} else {
+						toast.success("Анкета удалена");
+					}
+					navigate("/v2");
+				},
+				onError: (err) =>
+					toast.error("Ошибка удаления", {
+						description: apiErrorMessage(err),
+					}),
+			},
+		);
+	}, [bulkDelete, navigate, questionnaireId]);
 
 	const closeCompleteDialog = useCallback(() => {
 		setCompleteDialogOpen(false);
@@ -378,6 +434,27 @@ export function AnketaFormShell({
 						Создать копию
 					</Button>
 				) : null}
+				{canShowDelete ? (
+					<IconButton
+						size="small"
+						color="error"
+						title={
+							deleteIsHard
+								? "Удалить анкету"
+								: "Сделать анкету неактивной"
+						}
+						aria-label={
+							deleteIsHard
+								? "Удалить анкету"
+								: "Сделать анкету неактивной"
+						}
+						disabled={bulkDelete.isPending}
+						onClick={() => setDeleteDialogOpen(true)}
+						data-test-id={`${dataTestId}--delete`}
+					>
+						<DeleteOutlineIcon fontSize="small" />
+					</IconButton>
+				) : null}
 				{onSave && canSaveQuestionnaire ? (
 					<Button
 						variant="contained"
@@ -402,6 +479,8 @@ export function AnketaFormShell({
 			canCompleteAnketa,
 			canHoldCalculation,
 			canCreateCalculation,
+			canShowDelete,
+			deleteIsHard,
 			headerExtra,
 			isEditingQuestionnaire,
 			onSave,
@@ -416,6 +495,8 @@ export function AnketaFormShell({
 			questionnaireId,
 			createCopy.isPending,
 			holdMutation.isPending,
+			bulkDelete.isPending,
+			dataTestId,
 		],
 	);
 
@@ -566,6 +647,46 @@ export function AnketaFormShell({
 					</Button>
 				</DialogActions>
 			</Dialog>
+			<Dialog
+				open={deleteDialogOpen}
+				onClose={() =>
+					bulkDelete.isPending ? undefined : setDeleteDialogOpen(false)
+				}
+			>
+				<DialogTitle>
+					{deleteIsHard ? "Удалить анкету?" : "Сделать анкету неактивной?"}
+				</DialogTitle>
+				<DialogContent>
+					<DialogContentText>
+						{deleteIsHard
+							? "Анкета будет полностью удалена из реестра. Действие необратимо."
+							: "Анкета останется в реестре со статусом записи «Неактивная»."}
+					</DialogContentText>
+				</DialogContent>
+				<DialogActions>
+					<Button
+						onClick={() => setDeleteDialogOpen(false)}
+						disabled={bulkDelete.isPending}
+					>
+						Отмена
+					</Button>
+					<Button
+						color="error"
+						variant="contained"
+						onClick={confirmDelete}
+						disabled={bulkDelete.isPending}
+					>
+						{bulkDelete.isPending ? (
+							<CircularProgress size={18} color="inherit" />
+						) : deleteIsHard ? (
+							"Удалить"
+						) : (
+							"Сделать неактивной"
+						)}
+					</Button>
+				</DialogActions>
+			</Dialog>
+
 			<AnketaCalcNameDialog
 				open={renameDialogOpen}
 				title="Переименовать анкету"

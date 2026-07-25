@@ -85,6 +85,8 @@ type FuzzyAutocompleteProps<T> = {
 	getOptionLabel: (option: T) => string;
 	getOptionValue?: (option: T) => string;
 	getOptionSecondaryText?: (option: T) => string | undefined;
+	/** Уже выбранные / занятые опции остаются в списке, но недоступны. */
+	getOptionDisabled?: (option: T) => boolean;
 	fuzzyThreshold?: number;
 	/** `substring` — поиск по подстроке (как Ctrl+F); `fuzzy` — посимвольное совпадение. */
 	searchMode?: "substring" | "fuzzy";
@@ -117,6 +119,7 @@ export function FuzzyAutocomplete<T>({
 	getOptionLabel,
 	getOptionValue,
 	getOptionSecondaryText,
+	getOptionDisabled,
 	fuzzyThreshold = 0.1,
 	searchMode = "substring",
 	allowEmpty = true,
@@ -200,9 +203,12 @@ export function FuzzyAutocomplete<T>({
 			closeMenu();
 			return;
 		}
-		onChange(
-			options.find((option) => resolveValue(option) === nextValue) ?? null,
-		);
+		const nextOption =
+			options.find((option) => resolveValue(option) === nextValue) ?? null;
+		if (nextOption && getOptionDisabled?.(nextOption)) {
+			return;
+		}
+		onChange(nextOption);
 		closeMenu();
 	};
 
@@ -339,8 +345,15 @@ export function FuzzyAutocomplete<T>({
 				{filteredOptions.length > 0
 					? filteredOptions.map((item) => {
 							const secondary = getOptionSecondaryText?.(item.option);
+							const optionDisabled = Boolean(
+								getOptionDisabled?.(item.option),
+							);
 							return (
-								<MenuItem key={item.value} value={item.value}>
+								<MenuItem
+									key={item.value}
+									value={item.value}
+									disabled={optionDisabled}
+								>
 									<ListItemText
 										primary={
 											<HighlightedOptionText
@@ -360,7 +373,13 @@ export function FuzzyAutocomplete<T>({
 												}
 											/>
 										}
-										secondary={secondary}
+										secondary={
+											optionDisabled
+												? secondary
+													? `${secondary} · уже добавлен`
+													: "уже добавлен"
+												: secondary
+										}
 										secondaryTypographyProps={{
 											sx: { fontSize: 11, color: "text.secondary" },
 										}}

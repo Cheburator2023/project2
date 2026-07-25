@@ -497,14 +497,16 @@ export function SchemaPropertiesPanel() {
 				.filter((work): work is (typeof typicalWorks)[number] => Boolean(work)),
 		[typicalWorkCatalog, typicalWorkStreamExecutors, typicalWorks],
 	);
-	const unboundTypicalWorks = useMemo(() => {
-		if (explicitBoundWorkIds !== undefined) {
-			return streamScopedTypicalWorks.filter(
-				(work) => !explicitBoundWorkIds.includes(work.id),
-			);
-		}
-		return [];
+	const unboundTypicalWorksCount = useMemo(() => {
+		if (explicitBoundWorkIds === undefined) return 0;
+		return streamScopedTypicalWorks.filter(
+			(work) => !explicitBoundWorkIds.includes(work.id),
+		).length;
 	}, [explicitBoundWorkIds, streamScopedTypicalWorks]);
+	const isTypicalWorkBound = useMemo(() => {
+		const bound = new Set(explicitBoundWorkIds ?? []);
+		return (work: (typeof typicalWorks)[number]) => bound.has(work.id);
+	}, [explicitBoundWorkIds]);
 	const typicalWorkStreamPresence = useMemo(() => {
 		if (typicalWorkStreamExecutors.length === 0) {
 			return { all: false, missing: [] as V2ImplementationStreamCode[] };
@@ -1732,12 +1734,18 @@ export function SchemaPropertiesPanel() {
 								{typicalWorks.length > 0 ? (
 									<Box sx={{ mt: 1 }}>
 										<FuzzyAutocomplete<(typeof typicalWorks)[number]>
-											options={unboundTypicalWorks}
+											options={streamScopedTypicalWorks}
 											value={null}
 											onChange={(
 												work: (typeof typicalWorks)[number] | null,
 											) => {
-												if (!work || !selectedPointer) return;
+												if (
+													!work ||
+													!selectedPointer ||
+													isTypicalWorkBound(work)
+												) {
+													return;
+												}
 												recordDraftHistory();
 												patchUiSchema(
 													(prev) =>
@@ -1745,9 +1753,9 @@ export function SchemaPropertiesPanel() {
 															prev as Record<string, unknown>,
 															selectedPointer,
 															work.id,
-					typicalWorkCatalog,
-					typicalWorkStreamExecutors,
-				) as UiSchema,
+															typicalWorkCatalog,
+															typicalWorkStreamExecutors,
+														) as UiSchema,
 													{ recordHistory: false },
 												);
 											}}
@@ -1756,14 +1764,15 @@ export function SchemaPropertiesPanel() {
 													? `${work.name} · ${work.archComponentType}`
 													: work.name
 											}
+											getOptionDisabled={isTypicalWorkBound}
 											label="Привязать существующую"
 											placeholder={
-												unboundTypicalWorks.length === 0
+												unboundTypicalWorksCount === 0
 													? "Все работы шаблона уже привязаны к этому блоку"
 													: "Выберите работу из справочника шаблона"
 											}
 											size="small"
-											disabled={unboundTypicalWorks.length === 0}
+											disabled={streamScopedTypicalWorks.length === 0}
 										/>
 									</Box>
 								) : null}

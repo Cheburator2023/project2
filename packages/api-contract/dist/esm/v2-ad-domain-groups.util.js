@@ -181,9 +181,21 @@ export const V2_KEYCLOAK_PATH_TO_AD_GROUPS = {
 };
 /**
  * Target-path → родитель(и) в KK, под которыми лежит AD-лист (не top-level).
- * SUMD: sarep/sacfg/saprg/project_office; appadmin → `/admin_it/{stand}sum_appadmin`.
+ *
+ * Папки ролей (`/de` → внутри `/de/de_lead`, `/de/{stand}sum_de_*`):
+ * AD-лист только под каноном, без top-level `/{stand}sum_*`.
+ *
+ * SUMD также: sarep/sacfg/saprg/project_office; appadmin → `/admin_it/{stand}sum_appadmin`.
  */
 export const V2_AD_NEST_PARENT_BY_TARGET = {
+    "/ds": ["/ds"],
+    "/ds/ds_lead": ["/ds/ds_lead"],
+    "/de": ["/de"],
+    "/de/de_lead": ["/de/de_lead"],
+    "/modelops": ["/modelops"],
+    "/modelops/modelops_lead": ["/modelops/modelops_lead"],
+    "/validator": ["/validator"],
+    "/validator/validator_lead": ["/validator/validator_lead"],
     "/sarep": ["/sarep"],
     "/sacfg": ["/sacfg"],
     "/saprg": ["/saprg"],

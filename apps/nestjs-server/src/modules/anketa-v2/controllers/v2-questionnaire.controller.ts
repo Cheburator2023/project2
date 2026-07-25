@@ -65,11 +65,15 @@ export class V2QuestionnaireController {
 	@Post("bulk-delete")
 	@HttpCode(200)
 	@RealmRole(Permission.ANKETA_DELETE_CALCULATION)
-	@ApiOperation({ summary: "Массовое удаление анкет v2 по id" })
+	@ApiOperation({
+		summary:
+			"Удаление/деактивация анкет v2: Черновик — полное удаление, Заполнено — статус «Неактивная»",
+	})
 	async bulkDelete(
 		@Body() body: BulkDeleteV2QuestionnairesDto,
+		@CurrentUser() user: Record<string, unknown> | undefined,
 	): Promise<BulkDeleteV2QuestionnairesResultDto> {
-		return this.questionnaireService.bulkDelete(body.ids);
+		return this.questionnaireService.bulkDelete(body.ids, user as never);
 	}
 
 	@Post("seed-test")

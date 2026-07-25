@@ -250,7 +250,7 @@ describe("buildSchemaCanvasTree", () => {
 		).toBe("/uncertaintyCalculation/riskGroup");
 	});
 
-	it("appends summary row under typicalWork array blocks", () => {
+	it("does not append summary row under typicalWork array blocks", () => {
 		const preset = ARCH_COMPONENT_PRESET_DEFS.typicalWork.make();
 		const schema: RJSFSchema = {
 			type: "object",
@@ -266,13 +266,18 @@ describe("buildSchemaCanvasTree", () => {
 
 		const tree = buildSchemaCanvasTree(schema, ui);
 		const arrayId = "/streamTypical";
-		const summary = tree.find(
-			(n) => n.id === `${arrayId}/@summaryTotal`,
-		);
+		const summary = tree.find((n) => n.id === `${arrayId}/@summaryTotal`);
+		const itemFieldKeys = tree
+			.filter((n) => n.parent === arrayId && n.data?.kind === "field")
+			.map((n) => n.data?.fieldKey);
 
-		expect(summary?.parent).toBe(arrayId);
-		expect(summary?.text).toBe("Суммарный итог");
-		expect(summary?.data?.kind).toBe("typical-work-summary");
+		expect(summary).toBeUndefined();
+		expect(itemFieldKeys).toEqual([
+			"name",
+			"estimateHoursPerDay",
+			"coefficient",
+			"total",
+		]);
 	});
 });
 

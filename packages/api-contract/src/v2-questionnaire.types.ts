@@ -9,9 +9,29 @@ import type {
 	V2AnketaSectionStatus,
 } from "./v2-anketa-workflow.types";
 
-export const V2_QUESTIONNAIRE_STATUS_VALUES = ["active", "archived"] as const;
+export const V2_QUESTIONNAIRE_STATUS_VALUES = [
+	"active",
+	"archived",
+	"inactive",
+] as const;
 export type V2QuestionnaireStatus =
 	(typeof V2_QUESTIONNAIRE_STATUS_VALUES)[number];
+
+export const V2_QUESTIONNAIRE_STATUS_RU: Record<V2QuestionnaireStatus, string> =
+	{
+		active: "Активная",
+		archived: "Архив",
+		inactive: "Неактивная",
+	};
+
+export function formatV2QuestionnaireStatus(
+	status: V2QuestionnaireStatus | string | null | undefined,
+): string {
+	if (!status) return "";
+	return (
+		V2_QUESTIONNAIRE_STATUS_RU[status as V2QuestionnaireStatus] ?? String(status)
+	);
+}
 
 /** Связь анкеты с версией схемы шаблона на момент создания / редактирования. */
 export const V2_SCHEMA_BINDING_STATUS_VALUES = [
@@ -118,12 +138,20 @@ export type ExportV2QuestionnairesXlsxRequestDto = {
 
 export type BulkDeleteV2QuestionnairesFailureDto = {
 	id: string;
-	reason: "not_found" | "delete_failed";
+	reason:
+		| "not_found"
+		| "delete_failed"
+		| "forbidden"
+		| "wrong_stream"
+		| "already_inactive";
 	message: string;
 };
 
 export type BulkDeleteV2QuestionnairesResultDto = {
+	/** Полностью удалены (Черновик). */
 	deletedIds: string[];
+	/** Переведены в статус «Неактивная» (Заполнено / Утверждена). */
+	deactivatedIds: string[];
 	failed: BulkDeleteV2QuestionnairesFailureDto[];
 };
 

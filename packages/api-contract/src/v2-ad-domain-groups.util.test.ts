@@ -70,6 +70,11 @@ describe("v2-ad-domain-groups", () => {
 			"/sarep": ["anketa_view_all_calculations"],
 			"/saprg": ["anketa_hold"],
 			"/prjtoffice": [],
+			"/de": ["anketa_view_all_calculations"],
+			"/de/de_lead": [
+				"anketa_view_all_calculations",
+				"anketa_edit_calculation",
+			],
 		};
 		const expanded = expandV2KeycloakTargetsWithAdAliases(target, "dev_");
 		expect(expanded["/appadmin"]).toEqual(
@@ -96,6 +101,22 @@ describe("v2-ad-domain-groups", () => {
 		);
 		expect(expanded["/project_office/dev_sum_prjtoffice"]).toEqual([]);
 		expect(expanded["/prjtoffice/dev_sum_prjtoffice"]).toEqual([]);
+
+		/** /de — папка; AD и de_lead только внутри неё, не top-level */
+		expect(expanded["/dev_sum_de_kmbkcb"]).toBeUndefined();
+		expect(expanded["/dev_sum_Lde_kmbkcb"]).toBeUndefined();
+		expect(expanded["/de"]).toEqual(
+			expect.arrayContaining(["anketa_view_all_calculations"]),
+		);
+		expect(expanded["/de/de_lead"]).toEqual(
+			expect.arrayContaining(["anketa_edit_calculation"]),
+		);
+		expect(expanded["/de/dev_sum_de_kmbkcb"]).toEqual(
+			expect.arrayContaining(["anketa_view_all_calculations"]),
+		);
+		expect(expanded["/de/de_lead/dev_sum_Lde_rb"]).toEqual(
+			expect.arrayContaining(["anketa_edit_calculation"]),
+		);
 
 		const noStand = expandV2KeycloakTargetsWithAdAliases(
 			{ "/appadmin": ["anketa_audit_view"] },

@@ -1,7 +1,7 @@
 import { V2_ANKETA_MAIN_SECTION_TITLES } from "./v2-anketa-workflow.util";
 import { isV2AnketaHiddenUiNode } from "./v2-anketa-editor-ui.util";
 import { readV2AnketaSectionUiOptions, resolveAnketaSectionWorkflowBinding, resolveV2AnketaSectionDisplayTitle, } from "./v2-anketa-section-ui.util";
-import { formatV2SchemaBindingStatus, } from "./v2-questionnaire.types";
+import { formatV2QuestionnaireStatus, formatV2SchemaBindingStatus, } from "./v2-questionnaire.types";
 import { isV2AnketaBlockVisibleForViewer, isV2AnketaFormPathVisibleForViewer, maskV2AnketaExportFormValue, } from "./v2-anketa-block-access.util";
 const REGISTRY_SKIP_ROOT_KEYS = new Set([
     "workflow",
@@ -725,6 +725,9 @@ function metaValue(row, metaKey) {
         return row.readableId ?? row.id;
     if (metaKey === "schemaBinding.status") {
         return formatV2SchemaBindingStatus(row.schemaBinding.status);
+    }
+    if (metaKey === "status") {
+        return formatV2QuestionnaireStatus(row.status);
     }
     if (metaKey === "workflowGlobalStatus")
         return row.workflowGlobalStatus ?? "";

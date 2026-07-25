@@ -741,6 +741,9 @@ function metaValue(row, metaKey) {
     if (metaKey === "schemaBinding.status") {
         return (0, v2_questionnaire_types_1.formatV2SchemaBindingStatus)(row.schemaBinding.status);
     }
+    if (metaKey === "status") {
+        return (0, v2_questionnaire_types_1.formatV2QuestionnaireStatus)(row.status);
+    }
     if (metaKey === "workflowGlobalStatus")
         return row.workflowGlobalStatus ?? "";
     return row[metaKey];

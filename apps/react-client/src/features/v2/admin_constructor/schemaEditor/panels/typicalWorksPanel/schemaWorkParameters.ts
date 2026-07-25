@@ -245,9 +245,16 @@ function valuesFromHintPreview(
 	);
 }
 
+/**
+ * Лист схемы, пригодный как параметр работы.
+ * Массивы объектов отсекаем; исключение — мультисправочник
+ * (`array` of `string` + `ui:options.dictionaryCode`): его значения —
+ * элементы справочника, как у одиночного select.
+ */
 function isArchComponentLeafField(
 	pointer: string,
 	jsonSchema: RJSFSchema,
+	dictionaryCode?: string | null,
 ): boolean {
 	const node = resolveSchemaNode(jsonSchema, pointerSegments(pointer));
 	const type = resolveSchemaNodeType(node);
@@ -255,7 +262,11 @@ function isArchComponentLeafField(
 		if (Array.isArray(node?.enum) && node.enum.length > 0) return true;
 		return node?.const !== undefined;
 	}
-	if (type === "array") return false;
+	if (type === "array") {
+		if (!dictionaryCode?.trim()) return false;
+		const items = node?.items as RJSFSchema | undefined;
+		return resolveSchemaNodeType(items) === "string";
+	}
 	if (type === "object" && node && isObjectFieldGroup(node)) return false;
 	return true;
 }
@@ -398,12 +409,21 @@ export function buildSchemaWorkParameters({
 
 	for (const hint of fieldPathHints) {
 		if (isSystemScaffoldField(hint.pointer)) continue;
-		if (!isArchComponentLeafField(hint.pointer, jsonSchema)) continue;
+		if (
+			!isArchComponentLeafField(
+				hint.pointer,
+				jsonSchema,
+				hint.dictionaryCode,
+			)
+		) {
+			continue;
+		}
 		if (isWorkResultBlockField(uiSchema, hint.pointer)) continue;
 
 		const node = resolveSchemaNode(jsonSchema, pointerSegments(hint.pointer));
-		const dictionaryValues = hint.dictionaryCode
-			? valuesFromDictionary(hint.dictionaryCode, enumMapByCode)
+		const dictionaryCode = hint.dictionaryCode?.trim() || undefined;
+		const dictionaryValues = dictionaryCode
+			? valuesFromDictionary(dictionaryCode, enumMapByCode)
 			: [];
 		const previewValues = valuesFromHintPreview(hint);
 		const schemaValues = valuesFromSchemaNode(node);
@@ -417,13 +437,14 @@ export function buildSchemaWorkParameters({
 			dictionaryValues.length > 0 || previewValues.length > 0
 				? false
 				: schemaValues.numeric;
+		/** Привязка к справочнику — не «свободный текст», даже пока enum ещё грузится. */
 		const textual =
+			dictionaryCode ||
 			dictionaryValues.length > 0 ||
 			previewValues.length > 0 ||
 			schemaValues.textual !== true
 				? undefined
 				: true;
-		const dictionaryCode = hint.dictionaryCode?.trim() || undefined;
 
 		if (values.length === 0 && !numeric && !dictionaryCode && !textual)
 			continue;

@@ -764,36 +764,26 @@
 						"type": "array",
 						"items": {
 							"type": "object",
-							"title": "Типовая работа источника",
+							"title": "Типовая работа",
 							"properties": {
 								"name": {
 									"type": "string",
-									"title": "Наименование",
+									"title": "Название типовой работы",
+									"readOnly": true
+								},
+								"estimateHoursPerDay": {
+									"type": "number",
+									"title": "Базовая оценка",
+									"readOnly": true
+								},
+								"coefficient": {
+									"type": "number",
+									"title": "Коэффициент",
 									"readOnly": true
 								},
 								"total": {
 									"type": "number",
 									"title": "Итог",
-									"readOnly": true
-								},
-								"reason": {
-									"type": "string",
-									"title": "Причина",
-									"readOnly": true
-								},
-								"workType": {
-									"type": "string",
-									"title": "Тип работ",
-									"readOnly": true
-								},
-								"coefficient": {
-									"type": "number",
-									"title": "Коэф.",
-									"readOnly": true
-								},
-								"estimateHoursPerDay": {
-									"type": "number",
-									"title": "Базовая оценка (ч/д)",
 									"readOnly": true
 								}
 							}
@@ -1267,26 +1257,16 @@
 						"type": "array",
 						"items": {
 							"type": "object",
-							"title": "Типовая работа источника",
+							"title": "Типовая работа",
 							"properties": {
 								"name": {
 									"type": "string",
-									"title": "Наименование",
+									"title": "Название типовой работы",
 									"readOnly": true
 								},
-								"total": {
+								"estimateHoursPerDay": {
 									"type": "number",
-									"title": "Итог",
-									"readOnly": true
-								},
-								"reason": {
-									"type": "string",
-									"title": "Причина",
-									"readOnly": true
-								},
-								"workType": {
-									"type": "string",
-									"title": "Тип работ",
+									"title": "Базовая оценка",
 									"readOnly": true
 								},
 								"coefficient": {
@@ -1294,9 +1274,9 @@
 									"title": "Коэффициент",
 									"readOnly": true
 								},
-								"estimateHoursPerDay": {
+								"total": {
 									"type": "number",
-									"title": "Базовая оценка (ч/д)",
+									"title": "Итог",
 									"readOnly": true
 								}
 							}
@@ -1427,9 +1407,9 @@
 									"title": "Название типовой работы",
 									"readOnly": true
 								},
-								"total": {
+								"estimateHoursPerDay": {
 									"type": "number",
-									"title": "Итог",
+									"title": "Базовая оценка",
 									"readOnly": true
 								},
 								"coefficient": {
@@ -1437,9 +1417,9 @@
 									"title": "Коэффициент",
 									"readOnly": true
 								},
-								"estimateHoursPerDay": {
+								"total": {
 									"type": "number",
-									"title": "Базовая оценка",
+									"title": "Итог",
 									"readOnly": true
 								}
 							}
@@ -1515,9 +1495,9 @@
 									"title": "Название типовой работы",
 									"readOnly": true
 								},
-								"total": {
+								"estimateHoursPerDay": {
 									"type": "number",
-									"title": "Итог",
+									"title": "Базовая оценка",
 									"readOnly": true
 								},
 								"coefficient": {
@@ -1525,9 +1505,9 @@
 									"title": "Коэффициент",
 									"readOnly": true
 								},
-								"estimateHoursPerDay": {
+								"total": {
 									"type": "number",
-									"title": "Базовая оценка",
+									"title": "Итог",
 									"readOnly": true
 								}
 							}
@@ -1535,6 +1515,7 @@
 						"title": "Типовые работы",
 						"readOnly": true
 					},
+
 					"field_hQeUoQl4": {
 						"type": "array",
 						"items": {
@@ -2715,34 +2696,38 @@
 			"detailTypicalTasks": {
 				"items": {
 					"name": {
+						"ui:widget": "text",
 						"ui:options": {
 							"schemaFieldUid": "field_b032a32f-5cec-4536-84ba-a732c3e6d8c7"
-						}
+						},
+						"ui:readonly": true
 					},
-					"total": {
-						"ui:options": {
-							"schemaFieldUid": "field_3c6f9dfe-77f9-41dc-9f21-d083a3c33c31"
-						}
-					},
-					"reason": {
-						"ui:options": {
-							"schemaFieldUid": "field_5b1b36c2-22e1-4cd8-9012-eb2621d893c0"
-						}
-					},
-					"workType": {
-						"ui:options": {
-							"schemaFieldUid": "field_74cb3d2f-76d5-4a2e-ac06-8760e37944d6"
-						}
-					},
+					"ui:order": [
+						"name",
+						"estimateHoursPerDay",
+						"coefficient",
+						"total"
+					],
 					"coefficient": {
+						"ui:widget": "text",
 						"ui:options": {
 							"schemaFieldUid": "field_5e649147-121c-428c-910a-48c61315e2c3"
-						}
+						},
+						"ui:readonly": true
 					},
 					"estimateHoursPerDay": {
+						"ui:widget": "text",
 						"ui:options": {
 							"schemaFieldUid": "field_1c7147ad-ecfd-42fa-a0cb-dd4cddda75b2"
-						}
+						},
+						"ui:readonly": true
+					},
+					"total": {
+						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_3c6f9dfe-77f9-41dc-9f21-d083a3c33c31"
+						},
+						"ui:readonly": true
 					}
 				},
 				"ui:widget": "hidden",
@@ -2768,7 +2753,7 @@
 					"streamExecutor": "Модельный стрим"
 				},
 				"ui:readonly": true,
-				"ui:description": "Формируются автоматически по правилам справочника при расчёте анкеты.\n\nПоля: Наименование · Тип работ · Базовая оценка (ч/д) · Коэф. · Итог"
+				"ui:description": "Список заполняется автоматически при срабатывании триггеров типовых работ.\n\nПоля: Название типовой работы · Базовая оценка · Коэффициент · Итог\nСуммарный итог — при нескольких работах"
 			}
 		},
 		"generalInfo": {
@@ -3107,35 +3092,12 @@
 						},
 						"ui:readonly": true
 					},
-					"total": {
-						"ui:widget": "text",
-						"ui:options": {
-							"schemaFieldUid": "field_b4ba2f85-ad38-457a-98ea-3b18861aee27"
-						},
-						"ui:readonly": true
-					},
-					"reason": {
-						"ui:widget": "text",
-						"ui:options": {
-							"schemaFieldUid": "field_3d1127de-2c28-4ec1-9368-93bd67be6270"
-						},
-						"ui:readonly": true
-					},
 					"ui:order": [
 						"name",
-						"workType",
-						"reason",
-						"total",
+						"estimateHoursPerDay",
 						"coefficient",
-						"estimateHoursPerDay"
+						"total"
 					],
-					"workType": {
-						"ui:widget": "text",
-						"ui:options": {
-							"schemaFieldUid": "field_d047c413-b143-4f17-b755-c1997eb7323f"
-						},
-						"ui:readonly": true
-					},
 					"coefficient": {
 						"ui:widget": "text",
 						"ui:options": {
@@ -3147,6 +3109,13 @@
 						"ui:widget": "text",
 						"ui:options": {
 							"schemaFieldUid": "field_aacbdb0a-6ad1-49ed-88ba-d50ed5423f46"
+						},
+						"ui:readonly": true
+					},
+					"total": {
+						"ui:widget": "text",
+						"ui:options": {
+							"schemaFieldUid": "field_b4ba2f85-ad38-457a-98ea-3b18861aee27"
 						},
 						"ui:readonly": true
 					}
@@ -3194,7 +3163,7 @@
 					"streamExecutor": "ПиРМ"
 				},
 				"ui:readonly": true,
-				"ui:description": "Формируются автоматически по правилам справочника для стрима «ПиРМ».\n\nПоля: Наименование · Тип работ · Базовая оценка (ч/д) · Коэф. · Итог"
+				"ui:description": "Список заполняется автоматически при срабатывании триггеров типовых работ.\n\nПоля: Название типовой работы · Базовая оценка · Коэффициент · Итог\nСуммарный итог — при нескольких работах"
 			}
 		},
 		"field_i8dL7QZa": {
@@ -3277,12 +3246,14 @@
 				"field_u-7AkDrP"
 			],
 			"ui:options": {
+				"groupActive": false,
 				"sectionRole": "main",
 				"streamBlock": true,
 				"schemaFieldUid": "field_c37298ad-14f3-4b8c-ba41-aaae021c004c",
 				"sectionCaption": "Платформенные и поддерживающие стримы",
 				"streamExecutor": "Источники данных",
 				"defaultExpanded": false,
+				"groupActivatable": true,
 				"workflowSectionId": "streamDataSources"
 			},
 			"localParams": {
@@ -3458,12 +3429,14 @@
 				"field_hQeUoQl4"
 			],
 			"ui:options": {
+				"groupActive": false,
 				"sectionRole": "main",
 				"streamBlock": true,
 				"schemaFieldUid": "field_9d964cb9-c074-4484-a952-ca1f1d28bfa8",
 				"sectionCaption": "Платформенные и поддерживающие стримы",
 				"streamExecutor": "Контроль моделей",
 				"defaultExpanded": false,
+				"groupActivatable": true,
 				"workflowSectionId": "streamModelControl"
 			},
 			"localParams": {

@@ -18,6 +18,11 @@ export declare function normalizeV2UserGroups(userGroups: readonly string[]): st
 export declare function extractV2UserRoleCodes(userGroups: readonly string[]): string[];
 export declare function isV2UserStreamFilterExemptLead(userGroups: readonly string[]): boolean;
 export declare function isV2UserStreamFilteredByGroups(userGroups: readonly string[]): boolean;
+/**
+ * Коды implementationStream из groups (департаменты + AD-суффиксы),
+ * без учёта lead-exemption фильтра реестра.
+ */
+export declare function resolveV2UserScopedStreamsFromGroups(userGroups: readonly string[]): V2ImplementationStreamCode[];
 /** Коды implementationStream пользователя из groups Keycloak. */
 export declare function resolveV2UserImplementationStreamsFromGroups(userGroups: readonly string[]): V2ImplementationStreamCode[];
 /** Allow-list для фильтра реестра: коды + подписи (как Nest expandStreamAliases). */

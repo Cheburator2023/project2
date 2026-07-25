@@ -88,6 +88,7 @@ export const AnketaPreviewPageV2 = () => {
 			errorMessage={errorMessage}
 			questionnaireId={id}
 			questionnaireCalcName={formPackage?.questionnaire.calcName}
+			questionnaireStatus={formPackage?.questionnaire.status}
 			onRenameQuestionnaire={
 				formPackage && !errorMessage ? onRenameQuestionnaire : undefined
 			}

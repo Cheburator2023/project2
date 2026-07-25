@@ -71,7 +71,11 @@ import {
 import { agGridIconSet } from "@react-client/theme/ag-grid/agGridIconSet";
 import { useUserStore } from "@react-client/common/store/userStore";
 import { useV2StreamFilterSetting } from "@react-client/common/api/queries/v2-runtime-settings";
-import { filterV2QuestionnairesByUserStreamGroups } from "@smart-anketa/api-contract";
+import {
+	canUserDeleteV2Questionnaire,
+	filterV2QuestionnairesByUserStreamGroups,
+	userHasV2QuestionnaireDeleteRole,
+} from "@smart-anketa/api-contract";
 import { logV2RegistryStreamDebug } from "../utils/logV2RegistryStreamDebug";
 import {
 	buildV2QuestionnaireColumnDefsFromTree,
@@ -375,6 +379,8 @@ export function V2QuestionnaireList() {
 	const { data: questionnaires, isLoading } = useV2Questionnaires();
 	const username = useUserStore((s) => s.username);
 	const groups = useUserStore((s) => s.groups);
+	const canDeleteInRegistry =
+		canDeleteCalculation && userHasV2QuestionnaireDeleteRole(groups);
 	const streamFilterSetting = useV2StreamFilterSetting();
 	const streamFilterEnabled = streamFilterSetting.data?.enabled ?? true;
 
@@ -601,8 +607,15 @@ export function V2QuestionnaireList() {
 	);
 
 	const runBulkDelete = useCallback(() => {
-		const ids = selectedVersions.map((row) => row.id);
-		if (!ids.length) return;
+		const ids = selectedVersions
+			.filter((row) => canUserDeleteV2Questionnaire(groups, row.formData).ok)
+			.map((row) => row.id);
+		if (!ids.length) {
+			toast.error(
+				"Нет доступных для удаления анкет среди выбранных (роль/стрим)",
+			);
+			return;
+		}
 		bulkDelete.mutate(
 			{ ids },
 			{
@@ -611,15 +624,22 @@ export function V2QuestionnaireList() {
 					setSelectedVersions([]);
 					gridRef.current?.api?.deselectAll();
 					const deleted = result.deletedIds.length;
+					const deactivated = result.deactivatedIds?.length ?? 0;
 					const failed = result.failed.length;
-					if (deleted > 0) {
-						toast.success(
-							failed > 0
-								? `Удалено анкет: ${deleted}, ошибок: ${failed}`
-								: `Удалено анкет: ${deleted}`,
-						);
+					const ok = deleted + deactivated;
+					if (ok > 0) {
+						const parts: string[] = [];
+						if (deleted > 0) parts.push(`удалено: ${deleted}`);
+						if (deactivated > 0) {
+							parts.push(`неактивных: ${deactivated}`);
+						}
+						if (failed > 0) parts.push(`ошибок: ${failed}`);
+						toast.success(parts.join(", "));
 					} else if (failed > 0) {
-						toast.error("Не удалось удалить выбранные анкеты");
+						toast.error(
+							result.failed[0]?.message ??
+								"Не удалось удалить выбранные анкеты",
+						);
 					}
 				},
 				onError: (err) =>
@@ -628,7 +648,7 @@ export function V2QuestionnaireList() {
 					}),
 			},
 		);
-	}, [bulkDelete, selectedVersions]);
+	}, [bulkDelete, groups, selectedVersions]);
 
 	return (
 		<Flex
@@ -679,13 +699,14 @@ export function V2QuestionnaireList() {
 							</Button>
 						</>
 					) : null}
-					{canDeleteCalculation ? (
+					{canDeleteInRegistry ? (
 						<Button
 							variant="outlined"
 							size="small"
 							color="error"
 							startIcon={<DeleteOutlineIcon />}
 							disabled={!selectedVersions.length || bulkDelete.isPending}
+							title="Черновик — полное удаление; Заполнено/Утверждена — статус «Неактивная». Только анкеты своего стрима (кроме конфигуратора)."
 							onClick={() => setDeleteDialogOpen(true)}
 						>
 							Удалить выбранные ({selectedVersions.length})
@@ -710,11 +731,13 @@ export function V2QuestionnaireList() {
 				open={deleteDialogOpen}
 				onClose={() => setDeleteDialogOpen(false)}
 			>
-				<DialogTitle>Удалить анкеты?</DialogTitle>
+				<DialogTitle>Удалить выбранные анкеты?</DialogTitle>
 				<DialogContent>
 					<DialogContentText>
-						Будет удалено записей: {selectedVersions.length}. Действие
-						необратимо.
+						Будет обработано записей: {selectedVersions.length}. Черновики
+						удаляются из реестра безвозвратно; анкеты в статусе «Заполнено» или
+						«Утверждена» переводятся в статус записи «Неактивная». Действие
+						применяется только к анкетам, доступным вашей роли и стриму.
 					</DialogContentText>
 				</DialogContent>
 				<DialogActions>
@@ -725,7 +748,7 @@ export function V2QuestionnaireList() {
 						disabled={bulkDelete.isPending}
 						onClick={runBulkDelete}
 					>
-						Удалить
+						Подтвердить
 					</Button>
 				</DialogActions>
 			</Dialog>
