@@ -14,8 +14,16 @@ export type V2ImplementationStreamPayload = {
     legacyLabels: string[];
     /** Keycloak group / dept aliases → allow-list фильтра. */
     keycloakAliases: string[];
-    /** Участвует в umbrella «Модельный стрим». */
+    /**
+     * Дочерний стрим зонтичной группы (общий каталог типовых работ).
+     * Для заводской модели — входит в umbrella «Модельный стрим».
+     */
     isModelStream: boolean;
+    /**
+     * Зонтичный / общий стрим: каталог типовых работ на несколько дочерних.
+     * Не выбирается в `generalInfo.implementationStream` анкеты.
+     */
+    isUmbrellaStream: boolean;
     /** v1 streamExecutor aliases для фильтра реестра. */
     v1Labels: string[];
 };
@@ -27,6 +35,8 @@ export type V2ImplementationStreamCatalogEntry = {
     payload: V2ImplementationStreamPayload;
 };
 export declare function buildFactoryImplementationStreamPayload(code: V2ImplementationStreamCode): V2ImplementationStreamPayload;
+/** Заводской зонтичный стрим «Модельный стрим» (реестр + soft-sync). */
+export declare function buildFactoryModelUmbrellaStreamCatalogEntry(): V2ImplementationStreamCatalogEntry;
 /** Factory entries для seed / soft-sync / fallback до загрузки БД. */
 export declare function buildFactoryImplementationStreamCatalog(): V2ImplementationStreamCatalogEntry[];
 export declare function parseImplementationStreamPayload(raw: unknown, options?: {
@@ -46,13 +56,19 @@ export declare function findImplementationStreamCatalogEntry(value: string, cata
 /** Scope DB-имён для фильтра типовых работ по коду/подписи стрима. */
 export declare function resolveCatalogEntryScopeStreams(entry: V2ImplementationStreamCatalogEntry): string[];
 export declare function resolveModelStreamCatalogScopeFromEntries(catalog: readonly V2ImplementationStreamCatalogEntry[]): string[];
+/** Зонтичный стрим (payload или заводской код mdls). */
+export declare function isUmbrellaStreamCatalogEntry(entry: V2ImplementationStreamCatalogEntry): boolean;
+/** Заводские коды, которые нельзя удалить из реестра. */
+export declare function isFactoryProtectedStreamCode(code: string): boolean;
 /** Каноническое DB-имя для назначения типовой работы. */
 export declare function resolveCatalogDbExecutorName(entry: V2ImplementationStreamCatalogEntry): string;
 /** Alias-map для stream filter: keycloak/dept → [code, label, v1…]. */
 export declare function buildStreamFilterAliasMap(catalog: readonly V2ImplementationStreamCatalogEntry[]): Record<string, readonly string[]>;
 export declare function catalogCodes(catalog: readonly V2ImplementationStreamCatalogEntry[], options?: {
     activeOnly?: boolean;
+    includeUmbrella?: boolean;
 }): string[];
+/** Коды/подписи для enum `implementationStream` в анкете (без зонтичных). */
 export declare function catalogEnumPair(catalog: readonly V2ImplementationStreamCatalogEntry[]): {
     enums: string[];
     enumNames: string[];

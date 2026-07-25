@@ -5,11 +5,16 @@ const v2_implementation_streams_util_1 = require("./v2-implementation-streams.ut
 const v2_implementation_stream_catalog_util_1 = require("./v2-implementation-stream-catalog.util");
 const v2_model_stream_typical_works_constants_1 = require("./v2-model-stream-typical-works.constants");
 (0, vitest_1.describe)("v2-implementation-stream-catalog.util", () => {
-    (0, vitest_1.it)("builds factory catalog with model flags and dbNames", () => {
+    (0, vitest_1.it)("builds factory catalog with model flags, umbrella and dbNames", () => {
         const catalog = (0, v2_implementation_stream_catalog_util_1.buildFactoryImplementationStreamCatalog)();
-        (0, vitest_1.expect)(catalog.length).toBeGreaterThanOrEqual(11);
+        (0, vitest_1.expect)(catalog.length).toBeGreaterThanOrEqual(12);
+        const umbrella = catalog.find((entry) => entry.payload.isUmbrellaStream);
+        (0, vitest_1.expect)(umbrella?.code).toBe("mdls");
+        (0, vitest_1.expect)(umbrella?.label).toBe(v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_EXECUTOR);
+        (0, vitest_1.expect)(umbrella?.payload.isModelStream).toBe(false);
         const kmb = catalog.find((entry) => entry.code === v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.KMBKCB);
         (0, vitest_1.expect)(kmb?.payload.isModelStream).toBe(true);
+        (0, vitest_1.expect)(kmb?.payload.isUmbrellaStream).toBe(false);
         (0, vitest_1.expect)(kmb?.payload.dbNames).toEqual(vitest_1.expect.arrayContaining(["Разработка моделей КМБ и КСБ"]));
         (0, vitest_1.expect)(kmb?.payload.keycloakAliases.length).toBeGreaterThan(0);
         const idsrc = catalog.find((entry) => entry.code === v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.IDSRC);
@@ -20,7 +25,13 @@ const v2_model_stream_typical_works_constants_1 = require("./v2-model-stream-typ
         (0, vitest_1.expect)(payload.storeCode).toBe(true);
         (0, vitest_1.expect)(payload.dbNames).toEqual(["Новый стрим"]);
         (0, vitest_1.expect)(payload.isModelStream).toBe(true);
+        (0, vitest_1.expect)(payload.isUmbrellaStream).toBe(false);
         (0, vitest_1.expect)(payload.keycloakAliases).toEqual(["Dept A"]);
+    });
+    (0, vitest_1.it)("parses umbrella flag and clears isModelStream", () => {
+        const payload = (0, v2_implementation_stream_catalog_util_1.parseImplementationStreamPayload)({ isUmbrellaStream: true, isModelStream: true }, { label: "Общий стрим", code: "umb01" });
+        (0, vitest_1.expect)(payload.isUmbrellaStream).toBe(true);
+        (0, vitest_1.expect)(payload.isModelStream).toBe(false);
     });
     (0, vitest_1.it)("parses empty dbNames with code as canonical assignment name", () => {
         const payload = (0, v2_implementation_stream_catalog_util_1.parseImplementationStreamPayload)({ isModelStream: false }, { label: "СМЯЧМСЧМ", code: "dfdaf" });

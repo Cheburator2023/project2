@@ -1,6 +1,4 @@
 import MoreVertRoundedIcon from "@mui/icons-material/MoreVertRounded";
-import Backdrop from "@mui/material/Backdrop";
-import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
 import { dividerClasses } from "@mui/material/Divider";
 import { listClasses } from "@mui/material/List";
@@ -10,7 +8,7 @@ import Menu from "@mui/material/Menu";
 import MuiMenuItem from "@mui/material/MenuItem";
 import { paperClasses } from "@mui/material/Paper";
 import { styled } from "@mui/material/styles";
-import Typography from "@mui/material/Typography";
+import { beginLogoutOverlay } from "@react-client/common/auth/logoutOverlayState";
 import { isDevLikeEnvironment } from "@react-client/common/constants/dev";
 import { commonRoutes } from "@react-client/routing/common/routes";
 import { useQueryClient } from "@tanstack/react-query";
@@ -49,6 +47,7 @@ export function OptionsMenu({ onLogout }: { onLogout?: () => void }) {
 		setAnchorEl(null);
 		// Сразу: Keycloak logout + редирект на логин могут идти десятки секунд.
 		setLoggingOut(true);
+		beginLogoutOverlay();
 		queryClient.clear();
 		onLogout?.();
 	};
@@ -115,19 +114,6 @@ export function OptionsMenu({ onLogout }: { onLogout?: () => void }) {
 					</ListItemText>
 				</MenuItem>
 			</Menu>
-			<Backdrop
-				open={loggingOut}
-				sx={{
-					zIndex: (theme) => theme.zIndex.modal + 10,
-					color: "common.white",
-					flexDirection: "column",
-					gap: 2,
-				}}
-				data-test-id="options-menu--logout-backdrop"
-			>
-				<CircularProgress color="inherit" size={40} />
-				<Typography variant="body1">Выход из системы…</Typography>
-			</Backdrop>
 		</>
 	);
 }

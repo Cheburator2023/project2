@@ -2,11 +2,21 @@
 export declare const V2_MODEL_STREAM_FACTORY_WORK_IDS: readonly ["f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4001", "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4002", "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4003", "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4004", "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4005", "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4006", "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4007", "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4008", "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4009", "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4010"];
 export declare const V2_MODEL_STREAM_EXECUTOR = "\u041C\u043E\u0434\u0435\u043B\u044C\u043D\u044B\u0439 \u0441\u0442\u0440\u0438\u043C";
 /**
+ * Код зонтичного стрима в реестре implementationStream (не выбирается в анкете
+ * как implementationStream — только каталог / конструктор типовых работ).
+ */
+export declare const V2_MODEL_STREAM_UMBRELLA_CODE = "mdls";
+/**
  * Пять модельных стримов-исполнителей (ролевка / implementationStream).
  * Legacy-каталог «Модельный стрим» должен видеть назначения на любой из них.
  */
 export declare const V2_MODEL_IMPLEMENTATION_STREAM_CODES: readonly ["kmbkcb", "rb", "ptitpc", "finmdl", "rnd"];
+/** DB-имена пяти дочерних стримов (registry `streams` / `normsByStream`). */
+export declare const V2_MODEL_STREAM_CHILD_DB_NAMES: readonly [string, string, string, string, string];
+/** Mother + 5 children — полный список назначений factory model works. */
+export declare const V2_MODEL_STREAM_REGISTRY_STREAM_NAMES: readonly ["Модельный стрим", string, string, string, string, string];
 export declare function isV2ModelImplementationStreamCode(value: string): value is (typeof V2_MODEL_IMPLEMENTATION_STREAM_CODES)[number];
+export declare function isV2ModelStreamUmbrellaLabel(value: string): boolean;
 /** DB-имена + коды + legacy-подпись для каталога типовых работ модельного блока. */
 export declare function resolveModelStreamCatalogScopeDbStreams(): readonly string[];
 /** Всегда показываются в блоке типовых работ и в «Подробном расчёте». */

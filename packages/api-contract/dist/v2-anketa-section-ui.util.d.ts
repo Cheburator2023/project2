@@ -42,7 +42,8 @@ export type V2AnketaSectionUiOptions = {
     /** Корневой блок платформенного/поддерживающего стрима. */
     streamBlock?: boolean;
     /** Стрим-исполнитель из справочника (ДАДМ, ПиРМ, …). */
-    streamExecutor?: V2StreamBlockExecutorValue;
+    /** Код / массив кодов, либо mother-label «Модельный стрим». */
+    streamExecutor?: V2StreamBlockExecutorValue | string;
     /** Роли платформы для стрим-блока (код или массив кодов). */
     streamBlockRoles?: V2StreamBlockRoleValue;
 };
@@ -80,6 +81,8 @@ export declare function collectExecutorStreamBlocks(uiSchema: unknown): Executor
 export declare function collectPresentExecutorStreamLabels(uiSchema: unknown): Set<V2StreamBlockExecutor>;
 /** Есть ли в конструкторе корневой streamBlock для стрима (код или legacy-имя БД). */
 export declare function isExecutorStreamPresentInSchema(uiSchema: unknown, stream: string, catalog?: readonly import("./v2-implementation-stream-catalog.util").V2ImplementationStreamCatalogEntry[]): boolean;
+/** Pointer корневого umbrella / model-stream блока (detailInfo и т.п.). */
+export declare function resolveModelStreamUmbrellaBlockPointer(uiSchema: unknown): string | null;
 /**
  * Стримы-исполнители для блока typicalWork: явный ui:options.streamExecutor,
  * иначе стримы корневого streamBlock по пути вывода.

@@ -1,10 +1,11 @@
 import { clearMfeAuthState } from "@react-client/common/auth/clearMfeAuthState";
-import { useAuthStore } from "@react-client/common/store/authStore";
 import {
 	isGodModeAccessToken,
 	isNoRolesGodMode,
 } from "@react-client/common/auth/godMode";
+import { beginLogoutOverlay } from "@react-client/common/auth/logoutOverlayState";
 import { publishAppSync } from "@react-client/common/crossTab/appBroadcast";
+import { useAuthStore } from "@react-client/common/store/authStore";
 
 export type MfeAuthHostProps = {
 	token?: string;
@@ -263,6 +264,7 @@ export function resetKeycloakLoginGuardForTests(): void {
 
 /** Полный logout: чистим локальное состояние и отдаём управление Keycloak. */
 export function performMfeLogout(props?: MfeAuthHostProps | null): void {
+	beginLogoutOverlay();
 	clearMfeAuthState();
 	publishAppSync({ type: "auth:logout", reason: "user" });
 	props?.onLogout?.();

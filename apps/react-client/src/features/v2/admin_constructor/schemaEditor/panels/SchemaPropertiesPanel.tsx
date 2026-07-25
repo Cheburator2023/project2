@@ -52,6 +52,8 @@ import {
 	V2_ARCH_COMPONENT_LABELS,
 	V2_IMPLEMENTATION_STREAM,
 	V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE,
+	V2_MODEL_IMPLEMENTATION_STREAM_CODES,
+	V2_MODEL_STREAM_EXECUTOR,
 	normalizeStreamBlockExecutors,
 	normalizeStreamBlockRoles,
 	resolveStreamBlockExecutorLabel,
@@ -884,14 +886,16 @@ export function SchemaPropertiesPanel() {
 		[leafUiBranch, rootBlockKey],
 	);
 	const streamBlockExecutors = useMemo(() => {
-		const explicit = normalizeStreamBlockExecutors(
-			sectionUiOptions.streamExecutor,
-		);
-		if (explicit.length > 0) return [explicit[0]!];
-		const fromOpts = streamBlockOptions.streamExecutors;
-		return fromOpts.length > 0 ? [fromOpts[0]!] : [];
+		if (
+			streamBlockOptions.streamBlock &&
+			streamBlockOptions.streamExecutors.length > 0
+		) {
+			return streamBlockOptions.streamExecutors;
+		}
+		return normalizeStreamBlockExecutors(sectionUiOptions.streamExecutor);
 	}, [
 		sectionUiOptions.streamExecutor,
+		streamBlockOptions.streamBlock,
 		streamBlockOptions.streamExecutors,
 	]);
 	const streamsAssignedToOtherBlocks = useMemo(() => {
@@ -928,13 +932,13 @@ export function SchemaPropertiesPanel() {
 		sectionUiOptions.streamBlockRoles,
 		streamBlockOptions.streamBlockRoles,
 	]);
+	/** Стрим-блок: корневые object-секции, включая detailInfo (зонтик модельного). */
 	const showStreamBlockOptions =
 		showObjectLayout &&
 		isRootLevelBlock &&
 		!sectionUiOptions.system &&
 		![
 			"generalInfo",
-			"detailInfo",
 			"summary",
 			"meta",
 			"groupActivation",
@@ -1298,10 +1302,16 @@ export function SchemaPropertiesPanel() {
 											if (e.target.checked) {
 												patchSectionUi({
 													streamBlock: true,
-													streamExecutor: streamExecutorsToUiValue([
-														defaultFreeStreamExecutor,
-													]),
+													streamExecutor:
+														rootBlockKey === "detailInfo"
+															? V2_MODEL_STREAM_EXECUTOR
+															: streamExecutorsToUiValue([
+																	defaultFreeStreamExecutor,
+																]),
 													sectionRole: sectionUiOptions.sectionRole ?? "main",
+													...(rootBlockKey === "detailInfo"
+														? { workflowSectionId: "detailInfo" }
+														: {}),
 												});
 												return;
 											}
@@ -1312,24 +1322,35 @@ export function SchemaPropertiesPanel() {
 										}}
 									/>
 								}
-								label="Стримовый блок (платформенный / поддерживающий стрим)"
+								label={
+									rootBlockKey === "detailInfo"
+										? "Стримовый блок (зонтик / модельный стрим)"
+										: "Стримовый блок (платформенный / поддерживающий стрим)"
+								}
 							/>
 							{streamBlockOptions.streamBlock ? (
 								<Box>
 									<StreamExecutorMultiSelect
-										multiple={false}
+										multiple
 										value={streamBlockExecutors}
 										excludedCodes={streamsAssignedToOtherBlocks}
 										uiSchema={uiSchema}
-										onChange={(codes) =>
+										onChange={(codes) => {
+											const isFullModelUmbrella =
+												rootBlockKey === "detailInfo" &&
+												codes.length ===
+													V2_MODEL_IMPLEMENTATION_STREAM_CODES.length &&
+												V2_MODEL_IMPLEMENTATION_STREAM_CODES.every((code) =>
+													codes.includes(code),
+												);
 											patchSectionUi({
 												streamBlock: true,
-												streamExecutor: streamExecutorsToUiValue(
-													codes.slice(0, 1),
-												),
-											})
-										}
-										helperText={`Один стрим на блок. Уже занятые другими стрим-блоками скрыты. Справочник ${V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE}.`}
+												streamExecutor: isFullModelUmbrella
+													? V2_MODEL_STREAM_EXECUTOR
+													: streamExecutorsToUiValue(codes),
+											});
+										}}
+										helperText={`Можно выбрать несколько стримов на блок. Уже занятые другими стрим-блоками скрыты. Справочник ${V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE}.`}
 									/>
 									<StreamBlockRoleMultiSelect
 										value={streamBlockRoleCodes}

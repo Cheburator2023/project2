@@ -15,6 +15,7 @@ import {
 	ALL_LOGIC_WORKS_SCOPE,
 	LOGIC_STREAM_BLOCK_ROLES,
 	type LogicWorksScope,
+	buildExecutorStreamPickerRows,
 	isAllLogicWorksScope,
 	isRoleSelectedInScope,
 	isStreamSelectedInScope,
@@ -42,13 +43,23 @@ export function LogicWorksToolbar({
 	onScopeChange,
 }: LogicWorksToolbarProps) {
 	const { uiSchema, typicalWorkSaveDisplay } = useSchemaEditor();
-	const { codes: logicStreams, catalog } = useV2ImplementationStreamCatalog();
+	const { codes: logicStreams, catalog, umbrellaCatalog } =
+		useV2ImplementationStreamCatalog();
 	const anchorRef = useRef<HTMLButtonElement>(null);
 	const [pickerOpen, setPickerOpen] = useState(false);
 	const scopePresence = scopeStreamsPresentInSchema(
 		uiSchema,
 		scope,
 		(stream) => isExecutorStreamPresentInSchema(uiSchema, stream, catalog),
+	);
+	const pickerRows = buildExecutorStreamPickerRows(
+		logicStreams,
+		umbrellaCatalog.length > 0
+			? umbrellaCatalog.map((entry) => ({
+					value: entry.payload.dbNames[0] ?? entry.label,
+					label: `${entry.label} (зонтик)`,
+				}))
+			: undefined,
 	);
 
 	return (
@@ -177,21 +188,34 @@ export function LogicWorksToolbar({
 								</Typography>
 							</MenuItem>
 							<Divider sx={{ my: 0.5 }} />
-							{logicStreams.map((stream) => {
+							{pickerRows.map((row) => {
+								const stream = row.value;
 								const selected = isStreamSelectedInScope(scope, stream);
 								const present = isExecutorStreamPresentInSchema(
 									uiSchema,
 									stream,
 									catalog,
 								);
+								const label =
+									row.kind === "umbrella"
+										? row.label
+										: streamDisplayLabel(stream, catalog);
 								return (
 									<MenuItem
-										key={stream}
+										key={
+											row.kind === "umbrella"
+												? `umbrella:${stream}`
+												: stream
+										}
 										selected={selected}
 										onClick={() => {
 											onScopeChange(toggleStreamInScope(scope, stream));
 										}}
-										sx={{ borderRadius: 1, py: 0.9 }}
+										sx={{
+											borderRadius: 1,
+											py: 0.9,
+											pl: row.kind === "stream" && row.nested ? 3.5 : 1,
+										}}
 									>
 										<Checkbox
 											checked={selected}
@@ -202,7 +226,7 @@ export function LogicWorksToolbar({
 										<ListItemText
 											primary={
 												<ExecutorStreamMenuRow
-													stream={streamDisplayLabel(stream, catalog)}
+													stream={label}
 													color={streamColor(stream)}
 													present={present}
 													selected={selected}

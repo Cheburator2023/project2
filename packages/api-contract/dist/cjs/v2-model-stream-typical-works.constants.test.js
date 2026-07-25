@@ -1,7 +1,23 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const vitest_1 = require("vitest");
+const v2_implementation_streams_util_1 = require("./v2-implementation-streams.util");
+const v2_executor_streams_util_1 = require("./v2-executor-streams.util");
 const v2_model_stream_typical_works_constants_1 = require("./v2-model-stream-typical-works.constants");
+(0, vitest_1.describe)("V2_MODEL_STREAM_REGISTRY_STREAM_NAMES", () => {
+    (0, vitest_1.it)("lists mother + five child DB names for factory assignments", () => {
+        (0, vitest_1.expect)(v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_REGISTRY_STREAM_NAMES).toEqual([
+            v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_EXECUTOR,
+            ...v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_CHILD_DB_NAMES,
+        ]);
+        (0, vitest_1.expect)(v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_CHILD_DB_NAMES).toHaveLength(5);
+        (0, vitest_1.expect)((0, v2_model_stream_typical_works_constants_1.isV2ModelStreamUmbrellaLabel)(v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_EXECUTOR)).toBe(true);
+        for (const child of v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_CHILD_DB_NAMES) {
+            (0, vitest_1.expect)((0, v2_executor_streams_util_1.typicalWorkAssignedToExecutorStream)([...v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_REGISTRY_STREAM_NAMES], v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.KMBKCB)).toBe(true);
+            (0, vitest_1.expect)((0, v2_executor_streams_util_1.typicalWorkAssignedToExecutorStream)([child], v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_EXECUTOR)).toBe(true);
+        }
+    });
+});
 (0, vitest_1.describe)("compareModelStreamTypicalWorkNames", () => {
     (0, vitest_1.it)("orders model stream stages like CSV", () => {
         const names = [

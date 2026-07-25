@@ -8,6 +8,7 @@ import {
 	formatV2StreamBlockSectionTitle,
 	isExecutorStreamPresentInSchema,
 	readV2AnketaSectionUiOptions,
+	resolveModelStreamUmbrellaBlockPointer,
 	resolveStreamExecutorForTypicalWorkOutputPath,
 	resolveV2AnketaSectionDisplayTitle,
 	resolveV2AnketaStreamBlockOptions,
@@ -24,6 +25,7 @@ import {
 	V2_EXECUTOR_STREAM_LABELS,
 } from "./v2-executor-streams.util";
 import {
+	V2_MODEL_IMPLEMENTATION_STREAM_CODES,
 	V2_MODEL_STREAM_EXECUTOR,
 	resolveModelStreamCatalogScopeDbStreams,
 } from "./v2-model-stream-typical-works.constants";
@@ -193,6 +195,35 @@ describe("collectExecutorStreamBlocks", () => {
 			true,
 		);
 		expect(isExecutorStreamPresentInSchema(uiSchema, "ДАДМ")).toBe(false);
+	});
+
+	it("expands umbrella «Модельный стрим» detailInfo to five model child codes", () => {
+		const uiSchema = {
+			detailInfo: {
+				"ui:options": {
+					streamBlock: true,
+					streamExecutor: V2_MODEL_STREAM_EXECUTOR,
+				},
+			},
+		};
+		const blocks = collectExecutorStreamBlocks(uiSchema);
+		expect(blocks).toHaveLength(1);
+		expect(blocks[0]?.pointer).toBe("/detailInfo");
+		expect(blocks[0]?.streamExecutors).toEqual([
+			...V2_MODEL_IMPLEMENTATION_STREAM_CODES,
+		]);
+		expect(
+			isExecutorStreamPresentInSchema(uiSchema, V2_MODEL_STREAM_EXECUTOR),
+		).toBe(true);
+		expect(
+			isExecutorStreamPresentInSchema(
+				uiSchema,
+				V2_IMPLEMENTATION_STREAM.KMBKCB,
+			),
+		).toBe(true);
+		expect(resolveModelStreamUmbrellaBlockPointer(uiSchema)).toBe(
+			"/detailInfo",
+		);
 	});
 
 	it("resolves stream for typicalWork block from explicit option or root stream", () => {

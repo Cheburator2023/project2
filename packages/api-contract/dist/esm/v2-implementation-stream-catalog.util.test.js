@@ -3,11 +3,16 @@ import { V2_IMPLEMENTATION_STREAM } from "./v2-implementation-streams.util";
 import { buildFactoryImplementationStreamCatalog, buildStreamFilterAliasMap, findImplementationStreamCatalogEntry, isValidImplementationStreamCodeFormat, parseImplementationStreamPayload, resolveCatalogDbExecutorName, resolveCatalogEntryScopeStreams, resolveModelStreamCatalogScopeFromEntries, } from "./v2-implementation-stream-catalog.util";
 import { V2_MODEL_STREAM_EXECUTOR } from "./v2-model-stream-typical-works.constants";
 describe("v2-implementation-stream-catalog.util", () => {
-    it("builds factory catalog with model flags and dbNames", () => {
+    it("builds factory catalog with model flags, umbrella and dbNames", () => {
         const catalog = buildFactoryImplementationStreamCatalog();
-        expect(catalog.length).toBeGreaterThanOrEqual(11);
+        expect(catalog.length).toBeGreaterThanOrEqual(12);
+        const umbrella = catalog.find((entry) => entry.payload.isUmbrellaStream);
+        expect(umbrella?.code).toBe("mdls");
+        expect(umbrella?.label).toBe(V2_MODEL_STREAM_EXECUTOR);
+        expect(umbrella?.payload.isModelStream).toBe(false);
         const kmb = catalog.find((entry) => entry.code === V2_IMPLEMENTATION_STREAM.KMBKCB);
         expect(kmb?.payload.isModelStream).toBe(true);
+        expect(kmb?.payload.isUmbrellaStream).toBe(false);
         expect(kmb?.payload.dbNames).toEqual(expect.arrayContaining(["Разработка моделей КМБ и КСБ"]));
         expect(kmb?.payload.keycloakAliases.length).toBeGreaterThan(0);
         const idsrc = catalog.find((entry) => entry.code === V2_IMPLEMENTATION_STREAM.IDSRC);
@@ -18,7 +23,13 @@ describe("v2-implementation-stream-catalog.util", () => {
         expect(payload.storeCode).toBe(true);
         expect(payload.dbNames).toEqual(["Новый стрим"]);
         expect(payload.isModelStream).toBe(true);
+        expect(payload.isUmbrellaStream).toBe(false);
         expect(payload.keycloakAliases).toEqual(["Dept A"]);
+    });
+    it("parses umbrella flag and clears isModelStream", () => {
+        const payload = parseImplementationStreamPayload({ isUmbrellaStream: true, isModelStream: true }, { label: "Общий стрим", code: "umb01" });
+        expect(payload.isUmbrellaStream).toBe(true);
+        expect(payload.isModelStream).toBe(false);
     });
     it("parses empty dbNames with code as canonical assignment name", () => {
         const payload = parseImplementationStreamPayload({ isModelStream: false }, { label: "СМЯЧМСЧМ", code: "dfdaf" });

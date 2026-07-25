@@ -33,6 +33,7 @@ import {
 	getValueAtPath,
 	typicalWorkItemDisplayName,
 } from "@react-client/features/v2/anketaCRUD/utils/anketaModalArrayTableConfig";
+import { listUnfilledRequiredLabelsInBlock } from "@react-client/features/v2/anketaCRUD/utils/anketaModalFormValidation.util";
 import {
 	readArchObjectListAtPath,
 	isAnketaArchObjectListPath,
@@ -1012,6 +1013,21 @@ export function V2PreviewObjectFieldTemplate({
 		usesMainSectionWorkflow && workflowSectionIdResolved
 			? V2_ANKETA_SECTION_COMPLETE_LABELS[workflowSectionIdResolved]
 			: `Завершить заполнение ${sectionTitle}`;
+	const sectionFormData = pathKey
+		? getValueAtPath(anketaCtx.formData ?? {}, pathKey)
+		: anketaCtx.formData;
+	const unfilledRequiredLabels = listUnfilledRequiredLabelsInBlock(
+		schemaNode,
+		sectionFormData,
+		uiSchema as UiSchema | undefined,
+		{
+			absolutePath: pathKey || undefined,
+			rootFormData: anketaCtx.formData,
+			rootUiSchema:
+				anketaCtx.previewUiSchema ?? (uiSchema as UiSchema | undefined),
+		},
+	);
+	const hasUnfilledRequired = unfilledRequiredLabels.length > 0;
 	const canCompleteWorkflow =
 		showWorkflowChrome &&
 		!workflowLocked &&
@@ -1024,11 +1040,22 @@ export function V2PreviewObjectFieldTemplate({
 	const workflowStatusChip = showWorkflowChrome ? (
 		<AnketaSectionStatusChip kind="section" status={sectionStatus} />
 	) : null;
+	const completeBlockedTitle = hasUnfilledRequired
+		? `Заполните обязательные поля: ${unfilledRequiredLabels.slice(0, 8).join(", ")}${
+				unfilledRequiredLabels.length > 8
+					? ` и ещё ${unfilledRequiredLabels.length - 8}`
+					: ""
+			}`
+		: undefined;
 	const workflowCompleteButton =
 		groupActivatable && !groupActive ? null : canCompleteWorkflow ? (
 			<Button
 				variant="contained"
+				disabled={hasUnfilledRequired}
+				title={completeBlockedTitle}
+				aria-disabled={hasUnfilledRequired}
 				onClick={() => {
+					if (hasUnfilledRequired) return;
 					if (usesPanelPathWorkflow && panelWorkflowPathKey) {
 						onCompletePanelSection?.(panelWorkflowPathKey);
 						return;

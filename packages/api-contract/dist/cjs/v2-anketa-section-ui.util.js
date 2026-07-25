@@ -14,6 +14,7 @@ exports.resolveV2AnketaSectionDisplayTitle = resolveV2AnketaSectionDisplayTitle;
 exports.collectExecutorStreamBlocks = collectExecutorStreamBlocks;
 exports.collectPresentExecutorStreamLabels = collectPresentExecutorStreamLabels;
 exports.isExecutorStreamPresentInSchema = isExecutorStreamPresentInSchema;
+exports.resolveModelStreamUmbrellaBlockPointer = resolveModelStreamUmbrellaBlockPointer;
 exports.resolveStreamExecutorForTypicalWorkOutputPath = resolveStreamExecutorForTypicalWorkOutputPath;
 exports.resolvePrimaryStreamExecutorForTypicalWorkOutputPath = resolvePrimaryStreamExecutorForTypicalWorkOutputPath;
 exports.resolveTypicalWorkCatalogStreamLabel = resolveTypicalWorkCatalogStreamLabel;
@@ -121,7 +122,15 @@ function readV2AnketaSectionUiOptions(uiNode) {
                 ? false
                 : undefined,
         streamExecutor: (() => {
-            const executors = (0, v2_stream_block_executor_util_1.normalizeStreamBlockExecutors)(opts.streamExecutor);
+            const raw = opts.streamExecutor;
+            const executors = (0, v2_stream_block_executor_util_1.normalizeStreamBlockExecutors)(raw);
+            if (executors.length > 0) {
+                return (0, v2_stream_block_executor_util_1.serializeStreamBlockExecutors)(executors);
+            }
+            /** Umbrella не нормализуется в код — сохраняем mother-label. */
+            if (typeof raw === "string" && (0, v2_model_stream_typical_works_constants_1.isV2ModelStreamUmbrellaLabel)(raw)) {
+                return v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_EXECUTOR;
+            }
             return (0, v2_stream_block_executor_util_1.serializeStreamBlockExecutors)(executors);
         })(),
         streamBlockRoles: (() => {
@@ -148,7 +157,13 @@ function resolveV2AnketaStreamBlockOptions(uiNode, blockKey) {
         };
     }
     if (opts.streamBlock === true) {
-        const streamExecutors = (0, v2_stream_block_executor_util_1.normalizeStreamBlockExecutors)(opts.streamExecutor);
+        let streamExecutors = (0, v2_stream_block_executor_util_1.normalizeStreamBlockExecutors)(opts.streamExecutor);
+        /** Umbrella «Модельный стрим» не нормализуется в код — раскрываем в 5 дочерних. */
+        if (streamExecutors.length === 0 &&
+            typeof opts.streamExecutor === "string" &&
+            (0, v2_model_stream_typical_works_constants_1.isV2ModelStreamUmbrellaLabel)(opts.streamExecutor)) {
+            streamExecutors = [...v2_model_stream_typical_works_constants_1.V2_MODEL_IMPLEMENTATION_STREAM_CODES];
+        }
         return {
             streamBlock: true,
             streamExecutors,
@@ -258,6 +273,9 @@ function isExecutorStreamPresentInSchema(uiSchema, stream, catalog) {
     if (!trimmed)
         return false;
     const present = collectPresentExecutorStreamLabels(uiSchema);
+    if ((0, v2_model_stream_typical_works_constants_1.isV2ModelStreamUmbrellaLabel)(trimmed)) {
+        return v2_model_stream_typical_works_constants_1.V2_MODEL_IMPLEMENTATION_STREAM_CODES.some((code) => present.has(code));
+    }
     const streamCode = (0, v2_stream_block_executor_util_1.normalizeStreamBlockExecutor)(trimmed, catalog);
     if (streamCode && present.has(streamCode))
         return true;
@@ -269,6 +287,29 @@ function isExecutorStreamPresentInSchema(uiSchema, stream, catalog) {
     const area = (0, v2_executor_streams_util_1.resolveExecutorStreamAreaLabel)(trimmed);
     const areaCode = (0, v2_stream_block_executor_util_1.normalizeStreamBlockExecutor)(area, catalog);
     return areaCode != null && present.has(areaCode);
+}
+/** Pointer корневого umbrella / model-stream блока (detailInfo и т.п.). */
+function resolveModelStreamUmbrellaBlockPointer(uiSchema) {
+    const root = readRecord(uiSchema);
+    if (!root)
+        return null;
+    for (const blockKey of Object.keys(root)) {
+        if (blockKey.startsWith("ui:"))
+            continue;
+        const branch = readRecord(root[blockKey]);
+        const opts = readV2AnketaSectionUiOptions(branch);
+        if (opts.streamBlock === true &&
+            typeof opts.streamExecutor === "string" &&
+            (0, v2_model_stream_typical_works_constants_1.isV2ModelStreamUmbrellaLabel)(opts.streamExecutor)) {
+            return `/${blockKey}`;
+        }
+    }
+    for (const block of collectExecutorStreamBlocks(uiSchema)) {
+        if (block.streamExecutors.some((code) => (0, v2_model_stream_typical_works_constants_1.isV2ModelImplementationStreamCode)(code))) {
+            return block.pointer;
+        }
+    }
+    return null;
 }
 function readUiBranchAtDotPath(uiSchema, dotPath) {
     const segments = dotPath.split(".").filter(Boolean);

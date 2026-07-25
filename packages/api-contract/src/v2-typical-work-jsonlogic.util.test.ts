@@ -53,6 +53,17 @@ describe("v2-typical-work-jsonlogic.util", () => {
 		});
 	});
 
+	it("compiles arch-count-only trigger without false param AND", () => {
+		const jl = compileTypicalWorkTriggerRulesToJsonLogic([], {
+			kind: "modelService",
+			steps: [{ count: 1, coefficient: 1 }],
+			combinator: "and",
+		});
+		expect(jl).toEqual({
+			archCountTrigger: ["modelService", [{ count: 1, coefficient: 1 }]],
+		});
+	});
+
 	it("evaluates result JsonLogic with roundStep like token engine", () => {
 		const parsed = parseWorkFormulaText("N × P[x]");
 		const logic = compileTypicalWorkCalculationLogic({

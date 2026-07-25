@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { V2_IMPLEMENTATION_STREAM, V2_IMPLEMENTATION_STREAM_LABELS, } from "./v2-implementation-streams.util";
-import { collectExecutorStreamBlocks, formatV2StreamBlockSectionTitle, isExecutorStreamPresentInSchema, readV2AnketaSectionUiOptions, resolveStreamExecutorForTypicalWorkOutputPath, resolveV2AnketaSectionDisplayTitle, resolveV2AnketaStreamBlockOptions, } from "./v2-anketa-section-ui.util";
+import { collectExecutorStreamBlocks, formatV2StreamBlockSectionTitle, isExecutorStreamPresentInSchema, readV2AnketaSectionUiOptions, resolveModelStreamUmbrellaBlockPointer, resolveStreamExecutorForTypicalWorkOutputPath, resolveV2AnketaSectionDisplayTitle, resolveV2AnketaStreamBlockOptions, } from "./v2-anketa-section-ui.util";
 import { inferLegacyStreamBlockExecutorCode, } from "./v2-stream-block-executor.util";
 import { isV2ExecutorStreamLabel, resolveExecutorScopeDbStreams, typicalWorkAssignedToAnyExecutorStream, typicalWorkAssignedToExecutorStream, V2_EXECUTOR_STREAM_LABELS, } from "./v2-executor-streams.util";
-import { V2_MODEL_STREAM_EXECUTOR, resolveModelStreamCatalogScopeDbStreams, } from "./v2-model-stream-typical-works.constants";
+import { V2_MODEL_IMPLEMENTATION_STREAM_CODES, V2_MODEL_STREAM_EXECUTOR, resolveModelStreamCatalogScopeDbStreams, } from "./v2-model-stream-typical-works.constants";
 describe("v2-executor-streams.util", () => {
     it("lists seven executor stream labels", () => {
         expect(V2_EXECUTOR_STREAM_LABELS).toEqual([
@@ -110,6 +110,25 @@ describe("collectExecutorStreamBlocks", () => {
         expect(isExecutorStreamPresentInSchema(uiSchema, V2_IMPLEMENTATION_STREAM.IDSRC)).toBe(true);
         expect(isExecutorStreamPresentInSchema(uiSchema, "ИД. Внутренний")).toBe(true);
         expect(isExecutorStreamPresentInSchema(uiSchema, "ДАДМ")).toBe(false);
+    });
+    it("expands umbrella «Модельный стрим» detailInfo to five model child codes", () => {
+        const uiSchema = {
+            detailInfo: {
+                "ui:options": {
+                    streamBlock: true,
+                    streamExecutor: V2_MODEL_STREAM_EXECUTOR,
+                },
+            },
+        };
+        const blocks = collectExecutorStreamBlocks(uiSchema);
+        expect(blocks).toHaveLength(1);
+        expect(blocks[0]?.pointer).toBe("/detailInfo");
+        expect(blocks[0]?.streamExecutors).toEqual([
+            ...V2_MODEL_IMPLEMENTATION_STREAM_CODES,
+        ]);
+        expect(isExecutorStreamPresentInSchema(uiSchema, V2_MODEL_STREAM_EXECUTOR)).toBe(true);
+        expect(isExecutorStreamPresentInSchema(uiSchema, V2_IMPLEMENTATION_STREAM.KMBKCB)).toBe(true);
+        expect(resolveModelStreamUmbrellaBlockPointer(uiSchema)).toBe("/detailInfo");
     });
     it("resolves stream for typicalWork block from explicit option or root stream", () => {
         const uiSchema = {

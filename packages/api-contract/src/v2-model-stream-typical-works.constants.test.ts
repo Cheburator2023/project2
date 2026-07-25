@@ -1,9 +1,37 @@
 import { describe, expect, it } from "vitest";
+import { V2_IMPLEMENTATION_STREAM } from "./v2-implementation-streams.util";
+import { typicalWorkAssignedToExecutorStream } from "./v2-executor-streams.util";
 import {
 	compareModelStreamTypicalWorkNames,
 	dedupeTypicalWorkRowsByWorkId,
 	isModelStreamTypicalWorkVisibleInSummary,
+	isV2ModelStreamUmbrellaLabel,
+	V2_MODEL_STREAM_CHILD_DB_NAMES,
+	V2_MODEL_STREAM_EXECUTOR,
+	V2_MODEL_STREAM_REGISTRY_STREAM_NAMES,
 } from "./v2-model-stream-typical-works.constants";
+
+describe("V2_MODEL_STREAM_REGISTRY_STREAM_NAMES", () => {
+	it("lists mother + five child DB names for factory assignments", () => {
+		expect(V2_MODEL_STREAM_REGISTRY_STREAM_NAMES).toEqual([
+			V2_MODEL_STREAM_EXECUTOR,
+			...V2_MODEL_STREAM_CHILD_DB_NAMES,
+		]);
+		expect(V2_MODEL_STREAM_CHILD_DB_NAMES).toHaveLength(5);
+		expect(isV2ModelStreamUmbrellaLabel(V2_MODEL_STREAM_EXECUTOR)).toBe(true);
+		for (const child of V2_MODEL_STREAM_CHILD_DB_NAMES) {
+			expect(
+				typicalWorkAssignedToExecutorStream(
+					[...V2_MODEL_STREAM_REGISTRY_STREAM_NAMES],
+					V2_IMPLEMENTATION_STREAM.KMBKCB,
+				),
+			).toBe(true);
+			expect(
+				typicalWorkAssignedToExecutorStream([child], V2_MODEL_STREAM_EXECUTOR),
+			).toBe(true);
+		}
+	});
+});
 
 describe("compareModelStreamTypicalWorkNames", () => {
 	it("orders model stream stages like CSV", () => {

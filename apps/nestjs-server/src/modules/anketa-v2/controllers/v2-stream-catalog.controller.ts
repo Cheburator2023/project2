@@ -28,6 +28,7 @@ export class V2StreamCatalogController {
 			legacyLabels: entry.payload.legacyLabels,
 			keycloakAliases: entry.payload.keycloakAliases,
 			isModelStream: entry.payload.isModelStream,
+			isUmbrellaStream: entry.payload.isUmbrellaStream,
 			v1Labels: entry.payload.v1Labels,
 			payload: entry.payload,
 		}));

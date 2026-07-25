@@ -39,6 +39,16 @@ const v2_work_formula_util_1 = require("./v2-work-formula.util");
             ],
         });
     });
+    (0, vitest_1.it)("compiles arch-count-only trigger without false param AND", () => {
+        const jl = (0, v2_typical_work_jsonlogic_util_1.compileTypicalWorkTriggerRulesToJsonLogic)([], {
+            kind: "modelService",
+            steps: [{ count: 1, coefficient: 1 }],
+            combinator: "and",
+        });
+        (0, vitest_1.expect)(jl).toEqual({
+            archCountTrigger: ["modelService", [{ count: 1, coefficient: 1 }]],
+        });
+    });
     (0, vitest_1.it)("evaluates result JsonLogic with roundStep like token engine", () => {
         const parsed = (0, v2_work_formula_util_1.parseWorkFormulaText)("N × P[x]");
         const logic = (0, v2_typical_work_jsonlogic_util_1.compileTypicalWorkCalculationLogic)({

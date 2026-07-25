@@ -113,6 +113,25 @@ const v2_model_stream_typical_works_constants_1 = require("./v2-model-stream-typ
         (0, vitest_1.expect)((0, v2_anketa_section_ui_util_1.isExecutorStreamPresentInSchema)(uiSchema, "ИД. Внутренний")).toBe(true);
         (0, vitest_1.expect)((0, v2_anketa_section_ui_util_1.isExecutorStreamPresentInSchema)(uiSchema, "ДАДМ")).toBe(false);
     });
+    (0, vitest_1.it)("expands umbrella «Модельный стрим» detailInfo to five model child codes", () => {
+        const uiSchema = {
+            detailInfo: {
+                "ui:options": {
+                    streamBlock: true,
+                    streamExecutor: v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_EXECUTOR,
+                },
+            },
+        };
+        const blocks = (0, v2_anketa_section_ui_util_1.collectExecutorStreamBlocks)(uiSchema);
+        (0, vitest_1.expect)(blocks).toHaveLength(1);
+        (0, vitest_1.expect)(blocks[0]?.pointer).toBe("/detailInfo");
+        (0, vitest_1.expect)(blocks[0]?.streamExecutors).toEqual([
+            ...v2_model_stream_typical_works_constants_1.V2_MODEL_IMPLEMENTATION_STREAM_CODES,
+        ]);
+        (0, vitest_1.expect)((0, v2_anketa_section_ui_util_1.isExecutorStreamPresentInSchema)(uiSchema, v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_EXECUTOR)).toBe(true);
+        (0, vitest_1.expect)((0, v2_anketa_section_ui_util_1.isExecutorStreamPresentInSchema)(uiSchema, v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.KMBKCB)).toBe(true);
+        (0, vitest_1.expect)((0, v2_anketa_section_ui_util_1.resolveModelStreamUmbrellaBlockPointer)(uiSchema)).toBe("/detailInfo");
+    });
     (0, vitest_1.it)("resolves stream for typicalWork block from explicit option or root stream", () => {
         const uiSchema = {
             field_stream: {

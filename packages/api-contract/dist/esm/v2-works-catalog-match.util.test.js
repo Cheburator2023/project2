@@ -378,6 +378,16 @@ describe("v2-works-catalog-match.util", () => {
             combinator: "or",
         })).toBe(true);
     });
+    it("matches arch-count-only trigger (model stream: Модельный сервис >= 1)", () => {
+        const triggerArchCount = {
+            kind: "modelService",
+            steps: [{ count: 1, coefficient: 1 }],
+            combinator: "and",
+        };
+        expect(typicalWorkRulesMatchSource([], {}, { generalInfo: { modelService: [{ workType: "x" }] } }, triggerArchCount)).toBe(true);
+        expect(typicalWorkRulesMatchSource([], {}, { generalInfo: { modelService: [] } }, triggerArchCount)).toBe(false);
+        expect(typicalWorkRulesMatchSource([], {}, { generalInfo: { modelService: { name: "svc" } } }, triggerArchCount)).toBe(true);
+    });
     it("reads model-stream param triggers from formData when source is a sourceSystems row", () => {
         const rules = [
             {

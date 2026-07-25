@@ -1,6 +1,7 @@
 /** Стримы-исполнители в редакторе логики типовых работ (коды V2_IMPLEMENTATION_STREAM). */
 
 import {
+	isV2ModelImplementationStreamCode,
 	normalizeStreamBlockExecutor,
 	normalizeStreamBlockRoles,
 	resolveLogicStreamDbExecutor,
@@ -11,10 +12,59 @@ import {
 	resolveStreamBlockRolesLabel,
 	V2_IMPLEMENTATION_STREAM,
 	V2_IMPLEMENTATION_STREAM_CODES,
+	V2_MODEL_IMPLEMENTATION_STREAM_CODES,
+	V2_MODEL_STREAM_EXECUTOR,
 	V2_STREAM_BLOCK_ROLE_CODES,
 	type V2ImplementationStreamCode,
 	type V2StreamBlockRoleCode,
 } from "@smart-anketa/api-contract";
+
+/** Строка пикера стримов: umbrella «Модельный стрим» + дочерние / обычные. */
+export type ExecutorStreamPickerRow =
+	| { kind: "umbrella"; value: string; label: string }
+	| { kind: "stream"; value: string; nested: boolean };
+
+export type ExecutorStreamPickerUmbrella = {
+	value: string;
+	label: string;
+};
+
+/**
+ * Порядок для UI: при первом model-child вставляем umbrella(s), затем детей (nested),
+ * остальные стримы — без отступа.
+ */
+export function buildExecutorStreamPickerRows(
+	codes: readonly string[],
+	umbrellas: readonly ExecutorStreamPickerUmbrella[] = [
+		{ value: V2_MODEL_STREAM_EXECUTOR, label: `${V2_MODEL_STREAM_EXECUTOR} (зонтик)` },
+	],
+): ExecutorStreamPickerRow[] {
+	const modelInCatalog = V2_MODEL_IMPLEMENTATION_STREAM_CODES.filter((code) =>
+		codes.includes(code),
+	);
+	const rows: ExecutorStreamPickerRow[] = [];
+	let modelRendered = false;
+	for (const code of codes) {
+		if (isV2ModelImplementationStreamCode(code)) {
+			if (!modelRendered && modelInCatalog.length > 0) {
+				modelRendered = true;
+				for (const umbrella of umbrellas) {
+					rows.push({
+						kind: "umbrella",
+						value: umbrella.value,
+						label: umbrella.label,
+					});
+				}
+				for (const child of modelInCatalog) {
+					rows.push({ kind: "stream", value: child, nested: true });
+				}
+			}
+			continue;
+		}
+		rows.push({ kind: "stream", value: code, nested: false });
+	}
+	return rows;
+}
 
 export type LogicWorksScope =
 	| { kind: "stream"; streams: string[]; roles: string[] }

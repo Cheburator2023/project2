@@ -244,6 +244,12 @@ export function compileTypicalWorkTriggerRulesToJsonLogic(
 	const hasArch = isTriggerArchCountConfigured(triggerArchCount);
 	if (rules.length === 0 && !hasArch) return false;
 
+	if (rules.length === 0) {
+		return {
+			archCountTrigger: [triggerArchCount!.kind!, triggerArchCount!.steps ?? []],
+		};
+	}
+
 	const paramPart = compileParamRulesToJsonLogic(rules);
 	if (!hasArch) return paramPart;
 

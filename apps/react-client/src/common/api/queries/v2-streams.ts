@@ -24,6 +24,7 @@ export type V2StreamCatalogRow = {
 	legacyLabels: string[];
 	keycloakAliases: string[];
 	isModelStream: boolean;
+	isUmbrellaStream: boolean;
 	v1Labels: string[];
 	payload: V2ImplementationStreamPayload;
 };
@@ -48,7 +49,10 @@ export function useV2ImplementationStreamCatalog(options?: {
 	includeInactive?: boolean;
 }): {
 	catalog: V2ImplementationStreamCatalogEntry[];
+	/** Коды стрим-исполнителей без зонтичных (для анкеты / дочерних). */
 	codes: string[];
+	/** Зонтичные стримы (общий каталог типовых работ). */
+	umbrellaCatalog: V2ImplementationStreamCatalogEntry[];
 	labelByCode: Record<string, string>;
 	isLoading: boolean;
 	isError: boolean;
@@ -64,18 +68,27 @@ export function useV2ImplementationStreamCatalog(options?: {
 			payload: row.payload,
 		})) ?? buildFactoryImplementationStreamCatalog();
 
-	const active = options?.includeInactive
+	const visible = options?.includeInactive
 		? catalog
 		: catalog.filter((entry) => entry.isActive);
 
+	const umbrellaCatalog = visible.filter(
+		(entry) => entry.payload.isUmbrellaStream,
+	);
+	const active = visible.filter((entry) => !entry.payload.isUmbrellaStream);
+
 	const labelByCode: Record<string, string> = {};
 	for (const entry of active) {
+		labelByCode[entry.code] = entry.label;
+	}
+	for (const entry of umbrellaCatalog) {
 		labelByCode[entry.code] = entry.label;
 	}
 
 	return {
 		catalog: active,
 		codes: active.map((entry) => entry.code),
+		umbrellaCatalog,
 		labelByCode,
 		isLoading: query.isLoading,
 		isError: query.isError,
@@ -127,6 +140,7 @@ export type StreamRegistryItemInput = {
 	keycloakAliases: string;
 	v1Labels: string;
 	isModelStream: boolean;
+	isUmbrellaStream: boolean;
 };
 
 function splitCsv(value: string): string[] {
@@ -139,6 +153,7 @@ function splitCsv(value: string): string[] {
 export function buildStreamItemPayload(
 	input: StreamRegistryItemInput,
 ): V2ImplementationStreamPayload {
+	const isUmbrellaStream = input.isUmbrellaStream === true;
 	const entry = normalizeImplementationStreamCatalogEntry({
 		code: input.code,
 		label: input.label,
@@ -150,7 +165,8 @@ export function buildStreamItemPayload(
 			legacyLabels: splitCsv(input.legacyLabels),
 			keycloakAliases: splitCsv(input.keycloakAliases),
 			v1Labels: splitCsv(input.v1Labels),
-			isModelStream: input.isModelStream,
+			isModelStream: isUmbrellaStream ? false : input.isModelStream,
+			isUmbrellaStream,
 		},
 	});
 	return (
@@ -160,7 +176,8 @@ export function buildStreamItemPayload(
 			legacyLabels: splitCsv(input.legacyLabels),
 			keycloakAliases: splitCsv(input.keycloakAliases),
 			v1Labels: splitCsv(input.v1Labels),
-			isModelStream: input.isModelStream,
+			isModelStream: isUmbrellaStream ? false : input.isModelStream,
+			isUmbrellaStream,
 		}
 	);
 }

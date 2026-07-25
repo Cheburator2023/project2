@@ -164,6 +164,11 @@ function compileTypicalWorkTriggerRulesToJsonLogic(rules, triggerArchCount) {
     const hasArch = (0, v2_work_arch_count_coeff_util_1.isTriggerArchCountConfigured)(triggerArchCount);
     if (rules.length === 0 && !hasArch)
         return false;
+    if (rules.length === 0) {
+        return {
+            archCountTrigger: [triggerArchCount.kind, triggerArchCount.steps ?? []],
+        };
+    }
     const paramPart = compileParamRulesToJsonLogic(rules);
     if (!hasArch)
         return paramPart;

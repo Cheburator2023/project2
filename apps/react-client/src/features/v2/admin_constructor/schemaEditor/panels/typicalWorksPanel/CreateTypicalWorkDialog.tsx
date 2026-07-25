@@ -12,6 +12,8 @@ import Typography from "@mui/material/Typography";
 import {
 	V2_IMPLEMENTATION_STREAM,
 	V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE,
+	V2_MODEL_STREAM_EXECUTOR,
+	isV2ModelStreamUmbrellaLabel,
 	isValidImplementationStreamCodeFormat,
 } from "@smart-anketa/api-contract";
 import { useV2ImplementationStreamCatalog } from "@react-client/common/api/queries/v2-streams";
@@ -24,7 +26,10 @@ import {
 	ExecutorStreamPresenceHint,
 	ExecutorStreamPresenceLabel,
 } from "./ExecutorStreamPresenceLabel";
-import { streamDisplayLabel } from "./typicalWorksAreas";
+import {
+	buildExecutorStreamPickerRows,
+	streamDisplayLabel,
+} from "./typicalWorksAreas";
 
 export type CreateTypicalWorkDialogPayload = {
 	name: string;
@@ -57,7 +62,7 @@ export function CreateTypicalWorkDialog({
 	onSubmit,
 }: CreateTypicalWorkDialogProps) {
 	const isCreate = mode === "create";
-	const { codes: streamCodes, labelByCode, catalog } =
+	const { codes: streamCodes, labelByCode, catalog, umbrellaCatalog } =
 		useV2ImplementationStreamCatalog();
 	const [name, setName] = useState("");
 	const [archComponentType, setArchComponentType] = useState<string>(
@@ -67,6 +72,20 @@ export function CreateTypicalWorkDialog({
 		defaultStreamExecutor ?? V2_IMPLEMENTATION_STREAM.IDSRC,
 	);
 	const [starterNorm, setStarterNorm] = useState("1.00");
+
+	const pickerRows = useMemo(
+		() =>
+			buildExecutorStreamPickerRows(
+				streamCodes,
+				umbrellaCatalog.length > 0
+					? umbrellaCatalog.map((entry) => ({
+							value: entry.payload.dbNames[0] ?? entry.label,
+							label: `${entry.label} (зонтик)`,
+						}))
+					: undefined,
+			),
+		[streamCodes, umbrellaCatalog],
+	);
 
 	useEffect(() => {
 		if (!open) {
@@ -84,9 +103,14 @@ export function CreateTypicalWorkDialog({
 	useEffect(() => {
 		if (!open || !isCreate) return;
 		if (streamCodes.length === 0) return;
-		if (!streamCodes.includes(streamExecutor)) {
+		const allowed =
+			streamCodes.includes(streamExecutor) ||
+			isV2ModelStreamUmbrellaLabel(streamExecutor);
+		if (!allowed) {
 			setStreamExecutor(
-				defaultStreamExecutor && streamCodes.includes(defaultStreamExecutor)
+				defaultStreamExecutor &&
+					(streamCodes.includes(defaultStreamExecutor) ||
+						isV2ModelStreamUmbrellaLabel(defaultStreamExecutor))
 					? defaultStreamExecutor
 					: (streamCodes[0] ?? V2_IMPLEMENTATION_STREAM.IDSRC),
 			);
@@ -106,6 +130,10 @@ export function CreateTypicalWorkDialog({
 		archComponentType.length > 0 &&
 		(!isCreate || streamExecutor.length > 0) &&
 		(!isCreate || (Number.isFinite(normValue) && normValue >= 0));
+
+	const canCreateStreamBlock =
+		isV2ModelStreamUmbrellaLabel(streamExecutor) ||
+		isValidImplementationStreamCodeFormat(streamExecutor);
 
 	return (
 		<Dialog open={open} onClose={pending ? undefined : onClose} maxWidth="sm" fullWidth>
@@ -140,27 +168,44 @@ export function CreateTypicalWorkDialog({
 							label="Стрим-исполнитель"
 							value={streamExecutor}
 							onChange={(e) => setStreamExecutor(String(e.target.value))}
-							helperText={`Справочник ${V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE}. Назначение создаётся сразу; блок стрима в конструкторе нужен для полей и localParams.`}
+							helperText={`Справочник ${V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE}. Зонтик «${V2_MODEL_STREAM_EXECUTOR}» — общий каталог для дочерних модельных стримов.`}
 						>
-							{streamCodes.map((code) => (
-								<MenuItem key={code} value={code}>
-									<Box
+							{pickerRows.map((row) => {
+								const value = row.value;
+								const label =
+									row.kind === "umbrella"
+										? row.label
+										: (labelByCode[value] ?? value);
+								return (
+									<MenuItem
+										key={
+											row.kind === "umbrella"
+												? `umbrella:${value}`
+												: value
+										}
+										value={value}
 										sx={{
-											display: "flex",
-											alignItems: "center",
-											gap: 1,
-											width: "100%",
+											pl: row.kind === "stream" && row.nested ? 3.5 : 1.5,
 										}}
 									>
-										<Typography sx={{ flex: 1 }}>
-											{labelByCode[code] ?? code}
-										</Typography>
-										<ExecutorStreamPresenceLabel
-											present={isStreamPresentInSchema?.(code) ?? false}
-										/>
-									</Box>
-								</MenuItem>
-							))}
+										<Box
+											sx={{
+												display: "flex",
+												alignItems: "center",
+												gap: 1,
+												width: "100%",
+											}}
+										>
+											<Typography sx={{ flex: 1 }}>{label}</Typography>
+											<ExecutorStreamPresenceLabel
+												present={
+													isStreamPresentInSchema?.(value) ?? false
+												}
+											/>
+										</Box>
+									</MenuItem>
+								);
+							})}
 						</TextField>
 						<ExecutorStreamPresenceHint present={streamPresent} />
 						{!streamPresent && onCreateStreamBlock ? (
@@ -168,7 +213,7 @@ export function CreateTypicalWorkDialog({
 								size="small"
 								variant="outlined"
 								onClick={() => onCreateStreamBlock(streamExecutor)}
-								disabled={!isValidImplementationStreamCodeFormat(streamExecutor)}
+								disabled={!canCreateStreamBlock}
 							>
 								Создать стримовый блок в конструкторе
 							</Button>

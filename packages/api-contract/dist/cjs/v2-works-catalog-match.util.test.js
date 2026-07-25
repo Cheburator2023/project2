@@ -380,6 +380,16 @@ const v2_work_schema_params_match_util_1 = require("./v2-work-schema-params-matc
             combinator: "or",
         })).toBe(true);
     });
+    (0, vitest_1.it)("matches arch-count-only trigger (model stream: Модельный сервис >= 1)", () => {
+        const triggerArchCount = {
+            kind: "modelService",
+            steps: [{ count: 1, coefficient: 1 }],
+            combinator: "and",
+        };
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)([], {}, { generalInfo: { modelService: [{ workType: "x" }] } }, triggerArchCount)).toBe(true);
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)([], {}, { generalInfo: { modelService: [] } }, triggerArchCount)).toBe(false);
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)([], {}, { generalInfo: { modelService: { name: "svc" } } }, triggerArchCount)).toBe(true);
+    });
     (0, vitest_1.it)("reads model-stream param triggers from formData when source is a sourceSystems row", () => {
         const rules = [
             {

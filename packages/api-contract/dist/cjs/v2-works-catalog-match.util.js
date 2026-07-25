@@ -615,6 +615,14 @@ function typicalWorkRulesMatchSource(rules, source, formData, triggerArchCount, 
     const hasArch = hasTypicalWorkTriggerArchCount(triggerArchCount);
     if (rules.length === 0 && !hasArch)
         return false;
+    const archMatch = hasArch
+        ? formData
+            ? (0, v2_work_arch_count_coeff_util_1.archCountTriggerMatches)(formData, triggerArchCount.kind, triggerArchCount.steps ?? [])
+            : false
+        : false;
+    /** Только arch-count (без ПТ) — как у модельного стрима «Модельный сервис >= 1». */
+    if (rules.length === 0)
+        return archMatch;
     const lookupSource = (0, v2_typical_works_util_1.buildTypicalWorkTriggerLookupSource)(source, formData, matchContext?.referencePath, matchContext?.uiSchema);
     const paramCodes = [
         ...new Set(rules.map((rule) => rule.paramCode.trim()).filter(Boolean)),
@@ -625,9 +633,6 @@ function typicalWorkRulesMatchSource(rules, source, formData, triggerArchCount, 
     const paramMatch = matchTypicalWorkParamRules(rules, enrichedLookup);
     if (!hasArch)
         return paramMatch;
-    const archMatch = formData
-        ? (0, v2_work_arch_count_coeff_util_1.archCountTriggerMatches)(formData, triggerArchCount.kind, triggerArchCount.steps ?? [])
-        : false;
     const combinator = triggerArchCount?.combinator ?? "and";
     if (combinator === "or")
         return paramMatch || archMatch;

@@ -29,7 +29,7 @@ import {
 import { V2AdminButton } from "@react-client/features/v2/admin/atoms/V2AdminButton";
 import { toast } from "@react-client/common/toasts";
 import {
-	isV2ImplementationStreamCode,
+	isFactoryProtectedStreamCode,
 	parseImplementationStreamPayload,
 	type V2DictionaryItemDto,
 } from "@smart-anketa/api-contract";
@@ -56,10 +56,11 @@ const GridWrapper = styled(Box)`
 
 type StreamRow = V2DictionaryItemDto & {
 	isModelStream: boolean;
+	isUmbrellaStream: boolean;
 	isFactory: boolean;
 	originLabel: string;
 	activeLabel: string;
-	modelLabel: string;
+	kindLabel: string;
 	dbNamesDisplay: string;
 };
 
@@ -73,7 +74,17 @@ const emptyForm = (): StreamRegistryItemInput => ({
 	keycloakAliases: "",
 	v1Labels: "",
 	isModelStream: false,
+	isUmbrellaStream: false,
 });
+
+function streamKindLabel(payload: {
+	isUmbrellaStream: boolean;
+	isModelStream: boolean;
+}): string {
+	if (payload.isUmbrellaStream) return "Зонтичный";
+	if (payload.isModelStream) return "Дочерний модельный";
+	return "Обычный";
+}
 
 function itemToForm(item: V2DictionaryItemDto): StreamRegistryItemInput {
 	const payload = parseImplementationStreamPayload(item.payload, {
@@ -90,6 +101,7 @@ function itemToForm(item: V2DictionaryItemDto): StreamRegistryItemInput {
 		keycloakAliases: payload.keycloakAliases.join(", "),
 		v1Labels: payload.v1Labels.join(", "),
 		isModelStream: payload.isModelStream,
+		isUmbrellaStream: payload.isUmbrellaStream,
 	};
 }
 
@@ -114,14 +126,15 @@ export function AdminV2StreamsPage() {
 					label: item.label,
 					code: item.code,
 				});
-				const isFactory = isV2ImplementationStreamCode(item.code);
+				const isFactory = isFactoryProtectedStreamCode(item.code);
 				return {
 					...item,
 					isModelStream: payload.isModelStream,
+					isUmbrellaStream: payload.isUmbrellaStream,
 					isFactory,
 					originLabel: isFactory ? "Из поставки" : "Добавлен вручную",
 					activeLabel: item.isActive ? "Да" : "Нет",
-					modelLabel: payload.isModelStream ? "Да" : "Нет",
+					kindLabel: streamKindLabel(payload),
 					dbNamesDisplay: payload.dbNames.join(", "),
 				};
 			}),
@@ -132,6 +145,13 @@ export function AdminV2StreamsPage() {
 		() => [
 			{ field: "code", headerName: "Код", width: 110 },
 			{ field: "label", headerName: "Подпись", flex: 1.4, minWidth: 180 },
+			{
+				field: "kindLabel",
+				headerName: "Тип",
+				width: 160,
+				headerTooltip:
+					"Зонтичный — общий каталог типовых работ для группы дочерних. Дочерний модельный — входит в зонтик «Модельный стрим». Обычный — самостоятельный стрим-исполнитель.",
+			},
 			{
 				field: "originLabel",
 				headerName: "Источник",
@@ -146,14 +166,7 @@ export function AdminV2StreamsPage() {
 				headerName: "В списках",
 				width: 110,
 				headerTooltip:
-					"Да — стрим показывается в конструкторе, логике и форме анкеты. Нет — скрыт из новых выборов.",
-			},
-			{
-				field: "modelLabel",
-				headerName: "Модельный",
-				width: 110,
-				headerTooltip:
-					"Да — входит в группу модельных стримов (общий каталог типовых работ «Модельный стрим»).",
+					"Да — стрим показывается в конструкторе, логике и форме анкеты. Нет — скрыт из новых выборов. Зонтичные не попадают в выбор implementationStream анкеты.",
 			},
 			{
 				field: "dbNamesDisplay",
@@ -186,7 +199,7 @@ export function AdminV2StreamsPage() {
 		createStream.isPending || updateStream.isPending || deleteStream.isPending;
 
 	const editingIsFactory =
-		Boolean(editing) && isV2ImplementationStreamCode(editing!.code);
+		Boolean(editing) && isFactoryProtectedStreamCode(editing!.code);
 
 	const save = useCallback(() => {
 		if (!dictionaryId) return;
@@ -210,7 +223,11 @@ export function AdminV2StreamsPage() {
 			{ dictionaryId, input: form },
 			{
 				onSuccess: () => {
-					toast.success("Стрим создан");
+					toast.success(
+						form.isUmbrellaStream
+							? "Зонтичный стрим создан"
+							: "Стрим создан",
+					);
 					setDialogOpen(false);
 				},
 				onError: (err) =>
@@ -223,7 +240,7 @@ export function AdminV2StreamsPage() {
 
 	const remove = useCallback(() => {
 		if (!editing) return;
-		if (isV2ImplementationStreamCode(editing.code)) {
+		if (isFactoryProtectedStreamCode(editing.code)) {
 			toast.error("Заводской стрим нельзя удалить");
 			return;
 		}
@@ -257,10 +274,12 @@ export function AdminV2StreamsPage() {
 			<Card padding="12px" height="100%" overflow="hidden">
 				<Flex flexDirection="column" gap={8} height="100%" minHeight="0">
 					<Typography variant="body2" color="text.secondary">
-						Стримы для анкеты, конструктора и типовых работ. Колонка
-						«Источник»: <strong>Из поставки</strong> — системные (удалить
-						нельзя, можно скрыть из списков).{" "}
-						<strong>Добавлен вручную</strong> — ваши, можно удалять.
+						Стримы для анкеты, конструктора и типовых работ.{" "}
+						<strong>Зонтичный</strong> — общий каталог типовых работ на группу
+						дочерних (заводской пример: «Модельный стрим» / код{" "}
+						<code>mdls</code>). <strong>Дочерний модельный</strong> — входит в
+						этот зонтик. <strong>Из поставки</strong> — системные (удалить
+						нельзя). <strong>Добавлен вручную</strong> — ваши, можно удалять.
 					</Typography>
 					{isError ? (
 						<Alert severity="error">Не удалось загрузить справочник стримов</Alert>
@@ -370,7 +389,11 @@ export function AdminV2StreamsPage() {
 							size="small"
 							value={form.dbNames}
 							disabled={pending}
-							helperText="Первое имя — канон для назначений типовых работ"
+							helperText={
+								form.isUmbrellaStream
+									? "Для зонтика: подпись каталога типовых работ (напр. «Модельный стрим»)"
+									: "Первое имя — канон для назначений типовых работ"
+							}
 							onChange={(e) =>
 								setForm((prev) => ({ ...prev, dbNames: e.target.value }))
 							}
@@ -423,15 +446,45 @@ export function AdminV2StreamsPage() {
 						<FormControlLabel
 							control={
 								<Switch
-									checked={form.isModelStream}
+									checked={form.isUmbrellaStream}
 									disabled={pending}
 									onChange={(_, checked) =>
-										setForm((prev) => ({ ...prev, isModelStream: checked }))
+										setForm((prev) => ({
+											...prev,
+											isUmbrellaStream: checked,
+											isModelStream: checked ? false : prev.isModelStream,
+										}))
 									}
 								/>
 							}
-							label="Модельный стрим (umbrella-каталог)"
+							label="Зонтичный / общий стрим"
 						/>
+						<Typography variant="caption" color="text.secondary">
+							Зонтик — общий каталог типовых работ для нескольких дочерних
+							стримов. Не выбирается в поле implementationStream анкеты.
+						</Typography>
+						<FormControlLabel
+							control={
+								<Switch
+									checked={form.isModelStream}
+									disabled={pending || form.isUmbrellaStream}
+									onChange={(_, checked) =>
+										setForm((prev) => ({
+											...prev,
+											isModelStream: checked,
+											isUmbrellaStream: checked
+												? false
+												: prev.isUmbrellaStream,
+										}))
+									}
+								/>
+							}
+							label="Дочерний модельный стрим"
+						/>
+						<Typography variant="caption" color="text.secondary">
+							Дочерний — входит в зонтик «Модельный стрим» (общий каталог 10
+							типовых работ). Нельзя совмещать с флагом зонтика.
+						</Typography>
 					</Flex>
 				</DialogContent>
 				<DialogActions>

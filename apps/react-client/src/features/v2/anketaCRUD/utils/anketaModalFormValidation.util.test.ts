@@ -5,6 +5,7 @@ import {
 	createAnketaModalCustomValidate,
 	isAnketaModalFormValid,
 	isFilledRequiredValue,
+	listUnfilledRequiredLabelsInBlock,
 	omitUnsetOptionalFields,
 } from "./anketaModalFormValidation.util";
 
@@ -125,5 +126,51 @@ describe("anketaModalFormValidation.util", () => {
 				{},
 			),
 		).toBe(false);
+	});
+
+	it("lists unfilled required fields in a block including nested objects", () => {
+		const blockSchema: RJSFSchema = {
+			type: "object",
+			properties: {
+				name: { type: "string", title: "Название" },
+				nested: {
+					type: "object",
+					title: "Вложенный",
+					properties: {
+						code: { type: "string", title: "Код" },
+					},
+					required: ["code"],
+				},
+			},
+			required: ["name", "nested"],
+		};
+		expect(listUnfilledRequiredLabelsInBlock(blockSchema, {}, {})).toEqual([
+			"Название",
+			"Вложенный",
+		]);
+		expect(
+			listUnfilledRequiredLabelsInBlock(
+				blockSchema,
+				{ name: "A", nested: {} },
+				{},
+			),
+		).toEqual(["Вложенный: Код"]);
+		expect(
+			listUnfilledRequiredLabelsInBlock(
+				blockSchema,
+				{ name: "A", nested: { code: "x" } },
+				{},
+			),
+		).toEqual([]);
+	});
+
+	it("skips hidden required fields when listing unfilled in block", () => {
+		expect(
+			listUnfilledRequiredLabelsInBlock(
+				nameSchema,
+				{},
+				{ name: { "ui:widget": "hidden" } },
+			),
+		).toEqual([]);
 	});
 });

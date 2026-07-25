@@ -1,7 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.V2_MODEL_STREAM_ALWAYS_ACTIVE_WORK_IDS = exports.V2_MODEL_STREAM_ALWAYS_SHOWN_WORK_IDS = exports.V2_MODEL_IMPLEMENTATION_STREAM_CODES = exports.V2_MODEL_STREAM_EXECUTOR = exports.V2_MODEL_STREAM_FACTORY_WORK_IDS = void 0;
+exports.V2_MODEL_STREAM_ALWAYS_ACTIVE_WORK_IDS = exports.V2_MODEL_STREAM_ALWAYS_SHOWN_WORK_IDS = exports.V2_MODEL_STREAM_REGISTRY_STREAM_NAMES = exports.V2_MODEL_STREAM_CHILD_DB_NAMES = exports.V2_MODEL_IMPLEMENTATION_STREAM_CODES = exports.V2_MODEL_STREAM_UMBRELLA_CODE = exports.V2_MODEL_STREAM_EXECUTOR = exports.V2_MODEL_STREAM_FACTORY_WORK_IDS = void 0;
 exports.isV2ModelImplementationStreamCode = isV2ModelImplementationStreamCode;
+exports.isV2ModelStreamUmbrellaLabel = isV2ModelStreamUmbrellaLabel;
 exports.resolveModelStreamCatalogScopeDbStreams = resolveModelStreamCatalogScopeDbStreams;
 exports.isModelStreamAlwaysShownWork = isModelStreamAlwaysShownWork;
 exports.isModelStreamAlwaysActiveWork = isModelStreamAlwaysActiveWork;
@@ -25,6 +26,11 @@ exports.V2_MODEL_STREAM_FACTORY_WORK_IDS = [
 ];
 exports.V2_MODEL_STREAM_EXECUTOR = "Модельный стрим";
 /**
+ * Код зонтичного стрима в реестре implementationStream (не выбирается в анкете
+ * как implementationStream — только каталог / конструктор типовых работ).
+ */
+exports.V2_MODEL_STREAM_UMBRELLA_CODE = "mdls";
+/**
  * Пять модельных стримов-исполнителей (ролевка / implementationStream).
  * Legacy-каталог «Модельный стрим» должен видеть назначения на любой из них.
  */
@@ -35,8 +41,27 @@ exports.V2_MODEL_IMPLEMENTATION_STREAM_CODES = [
     v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.FINMDL,
     v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.RND,
 ];
+/** DB-имена пяти дочерних стримов (registry `streams` / `normsByStream`). */
+exports.V2_MODEL_STREAM_CHILD_DB_NAMES = [
+    v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM_LABELS[v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.KMBKCB],
+    v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM_LABELS[v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.RB],
+    v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM_LABELS[v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.PTITPC],
+    v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM_LABELS[v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.FINMDL],
+    v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM_LABELS[v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.RND],
+];
+/** Mother + 5 children — полный список назначений factory model works. */
+exports.V2_MODEL_STREAM_REGISTRY_STREAM_NAMES = [
+    exports.V2_MODEL_STREAM_EXECUTOR,
+    ...exports.V2_MODEL_STREAM_CHILD_DB_NAMES,
+];
 function isV2ModelImplementationStreamCode(value) {
     return exports.V2_MODEL_IMPLEMENTATION_STREAM_CODES.includes(value);
+}
+function isV2ModelStreamUmbrellaLabel(value) {
+    const trimmed = value.trim();
+    return (trimmed === exports.V2_MODEL_STREAM_EXECUTOR ||
+        trimmed === "Модельные стримы" ||
+        trimmed === exports.V2_MODEL_STREAM_UMBRELLA_CODE);
 }
 /** DB-имена + коды + legacy-подпись для каталога типовых работ модельного блока. */
 function resolveModelStreamCatalogScopeDbStreams() {

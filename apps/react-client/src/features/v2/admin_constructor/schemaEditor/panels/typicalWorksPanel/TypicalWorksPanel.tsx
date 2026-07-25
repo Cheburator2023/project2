@@ -12,11 +12,13 @@ import type {
 } from "@smart-anketa/api-contract";
 import {
 	isExecutorStreamPresentInSchema,
+	isV2ModelStreamUmbrellaLabel,
 	normalizeStreamBlockExecutor,
 	resolveLogicStreamDbExecutor,
 	resolveLogicStreamForDbExecutor,
 	resolveStreamBlockExecutorLabel,
 	resolveStreamExecutorForTypicalWorkOutputPath,
+	V2_MODEL_STREAM_EXECUTOR,
 } from "@smart-anketa/api-contract";
 import {
 	useCreateV2TypicalWork,
@@ -189,6 +191,20 @@ export function TypicalWorksPanel() {
 
 	const handleCreateStreamBlock = useCallback(
 		(stream: string) => {
+			if (isV2ModelStreamUmbrellaLabel(stream)) {
+				const pointer = placeTypicalWorkInStreamBlock(V2_MODEL_STREAM_EXECUTOR);
+				if (!pointer) {
+					toast.error(
+						`Не удалось создать блок «${V2_MODEL_STREAM_EXECUTOR}» в конструкторе`,
+					);
+					return;
+				}
+				activateMainTab("designer");
+				toast.success(
+					`Добавлен umbrella-блок «${V2_MODEL_STREAM_EXECUTOR}» (detailInfo)`,
+				);
+				return;
+			}
 			const code = normalizeStreamBlockExecutor(stream, catalog);
 			if (!code) {
 				toast.error(`Не удалось сопоставить стрим «${stream}» с кодом implementationStream`);
@@ -214,6 +230,7 @@ export function TypicalWorksPanel() {
 			jsonSchema,
 			uiSchema,
 			handleAddFieldPresetAtParent,
+			placeTypicalWorkInStreamBlock,
 			activateMainTab,
 			catalog,
 		],
@@ -482,12 +499,20 @@ export function TypicalWorksPanel() {
 		starterNormValue?: number;
 	}) => {
 		try {
-			const targetCode =
-				normalizeStreamBlockExecutor(
-					payload.streamExecutor ?? scopeStreamExecutor(scope, DEFAULT_LOGIC_STREAM),
-					catalog,
-				) ?? DEFAULT_LOGIC_STREAM;
-			const dbStream = resolveLogicStreamDbExecutor(targetCode, catalog);
+			const rawExecutor =
+				payload.streamExecutor ??
+				scopeStreamExecutor(scope, DEFAULT_LOGIC_STREAM);
+			const isUmbrella = isV2ModelStreamUmbrellaLabel(rawExecutor);
+			const targetCode = isUmbrella
+				? null
+				: (normalizeStreamBlockExecutor(rawExecutor, catalog) ??
+					DEFAULT_LOGIC_STREAM);
+			const dbStream = isUmbrella
+				? V2_MODEL_STREAM_EXECUTOR
+				: resolveLogicStreamDbExecutor(targetCode!, catalog);
+			const placeExecutor = isUmbrella
+				? V2_MODEL_STREAM_EXECUTOR
+				: targetCode!;
 			const created = await createWork.mutateAsync({
 				name: payload.name,
 				archComponentType: payload.archComponentType,
@@ -505,7 +530,7 @@ export function TypicalWorksPanel() {
 			storeWorkStream(created.id, stream);
 			const bindPointer = searchParams.get(BIND_POINTER_QUERY);
 			const targetPointer = placeTypicalWorkInStreamBlock(
-				targetCode,
+				placeExecutor,
 				bindPointer,
 			);
 			if (targetPointer) {
@@ -712,14 +737,14 @@ export function TypicalWorksPanel() {
 				onClose={() => setAssignOpen(false)}
 				onAssigned={(workId, stream) => {
 					openWorkInStreamsView(workId, stream);
-					const code =
-						resolveLogicStreamForDbExecutor(stream, catalog) ??
-						normalizeStreamBlockExecutor(stream, catalog);
-					if (code) {
-						const pointer = placeTypicalWorkInStreamBlock(code);
-						if (pointer) {
-							bindWorkToTypicalWorkBlock(pointer, workId);
-						}
+					const placeExecutor = isV2ModelStreamUmbrellaLabel(stream)
+						? V2_MODEL_STREAM_EXECUTOR
+						: (resolveLogicStreamForDbExecutor(stream, catalog) ??
+							normalizeStreamBlockExecutor(stream, catalog) ??
+							stream);
+					const pointer = placeTypicalWorkInStreamBlock(placeExecutor);
+					if (pointer) {
+						bindWorkToTypicalWorkBlock(pointer, workId);
 					}
 				}}
 				onCreateNew={() => {

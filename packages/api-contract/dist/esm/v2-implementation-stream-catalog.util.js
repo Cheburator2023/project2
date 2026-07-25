@@ -3,7 +3,7 @@
  * `v2.generalInfo.implementationStream` + resolved DTO для клиента/Nest.
  */
 import { V2_IMPLEMENTATION_STREAM, V2_IMPLEMENTATION_STREAM_CODES, V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE, V2_IMPLEMENTATION_STREAM_LABELS, isV2ImplementationStreamCode, } from "./v2-implementation-streams.util";
-import { V2_MODEL_IMPLEMENTATION_STREAM_CODES, V2_MODEL_STREAM_EXECUTOR, } from "./v2-model-stream-typical-works.constants";
+import { V2_MODEL_IMPLEMENTATION_STREAM_CODES, V2_MODEL_STREAM_EXECUTOR, V2_MODEL_STREAM_UMBRELLA_CODE, } from "./v2-model-stream-typical-works.constants";
 export { V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE };
 const FIELD_POINTER = "/generalInfo/implementationStream";
 /** Factory DB-scope / aliases (до загрузки каталога из БД). */
@@ -92,18 +92,39 @@ export function buildFactoryImplementationStreamPayload(code) {
         legacyLabels: [...(FACTORY_LEGACY_LABELS[code] ?? [])],
         keycloakAliases: [...(FACTORY_KEYCLOAK_ALIASES[code] ?? [])],
         isModelStream: V2_MODEL_IMPLEMENTATION_STREAM_CODES.includes(code),
+        isUmbrellaStream: false,
         v1Labels: [...(FACTORY_V1_LABELS[code] ?? [])],
+    };
+}
+/** Заводской зонтичный стрим «Модельный стрим» (реестр + soft-sync). */
+export function buildFactoryModelUmbrellaStreamCatalogEntry() {
+    return {
+        code: V2_MODEL_STREAM_UMBRELLA_CODE,
+        label: V2_MODEL_STREAM_EXECUTOR,
+        order: -1,
+        isActive: true,
+        payload: {
+            storeCode: true,
+            fieldPointer: FIELD_POINTER,
+            dbNames: [V2_MODEL_STREAM_EXECUTOR, "Модельные стримы"],
+            legacyLabels: [V2_MODEL_STREAM_EXECUTOR, "Модельные стримы"],
+            keycloakAliases: [],
+            isModelStream: false,
+            isUmbrellaStream: true,
+            v1Labels: [],
+        },
     };
 }
 /** Factory entries для seed / soft-sync / fallback до загрузки БД. */
 export function buildFactoryImplementationStreamCatalog() {
-    return V2_IMPLEMENTATION_STREAM_CODES.map((code, order) => ({
+    const children = V2_IMPLEMENTATION_STREAM_CODES.map((code, order) => ({
         code,
         label: V2_IMPLEMENTATION_STREAM_LABELS[code],
         order,
         isActive: true,
         payload: buildFactoryImplementationStreamPayload(code),
     }));
+    return [buildFactoryModelUmbrellaStreamCatalogEntry(), ...children];
 }
 export function parseImplementationStreamPayload(raw, options) {
     const record = raw && typeof raw === "object" && !Array.isArray(raw)
@@ -120,6 +141,8 @@ export function parseImplementationStreamPayload(raw, options) {
         if (label && !dbNames.includes(label))
             dbNames.push(label);
     }
+    const isUmbrellaStream = record.isUmbrellaStream === true ||
+        code === V2_MODEL_STREAM_UMBRELLA_CODE;
     return {
         storeCode: true,
         fieldPointer: typeof record.fieldPointer === "string" && record.fieldPointer.trim()
@@ -128,7 +151,8 @@ export function parseImplementationStreamPayload(raw, options) {
         dbNames,
         legacyLabels: asStringArray(record.legacyLabels),
         keycloakAliases: asStringArray(record.keycloakAliases),
-        isModelStream: record.isModelStream === true,
+        isModelStream: !isUmbrellaStream && record.isModelStream === true,
+        isUmbrellaStream,
         v1Labels: asStringArray(record.v1Labels),
     };
 }
@@ -185,17 +209,25 @@ export function resolveCatalogEntryScopeStreams(entry) {
         push(name);
     for (const name of entry.payload.legacyLabels)
         push(name);
-    if (entry.payload.isModelStream) {
+    if (entry.payload.isModelStream || entry.payload.isUmbrellaStream) {
         push(V2_MODEL_STREAM_EXECUTOR);
         push("Модельные стримы");
+        push(V2_MODEL_STREAM_UMBRELLA_CODE);
     }
     return result;
 }
 export function resolveModelStreamCatalogScopeFromEntries(catalog) {
-    const result = [V2_MODEL_STREAM_EXECUTOR, "Модельные стримы"];
+    const result = [
+        V2_MODEL_STREAM_EXECUTOR,
+        "Модельные стримы",
+        V2_MODEL_STREAM_UMBRELLA_CODE,
+    ];
     for (const entry of catalog) {
-        if (!entry.isActive || !entry.payload.isModelStream)
+        if (!entry.isActive)
             continue;
+        if (!entry.payload.isModelStream && !entry.payload.isUmbrellaStream) {
+            continue;
+        }
         for (const name of resolveCatalogEntryScopeStreams(entry)) {
             if (!result.includes(name))
                 result.push(name);
@@ -203,8 +235,21 @@ export function resolveModelStreamCatalogScopeFromEntries(catalog) {
     }
     return result;
 }
+/** Зонтичный стрим (payload или заводской код mdls). */
+export function isUmbrellaStreamCatalogEntry(entry) {
+    return entry.payload.isUmbrellaStream === true;
+}
+/** Заводские коды, которые нельзя удалить из реестра. */
+export function isFactoryProtectedStreamCode(code) {
+    const trimmed = code.trim();
+    return (isV2ImplementationStreamCode(trimmed) ||
+        trimmed === V2_MODEL_STREAM_UMBRELLA_CODE);
+}
 /** Каноническое DB-имя для назначения типовой работы. */
 export function resolveCatalogDbExecutorName(entry) {
+    if (entry.payload.isUmbrellaStream) {
+        return entry.payload.dbNames[0] ?? entry.label;
+    }
     // Кастомные стримы: код совпадает с ui:options.streamExecutor стрим-блока.
     // Заводские — первое dbNames (исторические русские имена в БД).
     if (!isV2ImplementationStreamCode(entry.code)) {
@@ -245,13 +290,16 @@ export function buildStreamFilterAliasMap(catalog) {
 }
 export function catalogCodes(catalog, options) {
     const activeOnly = options?.activeOnly !== false;
+    const includeUmbrella = options?.includeUmbrella === true;
     return catalog
         .filter((entry) => (activeOnly ? entry.isActive : true))
+        .filter((entry) => includeUmbrella || !entry.payload.isUmbrellaStream)
         .map((entry) => entry.code);
 }
+/** Коды/подписи для enum `implementationStream` в анкете (без зонтичных). */
 export function catalogEnumPair(catalog) {
     const active = catalog
-        .filter((entry) => entry.isActive)
+        .filter((entry) => entry.isActive && !entry.payload.isUmbrellaStream)
         .slice()
         .sort((a, b) => a.order - b.order || a.label.localeCompare(b.label, "ru"));
     return {

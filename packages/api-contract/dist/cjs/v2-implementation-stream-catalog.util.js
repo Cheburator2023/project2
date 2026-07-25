@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE = void 0;
 exports.buildFactoryImplementationStreamPayload = buildFactoryImplementationStreamPayload;
+exports.buildFactoryModelUmbrellaStreamCatalogEntry = buildFactoryModelUmbrellaStreamCatalogEntry;
 exports.buildFactoryImplementationStreamCatalog = buildFactoryImplementationStreamCatalog;
 exports.parseImplementationStreamPayload = parseImplementationStreamPayload;
 exports.normalizeImplementationStreamCatalogEntry = normalizeImplementationStreamCatalogEntry;
@@ -9,6 +10,8 @@ exports.isValidImplementationStreamCodeFormat = isValidImplementationStreamCodeF
 exports.findImplementationStreamCatalogEntry = findImplementationStreamCatalogEntry;
 exports.resolveCatalogEntryScopeStreams = resolveCatalogEntryScopeStreams;
 exports.resolveModelStreamCatalogScopeFromEntries = resolveModelStreamCatalogScopeFromEntries;
+exports.isUmbrellaStreamCatalogEntry = isUmbrellaStreamCatalogEntry;
+exports.isFactoryProtectedStreamCode = isFactoryProtectedStreamCode;
 exports.resolveCatalogDbExecutorName = resolveCatalogDbExecutorName;
 exports.buildStreamFilterAliasMap = buildStreamFilterAliasMap;
 exports.catalogCodes = catalogCodes;
@@ -107,18 +110,39 @@ function buildFactoryImplementationStreamPayload(code) {
         legacyLabels: [...(FACTORY_LEGACY_LABELS[code] ?? [])],
         keycloakAliases: [...(FACTORY_KEYCLOAK_ALIASES[code] ?? [])],
         isModelStream: v2_model_stream_typical_works_constants_1.V2_MODEL_IMPLEMENTATION_STREAM_CODES.includes(code),
+        isUmbrellaStream: false,
         v1Labels: [...(FACTORY_V1_LABELS[code] ?? [])],
+    };
+}
+/** Заводской зонтичный стрим «Модельный стрим» (реестр + soft-sync). */
+function buildFactoryModelUmbrellaStreamCatalogEntry() {
+    return {
+        code: v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_UMBRELLA_CODE,
+        label: v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_EXECUTOR,
+        order: -1,
+        isActive: true,
+        payload: {
+            storeCode: true,
+            fieldPointer: FIELD_POINTER,
+            dbNames: [v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_EXECUTOR, "Модельные стримы"],
+            legacyLabels: [v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_EXECUTOR, "Модельные стримы"],
+            keycloakAliases: [],
+            isModelStream: false,
+            isUmbrellaStream: true,
+            v1Labels: [],
+        },
     };
 }
 /** Factory entries для seed / soft-sync / fallback до загрузки БД. */
 function buildFactoryImplementationStreamCatalog() {
-    return v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM_CODES.map((code, order) => ({
+    const children = v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM_CODES.map((code, order) => ({
         code,
         label: v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM_LABELS[code],
         order,
         isActive: true,
         payload: buildFactoryImplementationStreamPayload(code),
     }));
+    return [buildFactoryModelUmbrellaStreamCatalogEntry(), ...children];
 }
 function parseImplementationStreamPayload(raw, options) {
     const record = raw && typeof raw === "object" && !Array.isArray(raw)
@@ -135,6 +159,8 @@ function parseImplementationStreamPayload(raw, options) {
         if (label && !dbNames.includes(label))
             dbNames.push(label);
     }
+    const isUmbrellaStream = record.isUmbrellaStream === true ||
+        code === v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_UMBRELLA_CODE;
     return {
         storeCode: true,
         fieldPointer: typeof record.fieldPointer === "string" && record.fieldPointer.trim()
@@ -143,7 +169,8 @@ function parseImplementationStreamPayload(raw, options) {
         dbNames,
         legacyLabels: asStringArray(record.legacyLabels),
         keycloakAliases: asStringArray(record.keycloakAliases),
-        isModelStream: record.isModelStream === true,
+        isModelStream: !isUmbrellaStream && record.isModelStream === true,
+        isUmbrellaStream,
         v1Labels: asStringArray(record.v1Labels),
     };
 }
@@ -200,17 +227,25 @@ function resolveCatalogEntryScopeStreams(entry) {
         push(name);
     for (const name of entry.payload.legacyLabels)
         push(name);
-    if (entry.payload.isModelStream) {
+    if (entry.payload.isModelStream || entry.payload.isUmbrellaStream) {
         push(v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_EXECUTOR);
         push("Модельные стримы");
+        push(v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_UMBRELLA_CODE);
     }
     return result;
 }
 function resolveModelStreamCatalogScopeFromEntries(catalog) {
-    const result = [v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_EXECUTOR, "Модельные стримы"];
+    const result = [
+        v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_EXECUTOR,
+        "Модельные стримы",
+        v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_UMBRELLA_CODE,
+    ];
     for (const entry of catalog) {
-        if (!entry.isActive || !entry.payload.isModelStream)
+        if (!entry.isActive)
             continue;
+        if (!entry.payload.isModelStream && !entry.payload.isUmbrellaStream) {
+            continue;
+        }
         for (const name of resolveCatalogEntryScopeStreams(entry)) {
             if (!result.includes(name))
                 result.push(name);
@@ -218,8 +253,21 @@ function resolveModelStreamCatalogScopeFromEntries(catalog) {
     }
     return result;
 }
+/** Зонтичный стрим (payload или заводской код mdls). */
+function isUmbrellaStreamCatalogEntry(entry) {
+    return entry.payload.isUmbrellaStream === true;
+}
+/** Заводские коды, которые нельзя удалить из реестра. */
+function isFactoryProtectedStreamCode(code) {
+    const trimmed = code.trim();
+    return ((0, v2_implementation_streams_util_1.isV2ImplementationStreamCode)(trimmed) ||
+        trimmed === v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_UMBRELLA_CODE);
+}
 /** Каноническое DB-имя для назначения типовой работы. */
 function resolveCatalogDbExecutorName(entry) {
+    if (entry.payload.isUmbrellaStream) {
+        return entry.payload.dbNames[0] ?? entry.label;
+    }
     // Кастомные стримы: код совпадает с ui:options.streamExecutor стрим-блока.
     // Заводские — первое dbNames (исторические русские имена в БД).
     if (!(0, v2_implementation_streams_util_1.isV2ImplementationStreamCode)(entry.code)) {
@@ -260,13 +308,16 @@ function buildStreamFilterAliasMap(catalog) {
 }
 function catalogCodes(catalog, options) {
     const activeOnly = options?.activeOnly !== false;
+    const includeUmbrella = options?.includeUmbrella === true;
     return catalog
         .filter((entry) => (activeOnly ? entry.isActive : true))
+        .filter((entry) => includeUmbrella || !entry.payload.isUmbrellaStream)
         .map((entry) => entry.code);
 }
+/** Коды/подписи для enum `implementationStream` в анкете (без зонтичных). */
 function catalogEnumPair(catalog) {
     const active = catalog
-        .filter((entry) => entry.isActive)
+        .filter((entry) => entry.isActive && !entry.payload.isUmbrellaStream)
         .slice()
         .sort((a, b) => a.order - b.order || a.label.localeCompare(b.label, "ru"));
     return {
