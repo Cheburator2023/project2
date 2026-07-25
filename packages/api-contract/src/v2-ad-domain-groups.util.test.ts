@@ -4,7 +4,9 @@ import {
 	isV2AdDelegatedCanonPath,
 	mapV2AdGroupLeafToRoleCodes,
 	normalizeV2AdStandPrefix,
+	isV2KeycloakIgnoredOrgGroupPath,
 	resolveV2KeycloakGroupPath,
+	v2KeycloakGroupParentPath,
 	shouldEnsureV2KeycloakGroupPath,
 	stripV2AdStandPrefix,
 } from "./v2-ad-domain-groups.util";
@@ -182,5 +184,29 @@ describe("v2-ad-domain-groups", () => {
 		expect(resolveV2KeycloakGroupPath("/dev_sum_appadmin", ["/appadmin"])).toBe(
 			null,
 		);
+	});
+
+	it("ignores org noise groups in matrix warnings", () => {
+		expect(isV2KeycloakIgnoredOrgGroupPath("/access_during_freeze")).toBe(
+			true,
+		);
+		expect(
+			isV2KeycloakIgnoredOrgGroupPath(
+				"/departament/Управление моделирования КИБ и СМБ",
+			),
+		).toBe(true);
+		expect(
+			isV2KeycloakIgnoredOrgGroupPath(
+				"/departament_business_customer/Департамент брокерского обслуживания",
+			),
+		).toBe(true);
+		expect(isV2KeycloakIgnoredOrgGroupPath("/mipm")).toBe(false);
+		expect(isV2KeycloakIgnoredOrgGroupPath("/ds_lead")).toBe(false);
+	});
+
+	it("parent path of nested groups", () => {
+		expect(v2KeycloakGroupParentPath("/mipm/dev_sum_mipm")).toBe("/mipm");
+		expect(v2KeycloakGroupParentPath("/ds/ds_lead")).toBe("/ds");
+		expect(v2KeycloakGroupParentPath("/ds_lead")).toBe(null);
 	});
 });

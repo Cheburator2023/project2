@@ -325,6 +325,26 @@ export function expandV2KeycloakTargetsWithAdAliases(target, standPrefixRaw) {
 export function v2KeycloakGroupLeaf(path) {
     return path.replace(/^\//, "").split("/").filter(Boolean).pop() ?? "";
 }
+/** Parent path: `/mipm/dev_sum_mipm` → `/mipm`; top-level → null. */
+export function v2KeycloakGroupParentPath(path) {
+    const parts = path.replace(/^\//, "").split("/").filter(Boolean);
+    if (parts.length < 2)
+        return null;
+    return `/${parts.slice(0, -1).join("/")}`;
+}
+/**
+ * Орг-шум KK (не F-05 membership): не считаем missing/extra в матрице.
+ * `/access_during_freeze`, `/departament…`, `/departament_business_customer…`.
+ */
+export function isV2KeycloakIgnoredOrgGroupPath(path) {
+    const p = (path.startsWith("/") ? path : `/${path}`).toLowerCase();
+    return (p === "/access_during_freeze" ||
+        p.startsWith("/access_during_freeze/") ||
+        p === "/departament" ||
+        p.startsWith("/departament/") ||
+        p === "/departament_business_customer" ||
+        p.startsWith("/departament_business_customer/"));
+}
 /**
  * Найти группу: точный path, иначе любой path с тем же leaf
  * (не создавать `/dev_sum_sarep_dadm`, если уже есть `/sarep/dev_sum_sarep_dadm`).

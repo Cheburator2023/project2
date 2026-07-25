@@ -73,6 +73,13 @@ export declare function shouldEnsureV2KeycloakGroupPath(path: string): boolean;
 export declare function expandV2KeycloakTargetsWithAdAliases(target: Record<string, readonly string[]>, standPrefixRaw?: string | null): Record<string, readonly string[]>;
 /** Последний сегмент path: `/sarep/dev_sum_sarep_dadm` → `dev_sum_sarep_dadm`. */
 export declare function v2KeycloakGroupLeaf(path: string): string;
+/** Parent path: `/mipm/dev_sum_mipm` → `/mipm`; top-level → null. */
+export declare function v2KeycloakGroupParentPath(path: string): string | null;
+/**
+ * Орг-шум KK (не F-05 membership): не считаем missing/extra в матрице.
+ * `/access_during_freeze`, `/departament…`, `/departament_business_customer…`.
+ */
+export declare function isV2KeycloakIgnoredOrgGroupPath(path: string): boolean;
 /**
  * Найти группу: точный path, иначе любой path с тем же leaf
  * (не создавать `/dev_sum_sarep_dadm`, если уже есть `/sarep/dev_sum_sarep_dadm`).

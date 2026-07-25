@@ -29,6 +29,8 @@ exports.isV2AdNestParentPath = isV2AdNestParentPath;
 exports.shouldEnsureV2KeycloakGroupPath = shouldEnsureV2KeycloakGroupPath;
 exports.expandV2KeycloakTargetsWithAdAliases = expandV2KeycloakTargetsWithAdAliases;
 exports.v2KeycloakGroupLeaf = v2KeycloakGroupLeaf;
+exports.v2KeycloakGroupParentPath = v2KeycloakGroupParentPath;
+exports.isV2KeycloakIgnoredOrgGroupPath = isV2KeycloakIgnoredOrgGroupPath;
 exports.resolveV2KeycloakGroupPath = resolveV2KeycloakGroupPath;
 /** Префиксы стенда в AD/Keycloak (единственное, что игнорим при метчинге). */
 exports.V2_AD_STAND_PREFIX_RE = /^(dev|test|prod)_/i;
@@ -336,6 +338,26 @@ function expandV2KeycloakTargetsWithAdAliases(target, standPrefixRaw) {
 /** Последний сегмент path: `/sarep/dev_sum_sarep_dadm` → `dev_sum_sarep_dadm`. */
 function v2KeycloakGroupLeaf(path) {
     return path.replace(/^\//, "").split("/").filter(Boolean).pop() ?? "";
+}
+/** Parent path: `/mipm/dev_sum_mipm` → `/mipm`; top-level → null. */
+function v2KeycloakGroupParentPath(path) {
+    const parts = path.replace(/^\//, "").split("/").filter(Boolean);
+    if (parts.length < 2)
+        return null;
+    return `/${parts.slice(0, -1).join("/")}`;
+}
+/**
+ * Орг-шум KK (не F-05 membership): не считаем missing/extra в матрице.
+ * `/access_during_freeze`, `/departament…`, `/departament_business_customer…`.
+ */
+function isV2KeycloakIgnoredOrgGroupPath(path) {
+    const p = (path.startsWith("/") ? path : `/${path}`).toLowerCase();
+    return (p === "/access_during_freeze" ||
+        p.startsWith("/access_during_freeze/") ||
+        p === "/departament" ||
+        p.startsWith("/departament/") ||
+        p === "/departament_business_customer" ||
+        p.startsWith("/departament_business_customer/"));
 }
 /**
  * Найти группу: точный path, иначе любой path с тем же leaf

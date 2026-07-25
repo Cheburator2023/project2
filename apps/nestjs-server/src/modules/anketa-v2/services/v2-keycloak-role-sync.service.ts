@@ -8,8 +8,10 @@ import {
 import { ConfigService } from "@nestjs/config";
 import {
 	expandV2KeycloakTargetsWithAdAliases,
+	isV2KeycloakIgnoredOrgGroupPath,
 	shouldEnsureV2KeycloakGroupPath,
 	resolveV2KeycloakGroupPath,
+	v2KeycloakGroupParentPath,
 } from "@smart-anketa/api-contract";
 import {
 	V2_KEYCLOAK_GROUP_ROLE_TARGET,
@@ -223,15 +225,18 @@ export type V2KeycloakMatrixDiffDto = {
 	userGroupDiffs: Array<{
 		username: string;
 		group: string;
-		status: "ok" | "missing" | "extra";
+		status: "ok" | "missing" | "extra" | "warn";
 		expected: boolean;
 		actual: boolean;
+		/** Soft placement hint (parent vs AD-leaf / nested lead). */
+		hint?: string;
 	}>;
 	summary: {
 		groupRoleMissing: number;
 		groupRoleExtra: number;
 		userGroupMissing: number;
 		userGroupExtra: number;
+		userGroupWarn: number;
 	};
 	etalon: {
 		groupRoleTarget: Record<string, string[]>;
@@ -2139,15 +2144,25 @@ export class V2KeycloakRoleSyncService {
 				etalonScopeOnly: true,
 			}));
 
+		/**
+		 * Map live KK roles by path. Alias by leaf only when etalon path missing —
+		 * never overwrite `/architect/dev_sum_arch_*` with empty top-level
+		 * `/dev_sum_arch_*` duplicates (same leaf).
+		 */
 		const actualGroupRoles = new Map<string, Set<string>>();
 		for (const g of inspect.groups) {
 			actualGroupRoles.set(g.path, new Set(g.anketaRoles));
-			for (const [etalonPath] of Object.entries(etalon.groupRoleTarget)) {
-				const resolved = resolveV2KeycloakGroupPath(etalonPath, [g.path]);
-				if (resolved === g.path) {
-					actualGroupRoles.set(etalonPath, new Set(g.anketaRoles));
-				}
-			}
+		}
+		const liveGroupPaths = inspect.groups.map((g) => g.path);
+		for (const etalonPath of Object.keys(etalon.groupRoleTarget)) {
+			if (actualGroupRoles.has(etalonPath)) continue;
+			const resolved = resolveV2KeycloakGroupPath(
+				etalonPath,
+				liveGroupPaths,
+			);
+			if (!resolved) continue;
+			const roles = actualGroupRoles.get(resolved);
+			if (roles) actualGroupRoles.set(etalonPath, new Set(roles));
 		}
 
 		const groupRoleDiffs: V2KeycloakMatrixDiffDto["groupRoleDiffs"] = [];
@@ -2155,10 +2170,7 @@ export class V2KeycloakRoleSyncService {
 			etalon.groupRoleTarget,
 		)) {
 			const resolved =
-				resolveV2KeycloakGroupPath(
-					path,
-					inspect.groups.map((g) => g.path),
-				) ?? path;
+				resolveV2KeycloakGroupPath(path, liveGroupPaths) ?? path;
 			const actual =
 				actualGroupRoles.get(path) ??
 				actualGroupRoles.get(resolved) ??
@@ -2195,23 +2207,60 @@ export class V2KeycloakRoleSyncService {
 		const userGroupDiffs: V2KeycloakMatrixDiffDto["userGroupDiffs"] = [];
 		for (const u of etalon.testUsers) {
 			const have = actualUserGroups.get(u.username.toLowerCase()) ?? new Set();
-			const want = new Set(u.groups);
-			const all = new Set([...want, ...have]);
+			const want = new Set(
+				u.groups.filter((g) => !isV2KeycloakIgnoredOrgGroupPath(g)),
+			);
+			const haveRelevant = [...have].filter(
+				(g) => !isV2KeycloakIgnoredOrgGroupPath(g),
+			);
+			const all = new Set([...want, ...haveRelevant]);
 			for (const group of [...all].sort()) {
+				if (isV2KeycloakIgnoredOrgGroupPath(group)) continue;
 				const expected = want.has(group);
-				const actual = [...have].some(
+				const actual = haveRelevant.some(
 					(p) =>
 						p === group ||
 						resolveV2KeycloakGroupPath(group, [p]) === p,
 				);
-				const status: "ok" | "missing" | "extra" =
-					expected && actual
-						? "ok"
-						: expected && !actual
-							? "missing"
-							: !expected && actual
-								? "extra"
-								: "ok";
+				let status: "ok" | "missing" | "extra" | "warn";
+				let hint: string | undefined;
+				if (expected && actual) {
+					status = "ok";
+				} else if (expected && !actual) {
+					const parent = v2KeycloakGroupParentPath(group);
+					if (parent && have.has(parent)) {
+						status = "warn";
+						hint = `предположительно не там: в parent ${parent}, эталон ждёт AD-leaf ${group}`;
+					} else {
+						status = "missing";
+					}
+				} else if (!expected && actual) {
+					const childLeaf = [...want].find((w) => {
+						const parent = v2KeycloakGroupParentPath(w);
+						if (parent !== group) return false;
+						return !haveRelevant.some(
+							(p) =>
+								p === w || resolveV2KeycloakGroupPath(w, [p]) === p,
+						);
+					});
+					if (childLeaf) {
+						status = "warn";
+						hint = `предположительно не там: в parent ${group}, эталон ждёт AD-leaf ${childLeaf}`;
+					} else {
+						const aliasedWant = [...want].find((w) => {
+							if (w === group) return false;
+							return resolveV2KeycloakGroupPath(w, [group]) === group;
+						});
+						if (aliasedWant) {
+							status = "warn";
+							hint = `предположительно не там: nested ${group}, эталон top-level ${aliasedWant}`;
+						} else {
+							status = "extra";
+						}
+					}
+				} else {
+					status = "ok";
+				}
 				if (status === "ok" && !expected) continue;
 				userGroupDiffs.push({
 					username: u.username,
@@ -2219,6 +2268,7 @@ export class V2KeycloakRoleSyncService {
 					status,
 					expected,
 					actual,
+					...(hint ? { hint } : {}),
 				});
 			}
 		}
@@ -2236,6 +2286,8 @@ export class V2KeycloakRoleSyncService {
 				userGroupMissing: userGroupDiffs.filter((d) => d.status === "missing")
 					.length,
 				userGroupExtra: userGroupDiffs.filter((d) => d.status === "extra")
+					.length,
+				userGroupWarn: userGroupDiffs.filter((d) => d.status === "warn")
 					.length,
 			},
 			etalon: {

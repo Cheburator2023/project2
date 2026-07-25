@@ -125,4 +125,16 @@ const v2_user_stream_mapping_util_1 = require("./v2-user-stream-mapping.util");
         ])).toBe("/admin_it/dev_sum_appadmin");
         (0, vitest_1.expect)((0, v2_ad_domain_groups_util_1.resolveV2KeycloakGroupPath)("/dev_sum_appadmin", ["/appadmin"])).toBe(null);
     });
+    (0, vitest_1.it)("ignores org noise groups in matrix warnings", () => {
+        (0, vitest_1.expect)((0, v2_ad_domain_groups_util_1.isV2KeycloakIgnoredOrgGroupPath)("/access_during_freeze")).toBe(true);
+        (0, vitest_1.expect)((0, v2_ad_domain_groups_util_1.isV2KeycloakIgnoredOrgGroupPath)("/departament/Управление моделирования КИБ и СМБ")).toBe(true);
+        (0, vitest_1.expect)((0, v2_ad_domain_groups_util_1.isV2KeycloakIgnoredOrgGroupPath)("/departament_business_customer/Департамент брокерского обслуживания")).toBe(true);
+        (0, vitest_1.expect)((0, v2_ad_domain_groups_util_1.isV2KeycloakIgnoredOrgGroupPath)("/mipm")).toBe(false);
+        (0, vitest_1.expect)((0, v2_ad_domain_groups_util_1.isV2KeycloakIgnoredOrgGroupPath)("/ds_lead")).toBe(false);
+    });
+    (0, vitest_1.it)("parent path of nested groups", () => {
+        (0, vitest_1.expect)((0, v2_ad_domain_groups_util_1.v2KeycloakGroupParentPath)("/mipm/dev_sum_mipm")).toBe("/mipm");
+        (0, vitest_1.expect)((0, v2_ad_domain_groups_util_1.v2KeycloakGroupParentPath)("/ds/ds_lead")).toBe("/ds");
+        (0, vitest_1.expect)((0, v2_ad_domain_groups_util_1.v2KeycloakGroupParentPath)("/ds_lead")).toBe(null);
+    });
 });

@@ -35,6 +35,7 @@ import { registerAgGridTableModules } from "@react-client/common/tableStuff/agGr
 import { toast } from "@react-client/common/toasts";
 import { inferAdStandPrefixFromUrl } from "@react-client/features/v2/admin/utils/inferAdStandPrefix";
 import { commonRoutes } from "@react-client/routing/common/routes";
+import { isV2KeycloakIgnoredOrgGroupPath } from "@smart-anketa/api-contract";
 import {
 	agGridCustomMUITheme,
 	agGridCustomMUIThemeDark,
@@ -76,7 +77,7 @@ type InspectDto = {
 	users: Array<{ username: string; groups: string[] }>;
 };
 
-type DiffStatus = "ok" | "missing" | "extra";
+type DiffStatus = "ok" | "missing" | "extra" | "warn";
 
 type ResolvedEtalon = {
 	standPrefix: string;
@@ -145,12 +146,14 @@ type DiffDto = {
 		status: DiffStatus;
 		expected: boolean;
 		actual: boolean;
+		hint?: string;
 	}>;
 	summary: {
 		groupRoleMissing: number;
 		groupRoleExtra: number;
 		userGroupMissing: number;
 		userGroupExtra: number;
+		userGroupWarn?: number;
 	};
 	etalon: {
 		groupRoleTarget: Record<string, string[]>;
@@ -179,6 +182,7 @@ type MatrixCell = {
 	rowKey: string;
 	colKey: string;
 	kind: "groupRole" | "userGroup";
+	hint?: string;
 };
 
 type GroupRoleRow = {
@@ -217,6 +221,8 @@ function connectionPayload(args: { keycloakUrl: string; realm: string }) {
 function statusLabel(status: DiffStatus | undefined): string {
 	if (status === "missing") return "не хватает в Keycloak";
 	if (status === "extra") return "лишнее в Keycloak (нет в эталоне)";
+	if (status === "warn")
+		return "предупреждение: предположительно не там лежит";
 	if (status === "ok") return "совпадает с эталоном";
 	return "вне эталона / не сверено";
 }
@@ -233,10 +239,13 @@ function cellTitle(cell: MatrixCell): string {
 		`Keycloak: ${cell.actual ? "да" : "нет"}`,
 		`Статус: ${statusLabel(cell.status)}`,
 	];
+	if (cell.hint) lines.push(cell.hint);
 	if (cell.staged) {
 		lines.push(
 			`В staged: будет ${cell.checked ? "добавлено" : "убрано"} при заливке`,
 		);
+	} else if (cell.status === "warn") {
+		lines.push("Не добавляется в «Исправить все» — проверьте вручную");
 	} else if (cell.status === "missing") {
 		lines.push("Клик по чекбоксу → добавить в staged (включить)");
 	} else if (cell.status === "extra") {
@@ -252,13 +261,15 @@ function cellBackground(cell: MatrixCell | undefined): string | undefined {
 	if (cell.staged) return "rgba(25, 118, 210, 0.18)";
 	if (cell.status === "missing") return "rgba(211, 47, 47, 0.22)";
 	if (cell.status === "extra") return "rgba(237, 108, 2, 0.22)";
+	if (cell.status === "warn") return "rgba(251, 192, 45, 0.28)";
 	return undefined;
 }
 
 const GridWrap = styled(Box)`
 	width: 100%;
-	height: 100%;
-	min-height: 1280px;
+	height: 72vh;
+	min-height: 560px;
+	flex-shrink: 0;
 	& .ag-root-wrapper {
 		height: 100%;
 	}
@@ -286,6 +297,11 @@ const GridWrap = styled(Box)`
 	& .ag-header-cell.kk-matrix-dim {
 		opacity: 0.38;
 	}
+`;
+
+const ModalGridWrap = styled(GridWrap)`
+	height: 52vh;
+	min-height: 320px;
 `;
 
 function MatrixCheckboxCell(
@@ -387,6 +403,8 @@ export function AdminV2KeycloakMatrixPage() {
 	const [applyPreview, setApplyPreview] = useState("");
 	const [etalonOpen, setEtalonOpen] = useState(false);
 	const [etalonJson, setEtalonJson] = useState("{}");
+	/** В модалке эталона: таблица по умолчанию; JSON — опционально. */
+	const [etalonShowJson, setEtalonShowJson] = useState(false);
 	const [dragUser, setDragUser] = useState<string | null>(null);
 	const [userSearch, setUserSearch] = useState("");
 	const [etalonHideAdAlias, setEtalonHideAdAlias] = useState(true);
@@ -500,13 +518,19 @@ export function AdminV2KeycloakMatrixPage() {
 	const userGroupDiffMap = useMemo(() => {
 		const map = new Map<
 			string,
-			{ status: DiffStatus; expected: boolean; actual: boolean }
+			{
+				status: DiffStatus;
+				expected: boolean;
+				actual: boolean;
+				hint?: string;
+			}
 		>();
 		for (const d of diff?.userGroupDiffs ?? []) {
 			map.set(`${d.username}::${d.group}`, {
 				status: d.status,
 				expected: d.expected,
 				actual: d.actual,
+				hint: d.hint,
 			});
 		}
 		return map;
@@ -558,10 +582,20 @@ export function AdminV2KeycloakMatrixPage() {
 		for (const u of diff?.etalon.testUsers ?? []) {
 			for (const g of u.groups) paths.add(g);
 		}
+		/** Колонки для warn/extra parent и nested lead, даже если path не в эталоне. */
+		for (const d of diff?.userGroupDiffs ?? []) {
+			if (
+				d.status === "warn" ||
+				d.status === "extra" ||
+				d.status === "missing"
+			) {
+				paths.add(d.group);
+			}
+		}
 		if (!etalonScopeOnly) {
 			for (const g of inspect?.groups ?? []) paths.add(g.path);
 		}
-		const all = [...paths];
+		const all = [...paths].filter((p) => !isV2KeycloakIgnoredOrgGroupPath(p));
 		return dimNonFeature
 			? sortFeatureFirst(all, featureGroupPaths)
 			: all.sort();
@@ -810,6 +844,8 @@ export function AdminV2KeycloakMatrixPage() {
 	const openEtalonEditor = async () => {
 		setBusy(true);
 		try {
+			const refreshed = await etalonQuery.refetch();
+			if (refreshed.data) reloadEtalonDraft(refreshed.data);
 			const data = await apiClient<{
 				overlay: Record<string, unknown> | null;
 				resolved: unknown;
@@ -827,6 +863,8 @@ export function AdminV2KeycloakMatrixPage() {
 					2,
 				),
 			);
+			setEtalonShowJson(false);
+			setEtalonViewPane("groups");
 			setEtalonOpen(true);
 		} catch (err) {
 			toast.error("Не удалось загрузить эталон", {
@@ -930,6 +968,132 @@ export function AdminV2KeycloakMatrixPage() {
 		a.download = "keycloak-etalon-overlay.json";
 		a.click();
 		URL.revokeObjectURL(url);
+	};
+
+	const exportMatrixReport = () => {
+		if (!diff && !inspect) {
+			toast.error("Нет данных — сначала «Загрузить из KK + сверить»");
+			return;
+		}
+
+		const groupRoleDiffs = diff?.groupRoleDiffs ?? [];
+		const userGroupDiffs = diff?.userGroupDiffs ?? [];
+		const groupRoleMissing = groupRoleDiffs.filter(
+			(d) => d.status === "missing",
+		);
+		const groupRoleExtra = groupRoleDiffs.filter((d) => d.status === "extra");
+		const userGroupMissing = userGroupDiffs.filter(
+			(d) => d.status === "missing",
+		);
+		const userGroupExtra = userGroupDiffs.filter((d) => d.status === "extra");
+		const userGroupWarn = userGroupDiffs.filter((d) => d.status === "warn");
+
+		const groupRolesByPath: Record<
+			string,
+			{ missing: string[]; extra: string[] }
+		> = {};
+		for (const d of groupRoleDiffs) {
+			const bucket = (groupRolesByPath[d.path] ??= {
+				missing: [],
+				extra: [],
+			});
+			if (d.status === "missing") bucket.missing.push(d.role);
+			else if (d.status === "extra") bucket.extra.push(d.role);
+		}
+
+		const userGroupsByUser: Record<
+			string,
+			{ missing: string[]; extra: string[]; warn: string[] }
+		> = {};
+		for (const d of userGroupDiffs) {
+			const bucket = (userGroupsByUser[d.username] ??= {
+				missing: [],
+				extra: [],
+				warn: [],
+			});
+			if (d.status === "missing") bucket.missing.push(d.group);
+			else if (d.status === "extra") bucket.extra.push(d.group);
+			else if (d.status === "warn") bucket.warn.push(d.group);
+		}
+
+		const inspectGroupsByPath = Object.fromEntries(
+			(inspect?.groups ?? []).map((g) => [
+				g.path,
+				{ anketaRoles: g.anketaRoles, memberUsernames: g.memberUsernames },
+			]),
+		);
+		const inspectUsersByName = Object.fromEntries(
+			(inspect?.users ?? []).map((u) => [u.username, { groups: u.groups }]),
+		);
+
+		const payload = {
+			kind: "keycloak-matrix-report",
+			exportedAt: new Date().toISOString(),
+			connection: {
+				keycloakUrl: inspect?.keycloakUrl ?? keycloakUrl,
+				realm: inspect?.realm ?? realm,
+				standPrefix: inspect?.standPrefix ?? standPrefix,
+				inspectExportedAt: inspect?.exportedAt ?? null,
+			},
+			uiFilters: {
+				onlyDiffs,
+				etalonScopeOnly,
+				dimNonFeature,
+			},
+			etalonSource: diff?.etalonSource ?? null,
+			summary: diff?.summary ?? null,
+			mismatchTotal:
+				(diff?.summary.groupRoleMissing ?? 0) +
+				(diff?.summary.groupRoleExtra ?? 0) +
+				(diff?.summary.userGroupMissing ?? 0) +
+				(diff?.summary.userGroupExtra ?? 0),
+			placementWarnTotal: diff?.summary.userGroupWarn ?? 0,
+			note:
+				"org groups (/access_during_freeze, /departament…) ignored; " +
+				"parent-vs-leaf / nested-lead → status=warn (not in Исправить все)",
+			mismatches: {
+				groupRoles: {
+					missing: groupRoleMissing,
+					extra: groupRoleExtra,
+					byPath: groupRolesByPath,
+				},
+				userGroups: {
+					missing: userGroupMissing,
+					extra: userGroupExtra,
+					warn: userGroupWarn,
+					byUsername: userGroupsByUser,
+				},
+			},
+			etalon: diff?.etalon ?? null,
+			inspect: inspect
+				? {
+						exportedAt: inspect.exportedAt,
+						anketaRoles: inspect.anketaRoles,
+						groupCount: inspect.groups.length,
+						userCount: inspect.users.length,
+						groupsByPath: inspectGroupsByPath,
+						usersByName: inspectUsersByName,
+					}
+				: null,
+			staged,
+			stagedLines,
+		};
+
+		const blob = new Blob([JSON.stringify(payload, null, 2)], {
+			type: "application/json",
+		});
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement("a");
+		a.href = url;
+		const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+		const prefix = (inspect?.standPrefix || standPrefix || "noprefix").replace(
+			/_$/,
+			"",
+		);
+		a.download = `keycloak-matrix-report-${prefix}-${stamp}.json`;
+		a.click();
+		URL.revokeObjectURL(url);
+		toast.success("Отчёт матрицы скачан");
 	};
 
 	const importEtalon = () => {
@@ -1081,6 +1245,7 @@ export function AdminV2KeycloakMatrixPage() {
 			diff.summary.userGroupMissing +
 			diff.summary.userGroupExtra
 		: 0;
+	const placementWarnTotal = diff?.summary.userGroupWarn ?? 0;
 
 	const groupRoleRowData = useMemo((): GroupRoleRow[] => {
 		const rows = etalonGroupPaths.map((path) => {
@@ -1145,6 +1310,7 @@ export function AdminV2KeycloakMatrixPage() {
 					rowKey: uname,
 					colKey: group,
 					kind: "userGroup",
+					hint: meta?.hint,
 				};
 			}
 			return {
@@ -1156,7 +1322,11 @@ export function AdminV2KeycloakMatrixPage() {
 		if (!onlyDiffs) return rows;
 		return rows.filter((row) =>
 			Object.values(row.cells).some(
-				(c) => c.status === "missing" || c.status === "extra" || c.staged,
+				(c) =>
+					c.status === "missing" ||
+					c.status === "extra" ||
+					c.status === "warn" ||
+					c.staged,
 			),
 		);
 	}, [
@@ -1176,7 +1346,8 @@ export function AdminV2KeycloakMatrixPage() {
 			{
 				colId: "path",
 				field: "path",
-				headerName: "Группа (path)",
+				headerName: "Группа Keycloak",
+				headerTooltip: "Путь группы в Keycloak (/ds, /architect/dev_sum_arch_…)",
 				pinned: "left",
 				width: 280,
 				filter: "agTextColumnFilter",
@@ -1352,6 +1523,65 @@ export function AdminV2KeycloakMatrixPage() {
 		return lines;
 	}, [staged]);
 
+		const problemItems = useMemo(() => {
+		if (!diff) return [] as Array<{
+			id: string;
+			severity: "error" | "warning";
+			kind: string;
+			text: string;
+		}>;
+		const items: Array<{
+			id: string;
+			severity: "error" | "warning";
+			kind: string;
+			text: string;
+		}> = [];
+		for (const d of diff.groupRoleDiffs) {
+			if (d.status === "missing") {
+				items.push({
+					id: `gr-miss-${d.path}-${d.role}`,
+					severity: "error",
+					kind: "роль",
+					text: `нет в KK: ${d.role} на ${d.path}`,
+				});
+			} else if (d.status === "extra") {
+				items.push({
+					id: `gr-extra-${d.path}-${d.role}`,
+					severity: "error",
+					kind: "роль",
+					text: `лишнее в KK: ${d.role} на ${d.path}`,
+				});
+			}
+		}
+		for (const d of diff.userGroupDiffs) {
+			if (d.status === "missing") {
+				items.push({
+					id: `ug-miss-${d.username}-${d.group}`,
+					severity: "error",
+					kind: "membership",
+					text: `нет в KK: ${d.username} → ${d.group}`,
+				});
+			} else if (d.status === "extra") {
+				items.push({
+					id: `ug-extra-${d.username}-${d.group}`,
+					severity: "error",
+					kind: "membership",
+					text: `лишнее в KK: ${d.username} в ${d.group}`,
+				});
+			} else if (d.status === "warn") {
+				items.push({
+					id: `ug-warn-${d.username}-${d.group}`,
+					severity: "warning",
+					kind: "размещение",
+					text:
+						d.hint ??
+						`предположительно не там: ${d.username} / ${d.group}`,
+				});
+			}
+		}
+		return items;
+	}, [diff]);
+
 	const viewedEtalon: ResolvedEtalon | null =
 		etalonDraft ?? etalonQuery.data ?? null;
 
@@ -1392,7 +1622,9 @@ export function AdminV2KeycloakMatrixPage() {
 		const cols: ColDef<EtalonGroupEditRow>[] = [
 			{
 				field: "path",
-				headerName: "Группа (path)",
+				headerName: "Группа Keycloak",
+				headerTooltip:
+					"Путь группы в Keycloak, напр. /ds или /architect/dev_sum_arch_kmbkcb",
 				pinned: "left",
 				width: 240,
 				filter: "agTextColumnFilter",
@@ -1410,16 +1642,26 @@ export function AdminV2KeycloakMatrixPage() {
 				width: 72,
 				sortable: false,
 				filter: false,
-				cellRenderer: (p: ICellRendererParams<EtalonGroupEditRow>) => (
-					<Button
-						size="small"
-						color="inherit"
-						onClick={() => p.data && removeEtalonGroupPath(p.data.path)}
-						title="Удалить path из эталона"
-					>
-						✕
-					</Button>
-				),
+				cellRenderer: (p: ICellRendererParams<EtalonGroupEditRow>) => {
+					const path = p.data?.path;
+					return (
+						<Button
+							size="small"
+							color="inherit"
+							onClick={() => path && removeEtalonGroupPath(path)}
+							title={
+								path
+									? `Убрать группу ${path} из эталона (всю строку с ролями)`
+									: "Убрать группу из эталона"
+							}
+							aria-label={
+								path ? `Убрать группу ${path} из эталона` : "Убрать группу"
+							}
+						>
+							✕
+						</Button>
+					);
+				},
 			},
 		];
 		for (const role of etalonEditRoles) {
@@ -1503,11 +1745,26 @@ export function AdminV2KeycloakMatrixPage() {
 	);
 
 	return (
-		<Flex flexDirection="column" flexGrow={1} minHeight="0" height="100%">
+		<Flex
+			flexDirection="column"
+			flexGrow={1}
+			minHeight="0"
+			height="100%"
+			sx={{ overflow: "hidden" }}
+		>
 			<Header fixed title={commonRoutes.adminV2KeycloakMatrix.name} />
 			<Spacer space={8} />
-			<Card padding="16px" height="100%" overflow="hidden">
-				<Flex flexDirection="column" gap={10} height="100%" minHeight="0">
+			<Box
+				sx={{
+					flex: 1,
+					minHeight: 0,
+					overflowY: "auto",
+					overflowX: "hidden",
+					pb: 3,
+				}}
+			>
+			<Card padding="16px" overflow="visible" maxHeight="none">
+				<Flex flexDirection="column" gap={10}>
 					<Flex
 						gap={8}
 						alignItems="center"
@@ -1530,6 +1787,13 @@ export function AdminV2KeycloakMatrixPage() {
 								variant="outlined"
 								label="оранжевое — лишнее в KK"
 								sx={{ bgcolor: "rgba(237, 108, 2, 0.18)" }}
+							/>
+							<Chip
+								size="small"
+								variant="outlined"
+								label="жёлтое — не там (parent/nested)"
+								title="Пользователь в parent или nested lead вместо AD-leaf / top-level. Орг-группы (/departament, access_during_freeze) игнорируются."
+								sx={{ bgcolor: "rgba(251, 192, 45, 0.28)" }}
 							/>
 							<Chip
 								size="small"
@@ -1651,6 +1915,14 @@ export function AdminV2KeycloakMatrixPage() {
 							Эталон…
 						</Button>
 						<Button
+							variant="outlined"
+							disabled={!diff && !inspect}
+							onClick={exportMatrixReport}
+							title="JSON: summary, все missing/extra (byPath / byUsername), эталон, snapshot KK, очередь"
+						>
+							Выгрузить отчёт JSON
+						</Button>
+						<Button
 							variant="text"
 							disabled={stagedCount === 0}
 							onClick={() => setStaged(emptyPatch())}
@@ -1666,7 +1938,7 @@ export function AdminV2KeycloakMatrixPage() {
 								/>
 							}
 							label="Только расхождения"
-							title="Скрыть строки без missing/extra/staged"
+							title="Скрыть строки без missing/extra/warn/staged"
 						/>
 						<FormControlLabel
 							control={
@@ -1696,22 +1968,27 @@ export function AdminV2KeycloakMatrixPage() {
 							title="Пустой target (business_customer, prjtoffice, admin_it…), юзеры без anketa-ролей и лишние anketa_* — вниз и полупрозрачные"
 						/>
 						{diff ? (
-							<Chip
-								size="small"
-								color={mismatchTotal ? "warning" : "success"}
-								label={`эталон: ${diff.etalonSource} · расхождений ${mismatchTotal}`}
-							/>
+							<>
+								<Chip
+									size="small"
+									color={mismatchTotal ? "warning" : "success"}
+									label={`эталон: ${diff.etalonSource} · расхождений ${mismatchTotal}`}
+								/>
+								{placementWarnTotal > 0 ? (
+									<Chip
+										size="small"
+										variant="outlined"
+										label={`размещение ≈ ${placementWarnTotal}`}
+										title="Parent вместо AD-leaf или nested lead вместо top-level — не в «Исправить все»"
+										sx={{ bgcolor: "rgba(251, 192, 45, 0.28)" }}
+									/>
+								) : null}
+							</>
 						) : null}
 					</Flex>
 
-					<Flex gap={12} flexGrow={1} minHeight="0" width="100%">
-						<Flex
-							flexDirection="column"
-							flexGrow={1}
-							minWidth="0"
-							minHeight="0"
-							gap={8}
-						>
+					<Flex gap={12} width="100%" alignItems="stretch">
+						<Flex flexDirection="column" flexGrow={1} minWidth="0" gap={8}>
 							<Tabs value={tab} onChange={(_, v) => setTab(v)}>
 								<Tab
 									label={
@@ -1748,7 +2025,7 @@ export function AdminV2KeycloakMatrixPage() {
 										<code>anketa_*</code>. Наведите на ячейку: эталон vs
 										Keycloak. Клик по чекбоксу → в очередь.
 									</Typography>
-									<GridWrap sx={{ flexGrow: 1, minHeight: 0 }}>
+									<GridWrap>
 										<AgGridReact<GroupRoleRow>
 											ref={groupGridRef}
 											theme={gridTheme}
@@ -1788,7 +2065,7 @@ export function AdminV2KeycloakMatrixPage() {
 											sx={{ width: 180 }}
 										/>
 									</Flex>
-									<GridWrap sx={{ flexGrow: 1, minHeight: 0 }}>
+									<GridWrap>
 										<AgGridReact<UserGroupRow>
 											ref={userGridRef}
 											theme={gridTheme}
@@ -1809,7 +2086,7 @@ export function AdminV2KeycloakMatrixPage() {
 							) : null}
 
 							{tab === 2 ? (
-								<Card padding="12px" variant="outlined" height="100%">
+								<Card padding="12px" variant="outlined">
 									{stagedLines.length === 0 ? (
 										<Alert severity="info">
 											Очередь пуста. Отметьте ячейки в матрице или нажмите
@@ -1945,11 +2222,12 @@ export function AdminV2KeycloakMatrixPage() {
 											<Flex gap={8} alignItems="center" wrap="wrap">
 												<TextField
 													size="small"
-													label="Новый path"
+													label="Путь группы KK"
 													value={newEtalonPath}
 													onChange={(e) => setNewEtalonPath(e.target.value)}
-													placeholder="/custom_role"
-													sx={{ width: 240 }}
+													placeholder="/ds/dev_sum_ds_kmbkcb"
+													helperText="Как в Keycloak: /роль или /роль/AD-leaf"
+													sx={{ width: 280 }}
 												/>
 												<Button
 													size="small"
@@ -1960,10 +2238,11 @@ export function AdminV2KeycloakMatrixPage() {
 													Добавить группу
 												</Button>
 												<Typography variant="caption" color="text.secondary">
-													Клик по чекбоксу — вкл/выкл роль на path
+													Строка = группа; ✕ убирает группу из эталона;
+													чекбокс — роль anketa_* на этой группе
 												</Typography>
 											</Flex>
-											<GridWrap sx={{ flexGrow: 1, minHeight: 0 }}>
+											<GridWrap>
 												<AgGridReact<EtalonGroupEditRow>
 													theme={gridTheme}
 													icons={agGridIconSet}
@@ -2002,7 +2281,7 @@ export function AdminV2KeycloakMatrixPage() {
 													Двойной клик по «Описание» / «Группы» — правка
 												</Typography>
 											</Flex>
-											<GridWrap sx={{ flexGrow: 1, minHeight: 0 }}>
+											<GridWrap>
 												<AgGridReact<EtalonUserEditRow>
 													theme={gridTheme}
 													icons={agGridIconSet}
@@ -2040,33 +2319,71 @@ export function AdminV2KeycloakMatrixPage() {
 						</Flex>
 
 						{tab < 3 ? (
-							<Flex width="280px" flexShrink={0} height="100%" minHeight="0">
+							<Flex width="360px" flexShrink={0}>
 								<Card
 									padding="12px"
 									variant="outlined"
 									width="100%"
-									height="100%"
 									overflow="auto"
 								>
 									<Typography variant="subtitle2" gutterBottom>
-										3. Сводка
+										3. Проблемы
+										{diff ? ` (${problemItems.length})` : ""}
 									</Typography>
 									{diff ? (
-										<Flex flexDirection="column" gap={6}>
-											<Typography variant="body2">
-												Роли групп: нет в KK{" "}
-												<strong>{diff.summary.groupRoleMissing}</strong>, лишние{" "}
-												<strong>{diff.summary.groupRoleExtra}</strong>
-											</Typography>
-											<Typography variant="body2">
-												Membership: нет в KK{" "}
-												<strong>{diff.summary.userGroupMissing}</strong>, лишние{" "}
-												<strong>{diff.summary.userGroupExtra}</strong>
-											</Typography>
+										<Flex flexDirection="column" gap={8}>
 											<Typography variant="caption" color="text.secondary">
-												Эталон: {diff.etalonSource}. SUMD leads — top-level
-												/ds_lead; nested /ds/ds_lead тоже в эталоне.
+												Эталон: {diff.etalonSource}. Роли: нет{" "}
+												{diff.summary.groupRoleMissing} / лишние{" "}
+												{diff.summary.groupRoleExtra}. Membership: нет{" "}
+												{diff.summary.userGroupMissing} / лишние{" "}
+												{diff.summary.userGroupExtra} / размещение{" "}
+												{diff.summary.userGroupWarn ?? 0}. Орг-группы игнор.;
+												размещение — не в «Исправить все».
 											</Typography>
+											{problemItems.length === 0 ? (
+												<Typography variant="body2" color="success.main">
+													Проблем нет — сверка чистая.
+												</Typography>
+											) : (
+												<ul
+													style={{
+														margin: 0,
+														paddingLeft: 16,
+														fontSize: 11,
+														fontFamily:
+															"ui-monospace, SFMono-Regular, Menlo, monospace",
+														lineHeight: 1.45,
+													}}
+												>
+													{problemItems.map((p) => (
+														<li
+															key={p.id}
+															title={p.text}
+															style={{
+																marginBottom: 4,
+																color:
+																	p.severity === "warning"
+																		? "#8a6d00"
+																		: undefined,
+															}}
+														>
+															<span style={{ opacity: 0.65, marginRight: 4 }}>
+																[{p.kind}]
+															</span>
+															{p.text}
+														</li>
+													))}
+												</ul>
+											)}
+											<Button
+												size="small"
+												variant="outlined"
+												onClick={exportMatrixReport}
+												title="Полный JSON для разбора расхождений"
+											>
+												Выгрузить отчёт JSON
+											</Button>
 										</Flex>
 									) : (
 										<Typography variant="body2" color="text.secondary">
@@ -2106,6 +2423,7 @@ export function AdminV2KeycloakMatrixPage() {
 					</Flex>
 				</Flex>
 			</Card>
+			</Box>
 
 			<Dialog
 				open={applyOpen}
@@ -2138,32 +2456,206 @@ export function AdminV2KeycloakMatrixPage() {
 			<Dialog
 				open={etalonOpen}
 				onClose={() => setEtalonOpen(false)}
-				maxWidth="md"
+				maxWidth="xl"
 				fullWidth
+				PaperProps={{ sx: { height: "90vh", maxHeight: "90vh" } }}
 			>
-				<DialogTitle>Кастомный эталон (overlay)</DialogTitle>
-				<DialogContent>
-					<Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-						JSON: <code>groupRoleTarget</code> (path → anketa_*[]) и/или{" "}
-						<code>testUsers</code> ([&#123; username, groups[] &#125;]). Merge
-						поверх code defaults. Diff всегда считает code ⊕ overlay.
+				<DialogTitle>
+					<Flex
+						alignItems="center"
+						justifyContent="space-between"
+						gap={8}
+						wrap="wrap"
+					>
+						<span>Кастомный эталон (overlay)</span>
+						{viewedEtalon ? (
+							<Chip
+								size="small"
+								color={etalonDirty ? "warning" : "default"}
+								label={`${viewedEtalon.source} · stand ${viewedEtalon.standPrefix || "(пусто)"}${etalonDirty ? " · не сохранено" : ""}`}
+							/>
+						) : null}
+					</Flex>
+				</DialogTitle>
+				<DialogContent
+					dividers
+					sx={{
+						display: "flex",
+						flexDirection: "column",
+						gap: 1,
+						minHeight: 0,
+						overflow: "hidden",
+					}}
+				>
+					<Typography variant="body2" color="text.secondary">
+						Таблица задаёт эталон (code ⊕ overlay): чекбоксы ролей на группах и
+						membership test-users. Diff всегда считает этот снимок. JSON — только
+						импорт/экспорт.
 					</Typography>
-					<Flex gap={8} sx={{ mb: 1 }}>
+					<Flex gap={8} alignItems="center" wrap="wrap">
+						<Tabs
+							value={etalonViewPane === "groups" ? 0 : 1}
+							onChange={(_, v) =>
+								setEtalonViewPane(v === 0 ? "groups" : "users")
+							}
+						>
+							<Tab label={`Группы → роли (${etalonGroupRows.length})`} />
+							<Tab label={`Users → groups (${etalonUserRows.length})`} />
+						</Tabs>
+						<FormControlLabel
+							control={
+								<Switch
+									checked={etalonHideAdAlias}
+									onChange={(_, v) => setEtalonHideAdAlias(v)}
+									size="small"
+								/>
+							}
+							label="Скрыть AD-alias path"
+						/>
+						<Button
+							size="small"
+							variant={etalonShowJson ? "contained" : "outlined"}
+							onClick={() => setEtalonShowJson((v) => !v)}
+						>
+							{etalonShowJson ? "Таблица" : "JSON…"}
+						</Button>
 						<Button size="small" onClick={importEtalon}>
 							Импорт JSON
 						</Button>
 						<Button size="small" onClick={exportEtalon}>
 							Экспорт JSON
 						</Button>
+						<Button
+							size="small"
+							disabled={!etalonDirty || busy}
+							onClick={discardEtalonDraft}
+						>
+							Отменить правки
+						</Button>
 					</Flex>
-					<TextField
-						multiline
-						minRows={16}
-						fullWidth
-						value={etalonJson}
-						onChange={(e) => setEtalonJson(e.target.value)}
-						inputProps={{ style: { fontFamily: "monospace", fontSize: 12 } }}
-					/>
+
+					{etalonShowJson ? (
+						<TextField
+							multiline
+							fullWidth
+							value={etalonJson}
+							onChange={(e) => setEtalonJson(e.target.value)}
+							sx={{ flex: 1, minHeight: 0 }}
+							inputProps={{
+								style: {
+									fontFamily: "monospace",
+									fontSize: 12,
+									height: "48vh",
+									overflow: "auto",
+								},
+							}}
+							helperText="Overlay JSON (delta поверх code). «Сохранить» в режиме JSON пишет этот текст."
+						/>
+					) : (
+						<Flex
+							flexDirection="column"
+							gap={8}
+							sx={{ flex: 1, minHeight: 0 }}
+						>
+							{etalonViewPane === "groups" ? (
+								<>
+									<Flex gap={8} alignItems="center" wrap="wrap">
+										<TextField
+											size="small"
+											label="Путь группы KK"
+											value={newEtalonPath}
+											onChange={(e) => setNewEtalonPath(e.target.value)}
+											placeholder="/ds/dev_sum_ds_kmbkcb"
+											helperText="Как в Keycloak: /роль или /роль/AD-leaf"
+											sx={{ width: 280 }}
+										/>
+										<Button
+											size="small"
+											variant="outlined"
+											onClick={addEtalonGroupPath}
+											disabled={!newEtalonPath.trim()}
+										>
+											Добавить группу
+										</Button>
+										<Typography variant="caption" color="text.secondary">
+											Строка = группа; ✕ убирает группу из эталона; чекбокс —
+											роль anketa_* на этой группе
+										</Typography>
+									</Flex>
+									<ModalGridWrap>
+										<AgGridReact<EtalonGroupEditRow>
+											theme={gridTheme}
+											icons={agGridIconSet}
+											localeText={AG_GRID_LOCALE_RU}
+											rowData={etalonGroupRows}
+											columnDefs={etalonGroupColDefs}
+											defaultColDef={defaultColDef}
+											getRowId={(p) => p.data.path}
+											rowHeight={34}
+											headerHeight={36}
+											animateRows={false}
+											suppressCellFocus
+										/>
+									</ModalGridWrap>
+								</>
+							) : (
+								<>
+									<Flex gap={8} alignItems="center" wrap="wrap">
+										<TextField
+											size="small"
+											label="Новый username"
+											value={newEtalonUser}
+											onChange={(e) => setNewEtalonUser(e.target.value)}
+											placeholder="test_custom"
+											sx={{ width: 200 }}
+										/>
+										<Button
+											size="small"
+											variant="outlined"
+											onClick={addEtalonUser}
+											disabled={!newEtalonUser.trim()}
+										>
+											Добавить user
+										</Button>
+										<Typography variant="caption" color="text.secondary">
+											Двойной клик по «Описание» / «Группы» — правка
+										</Typography>
+									</Flex>
+									<ModalGridWrap>
+										<AgGridReact<EtalonUserEditRow>
+											theme={gridTheme}
+											icons={agGridIconSet}
+											localeText={AG_GRID_LOCALE_RU}
+											rowData={etalonUserRows}
+											columnDefs={etalonUserColDefs}
+											defaultColDef={defaultColDef}
+											getRowId={(p) => p.data.username}
+											rowHeight={36}
+											headerHeight={36}
+											animateRows={false}
+											stopEditingWhenCellsLoseFocus
+											onCellValueChanged={(e) => {
+												const row = e.data;
+												if (!row) return;
+												if (e.colDef.field === "label") {
+													updateEtalonUser(row.username, {
+														label: String(e.newValue ?? ""),
+													});
+												}
+												if (e.colDef.field === "groupsText") {
+													const groups = String(e.newValue ?? "")
+														.split(/[,;\n]+/)
+														.map((g) => g.trim())
+														.filter(Boolean);
+													updateEtalonUser(row.username, { groups });
+												}
+											}}
+										/>
+									</ModalGridWrap>
+								</>
+							)}
+						</Flex>
+					)}
 				</DialogContent>
 				<DialogActions>
 					<Button onClick={() => void resetEtalon()} disabled={busy}>
@@ -2172,10 +2664,17 @@ export function AdminV2KeycloakMatrixPage() {
 					<Button onClick={() => setEtalonOpen(false)}>Отмена</Button>
 					<Button
 						variant="contained"
-						disabled={busy}
-						onClick={() => void saveEtalonFromJson()}
+						disabled={
+							busy ||
+							(etalonShowJson ? false : !etalonDirty || !etalonDraft)
+						}
+						onClick={() =>
+							void (etalonShowJson
+								? saveEtalonFromJson()
+								: saveEtalonFromDraft())
+						}
 					>
-						Сохранить
+						Сохранить overlay
 					</Button>
 				</DialogActions>
 			</Dialog>
