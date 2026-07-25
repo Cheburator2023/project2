@@ -77,12 +77,16 @@ export const V2_KEYCLOAK_GROUP_ROLE_TARGET: Record<string, readonly string[]> = 
 	"/validator": VALIDATOR_ROLES,
 	"/validator_lead": VALIDATOR_ROLES,
 	"/validator/validator_lead": VALIDATOR_ROLES,
-	/** Архитектор: завершение раздела, но не анкеты. */
+	/**
+	 * Архитектор данных ML: edit + завершение раздела и анкеты своего стрима
+	 * (требования_матрица_ролей / §3.10–3.12). Без create/delete.
+	 */
 	"/architect": [
 		"anketa_view_all_calculations",
 		"anketa_edit_calculation",
 		"anketa_export_reports",
 		"anketa_workflow_approve",
+		"anketa_complete_anketa",
 	],
 	/** Аналитик качества работы моделей ДАДМ: раздел да, анкета нет. */
 	"/mntranlst": [

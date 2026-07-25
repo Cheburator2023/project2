@@ -258,7 +258,7 @@ function cellBackground(cell: MatrixCell | undefined): string | undefined {
 const GridWrap = styled(Box)`
 	width: 100%;
 	height: 100%;
-	min-height: 280px;
+	min-height: 1280px;
 	& .ag-root-wrapper {
 		height: 100%;
 	}
@@ -432,9 +432,7 @@ export function AdminV2KeycloakMatrixPage() {
 		if (!d) return;
 		setKeycloakUrl((prev) => {
 			const next = prev || d.keycloakUrl || "";
-			setStandPrefix(
-				inferAdStandPrefixFromUrl(next || undefined),
-			);
+			setStandPrefix(inferAdStandPrefixFromUrl(next || undefined));
 			return next;
 		});
 		setRealm((prev) => (prev === "cym" && d.realm ? d.realm : prev));
@@ -575,9 +573,7 @@ export function AdminV2KeycloakMatrixPage() {
 		);
 		for (const u of inspect?.users ?? []) set.add(u.username);
 		const all = [...set];
-		return dimNonFeature
-			? sortFeatureFirst(all, featureUsernames)
-			: all.sort();
+		return dimNonFeature ? sortFeatureFirst(all, featureUsernames) : all.sort();
 	}, [diff, inspect, dimNonFeature, featureUsernames]);
 
 	const userLabels = useMemo(() => {
@@ -617,9 +613,7 @@ export function AdminV2KeycloakMatrixPage() {
 
 	const stagedUserHas = useCallback(
 		(uname: string, group: string): boolean | null => {
-			const change = staged.userGroupChanges.find(
-				(c) => c.username === uname,
-			);
+			const change = staged.userGroupChanges.find((c) => c.username === uname);
 			if (!change) return null;
 			if (change.addGroups.includes(group)) return true;
 			if (change.removeGroups.includes(group)) return false;
@@ -628,65 +622,77 @@ export function AdminV2KeycloakMatrixPage() {
 		[staged],
 	);
 
-	const toggleGroupRole = useCallback((path: string, role: string) => {
-		setStaged((prev) => {
-			const actual = actualGroupRoles.get(path)?.has(role) ?? false;
-			const change = prev.groupRoleChanges.find((c) => c.path === path);
-			let stagedVal: boolean | null = null;
-			if (change?.add.includes(role)) stagedVal = true;
-			else if (change?.remove.includes(role)) stagedVal = false;
-			const current = stagedVal ?? actual;
-			const nextWant = !current;
+	const toggleGroupRole = useCallback(
+		(path: string, role: string) => {
+			setStaged((prev) => {
+				const actual = actualGroupRoles.get(path)?.has(role) ?? false;
+				const change = prev.groupRoleChanges.find((c) => c.path === path);
+				let stagedVal: boolean | null = null;
+				if (change?.add.includes(role)) stagedVal = true;
+				else if (change?.remove.includes(role)) stagedVal = false;
+				const current = stagedVal ?? actual;
+				const nextWant = !current;
 
-			const others = prev.groupRoleChanges.filter((c) => c.path !== path);
-			const existing = change ?? { path, add: [] as string[], remove: [] as string[] };
-			let add = existing.add.filter((r) => r !== role);
-			let remove = existing.remove.filter((r) => r !== role);
-			if (nextWant !== actual) {
-				if (nextWant) add = [...add, role];
-				else remove = [...remove, role];
-			}
-			return {
-				...prev,
-				groupRoleChanges:
-					add.length || remove.length
-						? [...others, { path, add, remove }]
-						: others,
-			};
-		});
-	}, [actualGroupRoles]);
+				const others = prev.groupRoleChanges.filter((c) => c.path !== path);
+				const existing = change ?? {
+					path,
+					add: [] as string[],
+					remove: [] as string[],
+				};
+				let add = existing.add.filter((r) => r !== role);
+				let remove = existing.remove.filter((r) => r !== role);
+				if (nextWant !== actual) {
+					if (nextWant) add = [...add, role];
+					else remove = [...remove, role];
+				}
+				return {
+					...prev,
+					groupRoleChanges:
+						add.length || remove.length
+							? [...others, { path, add, remove }]
+							: others,
+				};
+			});
+		},
+		[actualGroupRoles],
+	);
 
-	const toggleUserGroup = useCallback((uname: string, group: string) => {
-		setStaged((prev) => {
-			const actual = actualUserGroups.get(uname)?.has(group) ?? false;
-			const change = prev.userGroupChanges.find((c) => c.username === uname);
-			let stagedVal: boolean | null = null;
-			if (change?.addGroups.includes(group)) stagedVal = true;
-			else if (change?.removeGroups.includes(group)) stagedVal = false;
-			const current = stagedVal ?? actual;
-			const nextWant = !current;
+	const toggleUserGroup = useCallback(
+		(uname: string, group: string) => {
+			setStaged((prev) => {
+				const actual = actualUserGroups.get(uname)?.has(group) ?? false;
+				const change = prev.userGroupChanges.find((c) => c.username === uname);
+				let stagedVal: boolean | null = null;
+				if (change?.addGroups.includes(group)) stagedVal = true;
+				else if (change?.removeGroups.includes(group)) stagedVal = false;
+				const current = stagedVal ?? actual;
+				const nextWant = !current;
 
-			const others = prev.userGroupChanges.filter((c) => c.username !== uname);
-			const existing = change ?? {
-				username: uname,
-				addGroups: [] as string[],
-				removeGroups: [] as string[],
-			};
-			let addGroups = existing.addGroups.filter((g) => g !== group);
-			let removeGroups = existing.removeGroups.filter((g) => g !== group);
-			if (nextWant !== actual) {
-				if (nextWant) addGroups = [...addGroups, group];
-				else removeGroups = [...removeGroups, group];
-			}
-			return {
-				...prev,
-				userGroupChanges:
-					addGroups.length || removeGroups.length
-						? [...others, { username: uname, addGroups, removeGroups }]
-						: others,
-			};
-		});
-	}, [actualUserGroups]);
+				const others = prev.userGroupChanges.filter(
+					(c) => c.username !== uname,
+				);
+				const existing = change ?? {
+					username: uname,
+					addGroups: [] as string[],
+					removeGroups: [] as string[],
+				};
+				let addGroups = existing.addGroups.filter((g) => g !== group);
+				let removeGroups = existing.removeGroups.filter((g) => g !== group);
+				if (nextWant !== actual) {
+					if (nextWant) addGroups = [...addGroups, group];
+					else removeGroups = [...removeGroups, group];
+				}
+				return {
+					...prev,
+					userGroupChanges:
+						addGroups.length || removeGroups.length
+							? [...others, { username: uname, addGroups, removeGroups }]
+							: others,
+				};
+			});
+		},
+		[actualUserGroups],
+	);
 
 	const ensureUserInGroup = useCallback(
 		(uname: string, group: string) => {
@@ -738,11 +744,10 @@ export function AdminV2KeycloakMatrixPage() {
 			toast.error("Укажите креды Keycloak");
 			return;
 		}
-		if (
-			!staged.groupRoleChanges.length &&
-			!staged.userGroupChanges.length
-		) {
-			toast.error("Очередь заливки пуста — сначала отметьте ячейки или «Исправить всё»");
+		if (!staged.groupRoleChanges.length && !staged.userGroupChanges.length) {
+			toast.error(
+				"Очередь заливки пуста — сначала отметьте ячейки или «Исправить всё»",
+			);
 			return;
 		}
 		setBusy(true);
@@ -1230,9 +1235,7 @@ export function AdminV2KeycloakMatrixPage() {
 					dimNonFeature && p.data && !p.data.inFeature
 						? "kk-matrix-dim"
 						: undefined,
-				cellRenderer: (
-					p: ICellRendererParams<UserGroupRow, string>,
-				) => {
+				cellRenderer: (p: ICellRendererParams<UserGroupRow, string>) => {
 					const uname = p.value ?? "";
 					const label = userLabels.get(uname);
 					const inFeature = p.data?.inFeature ?? false;
@@ -1241,18 +1244,16 @@ export function AdminV2KeycloakMatrixPage() {
 							draggable
 							onDragStart={() => setDragUser(uname)}
 							onDragEnd={() => setDragUser(null)}
-							title={
-								[
-									uname,
-									label,
-									inFeature
-										? "Участник фичи Smart Anketa (F-05)"
-										: "Вне фичи: нет доступа / пустой target / не из эталона",
-									"Перетащите на колонку группы, чтобы добавить",
-								]
-									.filter(Boolean)
-									.join("\n")
-							}
+							title={[
+								uname,
+								label,
+								inFeature
+									? "Участник фичи Smart Anketa (F-05)"
+									: "Вне фичи: нет доступа / пустой target / не из эталона",
+								"Перетащите на колонку группы, чтобы добавить",
+							]
+								.filter(Boolean)
+								.join("\n")}
 							style={{
 								cursor: "grab",
 								fontFamily: "monospace",
@@ -1320,7 +1321,9 @@ export function AdminV2KeycloakMatrixPage() {
 
 	const matrixGetRowClass = useCallback(
 		(p: { data?: { inFeature?: boolean } }) =>
-			dimNonFeature && p.data && !p.data.inFeature ? "kk-matrix-dim" : undefined,
+			dimNonFeature && p.data && !p.data.inFeature
+				? "kk-matrix-dim"
+				: undefined,
 		[dimNonFeature],
 	);
 
@@ -1342,8 +1345,7 @@ export function AdminV2KeycloakMatrixPage() {
 			for (const r of c.remove) lines.push(`− роль ${r} ← группа ${c.path}`);
 		}
 		for (const c of staged.userGroupChanges) {
-			for (const g of c.addGroups)
-				lines.push(`+ ${c.username} → группа ${g}`);
+			for (const g of c.addGroups) lines.push(`+ ${c.username} → группа ${g}`);
 			for (const g of c.removeGroups)
 				lines.push(`− ${c.username} ← группа ${g}`);
 		}
@@ -1740,31 +1742,31 @@ export function AdminV2KeycloakMatrixPage() {
 							) : null}
 
 							{tab === 0 && inspect ? (
-									<>
-										<Typography variant="caption" color="text.secondary">
-											Строки — группы Keycloak, колонки — realm-роли{" "}
-											<code>anketa_*</code>. Наведите на ячейку: эталон vs
-											Keycloak. Клик по чекбоксу → в очередь.
-										</Typography>
-										<GridWrap sx={{ flexGrow: 1, minHeight: 0 }}>
-											<AgGridReact<GroupRoleRow>
-												ref={groupGridRef}
-												theme={gridTheme}
-												icons={agGridIconSet}
-												localeText={AG_GRID_LOCALE_RU}
-												rowData={groupRoleRowData}
-												columnDefs={groupRoleColDefs}
-												defaultColDef={defaultColDef}
-												getRowId={(p) => p.data.path}
-												getRowClass={matrixGetRowClass}
-												rowHeight={36}
-												headerHeight={40}
-												animateRows={false}
-												suppressCellFocus
-											/>
-										</GridWrap>
-									</>
-								) : null}
+								<>
+									<Typography variant="caption" color="text.secondary">
+										Строки — группы Keycloak, колонки — realm-роли{" "}
+										<code>anketa_*</code>. Наведите на ячейку: эталон vs
+										Keycloak. Клик по чекбоксу → в очередь.
+									</Typography>
+									<GridWrap sx={{ flexGrow: 1, minHeight: 0 }}>
+										<AgGridReact<GroupRoleRow>
+											ref={groupGridRef}
+											theme={gridTheme}
+											icons={agGridIconSet}
+											localeText={AG_GRID_LOCALE_RU}
+											rowData={groupRoleRowData}
+											columnDefs={groupRoleColDefs}
+											defaultColDef={defaultColDef}
+											getRowId={(p) => p.data.path}
+											getRowClass={matrixGetRowClass}
+											rowHeight={36}
+											headerHeight={40}
+											animateRows={false}
+											suppressCellFocus
+										/>
+									</GridWrap>
+								</>
+							) : null}
 
 							{tab === 1 && inspect ? (
 								<>
@@ -1774,9 +1776,8 @@ export function AdminV2KeycloakMatrixPage() {
 											color="text.secondary"
 											sx={{ flexGrow: 1 }}
 										>
-											Строки — пользователи, колонки — группы. Перетащите
-											логин на заголовок колонки или ячейку, либо кликните
-											чекбокс.
+											Строки — пользователи, колонки — группы. Перетащите логин
+											на заголовок колонки или ячейку, либо кликните чекбокс.
 											{dragUser ? ` Перетаскивается: ${dragUser}` : ""}
 										</Typography>
 										<TextField
@@ -1856,8 +1857,8 @@ export function AdminV2KeycloakMatrixPage() {
 											sx={{ flexGrow: 1 }}
 										>
 											Живой редактор эталона (текущий code ⊕ overlay). Чекбоксы
-											ролей / правка ячеек users → «Сохранить overlay». Креды
-											KK не нужны.
+											ролей / правка ячеек users → «Сохранить overlay». Креды KK
+											не нужны.
 										</Typography>
 										{viewedEtalon ? (
 											<Chip
@@ -2054,14 +2055,12 @@ export function AdminV2KeycloakMatrixPage() {
 										<Flex flexDirection="column" gap={6}>
 											<Typography variant="body2">
 												Роли групп: нет в KK{" "}
-												<strong>{diff.summary.groupRoleMissing}</strong>,
-												лишние{" "}
+												<strong>{diff.summary.groupRoleMissing}</strong>, лишние{" "}
 												<strong>{diff.summary.groupRoleExtra}</strong>
 											</Typography>
 											<Typography variant="body2">
 												Membership: нет в KK{" "}
-												<strong>{diff.summary.userGroupMissing}</strong>,
-												лишние{" "}
+												<strong>{diff.summary.userGroupMissing}</strong>, лишние{" "}
 												<strong>{diff.summary.userGroupExtra}</strong>
 											</Typography>
 											<Typography variant="caption" color="text.secondary">
