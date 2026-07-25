@@ -5,6 +5,7 @@ import {
 	V2KeycloakBackupRequestDto,
 	V2KeycloakRestoreRequestDto,
 	V2KeycloakRoleSyncDto,
+	V2KeycloakTestUsersDto,
 } from "../dto/request/v2-keycloak-role-sync.dto";
 import { V2KeycloakRoleSyncService } from "../services/v2-keycloak-role-sync.service";
 
@@ -75,6 +76,24 @@ export class V2KeycloakRoleSyncController {
 			adminPassword: body.adminPassword,
 			dryRun: body.dryRun !== false,
 			applyRemap: body.applyRemap !== false,
+			keycloakUrl: body.keycloakUrl,
+			realm: body.realm,
+			adminRealm: body.adminRealm,
+			standPrefix: body.standPrefix,
+		});
+	}
+
+	@Post("test-users")
+	@DomainRoles("appadmin", "sacfg")
+	@ApiOperation({
+		summary:
+			"Создать тестовых test_* пользователей по матрице (пароль=логин; существующих пропускает)",
+	})
+	async provisionTestUsers(@Body() body: V2KeycloakTestUsersDto) {
+		return this.syncService.provisionTestUsers({
+			adminUsername: body.adminUsername,
+			adminPassword: body.adminPassword,
+			dryRun: body.dryRun !== false,
 			keycloakUrl: body.keycloakUrl,
 			realm: body.realm,
 			adminRealm: body.adminRealm,

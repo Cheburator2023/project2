@@ -126,7 +126,33 @@ type RestoreResult = {
 	warnings: string[];
 };
 
-type ModalMode = "sync" | "backup" | "restore";
+type TestUsersResult = {
+	dryRun: boolean;
+	keycloakUrl: string;
+	realm: string;
+	standPrefix: string;
+	users: Array<{
+		username: string;
+		label: string;
+		groups: string[];
+		status: "created" | "would_create" | "skipped_exists" | "error";
+		error?: string;
+	}>;
+	groupsEnsured: string[];
+	warnings: string[];
+};
+
+type ModalMode = "sync" | "backup" | "restore" | "test-users";
+
+function summarizeTestUsers(data: TestUsersResult): string {
+	const created = data.users.filter((u) => u.status === "created").length;
+	const would = data.users.filter((u) => u.status === "would_create").length;
+	const skipped = data.users.filter(
+		(u) => u.status === "skipped_exists",
+	).length;
+	const errors = data.users.filter((u) => u.status === "error").length;
+	return `create ${created || would}, skip ${skipped}, error ${errors}, groups±${data.groupsEnsured.length}`;
+}
 
 function downloadBackupJson(data: unknown, realm: string) {
 	const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
@@ -136,10 +162,7 @@ function downloadBackupJson(data: unknown, realm: string) {
 	downloadBlob(blob, `keycloak-${realm}-backup-${stamp}.json`);
 }
 
-function connectionPayload(fields: {
-	keycloakUrl: string;
-	realm: string;
-}) {
+function connectionPayload(fields: { keycloakUrl: string; realm: string }) {
 	return {
 		keycloakUrl: fields.keycloakUrl.trim() || undefined,
 		realm: fields.realm.trim() || undefined,
@@ -192,6 +215,9 @@ export function KeycloakRoleSyncPanel() {
 	const [lastResult, setLastResult] = useState<SyncResult | null>(null);
 	const [lastBackup, setLastBackup] = useState<BackupResult | null>(null);
 	const [lastRestore, setLastRestore] = useState<RestoreResult | null>(null);
+	const [lastTestUsers, setLastTestUsers] = useState<TestUsersResult | null>(
+		null,
+	);
 	const [backupDoneInSession, setBackupDoneInSession] = useState(false);
 
 	useEffect(() => {
@@ -402,16 +428,47 @@ export function KeycloakRoleSyncPanel() {
 		},
 	});
 
+	const testUsersMutation = useMutation({
+		mutationFn: (dryRun: boolean) =>
+			apiClient<TestUsersResult>({
+				url: "/v2/admin/keycloak-role-sync/test-users",
+				method: "POST",
+				data: {
+					adminUsername: username,
+					adminPassword: password,
+					dryRun,
+					...connection,
+					standPrefix: standPrefix.trim() || undefined,
+				},
+			}),
+		onSuccess: (data, dryRun) => {
+			setLastTestUsers(data);
+			toast.success(
+				dryRun
+					? `Dry-run test users: ${summarizeTestUsers(data)}`
+					: `Тестовые пользователи: ${summarizeTestUsers(data)}`,
+			);
+			if (!dryRun) {
+				setPassword("");
+				setOpen(false);
+			}
+		},
+		onError: (err) => {
+			toast.error("Создание тестовых пользователей не удалось", {
+				description: apiErrorMessage(err),
+			});
+		},
+	});
+
 	const pending =
 		backupMutation.isPending ||
 		syncMutation.isPending ||
-		restoreMutation.isPending;
+		restoreMutation.isPending ||
+		testUsersMutation.isPending;
 	const hasBackupSection =
 		backupInclude.realmRoles || backupInclude.groups || backupInclude.users;
 	const hasRestoreSection =
-		restoreInclude.realmRoles ||
-		restoreInclude.groups ||
-		restoreInclude.users;
+		restoreInclude.realmRoles || restoreInclude.groups || restoreInclude.users;
 	const canSubmit = Boolean(
 		username &&
 			password &&
@@ -449,6 +506,10 @@ export function KeycloakRoleSyncPanel() {
 		if (next === "restore") {
 			setRestoreInclude(DEFAULT_RESTORE_INCLUDE);
 		}
+		if (next === "test-users") {
+			setStandPrefix("dev_");
+			setLastTestUsers(null);
+		}
 		setOpen(true);
 	};
 
@@ -459,17 +520,19 @@ export function KeycloakRoleSyncPanel() {
 			? "Бекап Keycloak (скачать JSON)"
 			: mode === "restore"
 				? "Восстановление Keycloak из бекапа"
-				: "Синхронизация ролей Keycloak";
+				: mode === "test-users"
+					? "Тестовые пользователи Keycloak"
+					: "Синхронизация ролей Keycloak";
 
 	return (
 		<>
 			<Flex flexDirection="column" gap={8}>
-				<Typography variant="h6">Keycloak · роли F-05</Typography>
+				<Typography variant="h6">Keycloak</Typography>
 				<Typography variant="body2" color="text.secondary">
 					Сначала скачайте бекап, затем dry-run / apply. При откате — загрузка
-					того же JSON. Выставляет realm roles канонических групп по матрице
-					F-05. Latin-дубли (/DE vs /de) не трогаем. Креды admin только в
-					модалке. Доступно ролям appadmin / sacfg.
+					того же JSON. Выставляет realm roles канонических групп по матрице.
+					Latin-дубли (/DE vs /de) не трогаем. Креды admin только в модалке.
+					Доступно ролям appadmin / sacfg.
 				</Typography>
 				<Alert severity="info">
 					URL из env Nest: <code>{envUrl}</code>
@@ -490,6 +553,13 @@ export function KeycloakRoleSyncPanel() {
 					</Button>
 					<Button variant="outlined" onClick={() => openModal("sync")}>
 						Синхронизировать роли…
+					</Button>
+					<Button
+						variant="outlined"
+						color="secondary"
+						onClick={() => openModal("test-users")}
+					>
+						Создать тестовых пользователей…
 					</Button>
 					<Button
 						variant="outlined"
@@ -532,6 +602,18 @@ export function KeycloakRoleSyncPanel() {
 							: ""}
 					</Typography>
 				) : null}
+				{lastTestUsers ? (
+					<Typography variant="body2" color="text.secondary" component="div">
+						Последние test users ({lastTestUsers.dryRun ? "dry-run" : "apply"}):{" "}
+						{lastTestUsers.realm} @ {lastTestUsers.keycloakUrl} · prefix «
+						{lastTestUsers.standPrefix || "—"}»
+						<br />
+						{summarizeTestUsers(lastTestUsers)}
+						{lastTestUsers.warnings?.length
+							? ` · warnings: ${lastTestUsers.warnings.length}`
+							: ""}
+					</Typography>
+				) : null}
 			</Flex>
 
 			<input
@@ -550,7 +632,7 @@ export function KeycloakRoleSyncPanel() {
 				open={open}
 				onClose={() => !pending && setOpen(false)}
 				fullWidth
-				maxWidth="sm"
+				maxWidth={mode === "test-users" ? "md" : "sm"}
 			>
 				<DialogTitle>{dialogTitle}</DialogTitle>
 				<DialogContent>
@@ -579,6 +661,18 @@ export function KeycloakRoleSyncPanel() {
 							</Alert>
 						</>
 					) : null}
+					{mode === "test-users" ? (
+						<>
+							<Spacer space={12} />
+							<Alert severity="warning">
+								Только для тестовых стендов. Создаёт недостающих{" "}
+								<code>test_*</code> по матрице F-05; пароль = логин (например{" "}
+								<code>test_de</code>/<code>test_de</code>). Существующих
+								пропускает, пароли не сбрасывает. Роли на группах — через
+								«Синхронизировать роли».
+							</Alert>
+						</>
+					) : null}
 					<Spacer space={16} />
 					<Flex flexDirection="column" gap={12}>
 						<TextField
@@ -601,7 +695,7 @@ export function KeycloakRoleSyncPanel() {
 							fullWidth
 							disabled={pending}
 						/>
-						{mode === "sync" ? (
+						{mode === "sync" || mode === "test-users" ? (
 							<Autocomplete
 								freeSolo
 								selectOnFocus
@@ -617,9 +711,7 @@ export function KeycloakRoleSyncPanel() {
 										setStandPrefix("");
 										return;
 									}
-									setStandPrefix(
-										typeof next === "string" ? next : next.value,
-									);
+									setStandPrefix(typeof next === "string" ? next : next.value);
 								}}
 								onInputChange={(_, next, reason) => {
 									if (reason === "input" || reason === "clear") {
@@ -639,12 +731,46 @@ export function KeycloakRoleSyncPanel() {
 										{...params}
 										label="Префикс стенда (AD)"
 										placeholder="test_ | dev_ | prod_ | пусто"
-										helperText="Выбор или ручной ввод. ИФТ: test_ → /admin_it/test_sum_appadmin. Пусто → /admin_it/sum_appadmin."
+										helperText={
+											mode === "test-users"
+												? "Для /sacfg/{prefix}sum_sacfg и /sarep/{prefix}sum_sarep_*. SUMD: обычно dev_."
+												: "Выбор или ручной ввод. ИФТ: test_ → /admin_it/test_sum_appadmin. Пусто → /admin_it/sum_appadmin."
+										}
 									/>
 								)}
 								fullWidth
 								disabled={pending}
 							/>
+						) : null}
+						{mode === "test-users" && lastTestUsers ? (
+							<Flex
+								flexDirection="column"
+								gap={4}
+								sx={{
+									maxHeight: 240,
+									overflow: "auto",
+									border: "1px solid",
+									borderColor: "divider",
+									borderRadius: 1,
+									p: 1,
+								}}
+							>
+								{lastTestUsers.users.map((u) => (
+									<Typography
+										key={u.username}
+										variant="caption"
+										component="div"
+										sx={{ fontFamily: "monospace" }}
+									>
+										<strong>{u.status}</strong> {u.username}
+										{u.label ? ` — ${u.label}` : ""}
+										{u.groups.length
+											? `: ${u.groups.slice(0, 3).join(", ")}${u.groups.length > 3 ? "…" : ""}`
+											: ""}
+										{u.error ? ` (${u.error})` : ""}
+									</Typography>
+								))}
+							</Flex>
 						) : null}
 						{mode === "restore" ? (
 							<Flex flexDirection="column" gap={8}>
@@ -701,11 +827,7 @@ export function KeycloakRoleSyncPanel() {
 									}
 									label="Groups (path + anketa_* roles)"
 								/>
-								<Flex
-									flexDirection="column"
-									gap={0}
-									style={{ marginLeft: 24 }}
-								>
+								<Flex flexDirection="column" gap={0} style={{ marginLeft: 24 }}>
 									<FormControlLabel
 										control={
 											<Checkbox
@@ -753,11 +875,7 @@ export function KeycloakRoleSyncPanel() {
 									}
 									label="Users (membership / direct anketa_*)"
 								/>
-								<Flex
-									flexDirection="column"
-									gap={0}
-									style={{ marginLeft: 24 }}
-								>
+								<Flex flexDirection="column" gap={0} style={{ marginLeft: 24 }}>
 									<FormControlLabel
 										control={
 											<Checkbox
@@ -805,8 +923,8 @@ export function KeycloakRoleSyncPanel() {
 							<Flex flexDirection="column" gap={4}>
 								<Typography variant="subtitle2">Секции бекапа</Typography>
 								<Typography variant="caption" color="text.secondary">
-									«Realm roles» — справочник ролей realm. «Roles групп /
-									юзеров» — кому эти роли назначены.
+									«Realm roles» — справочник ролей realm. «Roles групп / юзеров»
+									— кому эти роли назначены.
 								</Typography>
 								<FormControlLabel
 									control={
@@ -1036,6 +1154,14 @@ export function KeycloakRoleSyncPanel() {
 							</Alert>
 						</>
 					) : null}
+					{mode === "test-users" && lastTestUsers?.dryRun ? (
+						<>
+							<Spacer space={16} />
+							<Alert severity="info">
+								Dry-run: {summarizeTestUsers(lastTestUsers)}. Если ок — Apply.
+							</Alert>
+						</>
+					) : null}
 				</DialogContent>
 				<DialogActions>
 					<Button onClick={() => setOpen(false)} disabled={pending}>
@@ -1065,6 +1191,24 @@ export function KeycloakRoleSyncPanel() {
 								onClick={() => restoreMutation.mutate(false)}
 							>
 								Apply restore
+							</Button>
+						</>
+					) : mode === "test-users" ? (
+						<>
+							<Button
+								variant="outlined"
+								disabled={pending || !canSubmit}
+								onClick={() => testUsersMutation.mutate(true)}
+							>
+								Dry-run
+							</Button>
+							<Button
+								variant="contained"
+								color="secondary"
+								disabled={pending || !canSubmit}
+								onClick={() => testUsersMutation.mutate(false)}
+							>
+								Apply
 							</Button>
 						</>
 					) : (

@@ -13,6 +13,7 @@ import {
 	V2_KEYCLOAK_ROLE_DESCRIPTIONS,
 	V2_KEYCLOAK_ROLES_TO_ENSURE,
 } from "../constants/v2-keycloak-f05-sync";
+import { resolveV2KeycloakTestUsers } from "../constants/v2-keycloak-test-users";
 
 type KcGroup = {
 	id: string;
@@ -112,6 +113,22 @@ export type V2KeycloakRestoreResult = {
 		remove: string[];
 		status: "ok" | "missing_user" | "updated" | "would_update";
 	}>;
+	warnings: string[];
+};
+
+export type V2KeycloakTestUsersResult = {
+	dryRun: boolean;
+	keycloakUrl: string;
+	realm: string;
+	standPrefix: string;
+	users: Array<{
+		username: string;
+		label: string;
+		groups: string[];
+		status: "created" | "would_create" | "skipped_exists" | "error";
+		error?: string;
+	}>;
+	groupsEnsured: string[];
 	warnings: string[];
 };
 
@@ -1121,6 +1138,214 @@ export class V2KeycloakRoleSyncService {
 			if (batch.length < 100) break;
 		}
 		return map;
+	}
+
+	/** POST /users + reset-password (password = username). Возвращает id. */
+	private async createUserWithPassword(
+		keycloakUrl: string,
+		realm: string,
+		token: string,
+		username: string,
+	): Promise<string> {
+		const url = `${keycloakUrl}/admin/realms/${realm}/users`;
+		const res = await this.safeFetch(url, {
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${token}`,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				username,
+				enabled: true,
+				emailVerified: true,
+				firstName: username,
+				lastName: "test",
+			}),
+		});
+		if (!res.ok && res.status !== 201) {
+			const text = await res.text();
+			throw new ServiceUnavailableException(
+				`Keycloak POST /users → ${res.status}: ${text.slice(0, 400)}`,
+			);
+		}
+
+		let userId = "";
+		const location = res.headers.get("Location") || res.headers.get("location");
+		if (location) {
+			userId = location.split("/").filter(Boolean).pop() || "";
+		}
+		if (!userId) {
+			const found =
+				(await this.api<Array<KcUser & { username?: string }>>(
+					keycloakUrl,
+					realm,
+					token,
+					"GET",
+					`/users?username=${encodeURIComponent(username)}&exact=true&max=1`,
+				)) || [];
+			userId = found[0]?.id || "";
+		}
+		if (!userId) {
+			throw new ServiceUnavailableException(
+				`Keycloak: пользователь ${username} создан, но id не найден`,
+			);
+		}
+
+		await this.api(
+			keycloakUrl,
+			realm,
+			token,
+			"PUT",
+			`/users/${userId}/reset-password`,
+			{
+				type: "password",
+				value: username,
+				temporary: false,
+			},
+		);
+		return userId;
+	}
+
+	/**
+	 * Создать тестовых `test_*` по матрице.
+	 * Существующих пропускает; для новых password = username.
+	 */
+	async provisionTestUsers(options: {
+		adminUsername: string;
+		adminPassword: string;
+		dryRun: boolean;
+		keycloakUrl?: string;
+		realm?: string;
+		adminRealm?: string;
+		standPrefix?: string;
+	}): Promise<V2KeycloakTestUsersResult> {
+		const { keycloakUrl, realm, adminRealm } = this.resolveConnection(options);
+		const standPrefix = options.standPrefix?.trim() ?? "";
+		const users = resolveV2KeycloakTestUsers(standPrefix);
+
+		const token = await this.fetchAdminToken({
+			keycloakUrl,
+			adminRealm,
+			username: options.adminUsername,
+			password: options.adminPassword,
+		});
+
+		const apply = !options.dryRun;
+		const result: V2KeycloakTestUsersResult = {
+			dryRun: options.dryRun,
+			keycloakUrl,
+			realm,
+			standPrefix,
+			users: [],
+			groupsEnsured: [],
+			warnings: [],
+		};
+
+		const neededGroups = [...new Set(users.flatMap((u) => u.groups))];
+		const byPath = await this.loadGroupsByPath(
+			keycloakUrl,
+			realm,
+			token,
+			neededGroups,
+		);
+
+		if (apply) {
+			for (const path of neededGroups.sort(
+				(a, b) =>
+					a.split("/").length - b.split("/").length || a.localeCompare(b),
+			)) {
+				const before = Boolean(byPath[path]?.id);
+				await this.ensureGroupPath(keycloakUrl, realm, token, path, byPath);
+				if (!before && byPath[path]?.id) {
+					result.groupsEnsured.push(path);
+				}
+			}
+		} else {
+			for (const path of neededGroups) {
+				if (!byPath[path]?.id) {
+					result.groupsEnsured.push(path);
+				}
+			}
+		}
+
+		const usersByUsername = await this.loadUsersByUsername(
+			keycloakUrl,
+			realm,
+			token,
+		);
+
+		for (const def of users) {
+			const existing = usersByUsername.get(def.username.toLowerCase());
+			if (existing?.id) {
+				result.users.push({
+					username: def.username,
+					label: def.label,
+					groups: def.groups,
+					status: "skipped_exists",
+				});
+				continue;
+			}
+
+			if (!apply) {
+				result.users.push({
+					username: def.username,
+					label: def.label,
+					groups: def.groups,
+					status: "would_create",
+				});
+				continue;
+			}
+
+			try {
+				const userId = await this.createUserWithPassword(
+					keycloakUrl,
+					realm,
+					token,
+					def.username,
+				);
+				usersByUsername.set(def.username.toLowerCase(), {
+					id: userId,
+					username: def.username,
+				});
+				for (const path of def.groups) {
+					const g = byPath[path];
+					if (!g?.id) {
+						result.warnings.push(
+							`${def.username}: нет группы ${path} для join`,
+						);
+						continue;
+					}
+					await this.api(
+						keycloakUrl,
+						realm,
+						token,
+						"PUT",
+						`/users/${userId}/groups/${g.id}`,
+					);
+				}
+				result.users.push({
+					username: def.username,
+					label: def.label,
+					groups: def.groups,
+					status: "created",
+				});
+			} catch (err) {
+				const message = err instanceof Error ? err.message : String(err);
+				result.warnings.push(`${def.username}: ${message}`);
+				result.users.push({
+					username: def.username,
+					label: def.label,
+					groups: def.groups,
+					status: "error",
+					error: message.slice(0, 300),
+				});
+			}
+		}
+
+		this.logger.log(
+			`Keycloak test-users dryRun=${options.dryRun} standPrefix=${standPrefix} created=${result.users.filter((u) => u.status === "created").length} skipped=${result.users.filter((u) => u.status === "skipped_exists").length}`,
+		);
+		return result;
 	}
 
 	async sync(options: {

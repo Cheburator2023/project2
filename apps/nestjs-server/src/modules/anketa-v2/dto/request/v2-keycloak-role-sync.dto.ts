@@ -130,3 +130,19 @@ export class V2KeycloakRoleSyncDto extends V2KeycloakAdminCredsDto {
 	@IsString()
 	standPrefix?: string;
 }
+
+/** Создание тестовых `test_*` пользователей по матрице (пароль = логин). */
+export class V2KeycloakTestUsersDto extends V2KeycloakAdminCredsDto {
+	/** По умолчанию true — только план без записи. */
+	@IsOptional()
+	@IsBoolean()
+	dryRun?: boolean;
+
+	/**
+	 * Префикс стенда для вложенных `/sacfg/{prefix}sum_sacfg`, `/sarep/{prefix}sum_sarep_*`.
+	 * На SUMD обычно `dev_`.
+	 */
+	@IsOptional()
+	@IsString()
+	standPrefix?: string;
+}
