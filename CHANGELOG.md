@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+# [1.45.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.44.0...v1.45.0) (2026-07-25)
+
+
+### Features
+
+* add test user provisioning functionality to Keycloak role sync ([ef9e670](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/ef9e6707d623627a408766920d89b0a439cb1fbe))
+
 # [1.44.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.43.0...v1.44.0) (2026-07-24)
 
 
