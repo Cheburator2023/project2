@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { RJSFSchema } from "@rjsf/utils";
 import type { V2TypicalWorkParameterDto } from "@smart-anketa/api-contract";
 import {
+	buildLaborCoefficientRowsFromParamValues,
 	buildSchemaWorkParameters,
 	isSchemaLaborParamCandidate,
 	jsonPointerToLogicVarPath,
@@ -332,6 +333,94 @@ describe("buildSchemaWorkParameters", () => {
 			"Разработка",
 			"Доработка",
 		]);
+	});
+
+	it("includes dataProcess Тип работ (field_yJ51GkCR) as labor param with dictionary values", () => {
+		const dictCode = "v2.detailInfo.dataProcess.workType";
+		const hints: FieldPathHint[] = [
+			{
+				pointer: "/detailInfo/dataProcess/field_yJ51GkCR",
+				key: "field_yJ51GkCR",
+				title: "Тип работ",
+				varPath: "detailInfo.dataProcess.field_yJ51GkCR",
+				schemaFieldUid: "field_68f5a4fa-579f-4b89-b4f3-11214957dffe",
+				dictionaryCode: dictCode,
+				codesPreview: null,
+			},
+		];
+
+		const params = buildSchemaWorkParameters({
+			fieldPathHints: hints,
+			uiSchema: {
+				detailInfo: {
+					dataProcess: {
+						"ui:options": { archComponent: "dataProcess" },
+						field_yJ51GkCR: {
+							"ui:options": {
+								dictionaryCode: dictCode,
+								schemaFieldUid:
+									"field_68f5a4fa-579f-4b89-b4f3-11214957dffe",
+							},
+						},
+					},
+				},
+			},
+			jsonSchema: {
+				type: "object",
+				properties: {
+					detailInfo: {
+						type: "object",
+						properties: {
+							dataProcess: {
+								type: "object",
+								properties: {
+									field_yJ51GkCR: {
+										type: "string",
+										title: "Тип работ",
+										enum: [
+											"Разработка",
+											"Доработка",
+											"Настройка",
+											"Без изменений",
+										],
+									},
+								},
+							},
+						},
+					},
+				},
+			} as RJSFSchema,
+			enumMapByCode: {
+				[dictCode]: {
+					enums: [
+						"Разработка",
+						"Доработка",
+						"Настройка",
+						"Без изменений",
+					],
+					enumNames: [
+						"Разработка",
+						"Доработка",
+						"Настройка",
+						"Без изменений",
+					],
+				},
+			},
+		});
+
+		const param = params.find((p) => p.code === "field_yJ51GkCR");
+		expect(param).toBeDefined();
+		expect(param?.dictionaryCode).toBe(dictCode);
+		expect(param?.values.map((v) => v.label)).toEqual([
+			"Разработка",
+			"Доработка",
+			"Настройка",
+			"Без изменений",
+		]);
+		expect(isSchemaLaborParamCandidate(param!)).toBe(true);
+		expect(
+			buildLaborCoefficientRowsFromParamValues(param!, "Источники данных"),
+		).toHaveLength(4);
 	});
 
 	it("includes dictionary-bound fields without inline enum when dictionary is not loaded", () => {
@@ -942,13 +1031,14 @@ describe("schemaLaborParamPickerCaption", () => {
 		).toMatch(/2 значения.*По значениям.*Any-of/i);
 	});
 
-	it("includes schema field path before mode hint", () => {
+	it("includes schema field id and path before mode hint", () => {
 		expect(
 			schemaLaborParamPickerCaption({
 				id: "schema:field",
 				code: "field_8pFvwc-v",
 				name: "Наличие реплики в DAPP",
 				description: "streamDataSources.sourceSystems[].field_8pFvwc-v",
+				schemaPointer: "/streamDataSources/sourceSystems/items/field_8pFvwc-v",
 				values: [
 					{
 						id: "v-true",
@@ -962,7 +1052,7 @@ describe("schemaLaborParamPickerCaption", () => {
 				],
 			}),
 		).toBe(
-			"streamDataSources.sourceSystems[].field_8pFvwc-v · 1 значение · подходит «По значениям» и Any-of",
+			"schema:field · streamDataSources.sourceSystems[].field_8pFvwc-v · 1 значение · подходит «По значениям» и Any-of",
 		);
 	});
 });

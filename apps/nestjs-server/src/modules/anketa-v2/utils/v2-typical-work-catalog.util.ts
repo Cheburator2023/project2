@@ -20,6 +20,30 @@ export function canonicalizeWorkStream(stream: string): string {
 	return LEGACY_SOURCE_STREAMS.has(trimmed) ? V2_SOURCE_STREAM : trimmed;
 }
 
+/**
+ * Стримы, на которые нужно применить настройки каталожной строки.
+ *
+ * Методология часто описывает работу один раз (например, «Модельный стрим»),
+ * а registry разворачивает её на mother + children. Триггеры / labor / archCount
+ * должны попасть на все назначения реестра, иначе list/card на дочернем стриме
+ * показывают «без условий появления».
+ */
+export function resolveCatalogApplyStreams(
+	catalogStream: string,
+	registryStreams?: readonly string[],
+): string[] {
+	const catalog = canonicalizeWorkStream(catalogStream);
+	const fromRegistry = [
+		...new Set(
+			(registryStreams ?? [])
+				.map((stream) => canonicalizeWorkStream(stream.trim()))
+				.filter(Boolean),
+		),
+	];
+	if (fromRegistry.length === 0) return catalog ? [catalog] : [];
+	return fromRegistry;
+}
+
 export function slugParamCode(name: string): string {
 	return name
 		.toLowerCase()

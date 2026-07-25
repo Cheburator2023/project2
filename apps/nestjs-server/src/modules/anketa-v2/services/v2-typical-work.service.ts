@@ -80,6 +80,7 @@ import {
 	groupCatalogWorks,
 	inferTriggerValueLabel,
 	normalizeArchComponentType,
+	resolveCatalogApplyStreams,
 	resolveCatalogTriggerParamCode,
 	resolveCatalogWorkComponent,
 	slugParamCode,
@@ -844,17 +845,23 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 
 		for (const row of catalogRows) {
 			const originalStream = row.stream.trim();
-			const stream = canonicalizeWorkStream(originalStream);
-			streams.add(stream);
-			queueAssignment(stream);
+			const applyStreams = resolveCatalogApplyStreams(
+				originalStream,
+				entry.streams,
+			);
+			for (const stream of applyStreams) {
+				streams.add(stream);
+				queueAssignment(stream);
+			}
 
+			const catalogStream = canonicalizeWorkStream(originalStream);
 			if (row.norm !== null) {
-				const normKey = `${stream}|${row.norm}`;
+				const normKey = `${catalogStream}|${row.norm}`;
 				if (!seenNormKeys.has(normKey)) {
 					seenNormKeys.add(normKey);
 					pendingNorms.push({
 						workId,
-						streamExecutor: stream,
+						streamExecutor: catalogStream,
 						normValue: String(row.norm),
 						validFrom: DEFAULT_NORM_VALID_FROM,
 						validTo: null,
@@ -869,68 +876,6 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 						operator: "exists" as const,
 						values: [] as string[],
 					}));
-			for (const triggerRule of triggerRules) {
-				if (triggerRule.operator === "unresolved") continue;
-				const trimmed = triggerRule.paramName.trim();
-				if (!trimmed) continue;
-				if (isArchCountLaborParamName(trimmed)) {
-					const arch =
-						row.triggerArchCount ??
-						resolveArchCountLaborFromCatalog(trimmed);
-					if (arch?.kind && arch.steps.length > 0) {
-						pendingTriggerArchCounts.set(stream, {
-							kind: arch.kind as NonNullable<
-								V2TypicalWorkCardDto["triggerArchCount"]
-							>["kind"],
-							steps: arch.steps,
-							combinator: row.triggerArchCount?.combinator ?? "and",
-						});
-					}
-					continue;
-				}
-				const coefficientGroup = findCatalogLaborParamGroup(row, trimmed);
-				const paramCode = resolveCatalogTriggerParamCode(row, trimmed);
-				const ruleKey = `${stream}|${paramCode}`;
-				if (seenRuleKeys.has(ruleKey)) continue;
-				seenRuleKeys.add(ruleKey);
-
-				const stored = resolveCatalogTriggerRuleStoredValues(
-					triggerRule,
-					trimmed,
-					originalStream,
-				);
-				const alwaysTrigger = isAlwaysShownTriggerParam(paramCode, trimmed);
-				pendingRules.push({
-					workId,
-					streamExecutor: stream,
-					schemaFieldUid: alwaysTrigger
-						? null
-						: (("schemaFieldUid" in triggerRule
-								? triggerRule.schemaFieldUid?.trim()
-								: null) ??
-							coefficientGroup?.schemaFieldUid?.trim() ??
-							null),
-					paramCode,
-					paramName: alwaysTrigger
-						? V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME
-						: trimmed,
-					operator: stored.operator,
-					valueCode: alwaysTrigger ? null : stored.valueCode,
-					valueLabel: alwaysTrigger ? null : stored.valueLabel,
-					valueCodes: alwaysTrigger ? null : stored.valueCodes,
-				});
-			}
-
-			if (row.triggerArchCount?.kind && row.triggerArchCount.steps.length > 0) {
-				pendingTriggerArchCounts.set(stream, {
-					kind: row.triggerArchCount.kind as NonNullable<
-						V2TypicalWorkCardDto["triggerArchCount"]
-					>["kind"],
-					steps: row.triggerArchCount.steps,
-					combinator: row.triggerArchCount.combinator ?? "and",
-				});
-			}
-
 			const laborSplit = splitCatalogLaborArchCounts({
 				laborParams: row.laborParams,
 				laborCoefficients: row.laborCoefficients,
@@ -943,73 +888,141 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 					steps: arch.steps,
 					paramName: arch.paramName ?? null,
 				})) ?? laborSplit.laborArchCounts;
-			if (catalogLaborArch.length > 0) {
-				const merged = pendingLaborArchCounts.get(stream) ?? [];
-				for (const arch of catalogLaborArch) {
-					if (merged.some((item) => item.kind === arch.kind)) continue;
-					merged.push(arch);
-				}
-				pendingLaborArchCounts.set(stream, merged);
-			}
 
-			for (const paramName of laborSplit.laborParams) {
-				const trimmed = paramName.trim();
-				if (!trimmed) continue;
-				if (isArchCountLaborParamName(trimmed)) continue;
-				const coefficientGroup = findCatalogLaborParamGroup(row, trimmed);
-				const paramCode =
-					coefficientGroup?.paramCode?.trim() || slugParamCode(trimmed);
-				const rowValues = coefficientGroup?.values ?? [];
-				const dictValues =
-					rowValues.length > 0
-						? rowValues
-						: (paramsByName.get(trimmed)?.values ?? []);
-				const laborParamKey = `${stream}|${paramCode}`;
-				if (!seenLaborParamKeys.has(laborParamKey)) {
-					seenLaborParamKeys.add(laborParamKey);
-					pendingLaborParams.push({
+			for (const stream of applyStreams) {
+				for (const triggerRule of triggerRules) {
+					if (triggerRule.operator === "unresolved") continue;
+					const trimmed = triggerRule.paramName.trim();
+					if (!trimmed) continue;
+					if (isArchCountLaborParamName(trimmed)) {
+						const arch =
+							row.triggerArchCount ??
+							resolveArchCountLaborFromCatalog(trimmed);
+						if (arch?.kind && arch.steps.length > 0) {
+							pendingTriggerArchCounts.set(stream, {
+								kind: arch.kind as NonNullable<
+									V2TypicalWorkCardDto["triggerArchCount"]
+								>["kind"],
+								steps: arch.steps,
+								combinator: row.triggerArchCount?.combinator ?? "and",
+							});
+						}
+						continue;
+					}
+					const coefficientGroup = findCatalogLaborParamGroup(row, trimmed);
+					const paramCode = resolveCatalogTriggerParamCode(row, trimmed);
+					const ruleKey = `${stream}|${paramCode}`;
+					if (seenRuleKeys.has(ruleKey)) continue;
+					seenRuleKeys.add(ruleKey);
+
+					const stored = resolveCatalogTriggerRuleStoredValues(
+						triggerRule,
+						trimmed,
+						originalStream,
+					);
+					const alwaysTrigger = isAlwaysShownTriggerParam(paramCode, trimmed);
+					pendingRules.push({
 						workId,
 						streamExecutor: stream,
-						schemaFieldUid: coefficientGroup?.schemaFieldUid?.trim() || null,
+						schemaFieldUid: alwaysTrigger
+							? null
+							: (("schemaFieldUid" in triggerRule
+									? triggerRule.schemaFieldUid?.trim()
+									: null) ??
+								coefficientGroup?.schemaFieldUid?.trim() ??
+								null),
 						paramCode,
-						paramName: trimmed,
-						kind: "by_value",
-						anyOfValueCodes: null,
-						anyOfValueLabels: null,
-						coeffOn: null,
-						coeffOff: null,
+						paramName: alwaysTrigger
+							? V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME
+							: trimmed,
+						operator: stored.operator,
+						valueCode: alwaysTrigger ? null : stored.valueCode,
+						valueLabel: alwaysTrigger ? null : stored.valueLabel,
+						valueCodes: alwaysTrigger ? null : stored.valueCodes,
 					});
 				}
 
-				if (dictValues.length === 0) {
-					const laborKey = `${stream}|${paramCode}|`;
-					if (seenLaborKeys.has(laborKey)) continue;
-					seenLaborKeys.add(laborKey);
-					pendingLaborRows.push({
-						workId,
-						streamExecutor: stream,
-						paramCode,
-						paramName: trimmed,
-						valueCode: null,
-						valueLabel: null,
-						coefficient: "1",
+				if (
+					row.triggerArchCount?.kind &&
+					row.triggerArchCount.steps.length > 0
+				) {
+					pendingTriggerArchCounts.set(stream, {
+						kind: row.triggerArchCount.kind as NonNullable<
+							V2TypicalWorkCardDto["triggerArchCount"]
+						>["kind"],
+						steps: row.triggerArchCount.steps,
+						combinator: row.triggerArchCount.combinator ?? "and",
 					});
-					continue;
 				}
 
-				for (const value of dictValues) {
-					const laborKey = `${stream}|${paramCode}|${value.label}`;
-					if (seenLaborKeys.has(laborKey)) continue;
-					seenLaborKeys.add(laborKey);
-					pendingLaborRows.push({
-						workId,
-						streamExecutor: stream,
-						paramCode,
-						paramName: trimmed,
-						valueCode: slugParamCode(value.label),
-						valueLabel: value.label,
-						coefficient: String(value.coefficient ?? 1),
-					});
+				if (catalogLaborArch.length > 0) {
+					const merged = pendingLaborArchCounts.get(stream) ?? [];
+					for (const arch of catalogLaborArch) {
+						if (merged.some((item) => item.kind === arch.kind)) continue;
+						merged.push(arch);
+					}
+					pendingLaborArchCounts.set(stream, merged);
+				}
+
+				for (const paramName of laborSplit.laborParams) {
+					const trimmed = paramName.trim();
+					if (!trimmed) continue;
+					if (isArchCountLaborParamName(trimmed)) continue;
+					const coefficientGroup = findCatalogLaborParamGroup(row, trimmed);
+					const paramCode =
+						coefficientGroup?.paramCode?.trim() || slugParamCode(trimmed);
+					const rowValues = coefficientGroup?.values ?? [];
+					const dictValues =
+						rowValues.length > 0
+							? rowValues
+							: (paramsByName.get(trimmed)?.values ?? []);
+					const laborParamKey = `${stream}|${paramCode}`;
+					if (!seenLaborParamKeys.has(laborParamKey)) {
+						seenLaborParamKeys.add(laborParamKey);
+						pendingLaborParams.push({
+							workId,
+							streamExecutor: stream,
+							schemaFieldUid: coefficientGroup?.schemaFieldUid?.trim() || null,
+							paramCode,
+							paramName: trimmed,
+							kind: "by_value",
+							anyOfValueCodes: null,
+							anyOfValueLabels: null,
+							coeffOn: null,
+							coeffOff: null,
+						});
+					}
+
+					if (dictValues.length === 0) {
+						const laborKey = `${stream}|${paramCode}|`;
+						if (seenLaborKeys.has(laborKey)) continue;
+						seenLaborKeys.add(laborKey);
+						pendingLaborRows.push({
+							workId,
+							streamExecutor: stream,
+							paramCode,
+							paramName: trimmed,
+							valueCode: null,
+							valueLabel: null,
+							coefficient: "1",
+						});
+						continue;
+					}
+
+					for (const value of dictValues) {
+						const laborKey = `${stream}|${paramCode}|${value.label}`;
+						if (seenLaborKeys.has(laborKey)) continue;
+						seenLaborKeys.add(laborKey);
+						pendingLaborRows.push({
+							workId,
+							streamExecutor: stream,
+							paramCode,
+							paramName: trimmed,
+							valueCode: slugParamCode(value.label),
+							valueLabel: value.label,
+							coefficient: String(value.coefficient ?? 1),
+						});
+					}
 				}
 			}
 		}
@@ -1112,94 +1125,101 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 
 			const workRows = rowsByWorkId.get(work.id) ?? [];
 			for (const catalogRow of catalogRows) {
-				const stream = canonicalizeWorkStream(catalogRow.stream);
-				for (const group of catalogRow.laborCoefficients ?? []) {
-					if (isArchCountLaborParamName(group.paramName)) continue;
-					const normalizedParam = normalizeFactoryLaborLabel(group.paramName);
-					const paramCode =
-						group.paramCode?.trim() ?? slugParamCode(group.paramName);
-					const sameParamRows = workRows.filter(
-						(row) =>
-							row.streamExecutor === stream &&
-							(row.paramCode === paramCode ||
-								normalizeFactoryLaborLabel(
-									row.paramName ?? row.paramCode,
-								) === normalizedParam),
-					);
-
-					for (const value of group.values) {
-						const normalizedValue = normalizeFactoryLaborLabel(value.label);
-						const valueCode = slugParamCode(value.label);
-						const matches = sameParamRows.filter(
+				const applyStreams = resolveCatalogApplyStreams(
+					catalogRow.stream,
+					registry.streams,
+				);
+				for (const stream of applyStreams) {
+					for (const group of catalogRow.laborCoefficients ?? []) {
+						if (isArchCountLaborParamName(group.paramName)) continue;
+						const normalizedParam = normalizeFactoryLaborLabel(group.paramName);
+						const paramCode =
+							group.paramCode?.trim() ?? slugParamCode(group.paramName);
+						const sameParamRows = workRows.filter(
 							(row) =>
-								row.paramCode === paramCode &&
-								(row.valueCode === valueCode ||
+								row.streamExecutor === stream &&
+								(row.paramCode === paramCode ||
 									normalizeFactoryLaborLabel(
-										row.valueLabel ?? row.valueCode,
-									) === normalizedValue),
+										row.paramName ?? row.paramCode,
+									) === normalizedParam),
 						);
-						const coefficient = String(value.coefficient ?? 1);
 
-						if (matches.length === 0) {
-							const duplicateByKey = workRows.find(
+						for (const value of group.values) {
+							const normalizedValue = normalizeFactoryLaborLabel(value.label);
+							const valueCode = slugParamCode(value.label);
+							const matches = sameParamRows.filter(
 								(row) =>
-									row.streamExecutor === stream &&
 									row.paramCode === paramCode &&
-									row.valueCode === valueCode,
+									(row.valueCode === valueCode ||
+										normalizeFactoryLaborLabel(
+											row.valueLabel ?? row.valueCode,
+										) === normalizedValue),
 							);
-							if (duplicateByKey) {
-								let changed = false;
-								if (Number(duplicateByKey.coefficient) !== Number(coefficient)) {
-									duplicateByKey.coefficient = coefficient;
-									changed = true;
+							const coefficient = String(value.coefficient ?? 1);
+
+							if (matches.length === 0) {
+								const duplicateByKey = workRows.find(
+									(row) =>
+										row.streamExecutor === stream &&
+										row.paramCode === paramCode &&
+										row.valueCode === valueCode,
+								);
+								if (duplicateByKey) {
+									let changed = false;
+									if (
+										Number(duplicateByKey.coefficient) !== Number(coefficient)
+									) {
+										duplicateByKey.coefficient = coefficient;
+										changed = true;
+									}
+									if (duplicateByKey.paramName !== group.paramName) {
+										duplicateByKey.paramName = group.paramName;
+										changed = true;
+									}
+									if (duplicateByKey.valueLabel !== value.label) {
+										duplicateByKey.valueLabel = value.label;
+										changed = true;
+									}
+									if (changed) {
+										await this.laborRepository.save(duplicateByKey);
+										synchronized++;
+									}
+									continue;
 								}
-								if (duplicateByKey.paramName !== group.paramName) {
-									duplicateByKey.paramName = group.paramName;
-									changed = true;
-								}
-								if (duplicateByKey.valueLabel !== value.label) {
-									duplicateByKey.valueLabel = value.label;
-									changed = true;
-								}
-								if (changed) {
-									await this.laborRepository.save(duplicateByKey);
-									synchronized++;
-								}
+								const created = await this.laborRepository.save(
+									this.laborRepository.create({
+										workId: work.id,
+										streamExecutor: stream,
+										paramCode,
+										paramName: group.paramName,
+										valueCode,
+										valueLabel: value.label,
+										coefficient,
+									}),
+								);
+								workRows.push(created);
+								synchronized++;
 								continue;
 							}
-							const created = await this.laborRepository.save(
-								this.laborRepository.create({
-									workId: work.id,
-									streamExecutor: stream,
-									paramCode,
-									paramName: group.paramName,
-									valueCode,
-									valueLabel: value.label,
-									coefficient,
-								}),
-							);
-							workRows.push(created);
-							synchronized++;
-							continue;
-						}
 
-						for (const row of matches) {
-							let changed = false;
-							if (row.paramCode !== paramCode) {
-								row.paramCode = paramCode;
-								changed = true;
+							for (const row of matches) {
+								let changed = false;
+								if (row.paramCode !== paramCode) {
+									row.paramCode = paramCode;
+									changed = true;
+								}
+								if (row.paramName !== group.paramName) {
+									row.paramName = group.paramName;
+									changed = true;
+								}
+								if (Number(row.coefficient) !== Number(coefficient)) {
+									row.coefficient = coefficient;
+									changed = true;
+								}
+								if (!changed) continue;
+								await this.laborRepository.save(row);
+								synchronized++;
 							}
-							if (row.paramName !== group.paramName) {
-								row.paramName = group.paramName;
-								changed = true;
-							}
-							if (Number(row.coefficient) !== Number(coefficient)) {
-								row.coefficient = coefficient;
-								changed = true;
-							}
-							if (!changed) continue;
-							await this.laborRepository.save(row);
-							synchronized++;
 						}
 					}
 				}
@@ -1351,7 +1371,10 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 			const workRules = rulesByWorkId.get(work.id) ?? [];
 			for (const catalogRow of catalogRows) {
 				const originalStream = catalogRow.stream.trim();
-				const stream = canonicalizeWorkStream(originalStream);
+				const applyStreams = resolveCatalogApplyStreams(
+					originalStream,
+					registry.streams,
+				);
 				const triggerRules = catalogRow.triggerRules?.length
 					? catalogRow.triggerRules
 					: catalogRow.triggerParams.map((paramName) => ({
@@ -1360,16 +1383,18 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 							values: [] as string[],
 						}));
 
-				for (const triggerRule of triggerRules) {
-					const changed = await this.upsertFactoryCatalogTriggerRule({
-						work,
-						catalogRow,
-						triggerRule,
-						stream,
-						originalStream,
-						workRules,
-					});
-					synchronized += changed;
+				for (const stream of applyStreams) {
+					for (const triggerRule of triggerRules) {
+						const changed = await this.upsertFactoryCatalogTriggerRule({
+							work,
+							catalogRow,
+							triggerRule,
+							stream,
+							originalStream,
+							workRules,
+						});
+						synchronized += changed;
+					}
 				}
 			}
 		}
@@ -1419,172 +1444,181 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 			if (catalogRows.length === 0) continue;
 
 			for (const catalogRow of catalogRows) {
-				const stream = canonicalizeWorkStream(catalogRow.stream);
+				const applyStreams = resolveCatalogApplyStreams(
+					catalogRow.stream,
+					registry.streams,
+				);
 
-				for (const rule of existingRules.filter(
-					(row) => row.workId === work.id && row.streamExecutor === stream,
-				)) {
-					if (isArchCountLaborParamName(rule.paramName ?? "")) {
-						await this.ruleRepository.delete(rule.id);
-						synchronized++;
-						continue;
-					}
-					const paramCode = resolveCatalogTriggerParamCode(
-						catalogRow,
-						rule.paramName ?? rule.paramCode,
-					);
-					const coefficientGroup = findCatalogLaborParamGroup(
-						catalogRow,
-						rule.paramName ?? rule.paramCode,
-					);
-					const schemaFieldUid =
-						coefficientGroup?.schemaFieldUid?.trim() ?? rule.schemaFieldUid;
-					if (rule.paramCode !== paramCode) {
-						const duplicate = existingRules.find(
-							(row) =>
-								row.id !== rule.id &&
-								row.workId === work.id &&
-								row.streamExecutor === stream &&
-								row.paramCode === paramCode,
-						);
-						if (duplicate) {
-							if (
-								!duplicate.valueLabel &&
-								!duplicate.valueCode &&
-								(rule.valueLabel || rule.valueCode)
-							) {
-								duplicate.valueCode = rule.valueCode;
-								duplicate.valueLabel = rule.valueLabel;
-								duplicate.valueCodes = rule.valueCodes;
-								duplicate.operator = rule.operator;
-								await this.ruleRepository.save(duplicate);
-								synchronized++;
-							}
+				for (const stream of applyStreams) {
+					for (const rule of existingRules.filter(
+						(row) => row.workId === work.id && row.streamExecutor === stream,
+					)) {
+						if (isArchCountLaborParamName(rule.paramName ?? "")) {
 							await this.ruleRepository.delete(rule.id);
 							synchronized++;
 							continue;
 						}
+						const paramCode = resolveCatalogTriggerParamCode(
+							catalogRow,
+							rule.paramName ?? rule.paramCode,
+						);
+						const coefficientGroup = findCatalogLaborParamGroup(
+							catalogRow,
+							rule.paramName ?? rule.paramCode,
+						);
+						const schemaFieldUid =
+							coefficientGroup?.schemaFieldUid?.trim() ?? rule.schemaFieldUid;
+						if (rule.paramCode !== paramCode) {
+							const duplicate = existingRules.find(
+								(row) =>
+									row.id !== rule.id &&
+									row.workId === work.id &&
+									row.streamExecutor === stream &&
+									row.paramCode === paramCode,
+							);
+							if (duplicate) {
+								if (
+									!duplicate.valueLabel &&
+									!duplicate.valueCode &&
+									(rule.valueLabel || rule.valueCode)
+								) {
+									duplicate.valueCode = rule.valueCode;
+									duplicate.valueLabel = rule.valueLabel;
+									duplicate.valueCodes = rule.valueCodes;
+									duplicate.operator = rule.operator;
+									await this.ruleRepository.save(duplicate);
+									synchronized++;
+								}
+								await this.ruleRepository.delete(rule.id);
+								synchronized++;
+								continue;
+							}
+						}
+						if (
+							rule.paramCode !== paramCode ||
+							rule.schemaFieldUid !== schemaFieldUid
+						) {
+							rule.paramCode = paramCode;
+							rule.schemaFieldUid = schemaFieldUid ?? null;
+							await this.ruleRepository.save(rule);
+							synchronized++;
+						}
 					}
-					if (
-						rule.paramCode !== paramCode ||
-						rule.schemaFieldUid !== schemaFieldUid
-					) {
-						rule.paramCode = paramCode;
-						rule.schemaFieldUid = schemaFieldUid ?? null;
-						await this.ruleRepository.save(rule);
-						synchronized++;
-					}
-				}
 
-				for (const laborParam of existingLaborParams.filter(
-					(row) => row.workId === work.id && row.streamExecutor === stream,
-				)) {
-					if (isArchCountLaborParamName(laborParam.paramName ?? "")) continue;
-					const coefficientGroup = findCatalogLaborParamGroup(
-						catalogRow,
-						laborParam.paramName ?? laborParam.paramCode,
-					);
-					const paramCode =
-						coefficientGroup?.paramCode?.trim() ??
-						resolveCatalogTriggerParamCode(
+					for (const laborParam of existingLaborParams.filter(
+						(row) => row.workId === work.id && row.streamExecutor === stream,
+					)) {
+						if (isArchCountLaborParamName(laborParam.paramName ?? "")) continue;
+						const coefficientGroup = findCatalogLaborParamGroup(
 							catalogRow,
 							laborParam.paramName ?? laborParam.paramCode,
 						);
-					const schemaFieldUid =
-						coefficientGroup?.schemaFieldUid?.trim() ??
-						laborParam.schemaFieldUid;
-					if (laborParam.paramCode !== paramCode) {
-						const duplicate = existingLaborParams.find(
+						const paramCode =
+							coefficientGroup?.paramCode?.trim() ??
+							resolveCatalogTriggerParamCode(
+								catalogRow,
+								laborParam.paramName ?? laborParam.paramCode,
+							);
+						const schemaFieldUid =
+							coefficientGroup?.schemaFieldUid?.trim() ??
+							laborParam.schemaFieldUid;
+						if (laborParam.paramCode !== paramCode) {
+							const duplicate = existingLaborParams.find(
+								(row) =>
+									row.id !== laborParam.id &&
+									row.workId === work.id &&
+									row.streamExecutor === stream &&
+									row.paramCode === paramCode,
+							);
+							if (duplicate) {
+								await this.laborParamRepository.delete(laborParam.id);
+								if (
+									schemaFieldUid &&
+									duplicate.schemaFieldUid !== schemaFieldUid
+								) {
+									duplicate.schemaFieldUid = schemaFieldUid;
+									await this.laborParamRepository.save(duplicate);
+								}
+								synchronized++;
+								continue;
+							}
+						}
+						if (
+							laborParam.paramCode !== paramCode ||
+							laborParam.schemaFieldUid !== schemaFieldUid
+						) {
+							laborParam.paramCode = paramCode;
+							laborParam.schemaFieldUid = schemaFieldUid ?? null;
+							await this.laborParamRepository.save(laborParam);
+							synchronized++;
+						}
+					}
+
+					for (const laborRow of existingLaborRows.filter(
+						(row) => row.workId === work.id && row.streamExecutor === stream,
+					)) {
+						if (isArchCountLaborParamName(laborRow.paramName ?? "")) continue;
+						const paramCode = resolveCatalogTriggerParamCode(
+							catalogRow,
+							laborRow.paramName ?? laborRow.paramCode,
+						);
+						if (laborRow.paramCode === paramCode) continue;
+						const duplicate = existingLaborRows.find(
 							(row) =>
-								row.id !== laborParam.id &&
+								row.id !== laborRow.id &&
 								row.workId === work.id &&
 								row.streamExecutor === stream &&
-								row.paramCode === paramCode,
+								row.paramCode === paramCode &&
+								row.valueCode === laborRow.valueCode,
 						);
 						if (duplicate) {
-							await this.laborParamRepository.delete(laborParam.id);
-							if (
-								schemaFieldUid &&
-								duplicate.schemaFieldUid !== schemaFieldUid
-							) {
-								duplicate.schemaFieldUid = schemaFieldUid;
-								await this.laborParamRepository.save(duplicate);
-							}
+							await this.laborRepository.delete(laborRow.id);
 							synchronized++;
 							continue;
 						}
-					}
-					if (
-						laborParam.paramCode !== paramCode ||
-						laborParam.schemaFieldUid !== schemaFieldUid
-					) {
-						laborParam.paramCode = paramCode;
-						laborParam.schemaFieldUid = schemaFieldUid ?? null;
-						await this.laborParamRepository.save(laborParam);
+						laborRow.paramCode = paramCode;
+						await this.laborRepository.save(laborRow);
 						synchronized++;
 					}
-				}
 
-				for (const laborRow of existingLaborRows.filter(
-					(row) => row.workId === work.id && row.streamExecutor === stream,
-				)) {
-					if (isArchCountLaborParamName(laborRow.paramName ?? "")) continue;
-					const paramCode = resolveCatalogTriggerParamCode(
-						catalogRow,
-						laborRow.paramName ?? laborRow.paramCode,
-					);
-					if (laborRow.paramCode === paramCode) continue;
-					const duplicate = existingLaborRows.find(
-						(row) =>
-							row.id !== laborRow.id &&
-							row.workId === work.id &&
-							row.streamExecutor === stream &&
-							row.paramCode === paramCode &&
-							row.valueCode === laborRow.valueCode,
-					);
-					if (duplicate) {
-						await this.laborRepository.delete(laborRow.id);
-						synchronized++;
-						continue;
-					}
-					laborRow.paramCode = paramCode;
-					await this.laborRepository.save(laborRow);
-					synchronized++;
-				}
-
-				if (
-					catalogRow.triggerArchCount?.kind &&
-					catalogRow.triggerArchCount.steps.length > 0
-				) {
-					const assignment = assignments.find(
-						(row) => row.workId === work.id && row.streamExecutor === stream,
-					);
 					if (
-						assignment &&
-						(assignment.triggerArchCountKind !==
-							catalogRow.triggerArchCount.kind ||
-							JSON.stringify(assignment.triggerArchCountSteps) !==
-								JSON.stringify(catalogRow.triggerArchCount.steps))
+						catalogRow.triggerArchCount?.kind &&
+						catalogRow.triggerArchCount.steps.length > 0
 					) {
-						assignment.triggerArchCountKind =
-							catalogRow.triggerArchCount.kind;
-						assignment.triggerArchCountSteps =
-							catalogRow.triggerArchCount.steps;
-						assignment.triggerArchCountCombinator =
-							catalogRow.triggerArchCount.combinator ?? "and";
-						await this.assignmentRepository.save(assignment);
-						synchronized++;
-					}
-				} else {
-					const assignment = assignments.find(
-						(row) => row.workId === work.id && row.streamExecutor === stream,
-					);
-					if (assignment?.triggerArchCountKind) {
-						assignment.triggerArchCountKind = null;
-						assignment.triggerArchCountSteps = null;
-						assignment.triggerArchCountCombinator = "and";
-						await this.assignmentRepository.save(assignment);
-						synchronized++;
+						const assignment = assignments.find(
+							(row) =>
+								row.workId === work.id && row.streamExecutor === stream,
+						);
+						if (
+							assignment &&
+							(assignment.triggerArchCountKind !==
+								catalogRow.triggerArchCount.kind ||
+								JSON.stringify(assignment.triggerArchCountSteps) !==
+									JSON.stringify(catalogRow.triggerArchCount.steps) ||
+								(assignment.triggerArchCountCombinator ?? "and") !==
+									(catalogRow.triggerArchCount.combinator ?? "and"))
+						) {
+							assignment.triggerArchCountKind =
+								catalogRow.triggerArchCount.kind;
+							assignment.triggerArchCountSteps =
+								catalogRow.triggerArchCount.steps;
+							assignment.triggerArchCountCombinator =
+								catalogRow.triggerArchCount.combinator ?? "and";
+							await this.assignmentRepository.save(assignment);
+							synchronized++;
+						}
+					} else {
+						const assignment = assignments.find(
+							(row) =>
+								row.workId === work.id && row.streamExecutor === stream,
+						);
+						if (assignment?.triggerArchCountKind) {
+							assignment.triggerArchCountKind = null;
+							assignment.triggerArchCountSteps = null;
+							assignment.triggerArchCountCombinator = "and";
+							await this.assignmentRepository.save(assignment);
+							synchronized++;
+						}
 					}
 				}
 			}
@@ -1636,7 +1670,10 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 			if (catalogRows.length === 0) continue;
 
 			for (const catalogRow of catalogRows) {
-				const stream = canonicalizeWorkStream(catalogRow.stream);
+				const applyStreams = resolveCatalogApplyStreams(
+					catalogRow.stream,
+					registry.streams,
+				);
 				const split = splitCatalogLaborArchCounts({
 					laborParams: catalogRow.laborParams,
 					laborCoefficients: catalogRow.laborCoefficients,
@@ -1646,36 +1683,39 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 						kind: arch.kind,
 						paramName: arch.paramName ?? null,
 						steps: arch.steps,
-					})) ?? split.laborArchCounts.map((arch) => ({
+					})) ??
+					split.laborArchCounts.map((arch) => ({
 						kind: arch.kind,
 						paramName: arch.paramName ?? null,
 						steps: arch.steps,
 					}));
 				if (catalogLaborArch.length === 0) continue;
 
-				const assignment = assignmentsByWorkId
-					.get(work.id)
-					?.find((row) => row.streamExecutor === stream);
-				if (!assignment) continue;
+				for (const stream of applyStreams) {
+					const assignment = assignmentsByWorkId
+						.get(work.id)
+						?.find((row) => row.streamExecutor === stream);
+					if (!assignment) continue;
 
-				if (!assignment.laborArchCounts?.length) {
-					assignment.laborArchCounts = catalogLaborArch;
-					await this.assignmentRepository.save(assignment);
-					synchronized++;
-				}
+					if (!assignment.laborArchCounts?.length) {
+						assignment.laborArchCounts = catalogLaborArch;
+						await this.assignmentRepository.save(assignment);
+						synchronized++;
+					}
 
-				for (const archParamName of catalogRow.laborParams) {
-					if (!isArchCountLaborParamName(archParamName)) continue;
-					await this.laborRepository.delete({
-						workId: work.id,
-						streamExecutor: stream,
-						paramName: archParamName.trim(),
-					});
-					await this.laborParamRepository.delete({
-						workId: work.id,
-						streamExecutor: stream,
-						paramName: archParamName.trim(),
-					});
+					for (const archParamName of catalogRow.laborParams) {
+						if (!isArchCountLaborParamName(archParamName)) continue;
+						await this.laborRepository.delete({
+							workId: work.id,
+							streamExecutor: stream,
+							paramName: archParamName.trim(),
+						});
+						await this.laborParamRepository.delete({
+							workId: work.id,
+							streamExecutor: stream,
+							paramName: archParamName.trim(),
+						});
+					}
 				}
 			}
 		}
@@ -1975,7 +2015,16 @@ export class V2TypicalWorkService {
 				const streamForStatus =
 					streamFilter && streams.includes(streamFilter)
 						? streamFilter
-						: (streams[0] ?? streamFilter ?? "");
+						: pickStreamForListTriggerStatus(
+								streams,
+								workRules,
+								workAssignments,
+								triggerStatusCatalog,
+								atDate,
+							) ??
+							streams[0] ??
+							streamFilter ??
+							"";
 
 				const normsDto = workNorms.map(mapNormEntity);
 				const normsByStream: Record<string, number | null> = {};
@@ -2624,6 +2673,36 @@ function resolveTriggerStatus(
 		undefined,
 		triggerArchCount,
 	);
+}
+
+/**
+ * Для multi-stream работ (модельный стрим + children) статус списка не должен
+ * зависеть от произвольного `streams[0]`: предпочитаем стрим с настроенными
+ * условиями появления.
+ */
+function pickStreamForListTriggerStatus(
+	streams: string[],
+	workRules: V2TypicalWorkRuleEntity[],
+	workAssignments: V2TypicalWorkAssignmentEntity[],
+	triggerStatusCatalog: WorkTriggerStatusCatalogParam[],
+	atDate: string,
+): string | null {
+	if (streams.length === 0) return null;
+	let fallback: string | null = streams[0] ?? null;
+	for (const stream of streams) {
+		const status = resolveTriggerStatus(
+			workRules.filter((rule) => rule.streamExecutor === stream),
+			triggerStatusCatalog,
+			atDate,
+			mapTriggerArchCountEntity(
+				workAssignments.find((row) => row.streamExecutor === stream),
+			),
+		);
+		if (status === "no_triggers") continue;
+		if (status === "invalid") return stream;
+		fallback = stream;
+	}
+	return fallback;
 }
 
 function mapNormEntity(entity: V2TypicalWorkNormEntity): V2TypicalWorkNormDto {

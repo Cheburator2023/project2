@@ -103,7 +103,10 @@ export type WorkCoefficientCatalogSourceParam = {
         label: string;
     }>;
 };
-export declare function isWorkSchemaLaborParamCandidate(param: Pick<WorkSchemaParamDef, "values">): boolean;
+export declare function isWorkSchemaLaborParamCandidate(param: Pick<WorkSchemaParamDef, "values"> & {
+    dictionaryCode?: string | null;
+    numeric?: boolean;
+}): boolean;
 /** Каталог коэффициентов как в TypicalWorkEditableCard.coefficientCatalog. */
 export declare function buildWorkCoefficientCatalog(input: {
     schemaParams: WorkSchemaParamDef[];

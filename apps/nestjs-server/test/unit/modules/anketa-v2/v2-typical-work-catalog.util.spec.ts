@@ -1,8 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { V2_MODEL_STREAM_REGISTRY_STREAM_NAMES } from "@smart-anketa/api-contract";
 import {
 	extractWorkStage,
 	findCatalogRowsForRegistryWork,
 	groupCatalogWorks,
+	resolveCatalogApplyStreams,
 } from "../../../../src/modules/anketa-v2/utils/v2-typical-work-catalog.util";
 
 describe("v2-typical-work-catalog util", () => {
@@ -34,6 +35,46 @@ describe("v2-typical-work-catalog util", () => {
 		expect(rows).toHaveLength(1);
 		expect(rows[0]?.formulaText).toContain("архкоэф(Модели");
 		expect(rows[0]?.triggerRules?.[0]?.paramName).toBe("Каналы внедрения");
+	});
+
+	it("fans out model-stream catalog settings to mother + children", () => {
+		expect(
+			resolveCatalogApplyStreams(
+				"Модельный стрим",
+				V2_MODEL_STREAM_REGISTRY_STREAM_NAMES,
+			),
+		).toEqual([...V2_MODEL_STREAM_REGISTRY_STREAM_NAMES]);
+		expect(resolveCatalogApplyStreams("Модельный стрим")).toEqual([
+			"Модельный стрим",
+		]);
+		expect(
+			resolveCatalogApplyStreams("ИД. Внутренний", ["Источники данных"]),
+		).toEqual(["Источники данных"]);
+	});
+
+	it("model works without triggerRules still have triggerArchCount in catalog", () => {
+		const groups = groupCatalogWorks();
+		const stage01 = findCatalogRowsForRegistryWork(
+			{
+				name: "01. Постановка задачи",
+				archComponentType: "Модельный сервис",
+			},
+			groups,
+		);
+		expect(stage01[0]?.triggerArchCount?.kind).toBe("modelService");
+		expect(stage01[0]?.triggerArchCount?.steps?.[0]).toMatchObject({
+			count: 1,
+			coefficient: 1,
+		});
+
+		const stage05 = findCatalogRowsForRegistryWork(
+			{
+				name: "05. Разработка модели",
+				archComponentType: "Модель",
+			},
+			groups,
+		);
+		expect(stage05[0]?.triggerArchCount?.kind).toBe("model");
 	});
 
 	it("does not merge same-name works from different stages", () => {

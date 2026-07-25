@@ -149,13 +149,38 @@ describe("v2 factory snapshot", () => {
 					.map((group) => ({ work, group })),
 		);
 
-		expect(bindings).toHaveLength(24);
+		expect(bindings).toHaveLength(25);
 		for (const { work, group } of bindings) {
-			expect(group.values.map((value) => value.label)).toEqual([
-				"Разработка",
-				"Доработка",
-				"Настройка",
-			]);
+			const labels = group.values.map((value) => value.label);
+			const isInternal212Process =
+				work.stream === "ИД. Внутренний" &&
+				work.stage === "Этап 212" &&
+				work.component.includes("Процесс");
+			const isInternal212Vitrina =
+				work.stream === "ИД. Внутренний" &&
+				work.stage === "Этап 212" &&
+				work.component.includes("Объект");
+
+			if (isInternal212Process) {
+				// CSV etalon: «Без изменений» вместо «Настройка»
+				expect(labels).toEqual([
+					"Разработка",
+					"Доработка",
+					"Без изменений",
+				]);
+			} else {
+				expect(labels).toEqual([
+					"Разработка",
+					"Доработка",
+					"Настройка",
+				]);
+			}
+			if (isInternal212Vitrina) {
+				// CSV: все типы работ ×1
+				expect(group.values.map((value) => value.coefficient)).toEqual([
+					1, 1, 1,
+				]);
+			}
 			if (work.component.includes("Процесс")) {
 				expect(group).toMatchObject({
 					paramCode: "field_yJ51GkCR",
@@ -170,6 +195,78 @@ describe("v2 factory snapshot", () => {
 				expect(work.formulaText).toContain("коэф(workType)");
 			}
 		}
+	});
+
+	it("внутренние источники 210–212: нормы и триггеры по CSV-эталону", () => {
+		const byName = (fragment: string) =>
+			V2_FACTORY_TYPICAL_WORKS_SNAPSHOT.typicalWorks.find(
+				(row) =>
+					row.stream === "ИД. Внутренний" &&
+					row.name.includes(fragment),
+			);
+
+		const stage210 = byName(
+			"Исследование и описание внутренних источников",
+		);
+		expect(stage210?.norm).toBe(14);
+		expect(stage210?.triggerRules).toEqual([
+			expect.objectContaining({
+				paramCode: "type",
+				values: ["Внутренний"],
+			}),
+		]);
+
+		const stage211Process = byName(
+			"процесса загрузки данных для внутренних",
+		);
+		expect(stage211Process?.norm).toBe(22);
+		expect(
+			stage211Process?.laborCoefficients?.some(
+				(g) => g.paramName === "Сложность реализации",
+			),
+		).toBe(true);
+
+		const stage211Vitrina = byName("витрины для внутренних данных");
+		expect(stage211Vitrina?.norm).toBe(22);
+		const clarify = stage211Vitrina?.laborCoefficients?.find((g) =>
+			g.paramName.includes("уточнение требований"),
+		);
+		expect(clarify?.values.map((v) => v.label)).toEqual(["Да", "Нет"]);
+		expect(clarify?.values.map((v) => v.coefficient)).toEqual([10, 1]);
+
+		const stage212Process = byName(
+			"процесса загрузки внутренних данных",
+		);
+		expect(stage212Process?.norm).toBe(22);
+		expect(stage212Process?.triggerRules).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					paramCode: "type",
+					values: ["Внутренний"],
+				}),
+				expect.objectContaining({
+					values: ["Да"],
+				}),
+			]),
+		);
+		const processWorkType = stage212Process?.laborCoefficients?.find(
+			(g) => g.paramName === "Тип работ",
+		);
+		expect(processWorkType?.values).toEqual([
+			{ label: "Разработка", coefficient: 1 },
+			{ label: "Доработка", coefficient: 0.8 },
+			{ label: "Без изменений", coefficient: 0.5 },
+		]);
+
+		const stage212Vitrina = byName("витрины внутренних данных");
+		const vitrinaWorkType = stage212Vitrina?.laborCoefficients?.find(
+			(g) => g.paramName === "Тип работ",
+		);
+		expect(vitrinaWorkType?.values).toEqual([
+			{ label: "Разработка", coefficient: 1 },
+			{ label: "Доработка", coefficient: 1 },
+			{ label: "Настройка", coefficient: 1 },
+		]);
 	});
 
 	it("dictionariesSnapshot из v35", () => {

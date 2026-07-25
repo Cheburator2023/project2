@@ -730,9 +730,16 @@ export type WorkCoefficientCatalogSourceParam = {
 };
 
 export function isWorkSchemaLaborParamCandidate(
-	param: Pick<WorkSchemaParamDef, "values">,
+	param: Pick<WorkSchemaParamDef, "values"> & {
+		dictionaryCode?: string | null;
+		numeric?: boolean;
+	},
 ): boolean {
-	return (param.values?.length ?? 0) > 0;
+	return (
+		(param.values?.length ?? 0) > 0 ||
+		param.numeric === true ||
+		Boolean(param.dictionaryCode?.trim())
+	);
 }
 
 function mergeCatalogValues(

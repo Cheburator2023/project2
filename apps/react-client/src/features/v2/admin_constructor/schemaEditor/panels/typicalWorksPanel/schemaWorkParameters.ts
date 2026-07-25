@@ -130,13 +130,47 @@ function schemaLaborParamModeHint(
 	return "Нет дискретных значений — Any-of, скорее всего, не подойдёт";
 }
 
-/** Подсказка в селекте «Параметр трудоёмкости» — путь к полю и уместный режим. */
+/** Подсказка в селекте «Параметр трудоёмкости» — id поля, путь и уместный режим. */
 export function schemaLaborParamPickerCaption(
 	param: SchemaBuiltWorkParameterDto,
 ): string {
-	const path = param.description?.trim();
+	const ref = resolveSchemaParamFieldRef(param);
+	const pathParts = [
+		param.id,
+		ref.varPath || param.description?.trim() || null,
+		ref.fieldKey !== param.code ? ref.fieldKey : null,
+	].filter((part): part is string => Boolean(part?.trim()));
+	const path = pathParts.join(" · ");
 	const modeHint = schemaLaborParamModeHint(param);
 	return path ? `${path} · ${modeHint}` : modeHint;
+}
+
+/** Строки коэффициентов «по значениям» из значений параметра схемы / справочника. */
+export function buildLaborCoefficientRowsFromParamValues(
+	param: Pick<V2TypicalWorkParameterDto, "code" | "name" | "values">,
+	streamExecutor: string,
+	paramName?: string | null,
+): Array<{
+	id: string;
+	streamExecutor: string;
+	paramCode: string;
+	paramName: string;
+	valueCode: string;
+	valueLabel: string;
+	coefficient: number;
+}> {
+	if (param.values.length === 0 || param.values.length > 24) return [];
+	const name = paramName?.trim() || param.name;
+	const stamp = Date.now();
+	return param.values.map((value, index) => ({
+		id: `new-${stamp}-${value.code}-${index}`,
+		streamExecutor,
+		paramCode: param.code,
+		paramName: name,
+		valueCode: value.code,
+		valueLabel: value.label,
+		coefficient: 1,
+	}));
 }
 
 export function resolveWorkArchSchemaType(

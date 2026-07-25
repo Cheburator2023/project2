@@ -498,7 +498,9 @@ function isWorkCoefficientValueAvailable(row, catalog, atDate) {
         (!atDate || isTypicalWorkParameterValueActiveOnDate(value, atDate)));
 }
 function isWorkSchemaLaborParamCandidate(param) {
-    return (param.values?.length ?? 0) > 0;
+    return ((param.values?.length ?? 0) > 0 ||
+        param.numeric === true ||
+        Boolean(param.dictionaryCode?.trim()));
 }
 function mergeCatalogValues(left, right) {
     const byKey = new Map();

@@ -51,6 +51,7 @@ import {
 import { useV2ImplementationStreamCatalog } from "@react-client/common/api/queries/v2-streams";
 import { useSchemaEditor } from "../../SchemaEditorContext";
 import {
+	buildLaborCoefficientRowsFromParamValues,
 	buildSchemaWorkParameters,
 	findSchemaWorkParameter,
 	isSchemaLaborParamCandidate,
@@ -558,6 +559,38 @@ export function TypicalWorkEditableCard({
 		scheduleSave(cardToPatchDto(withDerived, templateVersionId));
 	};
 
+	/** Справочник догрузился после добавления параметра — заполняем пустые коэфф. */
+	useEffect(() => {
+		if (!draft) return;
+		let changed = false;
+		const nextLabor = draft.laborParams.map((group) => {
+			if ((group.kind ?? "by_value") !== "by_value") return group;
+			if (group.coefficients.length > 0) return group;
+			const param = resolveLaborParamOption(group.paramCode, group.paramName);
+			if (!param?.values.length) return group;
+			if (
+				resolveNumericLaborPresetRows(param.name ?? group.paramName) != null
+			) {
+				return group;
+			}
+			const coefficients = buildLaborCoefficientRowsFromParamValues(
+				param,
+				draft.streamExecutor,
+				group.paramName ?? param.name,
+			);
+			if (coefficients.length === 0) return group;
+			changed = true;
+			return {
+				...group,
+				schemaFieldUid: group.schemaFieldUid ?? param.schemaFieldUid ?? null,
+				coefficients,
+			};
+		});
+		if (!changed) return;
+		commitDraft({ ...draft, laborParams: nextLabor });
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- только при появлении values у paramOptions
+	}, [paramOptions, draft?.id, draft?.laborParams, draft?.streamExecutor]);
+
 	/** Лёгкий путь для триггеров: без пересборки формулы/норм на каждый клик в select. */
 	const commitTriggerPatch = useCallback(
 		(
@@ -672,17 +705,11 @@ export function TypicalWorkEditableCard({
 									paramCode: picked.code,
 									paramName,
 								})
-							: picked.values.length > 24
-								? []
-								: picked.values.map((v) => ({
-									id: `new-${Date.now()}-${v.code}`,
-									streamExecutor: draft.streamExecutor,
-									paramCode: picked.code,
+							: buildLaborCoefficientRowsFromParamValues(
+									picked,
+									draft.streamExecutor,
 									paramName,
-									valueCode: v.code,
-									valueLabel: v.label,
-									coefficient: 1,
-								})),
+								),
 				};
 		commitDraft({
 			...draft,
@@ -1453,20 +1480,12 @@ export function TypicalWorkEditableCard({
 																						},
 																					);
 																				}
-																				return (param?.values ?? []).length > 24
-																					? []
-																					: (param?.values ?? []).map(
-																							(v) => ({
-																								id: `new-${Date.now()}-${v.code}`,
-																								streamExecutor:
-																									draft.streamExecutor,
-																								paramCode: g.paramCode,
-																								paramName: g.paramName,
-																								valueCode: v.code,
-																								valueLabel: v.label,
-																								coefficient: 1,
-																							}),
-																						);
+																				if (!param) return [];
+																				return buildLaborCoefficientRowsFromParamValues(
+																					param,
+																					draft.streamExecutor,
+																					g.paramName ?? param.name,
+																				);
 																			})(),
 															};
 														});
@@ -1928,6 +1947,58 @@ export function TypicalWorkEditableCard({
 														>
 															Добавить значение или диапазон
 														</Button>
+													) : null}
+													{!numericLaborRows &&
+													coeffCount === 0 &&
+													(paramMeta?.values.length ?? 0) > 0 ? (
+														<Button
+															size="small"
+															startIcon={<AddIcon />}
+															sx={{ mt: 1 }}
+															onClick={() => {
+																if (!paramMeta) return;
+																const nextGroups = draft.laborParams.map(
+																	(g) =>
+																		g.paramCode === group.paramCode
+																			? {
+																					...g,
+																					schemaFieldUid:
+																						g.schemaFieldUid ??
+																						paramMeta.schemaFieldUid ??
+																						null,
+																					coefficients:
+																						buildLaborCoefficientRowsFromParamValues(
+																							paramMeta,
+																							draft.streamExecutor,
+																							g.paramName ??
+																								paramMeta.name,
+																						),
+																				}
+																			: g,
+																);
+																commitDraft({
+																	...draft,
+																	laborParams: nextGroups,
+																});
+															}}
+														>
+															Заполнить из справочника схемы
+														</Button>
+													) : null}
+													{!numericLaborRows &&
+													coeffCount === 0 &&
+													(paramMeta?.values.length ?? 0) === 0 ? (
+														<Typography
+															sx={{
+																mt: 1,
+																fontSize: 12,
+																color: "#8a93a3",
+															}}
+														>
+															{paramMeta?.dictionaryCode
+																? "Значения справочника ещё не загружены. Дождитесь загрузки или проверьте привязку dictionaryCode в конструкторе."
+																: "У поля схемы нет значений enum/справочника — задайте их в конструкторе, затем вернитесь сюда."}
+														</Typography>
 													) : null}
 												</Box>
 											)}

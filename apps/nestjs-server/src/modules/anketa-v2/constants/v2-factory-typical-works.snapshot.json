@@ -7659,7 +7659,7 @@
               "coefficient": 0.8
             },
             {
-              "label": "Настройка",
+              "label": "Без изменений",
               "coefficient": 0.5
             }
           ]
@@ -7734,11 +7734,11 @@
             },
             {
               "label": "Доработка",
-              "coefficient": 0.8
+              "coefficient": 1
             },
             {
               "label": "Настройка",
-              "coefficient": 0.5
+              "coefficient": 1
             }
           ]
         },
@@ -11846,6 +11846,12 @@
         {
           "raw": "Настройка",
           "label": "Настройка",
+          "coeffRaw": null,
+          "coeff": null
+        },
+        {
+          "raw": "Без изменений",
+          "label": "Без изменений",
           "coeffRaw": null,
           "coeff": null
         }
