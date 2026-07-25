@@ -10,11 +10,11 @@ import { v1Routes } from "@react-client/routing/version/v1";
 import { v2Routes } from "@react-client/routing/version/v2";
 
 /** Корень: первая доступная по ролям страница; без доступных — заглушка. */
-function RootEntryRedirect() {
+function RootEntryRedirect({ onLogout }: { onLogout?: () => void }) {
 	const profileHydrated = useUserStore((s) => s.profileHydrated);
 	const firstAccessible = useFirstAccessiblePagePath();
 	if (!profileHydrated) return <FullScreenLoader />;
-	if (!firstAccessible) return <NoAccessiblePages />;
+	if (!firstAccessible) return <NoAccessiblePages onLogout={onLogout} />;
 	return <Navigate to={firstAccessible} replace />;
 }
 
@@ -24,7 +24,9 @@ export default function AppRoutes({ onLogout }: { onLogout?: () => void }) {
 			path: "/",
 			/** Layout с сайд-панелью и кнопкой выхода нужен и для заглушки «нет доступных страниц». */
 			element: <MainLayout onLogout={onLogout} />,
-			children: [{ index: true, element: <RootEntryRedirect /> }],
+			children: [
+				{ index: true, element: <RootEntryRedirect onLogout={onLogout} /> },
+			],
 		},
 		v1Routes({ onLogout }),
 		v2Routes({ onLogout }),

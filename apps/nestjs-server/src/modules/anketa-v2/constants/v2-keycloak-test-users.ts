@@ -3,15 +3,32 @@
  * (llm/feature_roles_fresh/тестовые_пользователи_sumd.md).
  *
  * Пароль для новых = username. Статусы из md не используются.
+ *
+ * Группы ролей — AD-alias с standPrefix (`/dev_sum_de_kmbkcb`, `/sacfg/dev_sum_sacfg`).
+ * Логины остаются `test_*`. Департаменты (`/departament/…`) без префикса.
  */
+import {
+	V2_AD_NEST_PARENT_BY_TARGET,
+	V2_AD_SAREP_STREAM_SUFFIXES,
+	V2_KEYCLOAK_PATH_TO_AD_GROUPS,
+	normalizeV2AdStandPrefix,
+} from "@smart-anketa/api-contract";
 import { DEPARTMENTS } from "../../../shared/constants/departments.constant";
-import { V2_AD_SAREP_STREAM_SUFFIXES } from "@smart-anketa/api-contract";
 
 export type V2KeycloakTestUserDef = {
 	username: string;
 	label: string;
-	/** Статические path или resolver от standPrefix (`dev_` / `test_` / …). */
-	groups: readonly string[] | ((standPrefix: string) => readonly string[]);
+	/** Канон path → AD-группы с standPrefix. */
+	rolePaths: readonly string[];
+	/** Доп. группы без AD-префикса (обычно /departament/…). */
+	extraGroups?: readonly string[];
+	/** Фильтр AD-имён для rolePaths (например только sum_de_kmbkcb). */
+	adFilter?: (adName: string) => boolean;
+	/**
+	 * Только канон path (без AD-alias).
+	 * Для umbrella `/sarep`, `/business_customer` и т.п.
+	 */
+	canonOnly?: boolean;
 };
 
 const ALL_MODEL_DEPARTMENTS = Object.values(DEPARTMENTS).map(
@@ -22,13 +39,41 @@ const DEPT_KIB = `/departament/${DEPARTMENTS.KIB_SMB}`;
 const DEPT_RB = `/departament/${DEPARTMENTS.RB}`;
 const DEPT_FIN = `/departament/${DEPARTMENTS.PROCESS_FINANCIAL}`;
 
-function nestedAdGroup(
-	parentPath: string,
-	standPrefix: string,
-	adNameWithoutStand: string,
-): string {
-	const prefix = standPrefix.trim();
-	return `${parentPath}/${prefix}${adNameWithoutStand}`;
+/** Канонический KK path → path(ы) AD-группы с префиксом стенда. */
+export function resolveAdGroupPathsForCanon(
+	canonPath: string,
+	standPrefixRaw: string,
+	options?: {
+		adFilter?: (adName: string) => boolean;
+		canonOnly?: boolean;
+	},
+): string[] {
+	const canon = canonPath.startsWith("/") ? canonPath : `/${canonPath}`;
+	if (options?.canonOnly) return [canon];
+
+	const standPrefix = normalizeV2AdStandPrefix(standPrefixRaw);
+	const adNames = V2_KEYCLOAK_PATH_TO_AD_GROUPS[canon];
+	if (!adNames?.length) return [canon];
+
+	const filtered = options?.adFilter
+		? adNames.filter(options.adFilter)
+		: [...adNames];
+	if (!filtered.length) return [canon];
+
+	const nestParents = V2_AD_NEST_PARENT_BY_TARGET[canon];
+	const out: string[] = [];
+	for (const ad of filtered) {
+		const leaf = `${standPrefix}${ad}`;
+		if (nestParents?.length) {
+			for (const parent of nestParents) {
+				out.push(`${parent}/${leaf}`);
+			}
+		} else {
+			/** Top-level AD-alias: `/dev_sum_de_kmbkcb` — лист начинается с префикса стенда. */
+			out.push(`/${leaf}`);
+		}
+	}
+	return [...new Set(out)];
 }
 
 /**
@@ -38,137 +83,150 @@ export const V2_KEYCLOAK_TEST_USER_DEFS: readonly V2KeycloakTestUserDef[] = [
 	{
 		username: "test_ds",
 		label: "DS",
-		groups: ["/ds", ...ALL_MODEL_DEPARTMENTS],
+		rolePaths: ["/ds"],
+		extraGroups: ALL_MODEL_DEPARTMENTS,
 	},
 	{
 		username: "test_ds_lead",
 		label: "Руководитель DS",
-		groups: ["/ds", "/ds/ds_lead"],
+		rolePaths: ["/ds", "/ds/ds_lead"],
 	},
 	{
 		username: "test_de",
 		label: "DE (все модельные департаменты)",
-		groups: ["/de", ...ALL_MODEL_DEPARTMENTS],
+		rolePaths: ["/de"],
+		extraGroups: ALL_MODEL_DEPARTMENTS,
 	},
 	{
 		username: "test_de_kib",
 		label: "DE · только КИБ и СМБ",
-		groups: ["/de", DEPT_KIB],
+		rolePaths: ["/de"],
+		adFilter: (ad) => ad === "sum_de_kmbkcb",
+		extraGroups: [DEPT_KIB],
 	},
 	{
 		username: "test_de_rb",
 		label: "DE · только РБ",
-		groups: ["/de", DEPT_RB],
+		rolePaths: ["/de"],
+		adFilter: (ad) => ad === "sum_de_rb",
+		extraGroups: [DEPT_RB],
 	},
 	{
 		username: "test_de_fin",
 		label: "DE · только процессные/финансовые",
-		groups: ["/de", DEPT_FIN],
+		rolePaths: ["/de"],
+		adFilter: (ad) => ad === "sum_de_finmdl",
+		extraGroups: [DEPT_FIN],
 	},
 	{
 		username: "test_de_lead",
 		label: "Руководитель DE",
-		groups: ["/de", "/de/de_lead"],
+		rolePaths: ["/de", "/de/de_lead"],
 	},
 	{
 		username: "test_modelops",
 		label: "ModelOps",
-		groups: ["/modelops", ...ALL_MODEL_DEPARTMENTS],
+		rolePaths: ["/modelops"],
+		extraGroups: ALL_MODEL_DEPARTMENTS,
 	},
 	{
 		username: "test_modelops_lead",
 		label: "Руководитель ModelOps",
-		groups: ["/modelops", "/modelops/modelops_lead"],
+		rolePaths: ["/modelops", "/modelops/modelops_lead"],
 	},
 	{
 		username: "test_mipm",
 		label: "Бизнес-партнёр",
-		groups: ["/mipm"],
+		rolePaths: ["/mipm"],
+		adFilter: (ad) => ad === "sum_mipm",
 	},
 	{
 		username: "test_mipm_sa",
 		label: "Бизнес-партнёр стрима",
-		groups: ["/mipm", DEPT_KIB],
+		rolePaths: ["/mipm"],
+		adFilter: (ad) => ad === "sum_mipm_kmbkcb",
+		extraGroups: [DEPT_KIB],
 	},
 	{
 		username: "test_validator",
 		label: "Валидатор",
-		groups: ["/validator"],
+		rolePaths: ["/validator"],
 	},
 	{
 		username: "test_validator_lead",
 		label: "Руководитель валидации",
-		groups: ["/validator", "/validator/validator_lead"],
+		rolePaths: ["/validator", "/validator/validator_lead"],
 	},
 	{
 		username: "test_architect",
 		label: "Архитектор данных ML",
-		groups: ["/architect"],
+		rolePaths: ["/architect"],
 	},
 	{
 		username: "test_sum_mntranlst",
 		label: "Аналитик качества работы моделей ДАДМ",
-		groups: ["/mntranlst"],
+		rolePaths: ["/mntranlst"],
 	},
 	{
 		username: "test_sum_da",
 		label: "Аналитик качества модельных данных",
-		groups: ["/da"],
+		rolePaths: ["/da"],
 	},
 	{
 		username: "test_sum_da_stream",
 		label: "Аналитик качества модельных данных стрима",
-		groups: ["/da_stream", DEPT_KIB],
+		rolePaths: ["/da_stream"],
+		adFilter: (ad) => ad === "sum_da_kmbkcb",
+		extraGroups: [DEPT_KIB],
 	},
 	{
 		username: "test_sum_appadmin",
 		label: "Прикладной администратор",
-		groups: ["/appadmin"],
+		rolePaths: ["/appadmin"],
 	},
 	{
 		username: "test_sum_auditorib",
 		label: "Аудитор ИБ",
-		groups: ["/auditorib"],
+		rolePaths: ["/auditorib"],
 	},
 	{
 		username: "test_auditor",
 		label: "Аудитор",
-		groups: ["/auditor"],
+		rolePaths: ["/auditor"],
 	},
 	{
 		username: "test_sum_saprg",
 		label: "Руководитель программ ДАДМ",
-		groups: ["/saprg"],
+		rolePaths: ["/saprg"],
 	},
 	{
 		username: "test_sum_sacfg",
 		label: "Конфигуратор Смарт-Анкеты",
-		groups: (standPrefix) => [
-			nestedAdGroup("/sacfg", standPrefix, "sum_sacfg"),
-		],
+		rolePaths: ["/sacfg"],
 	},
 	{
 		username: "test_sum_sarep",
 		label: "Представитель стрима — не участника ЖЦМ",
-		groups: ["/sarep"],
+		rolePaths: ["/sarep"],
+		canonOnly: true,
 	},
 	{
 		username: "test_business_customer",
 		label: "Бизнес-заказчик",
-		groups: ["/business_customer"],
+		rolePaths: ["/business_customer"],
+		canonOnly: true,
 	},
 	{
 		username: "test_prjtoffice",
 		label: "Сотрудник проектного офиса",
-		groups: ["/prjtoffice"],
+		rolePaths: ["/prjtoffice"],
 	},
 	...V2_AD_SAREP_STREAM_SUFFIXES.map(
 		(suffix): V2KeycloakTestUserDef => ({
 			username: `test_sum_sarep_${suffix}`,
 			label: `Представитель стрима (${suffix})`,
-			groups: (standPrefix) => [
-				nestedAdGroup("/sarep", standPrefix, `sum_sarep_${suffix}`),
-			],
+			rolePaths: ["/sarep"],
+			adFilter: (ad) => ad === `sum_sarep_${suffix}`,
 		}),
 	),
 ];
@@ -182,13 +240,18 @@ export type V2KeycloakResolvedTestUser = {
 export function resolveV2KeycloakTestUsers(
 	standPrefix: string,
 ): V2KeycloakResolvedTestUser[] {
-	return V2_KEYCLOAK_TEST_USER_DEFS.map((def) => ({
-		username: def.username,
-		label: def.label,
-		groups: [
-			...(typeof def.groups === "function"
-				? def.groups(standPrefix)
-				: def.groups),
-		],
-	}));
+	return V2_KEYCLOAK_TEST_USER_DEFS.map((def) => {
+		const roleGroups = def.rolePaths.flatMap((path) =>
+			resolveAdGroupPathsForCanon(path, standPrefix, {
+				adFilter: def.adFilter,
+				canonOnly: def.canonOnly,
+			}),
+		);
+		const groups = [...new Set([...roleGroups, ...(def.extraGroups ?? [])])];
+		return {
+			username: def.username,
+			label: def.label,
+			groups,
+		};
+	});
 }

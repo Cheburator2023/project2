@@ -1,5 +1,7 @@
+import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import MuiDrawer, { drawerClasses } from "@mui/material/Drawer";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
@@ -13,6 +15,10 @@ import {
 	getKeycloakUserDisplayName,
 	getKeycloakUserInitial,
 } from "@react-client/common/auth/keycloakUserText.util";
+import { usePermissions } from "@react-client/hooks/usePermissions";
+import { getAccessiblePages } from "@react-client/routing/accessiblePages";
+import { useQueryClient } from "@tanstack/react-query";
+import { performMfeLogout } from "@react-client/common/auth/syncMfeAuth";
 
 const drawerWidth = 260;
 
@@ -51,6 +57,9 @@ export function SideMenu({
 	const { mode } = useColorScheme();
 	const displayName = getKeycloakUserDisplayName(user);
 	const userInitial = getKeycloakUserInitial(user);
+	const permissions = usePermissions();
+	const queryClient = useQueryClient();
+	const noAccessiblePages = getAccessiblePages(permissions).length === 0;
 
 	return (
 		<Drawer variant="persistent" open={open} data-test-id="side-menu--Drawer-0">
@@ -111,7 +120,28 @@ export function SideMenu({
 							</Typography>
 						)}
 					</Box>
-					<OptionsMenu onLogout={onLogout} />
+					{noAccessiblePages ? (
+						<Button
+							size="small"
+							variant="contained"
+							color="primary"
+							startIcon={<LogoutRoundedIcon fontSize="small" />}
+							onClick={() => {
+								queryClient.clear();
+								if (onLogout) {
+									onLogout();
+									return;
+								}
+								performMfeLogout();
+							}}
+							title="Выйти из системы"
+							data-test-id="side-menu--logout-no-access"
+						>
+							Выйти
+						</Button>
+					) : (
+						<OptionsMenu onLogout={onLogout} />
+					)}
 				</Stack>
 			</DrawerWrapper>
 		</Drawer>

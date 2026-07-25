@@ -1,4 +1,5 @@
-import { Navigate } from "react-router";
+import { Navigate, useOutletContext } from "react-router";
+import type { MainLayoutOutletContext } from "@react-client/common/layouts/mainLayoutOutletContext";
 import { FullScreenLoader } from "@react-client/common/muiCustom/FullScreenLoader";
 import { NoAccessiblePages } from "@react-client/common/primitives/NoAccessiblePages";
 import { useUserStore } from "@react-client/common/store/userStore";
@@ -23,10 +24,13 @@ export const PermissionGuard: React.FC<PermissionGuardProps> = ({
 }) => {
 	const profileHydrated = useUserStore((s) => s.profileHydrated);
 	const permissions = usePermissions();
+	const outlet = useOutletContext<MainLayoutOutletContext | undefined>();
 	if (!profileHydrated) return <FullScreenLoader />;
 	if (!check(permissions)) {
 		const firstAccessible = getAccessiblePages(permissions)[0];
-		if (!firstAccessible) return <NoAccessiblePages />;
+		if (!firstAccessible) {
+			return <NoAccessiblePages onLogout={outlet?.onLogout} />;
+		}
 		return <Navigate to={firstAccessible.path} replace />;
 	}
 	return <>{children}</>;
