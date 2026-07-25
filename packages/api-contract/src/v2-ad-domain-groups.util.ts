@@ -155,8 +155,9 @@ export function mapV2AdGroupLeafToRoleCodes(rawLeaf: string): string[] {
 }
 
 /**
- * Канон KK path → AD-имена без stand-prefix (из CSV).
- * Для sync: `/appadmin` + prefix `test_` → `/test_sum_appadmin`.
+ * Логический KK path → AD-имена без stand-prefix (из CSV).
+ * Для sync: `/appadmin` + prefix `test_` → `/admin_it/test_sum_appadmin`
+ * (группы `/appadmin` в KK нет).
  */
 const DS_LEAD_AD = V2_AD_MODEL_STREAM_SUFFIXES.map((s) => `sum_Lds_${s}`);
 const DE_LEAD_AD = V2_AD_MODEL_STREAM_SUFFIXES.map((s) => `sum_Lde_${s}`);

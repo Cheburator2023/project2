@@ -6,6 +6,7 @@ import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import Box from "@mui/material/Box";
+import CircularProgress from "@mui/material/CircularProgress";
 import IconButton from "@mui/material/IconButton";
 import InputAdornment from "@mui/material/InputAdornment";
 import TextField from "@mui/material/TextField";
@@ -378,6 +379,7 @@ export function SchemaIssuesPanel({
 		cycles,
 		logicValidationIssues,
 		schemaConsistencyIssues,
+		schemaConsistencyLoading,
 		refreshSchemaConsistencyIssues,
 		templateVersionId,
 		dictionaryCodeByPointer,
@@ -400,8 +402,17 @@ export function SchemaIssuesPanel({
 		ISSUES_SEARCH_DEBOUNCE_MS,
 	);
 
-	const { data: worksData } = useV2TypicalWorksList({ templateId });
-	const { data: catalog } = useV2WorkParametersCatalog();
+	const { data: worksData, isLoading: worksLoading } = useV2TypicalWorksList({
+		templateId,
+	});
+	const { data: catalog, isLoading: catalogLoading } =
+		useV2WorkParametersCatalog();
+
+	const issuesLoading =
+		dictionaryEnumsLoading ||
+		worksLoading ||
+		catalogLoading ||
+		schemaConsistencyLoading;
 
 	const assignedWorks = useMemo(
 		() =>
@@ -576,75 +587,88 @@ export function SchemaIssuesPanel({
 		/>
 	);
 
-	const body =
-		issues.length === 0 ? (
-			<Flex
-				flexDirection="column"
-				alignItems="center"
-				justifyContent="center"
-				flexGrow={1}
-				gap={8}
-				padding="24px"
-			>
-				<Typography variant="body1" color="text.secondary">
-					Проблем не найдено
+	const body = issuesLoading ? (
+		<Flex
+			flexDirection="column"
+			alignItems="center"
+			justifyContent="center"
+			flexGrow={1}
+			gap={8}
+			padding="24px"
+		>
+			<CircularProgress size={28} />
+			<Typography variant="caption" color="text.secondary">
+				Проверка схемы и типовых работ…
+			</Typography>
+		</Flex>
+	) : issues.length === 0 ? (
+		<Flex
+			flexDirection="column"
+			alignItems="center"
+			justifyContent="center"
+			flexGrow={1}
+			gap={8}
+			padding="24px"
+		>
+			<Typography variant="body1" color="text.secondary">
+				Проблем не найдено
+			</Typography>
+			<Typography variant="caption" color="text.secondary" textAlign="center">
+				Ошибки правил, триггеров работ, зависимостей параметров и справочников
+				появятся здесь с переходом к месту исправления.
+			</Typography>
+		</Flex>
+	) : viewMode === "json" ? (
+		<Flex flexDirection="column" gap={8}>
+			{debouncedSearchQuery.trim() ? (
+				<Typography variant="caption" color="text.secondary">
+					JSON содержит все {issues.length} проблем; поиск применяется только к
+					списку.
 				</Typography>
-				<Typography variant="caption" color="text.secondary" textAlign="center">
-					Ошибки правил, триггеров работ, зависимостей параметров и справочников
-					появятся здесь с переходом к месту исправления.
-				</Typography>
-			</Flex>
-		) : viewMode === "json" ? (
-			<Flex flexDirection="column" gap={8}>
-				{debouncedSearchQuery.trim() ? (
-					<Typography variant="caption" color="text.secondary">
-						JSON содержит все {issues.length} проблем; поиск применяется только
-						к списку.
-					</Typography>
-				) : null}
-				<IssuesJsonView issues={issues} />
-			</Flex>
-		) : filteredIssues.length === 0 ? (
-			<Flex
-				flexDirection="column"
-				alignItems="center"
-				justifyContent="center"
-				flexGrow={1}
-				gap={8}
-				padding="24px"
-			>
-				<Typography variant="body1" color="text.secondary">
-					Ничего не найдено
-				</Typography>
-				<Typography variant="caption" color="text.secondary" textAlign="center">
-					Измените запрос поиска или очистите поле фильтра.
-				</Typography>
-			</Flex>
-		) : (
-			<Flex flexDirection="column" gap={8}>
-				<Spacer space={4} />
-				{filteredIssues.map((issue) => (
-					<IssueRow
-						key={issue.id}
-						issue={issue}
-						parameterPointer={resolveParameterPointer(issue)}
-						onNavigate={navigateToSchemaEditorIssue}
-						onOpenDesigner={openDesignerAtPointer}
-						onOpenLogic={(item) => {
-							logSchemaEditorNav("issues.clickGoLogic", {
-								issueId: item.id,
-								targetKind: item.target.kind,
-								workId:
-									item.target.kind === "typical_work"
-										? item.target.workId
-										: null,
-							});
-							openLogicForIssueTarget(item.target, { focusParam: false });
-						}}
-					/>
-				))}
-			</Flex>
-		);
+			) : null}
+			<IssuesJsonView issues={issues} />
+		</Flex>
+	) : filteredIssues.length === 0 ? (
+		<Flex
+			flexDirection="column"
+			alignItems="center"
+			justifyContent="center"
+			flexGrow={1}
+			gap={8}
+			padding="24px"
+		>
+			<Typography variant="body1" color="text.secondary">
+				Ничего не найдено
+			</Typography>
+			<Typography variant="caption" color="text.secondary" textAlign="center">
+				Измените запрос поиска или очистите поле фильтра.
+			</Typography>
+		</Flex>
+	) : (
+		<Flex flexDirection="column" gap={8}>
+			<Spacer space={4} />
+			{filteredIssues.map((issue) => (
+				<IssueRow
+					key={issue.id}
+					issue={issue}
+					parameterPointer={resolveParameterPointer(issue)}
+					onNavigate={navigateToSchemaEditorIssue}
+					onOpenDesigner={openDesignerAtPointer}
+					onOpenLogic={(item) => {
+						logSchemaEditorNav("issues.clickGoLogic", {
+							issueId: item.id,
+							targetKind: item.target.kind,
+							workId:
+								item.target.kind === "typical_work"
+									? item.target.workId
+									: null,
+						});
+						openLogicForIssueTarget(item.target, { focusParam: false });
+					}}
+				/>
+			))}
+		</Flex>
+	);
 
 	const panelContent = (
 		<Flex flexDirection="column" height="100%" minHeight="0">

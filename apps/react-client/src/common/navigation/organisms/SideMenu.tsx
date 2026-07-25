@@ -17,7 +17,6 @@ import {
 } from "@react-client/common/auth/keycloakUserText.util";
 import { usePermissions } from "@react-client/hooks/usePermissions";
 import { getAccessiblePages } from "@react-client/routing/accessiblePages";
-import { useQueryClient } from "@tanstack/react-query";
 import { performMfeLogout } from "@react-client/common/auth/syncMfeAuth";
 
 const drawerWidth = 260;
@@ -58,7 +57,6 @@ export function SideMenu({
 	const displayName = getKeycloakUserDisplayName(user);
 	const userInitial = getKeycloakUserInitial(user);
 	const permissions = usePermissions();
-	const queryClient = useQueryClient();
 	const noAccessiblePages = getAccessiblePages(permissions).length === 0;
 
 	return (
@@ -127,7 +125,6 @@ export function SideMenu({
 							color="primary"
 							startIcon={<LogoutRoundedIcon fontSize="small" />}
 							onClick={() => {
-								queryClient.clear();
 								if (onLogout) {
 									onLogout();
 									return;

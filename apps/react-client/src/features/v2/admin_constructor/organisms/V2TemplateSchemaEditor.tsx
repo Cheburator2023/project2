@@ -431,6 +431,8 @@ export const V2TemplateSchemaEditor = ({
 	const [schemaConsistencyIssues, setSchemaConsistencyIssues] = useState<
 		TypicalWorkSchemaConsistencyIssue[]
 	>([]);
+	const [schemaConsistencyLoading, setSchemaConsistencyLoading] =
+		useState(false);
 	const [logicPathPick, setLogicPathPick] = useState<string>("");
 	const [triggerParamPickId, setTriggerParamPickId] = useState<string | null>(
 		null,
@@ -941,7 +943,10 @@ export const V2TemplateSchemaEditor = ({
 	useEffect(() => {
 		if (dictionaryEnumsLoading) return;
 		const versionId = activeVersion?.id;
-		if (!versionId || schemaWorkParams.length === 0) return;
+		if (!versionId || schemaWorkParams.length === 0) {
+			setSchemaConsistencyLoading(false);
+			return;
+		}
 
 		const versionChanged = bulkSyncTrackedVersionRef.current !== versionId;
 		if (versionChanged) {
@@ -959,6 +964,7 @@ export const V2TemplateSchemaEditor = ({
 		}
 
 		let cancelled = false;
+		setSchemaConsistencyLoading(true);
 		void (async () => {
 			const maxAttempts = 3;
 			for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -991,7 +997,9 @@ export const V2TemplateSchemaEditor = ({
 					);
 				}
 			}
-		})();
+		})().finally(() => {
+			if (!cancelled) setSchemaConsistencyLoading(false);
+		});
 		return () => {
 			cancelled = true;
 		};
@@ -2398,6 +2406,7 @@ export const V2TemplateSchemaEditor = ({
 			logicValidationIssues,
 			legacyStageEvaluation,
 			schemaConsistencyIssues,
+			schemaConsistencyLoading,
 			refreshSchemaConsistencyIssues,
 			navigateToSchemaEditorIssue,
 			openDesignerAtPointer,
@@ -2508,6 +2517,7 @@ export const V2TemplateSchemaEditor = ({
 			logicValidationIssues,
 			legacyStageEvaluation,
 			schemaConsistencyIssues,
+			schemaConsistencyLoading,
 			refreshSchemaConsistencyIssues,
 			navigateToSchemaEditorIssue,
 			openDesignerAtPointer,

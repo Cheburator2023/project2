@@ -1,9 +1,13 @@
+import { queryClient } from "@react-client/common/api/queryClient";
 import { clearMfeAuthState } from "@react-client/common/auth/clearMfeAuthState";
 import {
 	isGodModeAccessToken,
 	isNoRolesGodMode,
 } from "@react-client/common/auth/godMode";
-import { beginLogoutOverlay } from "@react-client/common/auth/logoutOverlayState";
+import {
+	beginLogoutOverlay,
+	LOGOUT_OVERLAY_DELAY_MS,
+} from "@react-client/common/auth/logoutOverlayState";
 import { publishAppSync } from "@react-client/common/crossTab/appBroadcast";
 import { useAuthStore } from "@react-client/common/store/authStore";
 
@@ -262,20 +266,24 @@ export function resetKeycloakLoginGuardForTests(): void {
 	loginRedirectInFlight = false;
 }
 
-/** Полный logout: чистим локальное состояние и отдаём управление Keycloak. */
+/** Полный logout: сначала оверлей, затем с задержкой чистим state и Keycloak. */
 export function performMfeLogout(props?: MfeAuthHostProps | null): void {
 	beginLogoutOverlay();
-	clearMfeAuthState();
-	publishAppSync({ type: "auth:logout", reason: "user" });
-	props?.onLogout?.();
 
-	const keycloak = resolveKeycloakInstance(props);
-	if (keycloak?.logout) {
-		void keycloak.logout();
-		return;
-	}
+	window.setTimeout(() => {
+		queryClient.clear();
+		clearMfeAuthState();
+		publishAppSync({ type: "auth:logout", reason: "user" });
+		props?.onLogout?.();
 
-	if (typeof window !== "undefined") {
-		window.location.reload();
-	}
+		const keycloak = resolveKeycloakInstance(props);
+		if (keycloak?.logout) {
+			void keycloak.logout();
+			return;
+		}
+
+		if (typeof window !== "undefined") {
+			window.location.reload();
+		}
+	}, LOGOUT_OVERLAY_DELAY_MS);
 }

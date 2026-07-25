@@ -7419,7 +7419,7 @@
         "Необходимо уточнение требований по составу выгружаемых данных и алгоритмам расчета метрик",
         "Риск появления дополнительных систем-источников"
       ],
-      "formulaText": "N * (коэф(field_8pFvwc-v) + коэф(field_lzP44Urx) + коэф(field_whHc-OoW))",
+      "formulaText": "N * (коэф(field_8pFvwc-v) + коэф(field_xva1dRvW) + коэф(field_whHc-OoW))",
       "roundingMode": "CEIL",
       "roundingStep": 0.1,
       "laborCoefficients": [
@@ -7440,8 +7440,8 @@
         },
         {
           "paramName": "Необходимо уточнение требований по составу выгружаемых данных и алгоритмам расчета метрик",
-          "paramCode": "field_lzP44Urx",
-          "schemaFieldUid": "field_213d174a-4e1d-4843-8505-f7f5f4737feb",
+          "paramCode": "field_xva1dRvW",
+          "schemaFieldUid": "field_0845a1af-f430-4897-9300-4a3c580aa6ee",
           "values": [
             {
               "label": "Да",

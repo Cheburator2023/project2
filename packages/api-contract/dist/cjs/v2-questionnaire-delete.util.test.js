@@ -6,14 +6,17 @@ const formWithStream = (stream) => ({
     generalInfo: { implementationStream: stream },
 });
 (0, vitest_1.describe)("userHasV2QuestionnaireDeleteRole", () => {
-    (0, vitest_1.it)("allows ds_lead, modelops_lead, sacfg", () => {
+    (0, vitest_1.it)("allows ds_lead, modelops_lead, sacfg, sarep", () => {
         (0, vitest_1.expect)((0, v2_questionnaire_delete_util_1.userHasV2QuestionnaireDeleteRole)(["/ds/ds_lead"])).toBe(true);
         (0, vitest_1.expect)((0, v2_questionnaire_delete_util_1.userHasV2QuestionnaireDeleteRole)(["/modelops/modelops_lead"])).toBe(true);
         (0, vitest_1.expect)((0, v2_questionnaire_delete_util_1.userHasV2QuestionnaireDeleteRole)(["/sacfg"])).toBe(true);
+        (0, vitest_1.expect)((0, v2_questionnaire_delete_util_1.userHasV2QuestionnaireDeleteRole)(["/sarep"])).toBe(true);
     });
-    (0, vitest_1.it)("denies sarep and de_lead", () => {
-        (0, vitest_1.expect)((0, v2_questionnaire_delete_util_1.userHasV2QuestionnaireDeleteRole)(["/sarep"])).toBe(false);
+    (0, vitest_1.it)("denies de, modelops executor and plain ds", () => {
+        (0, vitest_1.expect)((0, v2_questionnaire_delete_util_1.userHasV2QuestionnaireDeleteRole)(["/de"])).toBe(false);
         (0, vitest_1.expect)((0, v2_questionnaire_delete_util_1.userHasV2QuestionnaireDeleteRole)(["/de/de_lead"])).toBe(false);
+        (0, vitest_1.expect)((0, v2_questionnaire_delete_util_1.userHasV2QuestionnaireDeleteRole)(["/modelops"])).toBe(false);
+        (0, vitest_1.expect)((0, v2_questionnaire_delete_util_1.userHasV2QuestionnaireDeleteRole)(["/ds"])).toBe(false);
     });
 });
 (0, vitest_1.describe)("canUserDeleteV2Questionnaire", () => {

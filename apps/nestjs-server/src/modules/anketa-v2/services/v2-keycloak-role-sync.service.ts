@@ -1670,7 +1670,7 @@ export class V2KeycloakRoleSyncService {
 			V2_KEYCLOAK_GROUP_ROLE_TARGET,
 			args.standPrefix,
 		);
-		/** Не создаём `/appadmin` и т.п. — только AD `/admin_it/{stand}sum_appadmin`. */
+		/** Delegated-каноны вроде `/appadmin` не создаём — роли на AD `/admin_it/{stand}sum_appadmin`. */
 		const groupsToEnsure = [
 			...new Set([
 				...V2_KEYCLOAK_GROUPS_TO_ENSURE,

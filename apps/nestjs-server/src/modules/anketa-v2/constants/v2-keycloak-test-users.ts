@@ -278,6 +278,7 @@ export const V2_KEYCLOAK_TEST_USER_DEFS: readonly V2KeycloakTestUserDef[] = [
 	{
 		username: "test_sum_appadmin",
 		label: "Прикладной администратор",
+		/** Логический ключ → `/admin_it/{stand}sum_appadmin` (группы `/appadmin` нет). */
 		rolePaths: ["/appadmin"],
 	},
 	{

@@ -117,6 +117,7 @@ export function AnketaFormShell({
 	const groups = useUserStore((s) => s.groups);
 	const {
 		canCreateCalculation,
+		canDeleteCalculation,
 		canEditCalculation,
 		canExportReports,
 		canWorkflowApprove,
@@ -181,6 +182,7 @@ export function AnketaFormShell({
 	);
 	const canShowDelete =
 		Boolean(questionnaireId) &&
+		canDeleteCalculation &&
 		deleteAccess.ok &&
 		deleteResolved.action !== "deny";
 	const deleteIsHard = deleteResolved.action === "hard_delete";
@@ -479,6 +481,7 @@ export function AnketaFormShell({
 			canCompleteAnketa,
 			canHoldCalculation,
 			canCreateCalculation,
+			canDeleteCalculation,
 			canShowDelete,
 			deleteIsHard,
 			headerExtra,

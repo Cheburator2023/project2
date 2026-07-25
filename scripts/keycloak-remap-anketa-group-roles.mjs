@@ -78,6 +78,7 @@ const TARGET = {
 		"anketa_edit_calculation",
 		"anketa_export_reports",
 		"anketa_workflow_approve",
+		"anketa_complete_anketa",
 	],
 	"/mntranlst": [
 		"anketa_view_all_calculations",
@@ -97,9 +98,10 @@ const TARGET = {
 		"anketa_export_reports",
 	],
 	/**
-	 * Прикладной администратор: AD sum_appadmin → /appadmin.
+	 * Прикладной администратор: группы `/appadmin` нет.
+	 * Ключ разворачивается в AD-лист `/admin_it/{stand}sum_appadmin`.
 	 * Админка в UI/API — по доменной группе appadmin/sacfg, без anketa_admin_*.
-	 * /admin_it* — legacy, anketa_* снимаем.
+	 * Родитель `/admin_it*` без anketa_* (роли только на leaf).
 	 */
 	"/appadmin": [
 		"anketa_view_all_calculations",
@@ -141,7 +143,6 @@ const TARGET = {
 	],
 	"/sarep": [
 		"anketa_view_all_calculations",
-		"anketa_create_calculation",
 		"anketa_edit_calculation",
 		"anketa_delete_calculation",
 		"anketa_export_reports",

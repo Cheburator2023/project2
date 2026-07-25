@@ -12,7 +12,6 @@ import { Card } from "@react-client/common/muiCustom/Card";
 import { usePermissions } from "@react-client/hooks/usePermissions";
 import { getAccessiblePages } from "@react-client/routing/accessiblePages";
 import { useNavigate, useOutletContext } from "react-router";
-import { useQueryClient } from "@tanstack/react-query";
 import { Flex } from "../../primitives/Flex";
 import { useGlobalSettingsStore } from "../../store/globalSettingsStore";
 import { ColorModeIconDropdown } from "../../../theme/ColorModeIconDropdown";
@@ -46,7 +45,6 @@ export function Header({
 	const navigate = useNavigate();
 	const outlet = useOutletContext<MainLayoutOutletContext | undefined>();
 	const permissions = usePermissions();
-	const queryClient = useQueryClient();
 	const noAccessiblePages = getAccessiblePages(permissions).length === 0;
 	const headerRef = useRef<HTMLDivElement>(null);
 	const [spacerHeight, setSpacerHeight] = useState(52);
@@ -191,7 +189,6 @@ export function Header({
 									color="inherit"
 									startIcon={<LogoutRoundedIcon fontSize="small" />}
 									onClick={() => {
-										queryClient.clear();
 										if (outlet?.onLogout) {
 											outlet.onLogout();
 											return;

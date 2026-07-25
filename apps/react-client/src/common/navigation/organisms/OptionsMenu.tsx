@@ -11,7 +11,6 @@ import { styled } from "@mui/material/styles";
 import { beginLogoutOverlay } from "@react-client/common/auth/logoutOverlayState";
 import { isDevLikeEnvironment } from "@react-client/common/constants/dev";
 import { commonRoutes } from "@react-client/routing/common/routes";
-import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 
@@ -24,7 +23,6 @@ const MenuItem = styled(MuiMenuItem)({
 export function OptionsMenu({ onLogout }: { onLogout?: () => void }) {
 	const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 	const [loggingOut, setLoggingOut] = useState(false);
-	const queryClient = useQueryClient();
 	const navigate = useNavigate();
 	const showSettings = isDevLikeEnvironment();
 
@@ -45,10 +43,9 @@ export function OptionsMenu({ onLogout }: { onLogout?: () => void }) {
 	const handleLogout = () => {
 		if (loggingOut) return;
 		setAnchorEl(null);
-		// Сразу: Keycloak logout + редирект на логин могут идти десятки секунд.
 		setLoggingOut(true);
+		// Оверлей сразу; clear + Keycloak — после задержки внутри performMfeLogout.
 		beginLogoutOverlay();
-		queryClient.clear();
 		onLogout?.();
 	};
 

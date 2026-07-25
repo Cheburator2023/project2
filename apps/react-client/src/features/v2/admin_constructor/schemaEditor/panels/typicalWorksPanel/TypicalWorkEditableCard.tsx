@@ -164,6 +164,7 @@ export function TypicalWorkEditableCard({
 		uiSchema,
 		jsonSchema,
 		enumMapByCode,
+		dictionaryEnumsLoading,
 		openDesignerAtPointer,
 		triggerParamPickId,
 		clearTriggerParamPick,
@@ -176,7 +177,10 @@ export function TypicalWorkEditableCard({
 	const { data: assignmentsList } = useV2TypicalWorkAssignments({
 		templateVersionId,
 	});
-	const { data: methodologyCatalogData } = useV2WorkParametersCatalog();
+	const {
+		data: methodologyCatalogData,
+		isLoading: methodologyCatalogLoading,
+	} = useV2WorkParametersCatalog();
 	const createVersion = useCreateV2TemplateVersion();
 	const [draft, setDraft] = useState<V2TypicalWorkCardDto | null>(null);
 	const draftRef = useRef<V2TypicalWorkCardDto | null>(null);
@@ -790,11 +794,23 @@ export function TypicalWorkEditableCard({
 		}
 	};
 
-	if (loading) {
+	/** Карточка + справочники/каталог: без них значения параметров «всплывают» позже. */
+	if (loading || dictionaryEnumsLoading || methodologyCatalogLoading) {
 		return (
-			<Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
+			<Flex
+				flexDirection="column"
+				alignItems="center"
+				justifyContent="center"
+				gap={8}
+				sx={{ p: 4 }}
+			>
 				<CircularProgress size={28} />
-			</Box>
+				<Typography variant="caption" color="text.secondary">
+					{loading
+						? "Загрузка типовой работы…"
+						: "Загрузка параметров и справочников…"}
+				</Typography>
+			</Flex>
 		);
 	}
 

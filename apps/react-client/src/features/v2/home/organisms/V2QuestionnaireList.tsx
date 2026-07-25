@@ -706,7 +706,7 @@ export function V2QuestionnaireList() {
 							color="error"
 							startIcon={<DeleteOutlineIcon />}
 							disabled={!selectedVersions.length || bulkDelete.isPending}
-							title="Черновик — полное удаление; Заполнено/Утверждена — статус «Неактивная». Только анкеты своего стрима (кроме конфигуратора)."
+							title="Черновик — полное удаление; Заполнено/Утверждена — статус «Неактивная». Руководители DS·ModelOps / sarep — свой стрим; конфигуратор — все."
 							onClick={() => setDeleteDialogOpen(true)}
 						>
 							Удалить выбранные ({selectedVersions.length})

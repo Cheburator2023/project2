@@ -9,7 +9,6 @@ import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
 import type { MainLayoutOutletContext } from "@react-client/common/layouts/mainLayoutOutletContext";
-import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router";
 
@@ -23,7 +22,6 @@ export const NoAccessiblePages = ({ onLogout }: NoAccessiblePagesProps = {}) => 
 	const setSideMenuVisible = useGlobalSettingsStore(
 		(s) => s.setSideMenuVisible,
 	);
-	const queryClient = useQueryClient();
 	const [loggingOut, setLoggingOut] = useState(false);
 
 	useEffect(() => {
@@ -34,7 +32,6 @@ export const NoAccessiblePages = ({ onLogout }: NoAccessiblePagesProps = {}) => 
 	const handleLogout = () => {
 		if (loggingOut) return;
 		setLoggingOut(true);
-		queryClient.clear();
 		const logout = onLogout ?? outlet?.onLogout;
 		if (logout) {
 			logout();

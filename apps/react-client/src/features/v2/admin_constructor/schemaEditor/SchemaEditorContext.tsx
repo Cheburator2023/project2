@@ -70,6 +70,8 @@ export type SchemaEditorContextValue = {
 	logicValidationIssues: LogicValidationIssue[];
 	legacyStageEvaluation: V2LegacyStageEvaluationDto | null;
 	schemaConsistencyIssues: TypicalWorkSchemaConsistencyIssue[];
+	/** Идёт bulk sync / dryRun consistency (первая загрузка или refresh). */
+	schemaConsistencyLoading: boolean;
 	/** Перезапросить consistency issues (dryRun bulk sync). */
 	refreshSchemaConsistencyIssues: () => void;
 	navigateToSchemaEditorIssue: (issue: SchemaEditorIssue) => void;

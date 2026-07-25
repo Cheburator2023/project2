@@ -10,17 +10,20 @@ const formWithStream = (stream: string) => ({
 });
 
 describe("userHasV2QuestionnaireDeleteRole", () => {
-	it("allows ds_lead, modelops_lead, sacfg", () => {
+	it("allows ds_lead, modelops_lead, sacfg, sarep", () => {
 		expect(userHasV2QuestionnaireDeleteRole(["/ds/ds_lead"])).toBe(true);
 		expect(userHasV2QuestionnaireDeleteRole(["/modelops/modelops_lead"])).toBe(
 			true,
 		);
 		expect(userHasV2QuestionnaireDeleteRole(["/sacfg"])).toBe(true);
+		expect(userHasV2QuestionnaireDeleteRole(["/sarep"])).toBe(true);
 	});
 
-	it("denies sarep and de_lead", () => {
-		expect(userHasV2QuestionnaireDeleteRole(["/sarep"])).toBe(false);
+	it("denies de, modelops executor and plain ds", () => {
+		expect(userHasV2QuestionnaireDeleteRole(["/de"])).toBe(false);
 		expect(userHasV2QuestionnaireDeleteRole(["/de/de_lead"])).toBe(false);
+		expect(userHasV2QuestionnaireDeleteRole(["/modelops"])).toBe(false);
+		expect(userHasV2QuestionnaireDeleteRole(["/ds"])).toBe(false);
 	});
 });
 

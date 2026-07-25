@@ -9,11 +9,16 @@ import {
 	type V2ImplementationStreamCode,
 } from "./v2-implementation-streams.util";
 
-/** Роли, которым доступно удаление/деактивация анкеты (карточка + реестр). */
+/**
+ * Роли, которым доступно удаление/деактивация анкеты (карточка + реестр).
+ * По живому SUMD: ds_lead / modelops_lead / sacfg / sarep.
+ * DE / modelops (executor) — без удаления.
+ */
 export const V2_QUESTIONNAIRE_DELETE_ROLE_CODES = [
 	"ds_lead",
 	"modelops_lead",
 	"sacfg",
+	"sarep",
 ] as const;
 
 export type V2QuestionnaireDeleteAction = "hard_delete" | "deactivate";
@@ -57,8 +62,8 @@ export function userHasV2QuestionnaireDeleteRole(
 
 /**
  * Можно ли пользователю удалить/деактивировать анкету (роль + стрим).
- * sacfg — все стримы; ds_lead / modelops_lead — свой стрим (если стримы из groups
- * не извлечены — разрешаем, как у lead без AD-суффикса).
+ * sacfg — все стримы; ds_lead / modelops_lead / sarep — свой стрим
+ * (если стримы из groups не извлечены — разрешаем, как у lead без AD-суффикса).
  */
 export function canUserDeleteV2Questionnaire(
 	userGroups: readonly string[],

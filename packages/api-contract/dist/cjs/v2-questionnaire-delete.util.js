@@ -6,11 +6,16 @@ exports.canUserDeleteV2Questionnaire = canUserDeleteV2Questionnaire;
 exports.resolveV2QuestionnaireDeleteAction = resolveV2QuestionnaireDeleteAction;
 const v2_user_stream_mapping_util_1 = require("./v2-user-stream-mapping.util");
 const v2_implementation_streams_util_1 = require("./v2-implementation-streams.util");
-/** Роли, которым доступно удаление/деактивация анкеты (карточка + реестр). */
+/**
+ * Роли, которым доступно удаление/деактивация анкеты (карточка + реестр).
+ * По живому SUMD: ds_lead / modelops_lead / sacfg / sarep.
+ * DE / modelops (executor) — без удаления.
+ */
 exports.V2_QUESTIONNAIRE_DELETE_ROLE_CODES = [
     "ds_lead",
     "modelops_lead",
     "sacfg",
+    "sarep",
 ];
 function readImplementationStream(formData) {
     if (!formData || typeof formData !== "object")
@@ -40,8 +45,8 @@ function userHasV2QuestionnaireDeleteRole(userGroups) {
 }
 /**
  * Можно ли пользователю удалить/деактивировать анкету (роль + стрим).
- * sacfg — все стримы; ds_lead / modelops_lead — свой стрим (если стримы из groups
- * не извлечены — разрешаем, как у lead без AD-суффикса).
+ * sacfg — все стримы; ds_lead / modelops_lead / sarep — свой стрим
+ * (если стримы из groups не извлечены — разрешаем, как у lead без AD-суффикса).
  */
 function canUserDeleteV2Questionnaire(userGroups, formData) {
     const normalized = (0, v2_user_stream_mapping_util_1.normalizeV2UserGroups)(userGroups);
