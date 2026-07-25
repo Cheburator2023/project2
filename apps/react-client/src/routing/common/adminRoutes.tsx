@@ -10,6 +10,7 @@ import {
 	AdminV2GuidePage,
 	AdminV2HistoryPage,
 	AdminV2SchemasPage,
+	AdminV2KeycloakMatrixPage,
 	AdminV2SettingsPage,
 	AdminV2StreamsPage,
 	AdminV2TemplateHistoryPage,
@@ -70,6 +71,10 @@ function adminChildRoutes(): RouteObject[] {
 				},
 				{ path: "history", element: <AdminV2HistoryPage /> },
 				{ path: "settings", element: <AdminV2SettingsPage /> },
+				{
+					path: "keycloak-matrix",
+					element: <AdminV2KeycloakMatrixPage />,
+				},
 				{
 					path: "templates/:templateId/read",
 					element: <V2TemplatePreviewPage />,

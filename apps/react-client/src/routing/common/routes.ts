@@ -67,6 +67,13 @@ export const commonRoutes = {
 		showInNavbar: true,
 		navbar: { group: "adminV2", order: 8 },
 	},
+	adminV2KeycloakMatrix: {
+		rootPath: "/admin/keycloak-matrix",
+		name: "Матрица Keycloak",
+		disabled: false,
+		showInNavbar: true,
+		navbar: { group: "adminV2", order: 10 },
+	},
 	adminV2TypicalWorkDetail: {
 		rootPath: "/admin/typical-works/:workId",
 		name: "Типовая работа",

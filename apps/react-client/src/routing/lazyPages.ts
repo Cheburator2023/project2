@@ -175,6 +175,13 @@ export const AdminV2SettingsPage = lazyPage(
 		),
 	"AdminV2SettingsPage",
 );
+export const AdminV2KeycloakMatrixPage = lazyPage(
+	() =>
+		import(
+			/* webpackChunkName: "page-admin-keycloak-matrix" */ "@react-client/features/v2/admin/pages/AdminV2KeycloakMatrixPage"
+		),
+	"AdminV2KeycloakMatrixPage",
+);
 export const AdminV2TemplateHistoryPage = lazyPage(
 	() =>
 		import(

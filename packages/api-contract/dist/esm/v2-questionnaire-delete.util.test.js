@@ -19,9 +19,9 @@ describe("canUserDeleteV2Questionnaire", () => {
         expect(canUserDeleteV2Questionnaire(["/sacfg"], formWithStream("RB"))).toEqual({ ok: true });
     });
     it("ds_lead limited to own stream when scope is known", () => {
-        const groups = ["/ds/ds_lead", "/ds/ds_lead_rb"];
+        const groups = ["/ds/ds_lead", "sum_Lds_rb"];
         expect(canUserDeleteV2Questionnaire(groups, formWithStream("RB"))).toEqual({ ok: true });
-        expect(canUserDeleteV2Questionnaire(groups, formWithStream("KIB_SMB"))).toEqual({ ok: false, reason: "wrong_stream" });
+        expect(canUserDeleteV2Questionnaire(groups, formWithStream("KMBKCB"))).toEqual({ ok: false, reason: "wrong_stream" });
     });
     it("forbidden without delete role", () => {
         expect(canUserDeleteV2Questionnaire(["/saprg"], formWithStream("RB"))).toEqual({ ok: false, reason: "forbidden" });

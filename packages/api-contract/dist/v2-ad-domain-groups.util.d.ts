@@ -32,26 +32,42 @@ export declare function stripV2AdStandPrefix(raw: string): string;
  * - `prod_appadmin` (стенд без sum_) → [] — sum_ обязателен в AD-имени
  */
 export declare function mapV2AdGroupLeafToRoleCodes(rawLeaf: string): string[];
-/**
- * Канон KK path → AD-имена без stand-prefix (из CSV).
- * Для sync: `/appadmin` + prefix `test_` → `/test_sum_appadmin`.
- */
 export declare const V2_KEYCLOAK_PATH_TO_AD_GROUPS: Record<string, readonly string[]>;
 /**
  * Target-path → родитель(и) в KK, под которыми лежит AD-лист (не top-level).
  *
- * Папки ролей (`/de` → внутри `/de/de_lead`, `/de/{stand}sum_de_*`):
- * AD-лист только под каноном, без top-level `/{stand}sum_*`.
+ * SUMD (realm-export):
+ * - executors `/de/{stand}sum_de_*`, leads top-level `/de_lead/{stand}sum_Lde_*`
+ * - auditor → `/controller/{stand}sum_auditor`
+ * - auditorib → `/auditor/{stand}sum_auditorib`
+ * - mipm stream → `/mipm_stream/{stand}sum_mipm_*`
+ * - appadmin → `/admin_it/{stand}sum_appadmin`
  *
- * SUMD также: sarep/sacfg/saprg/project_office; appadmin → `/admin_it/{stand}sum_appadmin`.
+ * Seed/nested: `/de/de_lead/{stand}sum_Lde_*` — тоже в списке nest, чтобы sync
+ * покрывал оба shape.
  */
 export declare const V2_AD_NEST_PARENT_BY_TARGET: Record<string, readonly string[]>;
 /** Нормализовать ввод UI: `test` / `test_` / `TEST_` → `test_`. */
 export declare function normalizeV2AdStandPrefix(raw: string | undefined | null): string;
 /**
+ * Канон, чьи AD-листы живут под другим parent
+ * (например `/appadmin` → `/admin_it/{stand}sum_appadmin`).
+ * Такой path не создаём в KK и не вешаем на него роли — только на AD-alias.
+ */
+export declare function isV2AdDelegatedCanonPath(path: string): boolean;
+/** Path является nest-parent для чьих-то AD-листов (папка должна существовать). */
+export declare function isV2AdNestParentPath(path: string): boolean;
+/**
+ * Нужно ли create/ensure этот path в Keycloak.
+ * Delegated-канон вроде `/appadmin` / `/auditorib` — нет (роли на AD-листе).
+ * `/auditor` — да, как parent для `sum_auditorib`, даже если его AD ушёл в `/controller`.
+ */
+export declare function shouldEnsureV2KeycloakGroupPath(path: string): boolean;
+/**
  * Развернуть TARGET: канон + AD-alias.
  *
  * - nested (см. V2_AD_NEST_PARENT_BY_TARGET): только `/{parent}/{stand}sum_*`
+ * - delegated-канон (`/appadmin` → `/admin_it/...`): роли только на AD-alias, не на каноне
  * - остальные: top-level `/{stand}sum_*` + опционально под каноном
  */
 export declare function expandV2KeycloakTargetsWithAdAliases(target: Record<string, readonly string[]>, standPrefixRaw?: string | null): Record<string, readonly string[]>;

@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
 	expandV2KeycloakTargetsWithAdAliases,
+	isV2AdDelegatedCanonPath,
 	mapV2AdGroupLeafToRoleCodes,
 	normalizeV2AdStandPrefix,
 	resolveV2KeycloakGroupPath,
+	shouldEnsureV2KeycloakGroupPath,
 	stripV2AdStandPrefix,
 } from "./v2-ad-domain-groups.util";
 import { normalizeV2UserGroups } from "./v2-user-stream-mapping.util";
@@ -71,15 +73,32 @@ describe("v2-ad-domain-groups", () => {
 			"/saprg": ["anketa_hold"],
 			"/prjtoffice": [],
 			"/de": ["anketa_view_all_calculations"],
+			"/de_lead": [
+				"anketa_view_all_calculations",
+				"anketa_edit_calculation",
+			],
 			"/de/de_lead": [
 				"anketa_view_all_calculations",
 				"anketa_edit_calculation",
 			],
+			"/auditor": [
+				"anketa_view_all_calculations",
+				"anketa_audit_view",
+			],
+			"/auditorib": [
+				"anketa_view_all_calculations",
+				"anketa_audit_view",
+			],
+			"/mipm_stream": ["anketa_view_all_calculations"],
 		};
 		const expanded = expandV2KeycloakTargetsWithAdAliases(target, "dev_");
-		expect(expanded["/appadmin"]).toEqual(
-			expect.arrayContaining(["anketa_audit_view"]),
-		);
+		/** delegated: роли только на AD-листе, не на каноне /appadmin */
+		expect(expanded["/appadmin"]).toBeUndefined();
+		expect(isV2AdDelegatedCanonPath("/appadmin")).toBe(true);
+		expect(shouldEnsureV2KeycloakGroupPath("/appadmin")).toBe(false);
+		expect(shouldEnsureV2KeycloakGroupPath("/admin_it")).toBe(true);
+		expect(shouldEnsureV2KeycloakGroupPath("/auditor")).toBe(true);
+		expect(shouldEnsureV2KeycloakGroupPath("/auditorib")).toBe(false);
 		/** appadmin AD → под /admin_it, не top-level */
 		expect(expanded["/dev_sum_appadmin"]).toBeUndefined();
 		expect(expanded["/admin_it/dev_sum_appadmin"]).toEqual(
@@ -102,7 +121,7 @@ describe("v2-ad-domain-groups", () => {
 		expect(expanded["/project_office/dev_sum_prjtoffice"]).toEqual([]);
 		expect(expanded["/prjtoffice/dev_sum_prjtoffice"]).toEqual([]);
 
-		/** /de — папка; AD и de_lead только внутри неё, не top-level */
+		/** /de — папка; AD только внутри, не top-level */
 		expect(expanded["/dev_sum_de_kmbkcb"]).toBeUndefined();
 		expect(expanded["/dev_sum_Lde_kmbkcb"]).toBeUndefined();
 		expect(expanded["/de"]).toEqual(
@@ -114,8 +133,21 @@ describe("v2-ad-domain-groups", () => {
 		expect(expanded["/de/dev_sum_de_kmbkcb"]).toEqual(
 			expect.arrayContaining(["anketa_view_all_calculations"]),
 		);
+		/** nested seed + SUMD top-level lead */
 		expect(expanded["/de/de_lead/dev_sum_Lde_rb"]).toEqual(
 			expect.arrayContaining(["anketa_edit_calculation"]),
+		);
+		expect(expanded["/de_lead/dev_sum_Lde_rb"]).toEqual(
+			expect.arrayContaining(["anketa_edit_calculation"]),
+		);
+		expect(expanded["/controller/dev_sum_auditor"]).toEqual(
+			expect.arrayContaining(["anketa_audit_view"]),
+		);
+		expect(expanded["/auditor/dev_sum_auditorib"]).toEqual(
+			expect.arrayContaining(["anketa_audit_view"]),
+		);
+		expect(expanded["/mipm_stream/dev_sum_mipm_kmbkcb"]).toEqual(
+			expect.arrayContaining(["anketa_view_all_calculations"]),
 		);
 
 		const noStand = expandV2KeycloakTargetsWithAdAliases(

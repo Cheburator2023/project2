@@ -56,6 +56,22 @@ export class V2RuntimeSettingsService {
 		return this.getStreamFilterSetting();
 	}
 
+	async getKeycloakEtalonOverlay(): Promise<Record<string, unknown> | null> {
+		const row = await this.getOrCreate();
+		return row.keycloakEtalonOverlay ?? null;
+	}
+
+	async setKeycloakEtalonOverlay(
+		overlay: Record<string, unknown> | null,
+		updatedBy?: string | null,
+	): Promise<Record<string, unknown> | null> {
+		const row = await this.getOrCreate();
+		row.keycloakEtalonOverlay = overlay;
+		row.updatedBy = updatedBy ?? null;
+		await this.repo.save(row);
+		return row.keycloakEtalonOverlay ?? null;
+	}
+
 	private async getOrCreate(): Promise<V2RuntimeSettingsEntity> {
 		let row = await this.repo.findOne({ where: { id: 1 } });
 		if (row) return row;

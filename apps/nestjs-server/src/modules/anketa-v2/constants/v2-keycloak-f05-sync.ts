@@ -6,46 +6,77 @@
  * - anketa_workflow_approve — завершение раздела/блока (§3.10);
  * - anketa_complete_anketa — завершение заполнения анкеты (§3.12).
  *
+ * SUMD (realm-export): лиды top-level `/ds_lead`, `/de_lead`, …
+ * Seed/F-05: вложенные `/ds/ds_lead`. Держим оба path с одинаковыми ролями,
+ * чтобы sync заливал роли и на пре-прод, и на nested-shape.
+ *
  * Latin-дубли с другим регистром (/DE vs /de) НЕ трогаем.
  */
 
+const DS_LEAD_ROLES = [
+	"anketa_view_all_calculations",
+	"anketa_create_calculation",
+	"anketa_edit_calculation",
+	"anketa_delete_calculation",
+	"anketa_export_reports",
+	"anketa_workflow_approve",
+	"anketa_complete_anketa",
+] as const;
+
+const DE_LEAD_ROLES = [
+	"anketa_view_all_calculations",
+	"anketa_edit_calculation",
+	"anketa_export_reports",
+	"anketa_workflow_approve",
+	"anketa_complete_anketa",
+] as const;
+
+const MODELOPS_LEAD_ROLES = [
+	"anketa_view_all_calculations",
+	"anketa_create_calculation",
+	"anketa_edit_calculation",
+	"anketa_delete_calculation",
+	"anketa_export_reports",
+	"anketa_workflow_approve",
+	"anketa_complete_anketa",
+] as const;
+
+const VALIDATOR_ROLES = [
+	"anketa_view_all_calculations",
+	"anketa_export_reports",
+] as const;
+
+const AUDITOR_ROLES = [
+	"anketa_view_all_calculations",
+	"anketa_export_reports",
+	"anketa_audit_view",
+] as const;
+
+const MIPM_ROLES = [
+	"anketa_view_all_calculations",
+	"anketa_export_reports",
+] as const;
+
 export const V2_KEYCLOAK_GROUP_ROLE_TARGET: Record<string, readonly string[]> = {
 	"/ds": ["anketa_view_all_calculations", "anketa_export_reports"],
-	"/ds/ds_lead": [
-		"anketa_view_all_calculations",
-		"anketa_create_calculation",
-		"anketa_edit_calculation",
-		"anketa_delete_calculation",
-		"anketa_export_reports",
-		"anketa_workflow_approve",
-		"anketa_complete_anketa",
-	],
+	/** SUMD top-level lead folder */
+	"/ds_lead": DS_LEAD_ROLES,
+	/** Seed / nested lead folder */
+	"/ds/ds_lead": DS_LEAD_ROLES,
 	"/de": ["anketa_view_all_calculations", "anketa_export_reports"],
-	"/de/de_lead": [
-		"anketa_view_all_calculations",
-		"anketa_edit_calculation",
-		"anketa_export_reports",
-		"anketa_workflow_approve",
-		"anketa_complete_anketa",
-	],
+	"/de_lead": DE_LEAD_ROLES,
+	"/de/de_lead": DE_LEAD_ROLES,
 	"/modelops": ["anketa_view_all_calculations", "anketa_export_reports"],
-	"/modelops/modelops_lead": [
-		"anketa_view_all_calculations",
-		"anketa_create_calculation",
-		"anketa_edit_calculation",
-		"anketa_delete_calculation",
-		"anketa_export_reports",
-		"anketa_workflow_approve",
-		"anketa_complete_anketa",
-	],
+	"/modelops_lead": MODELOPS_LEAD_ROLES,
+	"/modelops/modelops_lead": MODELOPS_LEAD_ROLES,
 	"/business_customer": [],
-	/** Бизнес-партнёр (sum_mipm) / стрима (sum_mipm_<стрим>): только view + export. */
-	"/mipm": ["anketa_view_all_calculations", "anketa_export_reports"],
-	"/validator": ["anketa_view_all_calculations", "anketa_export_reports"],
-	"/validator/validator_lead": [
-		"anketa_view_all_calculations",
-		"anketa_export_reports",
-	],
+	/** Бизнес-партнёр (sum_mipm): только view + export. */
+	"/mipm": MIPM_ROLES,
+	/** Бизнес-партнёр стрима (sum_mipm_<стрим>) — SUMD `/mipm_stream`. */
+	"/mipm_stream": MIPM_ROLES,
+	"/validator": VALIDATOR_ROLES,
+	"/validator_lead": VALIDATOR_ROLES,
+	"/validator/validator_lead": VALIDATOR_ROLES,
 	/** Архитектор: завершение раздела, но не анкеты. */
 	"/architect": [
 		"anketa_view_all_calculations",
@@ -79,28 +110,21 @@ export const V2_KEYCLOAK_GROUP_ROLE_TARGET: Record<string, readonly string[]> = 
 		"anketa_edit_calculation",
 		"anketa_export_reports",
 	],
-	/** AD sum_appadmin. Админка — по группе appadmin/sacfg, не anketa_admin_*. */
-	"/appadmin": [
-		"anketa_view_all_calculations",
-		"anketa_audit_view",
-	],
+	/**
+	 * AD sum_appadmin. Только view + audit (без create/edit/delete/export/approve).
+	 * Админка UI — по группе appadmin/sacfg, не anketa_admin_*.
+	 */
+	"/appadmin": ["anketa_view_all_calculations", "anketa_audit_view"],
 	"/admin_it": [],
 	"/admin_it/admin_it_lead": [],
-	"/auditor": [
-		"anketa_view_all_calculations",
-		"anketa_export_reports",
-		"anketa_audit_view",
-	],
-	"/auditor/auditor_lead": [
-		"anketa_view_all_calculations",
-		"anketa_export_reports",
-		"anketa_audit_view",
-	],
-	"/auditorib": [
-		"anketa_view_all_calculations",
-		"anketa_export_reports",
-		"anketa_audit_view",
-	],
+	"/auditor": AUDITOR_ROLES,
+	/**
+	 * SUMD: AD `sum_auditor` лежит под `/controller` (не под `/auditor`).
+	 * Роли те же, что у аудитора.
+	 */
+	"/controller": AUDITOR_ROLES,
+	"/auditor/auditor_lead": AUDITOR_ROLES,
+	"/auditorib": AUDITOR_ROLES,
 	/** AD sum_prjtoffice; /project_office — legacy alias. */
 	"/prjtoffice": [],
 	"/project_office": [],

@@ -16,6 +16,7 @@ import { downloadBlob } from "@react-client/common/api/queries/kanban-board";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { toast } from "@react-client/common/toasts";
+import { inferAdStandPrefixFromUrl } from "@react-client/features/v2/admin/utils/inferAdStandPrefix";
 import { useEffect, useRef, useState } from "react";
 
 type StandPrefixOption = { value: string; label: string };
@@ -198,7 +199,9 @@ export function KeycloakRoleSyncPanel() {
 	const [mode, setMode] = useState<ModalMode>("sync");
 	const [keycloakUrl, setKeycloakUrl] = useState("");
 	const [realm, setRealm] = useState("cym");
-	const [standPrefix, setStandPrefix] = useState("test_");
+	const [standPrefix, setStandPrefix] = useState<string>(() =>
+		inferAdStandPrefixFromUrl(),
+	);
 	const [username, setUsername] = useState("");
 	const [password, setPassword] = useState("");
 	const [backupInclude, setBackupInclude] = useState<BackupInclude>(
@@ -223,7 +226,11 @@ export function KeycloakRoleSyncPanel() {
 	useEffect(() => {
 		const d = defaultsQuery.data;
 		if (!d) return;
-		setKeycloakUrl((prev) => prev || d.keycloakUrl || "");
+		setKeycloakUrl((prev) => {
+			const next = prev || d.keycloakUrl || "";
+			setStandPrefix(inferAdStandPrefixFromUrl(next || undefined));
+			return next;
+		});
 		setRealm((prev) => (prev === "cym" && d.realm ? d.realm : prev));
 	}, [defaultsQuery.data]);
 
@@ -507,7 +514,7 @@ export function KeycloakRoleSyncPanel() {
 			setRestoreInclude(DEFAULT_RESTORE_INCLUDE);
 		}
 		if (next === "test-users") {
-			setStandPrefix("dev_");
+			setStandPrefix(inferAdStandPrefixFromUrl(keycloakUrl || undefined));
 			setLastTestUsers(null);
 		}
 		setOpen(true);
@@ -678,7 +685,11 @@ export function KeycloakRoleSyncPanel() {
 						<TextField
 							label="Keycloak URL"
 							value={keycloakUrl}
-							onChange={(e) => setKeycloakUrl(e.target.value)}
+							onChange={(e) => {
+								const next = e.target.value;
+								setKeycloakUrl(next);
+								setStandPrefix(inferAdStandPrefixFromUrl(next));
+							}}
 							placeholder="https://keycloak…/auth"
 							helperText={
 								defaultsQuery.data?.keycloakUrl
@@ -733,8 +744,8 @@ export function KeycloakRoleSyncPanel() {
 										placeholder="test_ | dev_ | prod_ | пусто"
 										helperText={
 											mode === "test-users"
-												? "Логины test_*. Папки ролей: /de → /de/de_lead; AD-листы: /de/dev_sum_de_*, /sacfg/dev_sum_sacfg, /admin_it/dev_sum_appadmin. Пусто → sum_* без стенда."
-												: "Выбор или ручной ввод. ИФТ: test_ → /admin_it/test_sum_appadmin. Пусто → /admin_it/sum_appadmin."
+												? "Авто по hostname: vtb → test_, иначе dev_. Логины test_*. AD: /de/{prefix}sum_de_*."
+												: "Авто по hostname: vtb → test_, иначе dev_. Можно переопределить вручную."
 										}
 									/>
 								)}

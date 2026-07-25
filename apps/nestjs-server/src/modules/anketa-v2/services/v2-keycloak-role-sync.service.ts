@@ -6,7 +6,11 @@ import {
 	ServiceUnavailableException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { expandV2KeycloakTargetsWithAdAliases, resolveV2KeycloakGroupPath } from "@smart-anketa/api-contract";
+import {
+	expandV2KeycloakTargetsWithAdAliases,
+	shouldEnsureV2KeycloakGroupPath,
+	resolveV2KeycloakGroupPath,
+} from "@smart-anketa/api-contract";
 import {
 	V2_KEYCLOAK_GROUP_ROLE_TARGET,
 	V2_KEYCLOAK_GROUPS_TO_ENSURE,
@@ -14,6 +18,7 @@ import {
 	V2_KEYCLOAK_ROLES_TO_ENSURE,
 } from "../constants/v2-keycloak-f05-sync";
 import { resolveV2KeycloakTestUsers } from "../constants/v2-keycloak-test-users";
+import { V2RuntimeSettingsService } from "./v2-runtime-settings.service";
 
 type KcGroup = {
 	id: string;
@@ -183,11 +188,74 @@ export type V2KeycloakBackupDto = {
 	}>;
 };
 
+export type V2KeycloakEtalonOverlay = {
+	groupRoleTarget?: Record<string, string[]>;
+	testUsers?: Array<{ username: string; groups: string[]; label?: string }>;
+};
+
+export type V2KeycloakMatrixInspectDto = {
+	exportedAt: string;
+	keycloakUrl: string;
+	realm: string;
+	standPrefix: string;
+	anketaRoles: string[];
+	groups: Array<{
+		path: string;
+		anketaRoles: string[];
+		memberUsernames: string[];
+	}>;
+	users: Array<{
+		username: string;
+		groups: string[];
+	}>;
+};
+
+export type V2KeycloakMatrixDiffDto = {
+	standPrefix: string;
+	etalonSource: "code" | "code+overlay";
+	groupRoleDiffs: Array<{
+		path: string;
+		role: string;
+		status: "ok" | "missing" | "extra";
+		expected: boolean;
+		actual: boolean;
+	}>;
+	userGroupDiffs: Array<{
+		username: string;
+		group: string;
+		status: "ok" | "missing" | "extra";
+		expected: boolean;
+		actual: boolean;
+	}>;
+	summary: {
+		groupRoleMissing: number;
+		groupRoleExtra: number;
+		userGroupMissing: number;
+		userGroupExtra: number;
+	};
+	etalon: {
+		groupRoleTarget: Record<string, string[]>;
+		testUsers: Array<{ username: string; label: string; groups: string[] }>;
+	};
+};
+
+export type V2KeycloakMatrixApplyResult = {
+	dryRun: boolean;
+	keycloakUrl: string;
+	realm: string;
+	groupRoleChanges: V2KeycloakRoleSyncResult["groupRoleChanges"];
+	userGroupChanges: V2KeycloakRestoreResult["userGroupChanges"];
+	warnings: string[];
+};
+
 @Injectable()
 export class V2KeycloakRoleSyncService {
 	private readonly logger = new Logger(V2KeycloakRoleSyncService.name);
 
-	constructor(private readonly config: ConfigService) {}
+	constructor(
+		private readonly config: ConfigService,
+		private readonly runtimeSettings: V2RuntimeSettingsService,
+	) {}
 
 	/** Дефолты из env — для префилла в UI. */
 	getDefaults(): {
@@ -1597,15 +1665,18 @@ export class V2KeycloakRoleSyncService {
 			V2_KEYCLOAK_GROUP_ROLE_TARGET,
 			args.standPrefix,
 		);
+		/** Не создаём `/appadmin` и т.п. — только AD `/admin_it/{stand}sum_appadmin`. */
 		const groupsToEnsure = [
 			...new Set([
 				...V2_KEYCLOAK_GROUPS_TO_ENSURE,
 				...Object.keys(target),
 			]),
-		].sort(
-			(a, b) =>
-				a.split("/").length - b.split("/").length || a.localeCompare(b),
-		);
+		]
+			.filter((path) => shouldEnsureV2KeycloakGroupPath(path))
+			.sort(
+				(a, b) =>
+					a.split("/").length - b.split("/").length || a.localeCompare(b),
+			);
 
 		const roles =
 			(await this.api<KcRole[]>(
@@ -1827,5 +1898,682 @@ export class V2KeycloakRoleSyncService {
 		}
 
 		return { rolesCreated, groupsCreated, groupRoleChanges };
+	}
+
+	normalizeStandPrefix(raw?: string | null): string {
+		const t = (raw ?? "").trim().toLowerCase().replace(/_+$/, "");
+		if (!t) return "";
+		return `${t}_`;
+	}
+
+	async getEtalonOverlay(): Promise<V2KeycloakEtalonOverlay | null> {
+		const raw = await this.runtimeSettings.getKeycloakEtalonOverlay();
+		if (!raw || typeof raw !== "object") return null;
+		return this.parseEtalonOverlay(raw);
+	}
+
+	async setEtalonOverlay(
+		overlay: V2KeycloakEtalonOverlay | null,
+		updatedBy?: string | null,
+	): Promise<V2KeycloakEtalonOverlay | null> {
+		if (overlay == null) {
+			await this.runtimeSettings.setKeycloakEtalonOverlay(null, updatedBy);
+			return null;
+		}
+		const parsed = this.parseEtalonOverlay(overlay);
+		await this.runtimeSettings.setKeycloakEtalonOverlay(
+			parsed as Record<string, unknown>,
+			updatedBy,
+		);
+		return parsed;
+	}
+
+	resolveEtalon(standPrefixRaw?: string | null): {
+		standPrefix: string;
+		source: "code" | "code+overlay";
+		groupRoleTarget: Record<string, string[]>;
+		testUsers: Array<{ username: string; label: string; groups: string[] }>;
+	} {
+		const standPrefix = this.normalizeStandPrefix(standPrefixRaw);
+		const baseTarget = expandV2KeycloakTargetsWithAdAliases(
+			V2_KEYCLOAK_GROUP_ROLE_TARGET,
+			standPrefix,
+		);
+		const baseUsers = resolveV2KeycloakTestUsers(standPrefix).map((u) => ({
+			username: u.username,
+			label: u.label,
+			groups: [...u.groups],
+		}));
+
+		return {
+			standPrefix,
+			source: "code",
+			groupRoleTarget: Object.fromEntries(
+				Object.entries(baseTarget).map(([path, roles]) => [
+					path,
+					[...roles].sort(),
+				]),
+			),
+			testUsers: baseUsers,
+		};
+	}
+
+	async resolveEtalonWithOverlay(standPrefixRaw?: string | null): Promise<{
+		standPrefix: string;
+		source: "code" | "code+overlay";
+		groupRoleTarget: Record<string, string[]>;
+		testUsers: Array<{ username: string; label: string; groups: string[] }>;
+	}> {
+		const base = this.resolveEtalon(standPrefixRaw);
+		const overlay = await this.getEtalonOverlay();
+		if (!overlay) return base;
+
+		const groupRoleTarget = { ...base.groupRoleTarget };
+		if (overlay.groupRoleTarget) {
+			for (const [path, roles] of Object.entries(overlay.groupRoleTarget)) {
+				groupRoleTarget[path] = [...new Set(roles.map(String))].sort();
+			}
+		}
+
+		const byUser = new Map(
+			base.testUsers.map((u) => [u.username.toLowerCase(), { ...u }]),
+		);
+		if (overlay.testUsers?.length) {
+			for (const u of overlay.testUsers) {
+				const key = u.username.toLowerCase();
+				byUser.set(key, {
+					username: u.username,
+					label: u.label || byUser.get(key)?.label || u.username,
+					groups: [...new Set(u.groups.map(String))].sort(),
+				});
+			}
+		}
+
+		return {
+			standPrefix: base.standPrefix,
+			source: "code+overlay",
+			groupRoleTarget,
+			testUsers: [...byUser.values()].sort((a, b) =>
+				a.username.localeCompare(b.username),
+			),
+		};
+	}
+
+	async inspectMatrix(options: {
+		adminUsername: string;
+		adminPassword: string;
+		keycloakUrl?: string;
+		realm?: string;
+		adminRealm?: string;
+		standPrefix?: string;
+		/** Если true — только группы/юзеры из эталона (+ их members). */
+		etalonScopeOnly?: boolean;
+	}): Promise<V2KeycloakMatrixInspectDto> {
+		const etalon = await this.resolveEtalonWithOverlay(options.standPrefix);
+		const { keycloakUrl, realm, adminRealm } = this.resolveConnection(options);
+		const token = await this.fetchAdminToken({
+			keycloakUrl,
+			adminRealm,
+			username: options.adminUsername,
+			password: options.adminPassword,
+		});
+
+		const roles =
+			(await this.api<KcRole[]>(
+				keycloakUrl,
+				realm,
+				token,
+				"GET",
+				"/roles?max=500",
+			)) || [];
+		const anketaRoles = roles
+			.map((r) => r.name)
+			.filter((n) => n.startsWith("anketa_"))
+			.sort();
+
+		const etalonPaths = new Set(Object.keys(etalon.groupRoleTarget));
+		for (const u of etalon.testUsers) {
+			for (const g of u.groups) etalonPaths.add(g);
+		}
+
+		const byPath = await this.loadGroupsByPath(keycloakUrl, realm, token);
+		const groupEntries = Object.values(byPath)
+			.filter((g) =>
+				options.etalonScopeOnly === false
+					? true
+					: etalonPaths.has(g.path) ||
+						[...etalonPaths].some(
+							(p) =>
+								resolveV2KeycloakGroupPath(p, [g.path]) === g.path,
+						),
+			)
+			.sort((a, b) => a.path.localeCompare(b.path));
+
+		const groups: V2KeycloakMatrixInspectDto["groups"] = [];
+		const memberUsernames = new Set<string>();
+		for (const g of groupEntries) {
+			const mapped =
+				(await this.api<KcRole[]>(
+					keycloakUrl,
+					realm,
+					token,
+					"GET",
+					`/groups/${g.id}/role-mappings/realm`,
+				)) || [];
+			const anketa = mapped
+				.map((r) => r.name)
+				.filter((n) => n.startsWith("anketa_"))
+				.sort();
+			const members = await this.listMembers(
+				keycloakUrl,
+				realm,
+				token,
+				g.id,
+			);
+			const usernames = members
+				.map((m) => m.username)
+				.filter((u): u is string => Boolean(u))
+				.sort();
+			for (const u of usernames) memberUsernames.add(u);
+			groups.push({
+				path: g.path,
+				anketaRoles: anketa,
+				memberUsernames: usernames,
+			});
+		}
+
+		const usernamesToLoad = new Set<string>([
+			...etalon.testUsers.map((u) => u.username),
+			...memberUsernames,
+		]);
+
+		const usersByName = await this.loadUsersByUsername(
+			keycloakUrl,
+			realm,
+			token,
+		);
+		const users: V2KeycloakMatrixInspectDto["users"] = [];
+		for (const username of [...usernamesToLoad].sort()) {
+			const live = usersByName.get(username.toLowerCase());
+			if (!live?.id) {
+				users.push({ username, groups: [] });
+				continue;
+			}
+			const userGroups = await this.listUserGroups(
+				keycloakUrl,
+				realm,
+				token,
+				live.id,
+			);
+			users.push({
+				username: live.username || username,
+				groups: userGroups.map((g) => g.path).sort(),
+			});
+		}
+
+		return {
+			exportedAt: new Date().toISOString(),
+			keycloakUrl,
+			realm,
+			standPrefix: etalon.standPrefix,
+			anketaRoles,
+			groups,
+			users,
+		};
+	}
+
+	async diffMatrix(options: {
+		adminUsername: string;
+		adminPassword: string;
+		keycloakUrl?: string;
+		realm?: string;
+		adminRealm?: string;
+		standPrefix?: string;
+		inspect?: V2KeycloakMatrixInspectDto | null;
+	}): Promise<V2KeycloakMatrixDiffDto> {
+		const etalon = await this.resolveEtalonWithOverlay(options.standPrefix);
+		const inspect =
+			options.inspect ??
+			(await this.inspectMatrix({
+				...options,
+				etalonScopeOnly: true,
+			}));
+
+		const actualGroupRoles = new Map<string, Set<string>>();
+		for (const g of inspect.groups) {
+			actualGroupRoles.set(g.path, new Set(g.anketaRoles));
+			for (const [etalonPath] of Object.entries(etalon.groupRoleTarget)) {
+				const resolved = resolveV2KeycloakGroupPath(etalonPath, [g.path]);
+				if (resolved === g.path) {
+					actualGroupRoles.set(etalonPath, new Set(g.anketaRoles));
+				}
+			}
+		}
+
+		const groupRoleDiffs: V2KeycloakMatrixDiffDto["groupRoleDiffs"] = [];
+		for (const [path, expectedRoles] of Object.entries(
+			etalon.groupRoleTarget,
+		)) {
+			const resolved =
+				resolveV2KeycloakGroupPath(
+					path,
+					inspect.groups.map((g) => g.path),
+				) ?? path;
+			const actual =
+				actualGroupRoles.get(path) ??
+				actualGroupRoles.get(resolved) ??
+				new Set<string>();
+			const want = new Set(expectedRoles);
+			const allRoles = new Set([...want, ...actual]);
+			for (const role of [...allRoles].sort()) {
+				const expected = want.has(role);
+				const have = actual.has(role);
+				const status: "ok" | "missing" | "extra" =
+					expected && have
+						? "ok"
+						: expected && !have
+							? "missing"
+							: !expected && have
+								? "extra"
+								: "ok";
+				if (status === "ok" && !expected) continue;
+				groupRoleDiffs.push({
+					path,
+					role,
+					status,
+					expected,
+					actual: have,
+				});
+			}
+		}
+
+		const actualUserGroups = new Map<string, Set<string>>();
+		for (const u of inspect.users) {
+			actualUserGroups.set(u.username.toLowerCase(), new Set(u.groups));
+		}
+
+		const userGroupDiffs: V2KeycloakMatrixDiffDto["userGroupDiffs"] = [];
+		for (const u of etalon.testUsers) {
+			const have = actualUserGroups.get(u.username.toLowerCase()) ?? new Set();
+			const want = new Set(u.groups);
+			const all = new Set([...want, ...have]);
+			for (const group of [...all].sort()) {
+				const expected = want.has(group);
+				const actual = [...have].some(
+					(p) =>
+						p === group ||
+						resolveV2KeycloakGroupPath(group, [p]) === p,
+				);
+				const status: "ok" | "missing" | "extra" =
+					expected && actual
+						? "ok"
+						: expected && !actual
+							? "missing"
+							: !expected && actual
+								? "extra"
+								: "ok";
+				if (status === "ok" && !expected) continue;
+				userGroupDiffs.push({
+					username: u.username,
+					group,
+					status,
+					expected,
+					actual,
+				});
+			}
+		}
+
+		return {
+			standPrefix: etalon.standPrefix,
+			etalonSource: etalon.source,
+			groupRoleDiffs,
+			userGroupDiffs,
+			summary: {
+				groupRoleMissing: groupRoleDiffs.filter((d) => d.status === "missing")
+					.length,
+				groupRoleExtra: groupRoleDiffs.filter((d) => d.status === "extra")
+					.length,
+				userGroupMissing: userGroupDiffs.filter((d) => d.status === "missing")
+					.length,
+				userGroupExtra: userGroupDiffs.filter((d) => d.status === "extra")
+					.length,
+			},
+			etalon: {
+				groupRoleTarget: etalon.groupRoleTarget,
+				testUsers: etalon.testUsers,
+			},
+		};
+	}
+
+	async applyMatrixPatch(options: {
+		adminUsername: string;
+		adminPassword: string;
+		keycloakUrl?: string;
+		realm?: string;
+		adminRealm?: string;
+		standPrefix?: string;
+		dryRun?: boolean;
+		groupRoleChanges?: Array<{
+			path: string;
+			add: string[];
+			remove: string[];
+		}>;
+		userGroupChanges?: Array<{
+			username: string;
+			addGroups: string[];
+			removeGroups: string[];
+		}>;
+	}): Promise<V2KeycloakMatrixApplyResult> {
+		const dryRun = options.dryRun !== false;
+		const apply = !dryRun;
+		const { keycloakUrl, realm, adminRealm } = this.resolveConnection(options);
+		const token = await this.fetchAdminToken({
+			keycloakUrl,
+			adminRealm,
+			username: options.adminUsername,
+			password: options.adminPassword,
+		});
+
+		const groupRoleChangesIn = options.groupRoleChanges ?? [];
+		const userGroupChangesIn = options.userGroupChanges ?? [];
+		const warnings: string[] = [];
+		const groupRoleChanges: V2KeycloakRoleSyncResult["groupRoleChanges"] = [];
+		const userGroupChanges: V2KeycloakRestoreResult["userGroupChanges"] = [];
+
+		const roles =
+			(await this.api<KcRole[]>(
+				keycloakUrl,
+				realm,
+				token,
+				"GET",
+				"/roles?max=500",
+			)) || [];
+		const byName: Record<string, KcRole> = Object.fromEntries(
+			roles.map((r) => [r.name, r]),
+		);
+
+		for (const name of V2_KEYCLOAK_ROLES_TO_ENSURE) {
+			if (byName[name]) continue;
+			if (!apply) continue;
+			try {
+				await this.api(keycloakUrl, realm, token, "POST", "/roles", {
+					name,
+					description: V2_KEYCLOAK_ROLE_DESCRIPTIONS[name] || name,
+				});
+				const created = await this.api<KcRole>(
+					keycloakUrl,
+					realm,
+					token,
+					"GET",
+					`/roles/${encodeURIComponent(name)}`,
+				);
+				if (created) byName[name] = created;
+			} catch (e) {
+				const msg = String(e);
+				if (!msg.includes("409")) throw e;
+			}
+		}
+
+		const pathsNeeded = [
+			...groupRoleChangesIn.map((c) => c.path),
+			...userGroupChangesIn.flatMap((c) => [
+				...c.addGroups,
+				...c.removeGroups,
+			]),
+		];
+		let byPath = await this.loadGroupsByPath(
+			keycloakUrl,
+			realm,
+			token,
+			pathsNeeded,
+		);
+
+		for (const change of groupRoleChangesIn) {
+			const add = (change.add ?? []).filter((n) => n.startsWith("anketa_"));
+			const remove = (change.remove ?? []).filter((n) =>
+				n.startsWith("anketa_"),
+			);
+			const resolved =
+				resolveV2KeycloakGroupPath(change.path, Object.keys(byPath)) ??
+				change.path;
+			const g = byPath[resolved];
+			if (!g) {
+				groupRoleChanges.push({
+					path: change.path,
+					add,
+					remove,
+					status: "missing_group",
+				});
+				continue;
+			}
+			if (!add.length && !remove.length) {
+				groupRoleChanges.push({
+					path: change.path,
+					add: [],
+					remove: [],
+					status: "ok",
+				});
+				continue;
+			}
+			if (!apply) {
+				groupRoleChanges.push({
+					path: change.path,
+					add,
+					remove,
+					status: "would_update",
+				});
+				continue;
+			}
+			if (add.length) {
+				await this.api(
+					keycloakUrl,
+					realm,
+					token,
+					"POST",
+					`/groups/${g.id}/role-mappings/realm`,
+					add.map((name) => {
+						const role = byName[name];
+						if (!role) {
+							throw new ServiceUnavailableException(`Role missing: ${name}`);
+						}
+						return { id: role.id, name: role.name };
+					}),
+				);
+			}
+			if (remove.length) {
+				await this.api(
+					keycloakUrl,
+					realm,
+					token,
+					"DELETE",
+					`/groups/${g.id}/role-mappings/realm`,
+					remove.map((name) => {
+						const role = byName[name];
+						if (!role) {
+							throw new ServiceUnavailableException(`Role missing: ${name}`);
+						}
+						return { id: role.id, name: role.name };
+					}),
+				);
+			}
+			groupRoleChanges.push({
+				path: change.path,
+				add,
+				remove,
+				status: "updated",
+			});
+		}
+
+		if (userGroupChangesIn.length) {
+			const usersByUsername = await this.loadUsersByUsername(
+				keycloakUrl,
+				realm,
+				token,
+			);
+			byPath = await this.loadGroupsByPath(
+				keycloakUrl,
+				realm,
+				token,
+				userGroupChangesIn.flatMap((c) => [
+					...c.addGroups,
+					...c.removeGroups,
+				]),
+			);
+
+			for (const change of userGroupChangesIn) {
+				const username = change.username;
+				const live = usersByUsername.get(username.toLowerCase());
+				const join = [...(change.addGroups ?? [])];
+				const leave = [...(change.removeGroups ?? [])];
+				if (!live?.id) {
+					userGroupChanges.push({
+						username,
+						join,
+						leave,
+						status: "missing_user",
+					});
+					continue;
+				}
+				if (!join.length && !leave.length) {
+					userGroupChanges.push({
+						username,
+						join: [],
+						leave: [],
+						status: "ok",
+					});
+					continue;
+				}
+				if (!apply) {
+					userGroupChanges.push({
+						username,
+						join,
+						leave,
+						status: "would_update",
+					});
+					continue;
+				}
+				for (const path of join) {
+					const resolved =
+						resolveV2KeycloakGroupPath(path, Object.keys(byPath)) ?? path;
+					const g = byPath[resolved];
+					if (!g?.id) {
+						warnings.push(`${username}: нет группы ${path} для join`);
+						continue;
+					}
+					await this.api(
+						keycloakUrl,
+						realm,
+						token,
+						"PUT",
+						`/users/${live.id}/groups/${g.id}`,
+					);
+				}
+				const currentGroups = await this.listUserGroups(
+					keycloakUrl,
+					realm,
+					token,
+					live.id,
+				);
+				for (const path of leave) {
+					const g =
+						currentGroups.find(
+							(x) =>
+								x.path === path ||
+								resolveV2KeycloakGroupPath(path, [x.path]) === x.path,
+						) ||
+						byPath[
+							resolveV2KeycloakGroupPath(path, Object.keys(byPath)) ?? path
+						];
+					if (!g?.id) continue;
+					await this.api(
+						keycloakUrl,
+						realm,
+						token,
+						"DELETE",
+						`/users/${live.id}/groups/${g.id}`,
+					);
+				}
+				userGroupChanges.push({
+					username,
+					join,
+					leave,
+					status: "updated",
+				});
+			}
+		}
+
+		this.logger.log(
+			`Keycloak matrix apply: realm=${realm} dryRun=${dryRun} groupRoleΔ=${groupRoleChanges.filter((c) => c.add.length || c.remove.length).length} userGroupΔ=${userGroupChanges.filter((c) => c.join.length || c.leave.length).length}`,
+		);
+
+		return {
+			dryRun,
+			keycloakUrl,
+			realm,
+			groupRoleChanges,
+			userGroupChanges,
+			warnings,
+		};
+	}
+
+	private parseEtalonOverlay(raw: unknown): V2KeycloakEtalonOverlay {
+		if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+			throw new BadRequestException("etalon overlay must be an object");
+		}
+		const rec = raw as Record<string, unknown>;
+		const out: V2KeycloakEtalonOverlay = {};
+		if (rec.groupRoleTarget != null) {
+			if (
+				typeof rec.groupRoleTarget !== "object" ||
+				Array.isArray(rec.groupRoleTarget)
+			) {
+				throw new BadRequestException("groupRoleTarget must be an object");
+			}
+			const target: Record<string, string[]> = {};
+			for (const [path, roles] of Object.entries(
+				rec.groupRoleTarget as Record<string, unknown>,
+			)) {
+				if (!Array.isArray(roles)) {
+					throw new BadRequestException(
+						`groupRoleTarget[${path}] must be string[]`,
+					);
+				}
+				target[path] = roles
+					.map(String)
+					.filter((n) => n.startsWith("anketa_"))
+					.sort();
+			}
+			out.groupRoleTarget = target;
+		}
+		if (rec.testUsers != null) {
+			if (!Array.isArray(rec.testUsers)) {
+				throw new BadRequestException("testUsers must be an array");
+			}
+			out.testUsers = rec.testUsers.map((item, index) => {
+				if (!item || typeof item !== "object") {
+					throw new BadRequestException(`testUsers[${index}] invalid`);
+				}
+				const u = item as Record<string, unknown>;
+				if (typeof u.username !== "string" || !u.username.trim()) {
+					throw new BadRequestException(
+						`testUsers[${index}].username required`,
+					);
+				}
+				if (!Array.isArray(u.groups)) {
+					throw new BadRequestException(
+						`testUsers[${index}].groups must be string[]`,
+					);
+				}
+				return {
+					username: u.username.trim(),
+					label:
+						typeof u.label === "string" && u.label.trim()
+							? u.label.trim()
+							: u.username.trim(),
+					groups: u.groups.map(String),
+				};
+			});
+		}
+		return out;
 	}
 }

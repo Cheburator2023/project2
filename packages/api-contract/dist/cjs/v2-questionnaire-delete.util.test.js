@@ -21,9 +21,9 @@ const formWithStream = (stream) => ({
         (0, vitest_1.expect)((0, v2_questionnaire_delete_util_1.canUserDeleteV2Questionnaire)(["/sacfg"], formWithStream("RB"))).toEqual({ ok: true });
     });
     (0, vitest_1.it)("ds_lead limited to own stream when scope is known", () => {
-        const groups = ["/ds/ds_lead", "/ds/ds_lead_rb"];
+        const groups = ["/ds/ds_lead", "sum_Lds_rb"];
         (0, vitest_1.expect)((0, v2_questionnaire_delete_util_1.canUserDeleteV2Questionnaire)(groups, formWithStream("RB"))).toEqual({ ok: true });
-        (0, vitest_1.expect)((0, v2_questionnaire_delete_util_1.canUserDeleteV2Questionnaire)(groups, formWithStream("KIB_SMB"))).toEqual({ ok: false, reason: "wrong_stream" });
+        (0, vitest_1.expect)((0, v2_questionnaire_delete_util_1.canUserDeleteV2Questionnaire)(groups, formWithStream("KMBKCB"))).toEqual({ ok: false, reason: "wrong_stream" });
     });
     (0, vitest_1.it)("forbidden without delete role", () => {
         (0, vitest_1.expect)((0, v2_questionnaire_delete_util_1.canUserDeleteV2Questionnaire)(["/saprg"], formWithStream("RB"))).toEqual({ ok: false, reason: "forbidden" });

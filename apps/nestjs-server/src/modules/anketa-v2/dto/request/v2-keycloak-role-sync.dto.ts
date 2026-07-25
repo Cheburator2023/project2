@@ -1,4 +1,5 @@
 import {
+	IsArray,
 	IsBoolean,
 	IsObject,
 	IsOptional,
@@ -7,6 +8,7 @@ import {
 	ValidateNested,
 } from "class-validator";
 import { Type } from "class-transformer";
+import { ApiPropertyOptional } from "@nestjs/swagger";
 
 /** Креды Keycloak admin + опциональный override URL (не сохраняются). */
 export class V2KeycloakAdminCredsDto {
@@ -145,4 +147,86 @@ export class V2KeycloakTestUsersDto extends V2KeycloakAdminCredsDto {
 	@IsOptional()
 	@IsString()
 	standPrefix?: string;
+}
+
+export class V2KeycloakMatrixInspectDto extends V2KeycloakAdminCredsDto {
+	@IsOptional()
+	@IsString()
+	standPrefix?: string;
+
+	/** false = все группы realm; по умолчанию только эталонные path. */
+	@IsOptional()
+	@IsBoolean()
+	etalonScopeOnly?: boolean;
+}
+
+export class V2KeycloakMatrixDiffDto extends V2KeycloakAdminCredsDto {
+	@IsOptional()
+	@IsString()
+	standPrefix?: string;
+
+	@ApiPropertyOptional({
+		description: "Опциональный уже загруженный inspect (иначе запросит KK)",
+	})
+	@IsOptional()
+	@IsObject()
+	inspect?: Record<string, unknown>;
+}
+
+export class V2KeycloakMatrixGroupRoleChangeDto {
+	@IsString()
+	path!: string;
+
+	@IsArray()
+	@IsString({ each: true })
+	add!: string[];
+
+	@IsArray()
+	@IsString({ each: true })
+	remove!: string[];
+}
+
+export class V2KeycloakMatrixUserGroupChangeDto {
+	@IsString()
+	username!: string;
+
+	@IsArray()
+	@IsString({ each: true })
+	addGroups!: string[];
+
+	@IsArray()
+	@IsString({ each: true })
+	removeGroups!: string[];
+}
+
+export class V2KeycloakMatrixApplyDto extends V2KeycloakAdminCredsDto {
+	@IsOptional()
+	@IsBoolean()
+	dryRun?: boolean;
+
+	@IsOptional()
+	@IsString()
+	standPrefix?: string;
+
+	@IsOptional()
+	@IsArray()
+	@ValidateNested({ each: true })
+	@Type(() => V2KeycloakMatrixGroupRoleChangeDto)
+	groupRoleChanges?: V2KeycloakMatrixGroupRoleChangeDto[];
+
+	@IsOptional()
+	@IsArray()
+	@ValidateNested({ each: true })
+	@Type(() => V2KeycloakMatrixUserGroupChangeDto)
+	userGroupChanges?: V2KeycloakMatrixUserGroupChangeDto[];
+}
+
+export class V2KeycloakEtalonOverlayDto {
+	@IsOptional()
+	@IsObject()
+	groupRoleTarget?: Record<string, string[]>;
+
+	@IsOptional()
+	@IsArray()
+	testUsers?: Array<{ username: string; groups: string[]; label?: string }>;
 }

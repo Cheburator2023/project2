@@ -22,6 +22,18 @@ export class V2RuntimeSettingsEntity {
 	})
 	streamFilterEnabled!: boolean | null;
 
+	/**
+	 * Overlay эталона матрицы Keycloak (groupRoleTarget + testUsers).
+	 * null = только code defaults (F-05 + test-users).
+	 */
+	@Column({
+		name: "keycloak_etalon_overlay",
+		type: "jsonb",
+		nullable: true,
+		default: null,
+	})
+	keycloakEtalonOverlay!: Record<string, unknown> | null;
+
 	@UpdateDateColumn({ name: "updated_at", type: "timestamptz" })
 	updatedAt!: Date;
 
