@@ -282,8 +282,15 @@ export const V2_KEYCLOAK_TEST_USER_DEFS: readonly V2KeycloakTestUserDef[] = [
 		rolePaths: ["/appadmin"],
 	},
 	{
+		username: "test_stream_view_all",
+		label: "Bypass разделения реестра по стримам",
+		/** → `/{stand}sum_stream_view_all` (группы `/stream_view_all` нет). */
+		rolePaths: ["/stream_view_all"],
+	},
+	{
 		username: "test_sum_auditorib",
 		label: "Аудитор ИБ",
+		/** → `/auditor/{stand}sum_auditorib` (группы `/auditorib` нет). */
 		rolePaths: ["/auditorib"],
 	},
 	{

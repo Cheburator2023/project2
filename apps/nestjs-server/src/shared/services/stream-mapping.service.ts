@@ -1,5 +1,6 @@
 import { Injectable, Optional } from "@nestjs/common";
 import {
+	isV2UserStreamFilteredByGroups,
 	V2_IMPLEMENTATION_STREAM,
 	V2_IMPLEMENTATION_STREAM_CODES,
 	V2_IMPLEMENTATION_STREAM_LABELS,
@@ -7,14 +8,10 @@ import {
 } from "@smart-anketa/api-contract";
 import {
 	DEPARTMENTS,
-	STREAM_FILTER_EXEMPT_LEAD_ROLES,
-	STREAM_FILTERED_ROLES,
 	STREAMS,
 } from "../constants";
 import {
 	extractDepartmentsAndStreams,
-	extractUserRoles,
-	normalizeUserGroups,
 } from "../utils/user-groups.util";
 import { V2StreamCatalogService } from "../../modules/anketa-v2/services/v2-stream-catalog.service";
 
@@ -40,6 +37,8 @@ const DEPARTMENT_TO_STREAM_MAPPING: Record<string, readonly string[]> = {
 		STREAMS.ML_ALGORITHMS,
 		V2_IMPLEMENTATION_STREAM.RND,
 		V2_IMPLEMENTATION_STREAM_LABELS[V2_IMPLEMENTATION_STREAM.RND],
+		V2_IMPLEMENTATION_STREAM.PTITPC,
+		V2_IMPLEMENTATION_STREAM_LABELS[V2_IMPLEMENTATION_STREAM.PTITPC],
 	],
 	[DEPARTMENTS.PROCESS_FINANCIAL]: [
 		STREAMS.PROCESS_FINANCIAL,
@@ -51,7 +50,11 @@ const DEPARTMENT_TO_STREAM_MAPPING: Record<string, readonly string[]> = {
 	[V2_IMPLEMENTATION_STREAM.RB]: [V2_IMPLEMENTATION_STREAM.RB],
 	[V2_IMPLEMENTATION_STREAM.PTITPC]: [V2_IMPLEMENTATION_STREAM.PTITPC],
 	[V2_IMPLEMENTATION_STREAM.FINMDL]: [V2_IMPLEMENTATION_STREAM.FINMDL],
-	[V2_IMPLEMENTATION_STREAM.RND]: [V2_IMPLEMENTATION_STREAM.RND],
+	/** `_rnd` → RnD + AI-модели партнерств. */
+	[V2_IMPLEMENTATION_STREAM.RND]: [
+		V2_IMPLEMENTATION_STREAM.RND,
+		V2_IMPLEMENTATION_STREAM.PTITPC,
+	],
 	[V2_IMPLEMENTATION_STREAM.IDSRC]: [V2_IMPLEMENTATION_STREAM.IDSRC],
 	[V2_IMPLEMENTATION_STREAM.MDLCTL]: [V2_IMPLEMENTATION_STREAM.MDLCTL],
 	[V2_IMPLEMENTATION_STREAM.DADM]: [V2_IMPLEMENTATION_STREAM.DADM],
@@ -78,6 +81,14 @@ export class StreamMappingService {
 		return process.env.STREAM_FILTER_DISABLED === "true";
 	}
 
+	/**
+	 * DE / DE lead / ModelOps / ModelOps lead видят все стримы.
+	 * Default ON; выкл.: `DE_MODELOPS_VIEW_ALL_STREAMS=false`.
+	 */
+	isDeModelopsViewAllStreams(): boolean {
+		return process.env.DE_MODELOPS_VIEW_ALL_STREAMS !== "false";
+	}
+
 	isStreamFilteredUser(userGroups: string[]): boolean {
 		if (this.isStreamFilterDisabled()) {
 			return false;
@@ -86,30 +97,9 @@ export class StreamMappingService {
 			return false;
 		}
 
-		const normalized = normalizeUserGroups(userGroups);
-		if (
-			STREAM_FILTER_EXEMPT_LEAD_ROLES.some((role) =>
-				normalized.includes(role),
-			)
-		) {
-			return false;
-		}
-
-		const userRoles = extractUserRoles(userGroups);
-		if (STREAM_FILTERED_ROLES.some((role) => userRoles.includes(role))) {
-			return true;
-		}
-		/**
-		 * `/mipm` без департамента = Бизнес-партнёр (все стримы);
-		 * `/mipm` + департамент/стрим = Бизнес-партнёр стрима (жёсткий фильтр).
-		 */
-		if (
-			normalized.includes("mipm") &&
-			extractDepartmentsAndStreams(userGroups).length > 0
-		) {
-			return true;
-		}
-		return false;
+		return isV2UserStreamFilteredByGroups(userGroups, {
+			deModelopsViewAllStreams: this.isDeModelopsViewAllStreams(),
+		});
 	}
 
 	getGroupsAfterMapping(userGroups: string[]): string[] {

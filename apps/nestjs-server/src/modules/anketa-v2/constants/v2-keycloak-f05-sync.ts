@@ -8,8 +8,8 @@
  * - anketa_workflow_approve — завершение раздела/блока (§3.10);
  * - anketa_complete_anketa — завершение заполнения анкеты (§3.12).
  *
- * SUMD: лиды top-level `/ds_lead`, `/de_lead`, … и nested `/ds/ds_lead`.
- * Держим оба path с одинаковыми ролями.
+ * Лиды — только top-level: `/ds_lead`, `/de_lead`, `/modelops_lead`, `/validator_lead`.
+ * Не создавать nested `/ds/ds_lead`, `/de/de_lead` и т.п.
  *
  * Latin-дубли с другим регистром (/DE vs /de) НЕ трогаем.
  */
@@ -62,26 +62,21 @@ const MIPM_ROLES = [
 export const V2_KEYCLOAK_GROUP_ROLE_TARGET: Record<string, readonly string[]> = {
 	"/ds": ["anketa_view_all_calculations", "anketa_export_reports"],
 	"/ds_lead": DS_LEAD_ROLES,
-	"/ds/ds_lead": DS_LEAD_ROLES,
 	"/de": ["anketa_view_all_calculations", "anketa_export_reports"],
 	"/de_lead": DE_LEAD_ROLES,
-	"/de/de_lead": DE_LEAD_ROLES,
 	/** ModelOps executor: только view + export (без delete на SUMD). */
 	"/modelops": ["anketa_view_all_calculations", "anketa_export_reports"],
 	"/modelops_lead": MODELOPS_LEAD_ROLES,
-	"/modelops/modelops_lead": MODELOPS_LEAD_ROLES,
 	"/business_customer": [],
 	"/mipm": MIPM_ROLES,
 	"/mipm_stream": MIPM_ROLES,
 	"/validator": VALIDATOR_ROLES,
 	"/validator_lead": VALIDATOR_ROLES,
-	"/validator/validator_lead": VALIDATOR_ROLES,
 	"/architect": [
 		"anketa_view_all_calculations",
 		"anketa_edit_calculation",
 		"anketa_export_reports",
 		"anketa_workflow_approve",
-		"anketa_complete_anketa",
 	],
 	"/mntranlst": [
 		"anketa_view_all_calculations",
@@ -111,6 +106,10 @@ export const V2_KEYCLOAK_GROUP_ROLE_TARGET: Record<string, readonly string[]> = 
 	"/auditor": AUDITOR_ROLES,
 	"/controller": AUDITOR_ROLES,
 	"/auditor/auditor_lead": AUDITOR_ROLES,
+	/**
+	 * Группы `/auditorib` нет. Логический ключ → AD-лист
+	 * `/auditor/{stand}sum_auditorib` (например `/auditor/test_sum_auditorib`).
+	 */
 	"/auditorib": AUDITOR_ROLES,
 	"/prjtoffice": [],
 	"/project_office": [],
@@ -137,6 +136,11 @@ export const V2_KEYCLOAK_GROUP_ROLE_TARGET: Record<string, readonly string[]> = 
 		"anketa_workflow_approve",
 		"anketa_complete_anketa",
 	],
+	/**
+	 * Bypass разделения реестра по стримам (доменный код `stream_view_all`).
+	 * Группы `/stream_view_all` нет — только AD `/{stand}sum_stream_view_all`.
+	 */
+	"/stream_view_all": [],
 };
 
 /** Все path из TARGET + родители, parents first (create-only). */

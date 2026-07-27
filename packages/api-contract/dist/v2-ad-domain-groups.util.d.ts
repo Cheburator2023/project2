@@ -43,8 +43,7 @@ export declare const V2_KEYCLOAK_PATH_TO_AD_GROUPS: Record<string, readonly stri
  * - mipm stream → `/mipm_stream/{stand}sum_mipm_*`
  * - appadmin → `/admin_it/{stand}sum_appadmin`
  *
- * Seed/nested: `/de/de_lead/{stand}sum_Lde_*` — тоже в списке nest, чтобы sync
- * покрывал оба shape.
+ * Nested `/de/de_lead`, `/ds/ds_lead` не используем — лиды только top-level.
  */
 export declare const V2_AD_NEST_PARENT_BY_TARGET: Record<string, readonly string[]>;
 /** Нормализовать ввод UI: `test` / `test_` / `TEST_` → `test_`. */
@@ -59,8 +58,12 @@ export declare function isV2AdDelegatedCanonPath(path: string): boolean;
 export declare function isV2AdNestParentPath(path: string): boolean;
 /**
  * Нужно ли create/ensure этот path в Keycloak.
- * Delegated-канон вроде `/appadmin` / `/auditorib` — нет (роли на AD-листе).
- * `/auditor` — да, как parent для `sum_auditorib`, даже если его AD ушёл в `/controller`.
+ *
+ * Не создаём логические каноны без AD-листа `{stand}sum_*`:
+ * - delegated (`/appadmin`, `/auditorib`) — только AD под другим parent;
+ * - AD-mapped без self-nest (`/stream_view_all`) — только `/{stand}sum_*`.
+ *
+ * Папки-родители (`/auditor`, `/admin_it`, `/de`, `/sacfg`, …) — да.
  */
 export declare function shouldEnsureV2KeycloakGroupPath(path: string): boolean;
 /**
@@ -68,7 +71,8 @@ export declare function shouldEnsureV2KeycloakGroupPath(path: string): boolean;
  *
  * - nested (см. V2_AD_NEST_PARENT_BY_TARGET): только `/{parent}/{stand}sum_*`
  * - delegated-канон (`/appadmin` → `/admin_it/...`): роли только на AD-alias, не на каноне
- * - остальные: top-level `/{stand}sum_*` + опционально под каноном
+ * - AD без nest (`/stream_view_all`): только `/{stand}sum_*`, без голого канона
+ * - self-nest (`/sacfg`, `/de`): папка + AD-лист под ней
  */
 export declare function expandV2KeycloakTargetsWithAdAliases(target: Record<string, readonly string[]>, standPrefixRaw?: string | null): Record<string, readonly string[]>;
 /** Последний сегмент path: `/sarep/dev_sum_sarep_dadm` → `dev_sum_sarep_dadm`. */

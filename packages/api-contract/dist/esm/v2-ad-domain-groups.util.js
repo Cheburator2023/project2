@@ -62,6 +62,7 @@ const V2_CANONICAL_ROLE_CODES = new Set([
     "business_customer",
     "admin_it",
     "admin_it_lead",
+    "stream_view_all",
 ]);
 /** Снять leading slash и stand-prefix (dev_|test_|prod_). `sum_` не трогаем. */
 export function stripV2AdStandPrefix(raw) {
@@ -118,6 +119,7 @@ function mapV2SumRestToRoleCodes(restRaw) {
         mipm: "mipm",
         prjtoffice: "prjtoffice",
         project_office: "project_office",
+        stream_view_all: "stream_view_all",
     };
     if (exact[rest])
         return [exact[rest]];
@@ -150,8 +152,9 @@ export function mapV2AdGroupLeafToRoleCodes(rawLeaf) {
     return [];
 }
 /**
- * Канон KK path → AD-имена без stand-prefix (из CSV).
- * Для sync: `/appadmin` + prefix `test_` → `/test_sum_appadmin`.
+ * Логический KK path → AD-имена без stand-prefix (из CSV).
+ * Для sync: `/appadmin` + prefix `test_` → `/admin_it/test_sum_appadmin`
+ * (группы `/appadmin` в KK нет).
  */
 const DS_LEAD_AD = V2_AD_MODEL_STREAM_SUFFIXES.map((s) => `sum_Lds_${s}`);
 const DE_LEAD_AD = V2_AD_MODEL_STREAM_SUFFIXES.map((s) => `sum_Lde_${s}`);
@@ -159,21 +162,17 @@ const MODELOPS_LEAD_AD = V2_AD_MODEL_STREAM_SUFFIXES.map((s) => `sum_Ldmo_${s}`)
 const MIPM_STREAM_AD = V2_AD_MODEL_STREAM_SUFFIXES.map((s) => `sum_mipm_${s}`);
 export const V2_KEYCLOAK_PATH_TO_AD_GROUPS = {
     "/ds": V2_AD_MODEL_STREAM_SUFFIXES.map((s) => `sum_ds_${s}`),
-    /** SUMD top-level + nested seed — одни и те же AD-листы lead. */
+    /** Lead AD-листы только под top-level `/ds_lead` (не `/ds/ds_lead`). */
     "/ds_lead": DS_LEAD_AD,
-    "/ds/ds_lead": DS_LEAD_AD,
     "/de": V2_AD_MODEL_STREAM_SUFFIXES.map((s) => `sum_de_${s}`),
     "/de_lead": DE_LEAD_AD,
-    "/de/de_lead": DE_LEAD_AD,
     "/modelops": V2_AD_MODEL_STREAM_SUFFIXES.map((s) => `sum_mo_${s}`),
     "/modelops_lead": MODELOPS_LEAD_AD,
-    "/modelops/modelops_lead": MODELOPS_LEAD_AD,
     "/architect": V2_AD_MODEL_STREAM_SUFFIXES.map((s) => `sum_arch_${s}`),
     "/mipm": ["sum_mipm"],
     "/mipm_stream": MIPM_STREAM_AD,
     "/validator": ["sum_validator"],
     "/validator_lead": ["sum_Ldvalidator"],
-    "/validator/validator_lead": ["sum_Ldvalidator"],
     "/mntranlst": ["sum_mntranlst"],
     "/da": ["sum_da"],
     "/da_stream": V2_AD_MODEL_STREAM_SUFFIXES.map((s) => `sum_da_${s}`),
@@ -191,6 +190,7 @@ export const V2_KEYCLOAK_PATH_TO_AD_GROUPS = {
     "/sarep": V2_AD_SAREP_STREAM_SUFFIXES.map((s) => `sum_sarep_${s}`),
     "/prjtoffice": ["sum_prjtoffice"],
     "/project_office": ["sum_prjtoffice"],
+    "/stream_view_all": ["sum_stream_view_all"],
 };
 /**
  * Target-path → родитель(и) в KK, под которыми лежит AD-лист (не top-level).
@@ -202,27 +202,19 @@ export const V2_KEYCLOAK_PATH_TO_AD_GROUPS = {
  * - mipm stream → `/mipm_stream/{stand}sum_mipm_*`
  * - appadmin → `/admin_it/{stand}sum_appadmin`
  *
- * Seed/nested: `/de/de_lead/{stand}sum_Lde_*` — тоже в списке nest, чтобы sync
- * покрывал оба shape.
+ * Nested `/de/de_lead`, `/ds/ds_lead` не используем — лиды только top-level.
  */
 export const V2_AD_NEST_PARENT_BY_TARGET = {
     "/ds": ["/ds"],
     "/ds_lead": ["/ds_lead"],
-    "/ds/ds_lead": ["/ds/ds_lead", "/ds_lead"],
     "/de": ["/de"],
     "/de_lead": ["/de_lead"],
-    "/de/de_lead": ["/de/de_lead", "/de_lead"],
     "/modelops": ["/modelops"],
     "/modelops_lead": ["/modelops_lead"],
-    "/modelops/modelops_lead": ["/modelops/modelops_lead", "/modelops_lead"],
     "/mipm": ["/mipm"],
     "/mipm_stream": ["/mipm_stream"],
     "/validator": ["/validator"],
     "/validator_lead": ["/validator_lead"],
-    "/validator/validator_lead": [
-        "/validator/validator_lead",
-        "/validator_lead",
-    ],
     "/sarep": ["/sarep"],
     "/sacfg": ["/sacfg"],
     "/saprg": ["/saprg"],
@@ -270,12 +262,23 @@ export function isV2AdNestParentPath(path) {
 }
 /**
  * Нужно ли create/ensure этот path в Keycloak.
- * Delegated-канон вроде `/appadmin` / `/auditorib` — нет (роли на AD-листе).
- * `/auditor` — да, как parent для `sum_auditorib`, даже если его AD ушёл в `/controller`.
+ *
+ * Не создаём логические каноны без AD-листа `{stand}sum_*`:
+ * - delegated (`/appadmin`, `/auditorib`) — только AD под другим parent;
+ * - AD-mapped без self-nest (`/stream_view_all`) — только `/{stand}sum_*`.
+ *
+ * Папки-родители (`/auditor`, `/admin_it`, `/de`, `/sacfg`, …) — да.
  */
 export function shouldEnsureV2KeycloakGroupPath(path) {
     const canon = path.startsWith("/") ? path : `/${path}`;
-    if (isV2AdDelegatedCanonPath(canon) && !isV2AdNestParentPath(canon)) {
+    if (isV2AdNestParentPath(canon))
+        return true;
+    if (isV2AdDelegatedCanonPath(canon))
+        return false;
+    const adNames = V2_KEYCLOAK_PATH_TO_AD_GROUPS[canon];
+    const nests = V2_AD_NEST_PARENT_BY_TARGET[canon];
+    /** Логический ключ с AD, но не папка self-nest → группу с именем роли не создаём. */
+    if (adNames?.length && !nests?.includes(canon)) {
         return false;
     }
     return true;
@@ -285,7 +288,8 @@ export function shouldEnsureV2KeycloakGroupPath(path) {
  *
  * - nested (см. V2_AD_NEST_PARENT_BY_TARGET): только `/{parent}/{stand}sum_*`
  * - delegated-канон (`/appadmin` → `/admin_it/...`): роли только на AD-alias, не на каноне
- * - остальные: top-level `/{stand}sum_*` + опционально под каноном
+ * - AD без nest (`/stream_view_all`): только `/{stand}sum_*`, без голого канона
+ * - self-nest (`/sacfg`, `/de`): папка + AD-лист под ней
  */
 export function expandV2KeycloakTargetsWithAdAliases(target, standPrefixRaw) {
     const standPrefix = normalizeV2AdStandPrefix(standPrefixRaw);
@@ -300,12 +304,18 @@ export function expandV2KeycloakTargetsWithAdAliases(target, standPrefixRaw) {
         const adNames = V2_KEYCLOAK_PATH_TO_AD_GROUPS[canon];
         const nestParents = V2_AD_NEST_PARENT_BY_TARGET[canon];
         const delegated = isV2AdDelegatedCanonPath(canon);
-        /** Канон с ролями — только если AD не «уехал» на другой parent. */
-        if (!delegated) {
+        const selfNest = Boolean(nestParents?.includes(canon));
+        /**
+         * Канон-папка с ролями — только self-nest (или путь без AD-map).
+         * Не создаём голые `/auditorib`, `/stream_view_all`, `/appadmin`.
+         */
+        if (!adNames?.length) {
+            add(canon, roles);
+            continue;
+        }
+        if (selfNest && !delegated) {
             add(canon, roles);
         }
-        if (!adNames?.length)
-            continue;
         for (const ad of adNames) {
             const leaf = `${standPrefix}${ad}`;
             if (nestParents?.length) {
@@ -314,8 +324,8 @@ export function expandV2KeycloakTargetsWithAdAliases(target, standPrefixRaw) {
                 }
             }
             else {
+                /** Top-level AD-лист: `/test_sum_stream_view_all`, не `/stream_view_all`. */
                 add(`/${leaf}`, roles);
-                add(`${canon}/${leaf}`, roles);
             }
         }
     }

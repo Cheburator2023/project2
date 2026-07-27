@@ -383,6 +383,8 @@ export function V2QuestionnaireList() {
 		canDeleteCalculation && userHasV2QuestionnaireDeleteRole(groups);
 	const streamFilterSetting = useV2StreamFilterSetting();
 	const streamFilterEnabled = streamFilterSetting.data?.enabled ?? true;
+	const deModelopsViewAllStreams =
+		streamFilterSetting.data?.deModelopsViewAllStreams ?? true;
 
 	const filteredQuestionnaires = useMemo(
 		() =>
@@ -390,8 +392,9 @@ export function V2QuestionnaireList() {
 				questionnaires ?? [],
 				groups,
 				streamFilterEnabled,
+				{ deModelopsViewAllStreams },
 			),
-		[questionnaires, groups, streamFilterEnabled],
+		[questionnaires, groups, streamFilterEnabled, deModelopsViewAllStreams],
 	);
 
 	useEffect(() => {
@@ -401,6 +404,7 @@ export function V2QuestionnaireList() {
 			questionnaires: filteredQuestionnaires,
 			allQuestionnaires: questionnaires,
 			streamFilterEnabled,
+			deModelopsViewAllStreams,
 			isLoading: isLoading || streamFilterSetting.isLoading,
 		});
 	}, [
@@ -409,6 +413,7 @@ export function V2QuestionnaireList() {
 		filteredQuestionnaires,
 		questionnaires,
 		streamFilterEnabled,
+		deModelopsViewAllStreams,
 		isLoading,
 		streamFilterSetting.isLoading,
 	]);

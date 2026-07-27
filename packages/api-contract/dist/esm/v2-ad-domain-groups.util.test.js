@@ -26,6 +26,12 @@ describe("v2-ad-domain-groups", () => {
         expect(mapV2AdGroupLeafToRoleCodes("sum_da")).toEqual(["da"]);
         expect(mapV2AdGroupLeafToRoleCodes("sum_da_ptitpc")).toEqual(["da_stream"]);
         expect(mapV2AdGroupLeafToRoleCodes("sum_sarep_idsrc")).toEqual(["sarep"]);
+        expect(mapV2AdGroupLeafToRoleCodes("sum_stream_view_all")).toEqual([
+            "stream_view_all",
+        ]);
+        expect(mapV2AdGroupLeafToRoleCodes("stream_view_all")).toEqual([
+            "stream_view_all",
+        ]);
         /** KK канон без AD sum_ */
         expect(mapV2AdGroupLeafToRoleCodes("appadmin")).toEqual(["appadmin"]);
     });
@@ -54,10 +60,6 @@ describe("v2-ad-domain-groups", () => {
             "/prjtoffice": [],
             "/de": ["anketa_view_all_calculations"],
             "/de_lead": [
-                "anketa_view_all_calculations",
-                "anketa_edit_calculation",
-            ],
-            "/de/de_lead": [
                 "anketa_view_all_calculations",
                 "anketa_edit_calculation",
             ],
@@ -96,14 +98,20 @@ describe("v2-ad-domain-groups", () => {
         expect(expanded["/dev_sum_de_kmbkcb"]).toBeUndefined();
         expect(expanded["/dev_sum_Lde_kmbkcb"]).toBeUndefined();
         expect(expanded["/de"]).toEqual(expect.arrayContaining(["anketa_view_all_calculations"]));
-        expect(expanded["/de/de_lead"]).toEqual(expect.arrayContaining(["anketa_edit_calculation"]));
+        expect(expanded["/de/de_lead"]).toBeUndefined();
         expect(expanded["/de/dev_sum_de_kmbkcb"]).toEqual(expect.arrayContaining(["anketa_view_all_calculations"]));
-        /** nested seed + SUMD top-level lead */
-        expect(expanded["/de/de_lead/dev_sum_Lde_rb"]).toEqual(expect.arrayContaining(["anketa_edit_calculation"]));
+        /** Lead AD только под top-level /de_lead */
+        expect(expanded["/de/de_lead/dev_sum_Lde_rb"]).toBeUndefined();
         expect(expanded["/de_lead/dev_sum_Lde_rb"]).toEqual(expect.arrayContaining(["anketa_edit_calculation"]));
         expect(expanded["/controller/dev_sum_auditor"]).toEqual(expect.arrayContaining(["anketa_audit_view"]));
         expect(expanded["/auditor/dev_sum_auditorib"]).toEqual(expect.arrayContaining(["anketa_audit_view"]));
+        expect(expanded["/auditorib"]).toBeUndefined();
         expect(expanded["/mipm_stream/dev_sum_mipm_kmbkcb"]).toEqual(expect.arrayContaining(["anketa_view_all_calculations"]));
+        const withStreamViewAll = expandV2KeycloakTargetsWithAdAliases({ "/stream_view_all": [] }, "test_");
+        expect(withStreamViewAll["/stream_view_all"]).toBeUndefined();
+        expect(withStreamViewAll["/test_sum_stream_view_all"]).toEqual([]);
+        expect(shouldEnsureV2KeycloakGroupPath("/stream_view_all")).toBe(false);
+        expect(shouldEnsureV2KeycloakGroupPath("/test_sum_stream_view_all")).toBe(true);
         const noStand = expandV2KeycloakTargetsWithAdAliases({ "/appadmin": ["anketa_audit_view"] }, "");
         expect(noStand["/admin_it/sum_appadmin"]).toEqual(expect.arrayContaining(["anketa_audit_view"]));
         expect(noStand["/sum_appadmin"]).toBeUndefined();
@@ -134,5 +142,6 @@ describe("v2-ad-domain-groups", () => {
         expect(v2KeycloakGroupParentPath("/mipm/dev_sum_mipm")).toBe("/mipm");
         expect(v2KeycloakGroupParentPath("/ds/ds_lead")).toBe("/ds");
         expect(v2KeycloakGroupParentPath("/ds_lead")).toBe(null);
+        expect(v2KeycloakGroupParentPath("/de_lead")).toBe(null);
     });
 });

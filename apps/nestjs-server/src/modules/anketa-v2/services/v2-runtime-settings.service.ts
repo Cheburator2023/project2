@@ -10,6 +10,11 @@ export type V2StreamFilterSettingDto = {
 	envDefaultEnabled: boolean;
 	/** Явный override из админки; null = только env. */
 	override: boolean | null;
+	/**
+	 * DE / DE lead / ModelOps / ModelOps lead видят все стримы.
+	 * Env `DE_MODELOPS_VIEW_ALL_STREAMS` (default ON; `=false` выключает).
+	 */
+	deModelopsViewAllStreams: boolean;
 };
 
 @Injectable()
@@ -24,6 +29,11 @@ export class V2RuntimeSettingsService {
 		return process.env.STREAM_FILTER_DISABLED !== "true";
 	}
 
+	/** Env: DE/ModelOps family видит все стримы (default ON). */
+	getDeModelopsViewAllStreams(): boolean {
+		return process.env.DE_MODELOPS_VIEW_ALL_STREAMS !== "false";
+	}
+
 	async getStreamFilterSetting(): Promise<V2StreamFilterSettingDto> {
 		const row = await this.getOrCreate();
 		const envDefaultEnabled = this.getEnvDefaultEnabled();
@@ -32,6 +42,7 @@ export class V2RuntimeSettingsService {
 			enabled: override == null ? envDefaultEnabled : override,
 			envDefaultEnabled,
 			override,
+			deModelopsViewAllStreams: this.getDeModelopsViewAllStreams(),
 		};
 	}
 

@@ -5,7 +5,8 @@
  *
  * Делает:
  *  1) создаёт недостающие realm roles anketa_* (в т.ч. anketa_complete_anketa);
- *  2) создаёт недостающие группы из TARGET (в т.ч. /sacfg, nested lead-подгруппы);
+ *  2) создаёт недостающие группы (папки + AD-листы `{stand}sum_*`;
+ *     не создаёт голые `/auditorib`, `/appadmin`, `/stream_view_all`);
  *  3) выставляет anketa_* realm-role mappings канонических групп ровно по TARGET.
  *
  * НЕ делает:
@@ -26,6 +27,7 @@ const require = createRequire(import.meta.url);
 const {
 	expandV2KeycloakTargetsWithAdAliases,
 	resolveV2KeycloakGroupPath,
+	shouldEnsureV2KeycloakGroupPath,
 } = require("../packages/api-contract/dist/cjs/v2-ad-domain-groups.util.js");
 
 const KC = (process.env.KC_URL || "").replace(/\/$/, "");
@@ -39,7 +41,7 @@ const APPLY = process.argv.includes("--apply");
 /** path → desired anketa* realm roles (canonical lowercase groups). */
 const TARGET = {
 	"/ds": ["anketa_view_all_calculations", "anketa_export_reports"],
-	"/ds/ds_lead": [
+	"/ds_lead": [
 		"anketa_view_all_calculations",
 		"anketa_create_calculation",
 		"anketa_edit_calculation",
@@ -49,7 +51,7 @@ const TARGET = {
 		"anketa_complete_anketa",
 	],
 	"/de": ["anketa_view_all_calculations", "anketa_export_reports"],
-	"/de/de_lead": [
+	"/de_lead": [
 		"anketa_view_all_calculations",
 		"anketa_edit_calculation",
 		"anketa_export_reports",
@@ -57,7 +59,7 @@ const TARGET = {
 		"anketa_complete_anketa",
 	],
 	"/modelops": ["anketa_view_all_calculations", "anketa_export_reports"],
-	"/modelops/modelops_lead": [
+	"/modelops_lead": [
 		"anketa_view_all_calculations",
 		"anketa_create_calculation",
 		"anketa_edit_calculation",
@@ -69,7 +71,7 @@ const TARGET = {
 	"/business_customer": [],
 	"/mipm": ["anketa_view_all_calculations", "anketa_export_reports"],
 	"/validator": ["anketa_view_all_calculations", "anketa_export_reports"],
-	"/validator/validator_lead": [
+	"/validator_lead": [
 		"anketa_view_all_calculations",
 		"anketa_export_reports",
 	],
@@ -78,7 +80,6 @@ const TARGET = {
 		"anketa_edit_calculation",
 		"anketa_export_reports",
 		"anketa_workflow_approve",
-		"anketa_complete_anketa",
 	],
 	"/mntranlst": [
 		"anketa_view_all_calculations",
@@ -119,6 +120,9 @@ const TARGET = {
 		"anketa_export_reports",
 		"anketa_audit_view",
 	],
+	/**
+	 * Группы `/auditorib` нет — только `/auditor/{stand}sum_auditorib`.
+	 */
 	"/auditorib": [
 		"anketa_view_all_calculations",
 		"anketa_export_reports",
@@ -149,6 +153,8 @@ const TARGET = {
 		"anketa_workflow_approve",
 		"anketa_complete_anketa",
 	],
+	/** Bypass stream separation — только `/{stand}sum_stream_view_all`, не `/stream_view_all`. */
+	"/stream_view_all": [],
 };
 
 const EFFECTIVE_TARGET = expandV2KeycloakTargetsWithAdAliases(
@@ -172,7 +178,9 @@ function collectGroupPathsToEnsure(target) {
 	);
 }
 
-const GROUPS_TO_ENSURE = collectGroupPathsToEnsure(EFFECTIVE_TARGET);
+const GROUPS_TO_ENSURE = collectGroupPathsToEnsure(EFFECTIVE_TARGET).filter(
+	(path) => shouldEnsureV2KeycloakGroupPath(path),
+);
 
 const ROLES_TO_ENSURE = [
 	"anketa_view_all_calculations",

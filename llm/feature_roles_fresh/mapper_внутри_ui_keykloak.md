@@ -125,13 +125,31 @@ if (rawGroups) {
         }
       }
 
-      if (g === "ds_lead" || g.indexOf("/ds_lead") >= 0 || g.match(/(^|_)ds_lead$/i)) {
+      if (g === "ds_lead" || g.indexOf("/ds_lead") >= 0 || g.match(/(^|_)ds_lead$/i) || g.match(/sum_Lds_/i)) {
         push("/ds");
-        push("/ds/ds_lead");
+        push("/ds_lead");
+      }
+
+      if (g === "de_lead" || g.indexOf("/de_lead") >= 0 || g.match(/(^|_)de_lead$/i) || g.match(/sum_Lde_/i)) {
+        push("/de");
+        push("/de_lead");
+      }
+
+      if (g === "modelops_lead" || g.indexOf("/modelops_lead") >= 0 || g.match(/(^|_)modelops_lead$/i) || g.match(/sum_Ldmo_/i)) {
+        push("/modelops");
+        push("/modelops_lead");
       }
 
       if (g === "ds" || g.indexOf("/ds/") === 0 || g.match(/(^|_)ds$/i)) {
         push("/ds");
+      }
+
+      if (g === "de" || g.indexOf("/de/") === 0 || g.match(/(^|_)de$/i)) {
+        push("/de");
+      }
+
+      if (g === "modelops" || g.indexOf("/modelops/") === 0 || g.match(/(^|_)modelops$/i) || g.match(/(^|_)mo_/i)) {
+        push("/modelops");
       }
     }
   }

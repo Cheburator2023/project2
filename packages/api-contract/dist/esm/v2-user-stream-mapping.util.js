@@ -19,6 +19,21 @@ export const V2_USER_STREAM_FILTER_EXEMPT_LEAD_CODES = [
     "de_lead",
     "modelops_lead",
 ];
+/**
+ * DE / DE lead / ModelOps / ModelOps lead — при `DE_MODELOPS_VIEW_ALL_STREAMS`
+ * (default ON) видят все стримы без разделения.
+ */
+export const V2_USER_DE_MODELOPS_VIEW_ALL_ROLE_CODES = [
+    "de",
+    "de_lead",
+    "modelops",
+    "modelops_lead",
+];
+/**
+ * Доменная/Keycloak-группа: при наличии отключает разделение реестра по стримам
+ * (для любой роли). Path: `/stream_view_all`, AD: `sum_stream_view_all`.
+ */
+export const V2_USER_STREAM_VIEW_ALL_ROLE_CODE = "stream_view_all";
 /** `/mipm` без департамента = Бизнес-партнёр (все стримы); с департаментом = Бизнес-партнёр стрима. */
 export const V2_USER_CONDITIONAL_STREAM_FILTER_ROLE_CODES = ["mipm"];
 /** Суффиксы стримов в AD/Keycloak path (как в groups-department mapper). */
@@ -38,22 +53,36 @@ const V2_LEGACY_STREAM_GROUPS = {
     ML_ALGORITHMS: "Моделирование RnD",
     PROCESS_FINANCIAL: "Финансовое моделирование",
 };
-/** Департамент Keycloak → коды v2 implementationStream (синхронно с StreamMappingService). */
+/**
+ * Департамент Keycloak / код стрима → allow-list v2 implementationStream.
+ * `_rnd` / RnD → ещё и «AI-модели партнерств» (`ptitpc`).
+ */
 const DEPARTMENT_TO_V2_STREAM_CODES = {
     [V2_DEPARTMENT_GROUPS.KIB_SMB]: [V2_IMPLEMENTATION_STREAM.KMBKCB],
     [V2_DEPARTMENT_GROUPS.PARTNERSHIPS_IT]: [
         V2_IMPLEMENTATION_STREAM.PTITPC,
     ],
     [V2_DEPARTMENT_GROUPS.RB]: [V2_IMPLEMENTATION_STREAM.RB],
-    [V2_DEPARTMENT_GROUPS.ML_ALGORITHMS]: [V2_IMPLEMENTATION_STREAM.RND],
+    [V2_DEPARTMENT_GROUPS.ML_ALGORITHMS]: [
+        V2_IMPLEMENTATION_STREAM.RND,
+        V2_IMPLEMENTATION_STREAM.PTITPC,
+    ],
     [V2_DEPARTMENT_GROUPS.PROCESS_FINANCIAL]: [
         V2_IMPLEMENTATION_STREAM.FINMDL,
+    ],
+    /** Legacy/v1 label «Моделирование RnD» (и ML_ALGORITHMS, и PARTNERSHIPS_IT_RND). */
+    [V2_LEGACY_STREAM_GROUPS.ML_ALGORITHMS]: [
+        V2_IMPLEMENTATION_STREAM.RND,
+        V2_IMPLEMENTATION_STREAM.PTITPC,
     ],
     [V2_IMPLEMENTATION_STREAM.KMBKCB]: [V2_IMPLEMENTATION_STREAM.KMBKCB],
     [V2_IMPLEMENTATION_STREAM.RB]: [V2_IMPLEMENTATION_STREAM.RB],
     [V2_IMPLEMENTATION_STREAM.PTITPC]: [V2_IMPLEMENTATION_STREAM.PTITPC],
     [V2_IMPLEMENTATION_STREAM.FINMDL]: [V2_IMPLEMENTATION_STREAM.FINMDL],
-    [V2_IMPLEMENTATION_STREAM.RND]: [V2_IMPLEMENTATION_STREAM.RND],
+    [V2_IMPLEMENTATION_STREAM.RND]: [
+        V2_IMPLEMENTATION_STREAM.RND,
+        V2_IMPLEMENTATION_STREAM.PTITPC,
+    ],
     [V2_IMPLEMENTATION_STREAM.IDSRC]: [V2_IMPLEMENTATION_STREAM.IDSRC],
     [V2_IMPLEMENTATION_STREAM.MDLCTL]: [V2_IMPLEMENTATION_STREAM.MDLCTL],
     [V2_IMPLEMENTATION_STREAM.DADM]: [V2_IMPLEMENTATION_STREAM.DADM],
@@ -108,7 +137,21 @@ export function isV2UserStreamFilterExemptLead(userGroups) {
     const normalized = normalizeV2UserGroups(userGroups);
     return V2_USER_STREAM_FILTER_EXEMPT_LEAD_CODES.some((role) => normalized.includes(role));
 }
-export function isV2UserStreamFilteredByGroups(userGroups) {
+/** Роль `/stream_view_all` — видеть все стримы независимо от DE/ModelOps env. */
+export function isV2UserStreamViewAll(userGroups) {
+    return normalizeV2UserGroups(userGroups).includes(V2_USER_STREAM_VIEW_ALL_ROLE_CODE);
+}
+export function isV2UserDeModelopsViewAllFamily(userGroups) {
+    const normalized = normalizeV2UserGroups(userGroups);
+    return V2_USER_DE_MODELOPS_VIEW_ALL_ROLE_CODES.some((role) => normalized.includes(role));
+}
+export function isV2UserStreamFilteredByGroups(userGroups, options) {
+    if (isV2UserStreamViewAll(userGroups))
+        return false;
+    const deModelopsViewAll = options?.deModelopsViewAllStreams !== false;
+    if (deModelopsViewAll && isV2UserDeModelopsViewAllFamily(userGroups)) {
+        return false;
+    }
     if (isV2UserStreamFilterExemptLead(userGroups))
         return false;
     if (extractV2UserRoleCodes(userGroups).length > 0)
@@ -164,15 +207,15 @@ export function resolveV2UserScopedStreamsFromGroups(userGroups) {
     return expandStreamCodeAliases([...mapped, ...directCodes]);
 }
 /** Коды implementationStream пользователя из groups Keycloak. */
-export function resolveV2UserImplementationStreamsFromGroups(userGroups) {
-    if (!isV2UserStreamFilteredByGroups(userGroups)) {
+export function resolveV2UserImplementationStreamsFromGroups(userGroups, options) {
+    if (!isV2UserStreamFilteredByGroups(userGroups, options)) {
         return [];
     }
     return resolveV2UserScopedStreamsFromGroups(userGroups);
 }
 /** Allow-list для фильтра реестра: коды + подписи (как Nest expandStreamAliases). */
-export function resolveV2UserAllowedStreamFilterValues(userGroups) {
-    const codes = resolveV2UserImplementationStreamsFromGroups(userGroups);
+export function resolveV2UserAllowedStreamFilterValues(userGroups, options) {
+    const codes = resolveV2UserImplementationStreamsFromGroups(userGroups, options);
     const expanded = new Set();
     for (const code of codes) {
         expanded.add(code);
@@ -195,12 +238,12 @@ function readImplementationStream(formData) {
  * Фильтр списка анкет по стриму пользователя (логика бывшего Nest StreamFilterInterceptor).
  * `filterEnabled=false` → список без изменений.
  */
-export function filterV2QuestionnairesByUserStreamGroups(items, userGroups, filterEnabled) {
+export function filterV2QuestionnairesByUserStreamGroups(items, userGroups, filterEnabled, options) {
     if (!filterEnabled)
         return [...items];
-    if (!isV2UserStreamFilteredByGroups(userGroups))
+    if (!isV2UserStreamFilteredByGroups(userGroups, options))
         return [...items];
-    const allowed = resolveV2UserAllowedStreamFilterValues(userGroups);
+    const allowed = resolveV2UserAllowedStreamFilterValues(userGroups, options);
     if (allowed.length === 0)
         return [];
     return items.filter((item) => {

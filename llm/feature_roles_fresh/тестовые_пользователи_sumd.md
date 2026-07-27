@@ -21,7 +21,7 @@ Sarep суффиксы → стрим:
 Стрим-логины = AD-лист: `test_sum_de_kmbkcb`, `test_sum_ds_rb`, `test_sum_mo_finmdl`, …
 
 SUMD leads: top-level `/ds_lead`, `/de_lead`, `/modelops_lead`, `/validator_lead`  
-(не `/ds/ds_lead` — это seed-shape; sync заливает роли в оба).
+(не `/ds/ds_lead` — nested запрещён; эталон только `/ds_lead`).
 
 ---
 

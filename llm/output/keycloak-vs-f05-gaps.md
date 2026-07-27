@@ -32,21 +32,22 @@ Realm → Roles → Create role. Имена **точно** как в табли�
 
 ## 2. Назначить роли группам (целевая матрица)
 
-Канон path групп: **lowercase** (`/ds`, `/de/de_lead`, …).  
+Канон path групп: **lowercase**, лиды **top-level** (`/ds`, `/ds_lead`, `/de`, `/de_lead`, `/modelops`, `/modelops_lead`).  
+Nested `/ds/ds_lead`, `/de/de_lead`, `/modelops/modelops_lead` — не использовать.  
 Если на стенде есть и `/DS`, и `/ds` — роли вешать **только на lowercase**; uppercase-дубли **не удалять и не склеивать**.
 
 | Группа KK | Роли, которые нужно **назначить** группе (все новые) | Роль в F-05 |
 |-----------|------------------------------------------------------|-------------|
 | `/ds` | `anketa_view_all_calculations`, `anketa_export_reports` | DS |
-| `/ds/ds_lead` | `anketa_view_all_calculations`, `anketa_create_calculation`, `anketa_edit_calculation`, `anketa_delete_calculation`, `anketa_export_reports`, `anketa_workflow_approve` | Руководитель DS |
+| `/ds_lead` | `anketa_view_all_calculations`, `anketa_create_calculation`, `anketa_edit_calculation`, `anketa_delete_calculation`, `anketa_export_reports`, `anketa_workflow_approve` | Руководитель DS |
 | `/de` | `anketa_view_all_calculations`, `anketa_export_reports` | DE |
-| `/de/de_lead` | `anketa_view_all_calculations`, `anketa_edit_calculation`, `anketa_export_reports`, `anketa_workflow_approve` | Руководитель DE |
+| `/de_lead` | `anketa_view_all_calculations`, `anketa_edit_calculation`, `anketa_export_reports`, `anketa_workflow_approve` | Руководитель DE |
 | `/modelops` | `anketa_view_all_calculations`, `anketa_export_reports` | ModelOps |
-| `/modelops/modelops_lead` | `anketa_view_all_calculations`, `anketa_create_calculation`, `anketa_edit_calculation`, `anketa_delete_calculation`, `anketa_export_reports`, `anketa_workflow_approve` | Руководитель ModelOps |
+| `/modelops_lead` | `anketa_view_all_calculations`, `anketa_create_calculation`, `anketa_edit_calculation`, `anketa_delete_calculation`, `anketa_export_reports`, `anketa_workflow_approve` | Руководитель ModelOps |
 | `/business_customer` | _(пусто — доступ не выдаём)_ | Бизнес-заказчик |
 | `/mipm` | `anketa_view_all_calculations`, `anketa_export_reports` | Бизнес-партнёр / Бизнес-партнёр стрима |
 | `/validator` | `anketa_view_all_calculations`, `anketa_export_reports` | Валидатор |
-| `/validator/validator_lead` | `anketa_view_all_calculations`, `anketa_export_reports` | Руководитель группы валидации |
+| `/validator_lead` | `anketa_view_all_calculations`, `anketa_export_reports` | Руководитель группы валидации |
 | `/architect` | `anketa_view_all_calculations`, `anketa_edit_calculation`, `anketa_export_reports`, `anketa_workflow_approve` | Архитектор данных ML |
 | `/mntranlst` **(новая группа)** | `anketa_view_all_calculations`, `anketa_edit_calculation`, `anketa_export_reports`, `anketa_workflow_approve` | Аналитик качества работы моделей ДАДМ |
 | `/da` **(новая группа)** | `anketa_view_all_calculations`, `anketa_edit_calculation`, `anketa_export_reports` | Аналитик качества модельных данных |
@@ -66,8 +67,8 @@ Realm → Roles → Create role. Имена **точно** как в табли�
 
 | Группа | Не назначать |
 |--------|----------------|
-| `/ds/ds_lead` | `anketa_admin_panel`, `anketa_audit_view` |
-| `/de/de_lead` | `anketa_create_calculation`, `anketa_delete_calculation`, `anketa_admin_panel` |
+| `/ds_lead` | `anketa_admin_panel`, `anketa_audit_view` |
+| `/de_lead` | `anketa_create_calculation`, `anketa_delete_calculation`, `anketa_admin_panel` |
 | `/mipm` | `anketa_edit_calculation`, `anketa_workflow_approve` (Бизнес-партнёр — только просмотр+экспорт) |
 | `/da` | `anketa_workflow_approve` (не завершает модельные блоки) |
 | `/admin_it*` | `anketa_export_reports` (сознательно по матрице) |

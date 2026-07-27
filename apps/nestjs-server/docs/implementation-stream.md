@@ -105,15 +105,27 @@ v2.generalInfo.implementationStream
 
 ### Роли, для которых фильтр включён
 
-`STREAM_FILTERED_ROLES` (`roles.constant.ts`), например: `ds`, `de`, `sarep`, `data_expert`, `mipm_stream`, `modelops`.
+`STREAM_FILTERED_ROLES` (`roles.constant.ts`), например: `ds`, `de`, `data_expert`, `mipm_stream`, `modelops`, `da_stream`.
 
 Остальные роли видят полный реестр без фильтрации по стриму.
 
-**Отключение:** `STREAM_FILTER_DISABLED=true` в env Nest — default для UI-фильтра
+**Отключение (глобально):** `STREAM_FILTER_DISABLED=true` в env Nest — default для UI-фильтра
 (админка → «Фильтр реестра по стриму» может переопределить). Фильтрация v2-реестра
 выполняется на **клиенте** (`filterV2QuestionnairesByUserStreamGroups`); Nest
 `@StreamFilter()` на `GET /v2/questionnaires` снят. Для v1 calculation list
 interceptor по-прежнему учитывает `STREAM_FILTER_DISABLED`.
+
+**DE / ModelOps без разделения по стримам (default ON):**
+`DE_MODELOPS_VIEW_ALL_STREAMS` — если не `false`, роли `de`, `de_lead`, `modelops`,
+`modelops_lead` видят весь реестр. Выкл.: `DE_MODELOPS_VIEW_ALL_STREAMS=false`
+(тогда DE/ModelOps снова Level A; лиды по-прежнему exempt).
+
+**Bypass-роль:** `/stream_view_all` (AD `sum_stream_view_all`, доменный код
+`stream_view_all`) — при добавлении в groups отключает разделение по стримам
+для любого пользователя.
+
+**Ключ `_rnd`:** суффикс / код `rnd` даёт доступ к анкетам «Моделирование RnD»
+и «AI-модели партнерств» (`ptitpc`).
 
 ### Как работает
 
@@ -147,7 +159,7 @@ Keycloak groups
 | Управление моделирования КИБ и СМБ | Разработка моделей для КМБ и КСБ | `kmbkcb` |
 | Управление моделирования РБ | Моделирование РБ | `rb` |
 | Управление моделирования партнерств и ИТ-процессов | Модели партнерств…; Моделирование RnD | `ptitpc` |
-| Управление перспективных алгоритмов машинного обучения | Моделирование RnD | `rnd` |
+| Управление перспективных алгоритмов машинного обучения | Моделирование RnD | `rnd` + `ptitpc` (оба) |
 | Управление процессных и финансовых моделей | Финансовое моделирование | `finmdl` |
 
 Дополнительно:

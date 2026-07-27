@@ -38,16 +38,29 @@ export function logV2RegistryStreamDebug(args: {
 	/** Полный ответ API до UI-фильтра. */
 	allQuestionnaires?: V2QuestionnaireDto[] | undefined;
 	streamFilterEnabled?: boolean;
+	deModelopsViewAllStreams?: boolean;
 	isLoading: boolean;
 }): void {
 	if (!isDebugEnabled() || args.isLoading) return;
 
 	const groups = [...args.groups];
+	const filterOptions = {
+		deModelopsViewAllStreams: args.deModelopsViewAllStreams ?? true,
+	};
 	const normalized = normalizeV2UserGroups(groups);
 	const leadExempt = isV2UserStreamFilterExemptLead(groups);
-	const clientWouldFilter = isV2UserStreamFilteredByGroups(groups);
-	const allowedStreams = resolveV2UserImplementationStreamsFromGroups(groups);
-	const allowedFilterValues = resolveV2UserAllowedStreamFilterValues(groups);
+	const clientWouldFilter = isV2UserStreamFilteredByGroups(
+		groups,
+		filterOptions,
+	);
+	const allowedStreams = resolveV2UserImplementationStreamsFromGroups(
+		groups,
+		filterOptions,
+	);
+	const allowedFilterValues = resolveV2UserAllowedStreamFilterValues(
+		groups,
+		filterOptions,
+	);
 	const suffixHits = normalized
 		.map((g) => {
 			const m = g.match(STREAM_SUFFIX_RE);
@@ -74,6 +87,7 @@ export function logV2RegistryStreamDebug(args: {
 	const summary = {
 		username: args.username,
 		streamFilterEnabled: args.streamFilterEnabled ?? true,
+		deModelopsViewAllStreams: filterOptions.deModelopsViewAllStreams,
 		groupsRaw: groups,
 		groupsNormalized: normalized,
 		leadExempt,
@@ -88,8 +102,8 @@ export function logV2RegistryStreamDebug(args: {
 				? "UI-фильтр выключен (админка / STREAM_FILTER_DISABLED) — показан полный API-список"
 				: clientWouldFilter && allowedStreams.length === 0
 					? "Level A без департамента/суффикса стрима → UI отдаёт []. Добавь /departament/… или выключи фильтр в админке"
-					: leadExempt
-						? "Lead exempt → реестр без жёсткого фильтра по стриму"
+					: leadExempt || !clientWouldFilter
+						? "Без жёсткого фильтра по стриму (lead / DE·ModelOps view-all / stream_view_all)"
 						: allowedStreams.length > 0
 							? "UI фильтрует по стримам из groups"
 							: "Фильтр по стриму для этой роли не ожидается",

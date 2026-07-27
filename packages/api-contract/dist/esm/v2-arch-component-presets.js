@@ -388,15 +388,6 @@ const SNAPSHOT_ARCH_PRESETS = {
                         "type": "string",
                         "title": "Размер модели разметки данных"
                     },
-                    "field_HuOLfL4K": {
-                        "enum": [
-                            "Есть",
-                            "Нет",
-                            "Неизвестно"
-                        ],
-                        "type": "string",
-                        "title": "Риск появления дополнительных систем-источников"
-                    },
                     "field_L1lRlgf1": {
                         "enum": [
                             "Высокая",
@@ -455,15 +446,6 @@ const SNAPSHOT_ARCH_PRESETS = {
                     "field_lDw9gG39": {
                         "type": "boolean",
                         "title": "Требуются специальные условия хранения и обработки конфиденциальных данных, не поддерживаемые коммунальным сервисом"
-                    },
-                    "field_lzP44Urx": {
-                        "enum": [
-                            "Да",
-                            "Нет",
-                            "Неизвестно"
-                        ],
-                        "type": "string",
-                        "title": "Необходимо уточнение требований по составу выгружаемых данных и алгоритмам расчета метрик"
                     },
                     "field_nE73kPQl": {
                         "enum": [
@@ -539,14 +521,12 @@ const SNAPSHOT_ARCH_PRESETS = {
                     "name",
                     "type",
                     "field_8pFvwc-v",
-                    "field_lzP44Urx",
                     "field_whHc-OoW",
                     "field_-EGYyyJF",
                     "field_fJ_7OdE7",
                     "field_d3OCFyaC",
                     "field_Y_K0Hy0e",
                     "field_nE73kPQl",
-                    "field_HuOLfL4K",
                     "field_tpROQBf5",
                     "field_AKLVuyFy",
                     "field_4jxR0E0m",
@@ -654,13 +634,6 @@ const SNAPSHOT_ARCH_PRESETS = {
                         "schemaFieldUid": "field_ee81cbee-281b-4d15-b478-9b5dffac47aa"
                     }
                 },
-                "field_HuOLfL4K": {
-                    "ui:widget": "select",
-                    "ui:options": {
-                        "dictionaryCode": "Риск появления дополнительных систем-источников",
-                        "schemaFieldUid": "field_8f0b912b-84cd-4bf9-b978-f6713eed8b36"
-                    }
-                },
                 "field_L1lRlgf1": {
                     "ui:widget": "select",
                     "ui:options": {
@@ -709,12 +682,6 @@ const SNAPSHOT_ARCH_PRESETS = {
                     "ui:options": {
                         "schemaFieldUid": "field_7d161d75-68cc-45be-92d2-2991928b567b"
                     }
-                },
-                "field_lzP44Urx": {
-                    "ui:options": {
-                        "schemaFieldUid": "field_213d174a-4e1d-4843-8505-f7f5f4737feb"
-                    },
-                    "ui:placeholder": "Необходимо уточнение требований по составу выгружаемых данных и алгоритмам расчета метрик"
                 },
                 "field_nE73kPQl": {
                     "ui:widget": "select",
@@ -819,7 +786,8 @@ const SNAPSHOT_ARCH_PRESETS = {
                     "enum": [
                         "Разработка",
                         "Доработка",
-                        "Настройка"
+                        "Настройка",
+                        "Без изменений"
                     ],
                     "type": "string",
                     "title": "Тип работ"
@@ -903,7 +871,7 @@ const SNAPSHOT_ARCH_PRESETS = {
             "field_yJ51GkCR": {
                 "ui:widget": "select",
                 "ui:options": {
-                    "dictionaryCode": "v2.detailInfo.dataProcess.workType",
+                    "dictionaryCode": "v2.detailInfo.dataProcess.field_yJ51GkCR",
                     "schemaFieldUid": "field_68f5a4fa-579f-4b89-b4f3-11214957dffe"
                 }
             },
@@ -959,10 +927,6 @@ const SNAPSHOT_ARCH_PRESETS = {
                     ],
                     "type": "string",
                     "title": "Сложность реализации"
-                },
-                "field_Ad1msOl7": {
-                    "type": "boolean",
-                    "title": "Необходима продуктивизация"
                 },
                 "field_L-WWLDWY": {
                     "enum": [
@@ -1021,6 +985,10 @@ const SNAPSHOT_ARCH_PRESETS = {
                     "type": "boolean",
                     "title": "Требуется парсинг сырых данных"
                 },
+                "field_x-1d7wUh": {
+                    "type": "boolean",
+                    "title": "Необходима продуктивизация"
+                },
                 "field_xva1dRvW": {
                     "type": "boolean",
                     "title": "Необходимо уточнение требований по составу выгружаемых данных и алгоритмам расчета метрик"
@@ -1032,10 +1000,6 @@ const SNAPSHOT_ARCH_PRESETS = {
                 "field_saveRawFs": {
                     "type": "boolean",
                     "title": "Требуется сохранять сырые данные в Хранилище признаков"
-                },
-                "readyPromReports": {
-                    "type": "boolean",
-                    "title": "Наличие готовых пром витрин (необходима продуктивизация)"
                 }
             }
         },
@@ -1051,6 +1015,7 @@ const SNAPSHOT_ARCH_PRESETS = {
                 "workType",
                 "field_lovKvLZc",
                 "field_hIM0c5gG",
+                "field_x-1d7wUh",
                 "field_saveRawFs",
                 "field_w_EN6lWe",
                 "metricsCount",
@@ -1059,8 +1024,6 @@ const SNAPSHOT_ARCH_PRESETS = {
                 "field_rZeUo8a_",
                 "field_Q8DGJNTn",
                 "field_xva1dRvW",
-                "readyPromReports",
-                "field_Ad1msOl7",
                 "field_28IPlEQu",
                 "field_fRuMuWtn",
                 "field_L-WWLDWY",
@@ -1096,11 +1059,6 @@ const SNAPSHOT_ARCH_PRESETS = {
                 "ui:options": {
                     "dictionaryCode": "v2.detailInfo.dataMart.field_46LCnfWo",
                     "schemaFieldUid": "field_9aaf1e8d-e27c-4f48-a631-9f690ea03a07"
-                }
-            },
-            "field_Ad1msOl7": {
-                "ui:options": {
-                    "schemaFieldUid": "field_08a71e6d-809b-41a3-aa63-10c8b89da9a0"
                 }
             },
             "field_L-WWLDWY": {
@@ -1156,6 +1114,11 @@ const SNAPSHOT_ARCH_PRESETS = {
                     "schemaFieldUid": "field_5525d556-6cd1-4efa-b10b-0f24ea6c1d96"
                 }
             },
+            "field_x-1d7wUh": {
+                "ui:options": {
+                    "schemaFieldUid": "field_76bc5061-e89b-494f-a8e5-40e747ba45d6"
+                }
+            },
             "field_xva1dRvW": {
                 "ui:options": {
                     "schemaFieldUid": "field_0845a1af-f430-4897-9300-4a3c580aa6ee"
@@ -1169,12 +1132,6 @@ const SNAPSHOT_ARCH_PRESETS = {
             "field_saveRawFs": {
                 "ui:options": {
                     "schemaFieldUid": "field_a8c3e1d2-4b5f-6789-a0b1-c2d3e4f50607"
-                }
-            },
-            "readyPromReports": {
-                "ui:widget": "checkbox",
-                "ui:options": {
-                    "schemaFieldUid": "field_12d42005-7d15-4d0f-9aa0-2b6eebc596c8"
                 }
             }
         }
@@ -1241,6 +1198,10 @@ const SNAPSHOT_ARCH_PRESETS = {
                 "field_atxiq-UM": {
                     "type": "string",
                     "title": "Название модели"
+                },
+                "readyPromReports": {
+                    "type": "boolean",
+                    "title": "Наличие готовых промышленных витрин"
                 }
             }
         },
@@ -1255,6 +1216,7 @@ const SNAPSHOT_ARCH_PRESETS = {
                 "field_atxiq-UM",
                 "workType",
                 "field_VbI-0aiT",
+                "readyPromReports",
                 "algorithmType",
                 "autoML",
                 "field_S41Rqt5E",
@@ -1307,6 +1269,12 @@ const SNAPSHOT_ARCH_PRESETS = {
             "field_atxiq-UM": {
                 "ui:options": {
                     "schemaFieldUid": "field_641d16cb-4f74-41d3-abbf-12510e14ccae"
+                }
+            },
+            "readyPromReports": {
+                "ui:widget": "checkbox",
+                "ui:options": {
+                    "schemaFieldUid": "field_12d42005-7d15-4d0f-9aa0-2b6eebc596c8"
                 }
             }
         }

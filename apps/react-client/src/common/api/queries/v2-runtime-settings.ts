@@ -5,6 +5,8 @@ export type V2StreamFilterSetting = {
 	enabled: boolean;
 	envDefaultEnabled: boolean;
 	override: boolean | null;
+	/** DE/ModelOps family видит все стримы (env DE_MODELOPS_VIEW_ALL_STREAMS, default ON). */
+	deModelopsViewAllStreams: boolean;
 };
 
 const STREAM_FILTER_KEY = ["v2-runtime-settings", "stream-filter"] as const;

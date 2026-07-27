@@ -28,6 +28,12 @@ const v2_user_stream_mapping_util_1 = require("./v2-user-stream-mapping.util");
         (0, vitest_1.expect)((0, v2_ad_domain_groups_util_1.mapV2AdGroupLeafToRoleCodes)("sum_da")).toEqual(["da"]);
         (0, vitest_1.expect)((0, v2_ad_domain_groups_util_1.mapV2AdGroupLeafToRoleCodes)("sum_da_ptitpc")).toEqual(["da_stream"]);
         (0, vitest_1.expect)((0, v2_ad_domain_groups_util_1.mapV2AdGroupLeafToRoleCodes)("sum_sarep_idsrc")).toEqual(["sarep"]);
+        (0, vitest_1.expect)((0, v2_ad_domain_groups_util_1.mapV2AdGroupLeafToRoleCodes)("sum_stream_view_all")).toEqual([
+            "stream_view_all",
+        ]);
+        (0, vitest_1.expect)((0, v2_ad_domain_groups_util_1.mapV2AdGroupLeafToRoleCodes)("stream_view_all")).toEqual([
+            "stream_view_all",
+        ]);
         /** KK канон без AD sum_ */
         (0, vitest_1.expect)((0, v2_ad_domain_groups_util_1.mapV2AdGroupLeafToRoleCodes)("appadmin")).toEqual(["appadmin"]);
     });
@@ -56,10 +62,6 @@ const v2_user_stream_mapping_util_1 = require("./v2-user-stream-mapping.util");
             "/prjtoffice": [],
             "/de": ["anketa_view_all_calculations"],
             "/de_lead": [
-                "anketa_view_all_calculations",
-                "anketa_edit_calculation",
-            ],
-            "/de/de_lead": [
                 "anketa_view_all_calculations",
                 "anketa_edit_calculation",
             ],
@@ -98,14 +100,20 @@ const v2_user_stream_mapping_util_1 = require("./v2-user-stream-mapping.util");
         (0, vitest_1.expect)(expanded["/dev_sum_de_kmbkcb"]).toBeUndefined();
         (0, vitest_1.expect)(expanded["/dev_sum_Lde_kmbkcb"]).toBeUndefined();
         (0, vitest_1.expect)(expanded["/de"]).toEqual(vitest_1.expect.arrayContaining(["anketa_view_all_calculations"]));
-        (0, vitest_1.expect)(expanded["/de/de_lead"]).toEqual(vitest_1.expect.arrayContaining(["anketa_edit_calculation"]));
+        (0, vitest_1.expect)(expanded["/de/de_lead"]).toBeUndefined();
         (0, vitest_1.expect)(expanded["/de/dev_sum_de_kmbkcb"]).toEqual(vitest_1.expect.arrayContaining(["anketa_view_all_calculations"]));
-        /** nested seed + SUMD top-level lead */
-        (0, vitest_1.expect)(expanded["/de/de_lead/dev_sum_Lde_rb"]).toEqual(vitest_1.expect.arrayContaining(["anketa_edit_calculation"]));
+        /** Lead AD только под top-level /de_lead */
+        (0, vitest_1.expect)(expanded["/de/de_lead/dev_sum_Lde_rb"]).toBeUndefined();
         (0, vitest_1.expect)(expanded["/de_lead/dev_sum_Lde_rb"]).toEqual(vitest_1.expect.arrayContaining(["anketa_edit_calculation"]));
         (0, vitest_1.expect)(expanded["/controller/dev_sum_auditor"]).toEqual(vitest_1.expect.arrayContaining(["anketa_audit_view"]));
         (0, vitest_1.expect)(expanded["/auditor/dev_sum_auditorib"]).toEqual(vitest_1.expect.arrayContaining(["anketa_audit_view"]));
+        (0, vitest_1.expect)(expanded["/auditorib"]).toBeUndefined();
         (0, vitest_1.expect)(expanded["/mipm_stream/dev_sum_mipm_kmbkcb"]).toEqual(vitest_1.expect.arrayContaining(["anketa_view_all_calculations"]));
+        const withStreamViewAll = (0, v2_ad_domain_groups_util_1.expandV2KeycloakTargetsWithAdAliases)({ "/stream_view_all": [] }, "test_");
+        (0, vitest_1.expect)(withStreamViewAll["/stream_view_all"]).toBeUndefined();
+        (0, vitest_1.expect)(withStreamViewAll["/test_sum_stream_view_all"]).toEqual([]);
+        (0, vitest_1.expect)((0, v2_ad_domain_groups_util_1.shouldEnsureV2KeycloakGroupPath)("/stream_view_all")).toBe(false);
+        (0, vitest_1.expect)((0, v2_ad_domain_groups_util_1.shouldEnsureV2KeycloakGroupPath)("/test_sum_stream_view_all")).toBe(true);
         const noStand = (0, v2_ad_domain_groups_util_1.expandV2KeycloakTargetsWithAdAliases)({ "/appadmin": ["anketa_audit_view"] }, "");
         (0, vitest_1.expect)(noStand["/admin_it/sum_appadmin"]).toEqual(vitest_1.expect.arrayContaining(["anketa_audit_view"]));
         (0, vitest_1.expect)(noStand["/sum_appadmin"]).toBeUndefined();
@@ -136,5 +144,6 @@ const v2_user_stream_mapping_util_1 = require("./v2-user-stream-mapping.util");
         (0, vitest_1.expect)((0, v2_ad_domain_groups_util_1.v2KeycloakGroupParentPath)("/mipm/dev_sum_mipm")).toBe("/mipm");
         (0, vitest_1.expect)((0, v2_ad_domain_groups_util_1.v2KeycloakGroupParentPath)("/ds/ds_lead")).toBe("/ds");
         (0, vitest_1.expect)((0, v2_ad_domain_groups_util_1.v2KeycloakGroupParentPath)("/ds_lead")).toBe(null);
+        (0, vitest_1.expect)((0, v2_ad_domain_groups_util_1.v2KeycloakGroupParentPath)("/de_lead")).toBe(null);
     });
 });

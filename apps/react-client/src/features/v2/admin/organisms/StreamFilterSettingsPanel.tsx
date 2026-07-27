@@ -28,8 +28,10 @@ export function StreamFilterSettingsPanel() {
 		<Flex flexDirection="column" gap={8}>
 			<Typography variant="h6">Фильтр реестра по стриму</Typography>
 			<Typography variant="body2" color="text.secondary">
-				Для DS / DE / ModelOps (Level A) реестр на UI режется по
-				департаменту/стриму из Keycloak groups. Лид-роли видят весь список.
+				Для DS (Level A) реестр на UI режется по департаменту/стриму из Keycloak
+				groups. DE / ModelOps / их лиды по умолчанию видят все стримы (
+				<code>DE_MODELOPS_VIEW_ALL_STREAMS</code>). Роль{" "}
+				<code>stream_view_all</code> также отключает разделение.
 			</Typography>
 			<Button
 				component={RouterLink}
@@ -77,6 +79,13 @@ export function StreamFilterSettingsPanel() {
 				</code>{" "}
 				→ фильтр {envDefault ? "включён" : "выключен"}
 				{hasOverride ? " · сейчас задан override из админки" : ""}.
+			</Typography>
+			<Typography variant="body2" color="text.secondary">
+				<code>DE_MODELOPS_VIEW_ALL_STREAMS</code>={" "}
+				{(data?.deModelopsViewAllStreams ?? true) ? "true" : "false"} (default
+				ON) — DE / DE lead / ModelOps / ModelOps lead без разделения по стримам.
+				Выкл.: <code>DE_MODELOPS_VIEW_ALL_STREAMS=false</code>. Bypass-роль:{" "}
+				<code>/stream_view_all</code>.
 			</Typography>
 			<Button
 				variant="outlined"

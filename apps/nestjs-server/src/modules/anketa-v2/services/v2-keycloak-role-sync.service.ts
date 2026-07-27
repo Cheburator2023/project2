@@ -84,7 +84,7 @@ export type V2KeycloakRoleSyncResult = {
 	/** Merge дублей отключён — всегда пустой (не трогаем /DE vs /de). */
 	merge: [];
 	rolesCreated: string[];
-	/** Созданные top-level группы из матрицы (/mntranlst, /da, /auditorib, …). */
+	/** Созданные группы (папки + AD-листы; без голых `/auditorib` / `/appadmin`). */
 	groupsCreated: string[];
 	groupRoleChanges: Array<{
 		path: string;

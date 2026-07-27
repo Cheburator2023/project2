@@ -13,22 +13,18 @@ describe("v2-keycloak-test-users", () => {
 		).toEqual(["/de/dev_sum_de_kmbkcb"]);
 	});
 
-	it("nests lead AD under SUMD top-level /de_lead (and nested seed path)", () => {
+	it("nests lead AD under top-level /de_lead only", () => {
 		expect(
 			resolveAdGroupPathsForCanon("/de_lead", "dev_", {
 				adFilter: (ad) => ad === "sum_Lde_kmbkcb",
 			}),
 		).toEqual(["/de_lead/dev_sum_Lde_kmbkcb"]);
+		/** Nested canon `/de/de_lead` больше не в эталоне AD-map. */
 		expect(
 			resolveAdGroupPathsForCanon("/de/de_lead", "dev_", {
 				adFilter: (ad) => ad === "sum_Lde_kmbkcb",
 			}),
-		).toEqual(
-			expect.arrayContaining([
-				"/de/de_lead/dev_sum_Lde_kmbkcb",
-				"/de_lead/dev_sum_Lde_kmbkcb",
-			]),
-		);
+		).toEqual(["/de/de_lead"]);
 	});
 
 	it("nests auditor under /controller and auditorib under /auditor", () => {
