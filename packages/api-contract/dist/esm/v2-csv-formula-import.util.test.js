@@ -99,6 +99,11 @@ describe("v2-csv-formula-import.util", () => {
         expect(extracted?.roundingMode).toBe("CEIL");
         expect(extracted?.roundingStep).toBe(0.1);
     });
+    it("maps Excel digit count ;2 to step 0.01", () => {
+        const extracted = extractFormulaCoreFromCsvText("ЧД(работы) =ОКРУГЛ.ВВЕРХ(Норматив × [Кол-во моделей]; 2)");
+        expect(extracted?.roundingMode).toBe("CEIL");
+        expect(extracted?.roundingStep).toBe(0.01);
+    });
     it("builds N * coef formula text", () => {
         const built = buildFormulaTextFromCsvCore("Норматив × [Param A] × [Param B]", (label) => label === "Param A"
             ? "param_a"

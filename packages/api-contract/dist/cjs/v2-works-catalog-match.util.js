@@ -498,11 +498,15 @@ function buildLaborCoefficientLookupSource(source, formData, schemaParams, param
 /** Сопоставление значения поля анкеты с кодом/меткой из справочника или схемы. */
 function laborValueMatches(actual, valueCode, valueLabel) {
     const normalizedActual = coerceNumericLaborActual(actual);
+    const actualStr = String(normalizedActual).trim();
     if (valueLabel != null && String(valueLabel).trim() !== "") {
-        if (String(normalizedActual) === valueLabel)
+        const label = String(valueLabel).trim();
+        if (actualStr === label)
+            return true;
+        if (matchesEnumPrefixLaborValue(actualStr, label))
             return true;
         if (typeof normalizedActual === "number" && Number.isFinite(normalizedActual)) {
-            const range = valueLabel.trim().toLowerCase().replace(/\s+/g, " ");
+            const range = label.toLowerCase().replace(/\s+/g, " ");
             const upTo = range.match(/^до\s*(\d+(?:[.,]\d+)?)/u);
             if (upTo?.[1] && normalizedActual <= Number(upTo[1].replace(",", "."))) {
                 return true;
@@ -519,32 +523,48 @@ function laborValueMatches(actual, valueCode, valueLabel) {
                 return true;
             }
         }
-        if (typeof normalizedActual === "boolean") {
-            const norm = valueLabel.trim().toLowerCase();
-            if (norm === "да" && normalizedActual === true)
-                return true;
-            if (norm === "нет" && normalizedActual === false)
-                return true;
-            if (norm === "true" && normalizedActual === true)
-                return true;
-            if (norm === "false" && normalizedActual === false)
-                return true;
+        if (matchesBooleanLaborLabel(normalizedActual, label)) {
+            return true;
         }
     }
     if (valueCode != null && String(valueCode).trim() !== "") {
-        if (String(normalizedActual) === valueCode)
+        const code = String(valueCode).trim();
+        if (actualStr === code)
             return true;
-        if (typeof normalizedActual === "boolean") {
-            const norm = valueCode.trim().toLowerCase();
-            if (norm === "true" && normalizedActual === true)
-                return true;
-            if (norm === "false" && normalizedActual === false)
-                return true;
-            if (norm === "да" && normalizedActual === true)
-                return true;
-            if (norm === "нет" && normalizedActual === false)
-                return true;
+        if (matchesEnumPrefixLaborValue(actualStr, code))
+            return true;
+        if (matchesBooleanLaborLabel(normalizedActual, code)) {
+            return true;
         }
+    }
+    return false;
+}
+/**
+ * Enum схемы «4 — …» / «ОК — …» ↔ короткий код/метка трудоёмкости «4» / «ОК».
+ * Как у catalogValueMatchesTriggerRule.
+ */
+function matchesEnumPrefixLaborValue(actualStr, expectedShort) {
+    const short = expectedShort.trim();
+    if (!short)
+        return false;
+    return (actualStr.startsWith(`${short} —`) ||
+        actualStr.startsWith(`${short} -`) ||
+        actualStr.startsWith(`${short} –`));
+}
+function matchesBooleanLaborLabel(actual, expected) {
+    const norm = expected.trim().toLowerCase();
+    const truthy = norm === "да" || norm === "true";
+    const falsy = norm === "нет" || norm === "false";
+    if (!truthy && !falsy)
+        return false;
+    if (typeof actual === "boolean") {
+        return truthy ? actual === true : actual === false;
+    }
+    if (typeof actual === "string") {
+        const a = actual.trim().toLowerCase();
+        if (truthy)
+            return a === "да" || a === "true";
+        return a === "нет" || a === "false";
     }
     return false;
 }

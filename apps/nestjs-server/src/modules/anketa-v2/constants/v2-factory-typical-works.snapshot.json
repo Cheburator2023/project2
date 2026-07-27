@@ -8142,7 +8142,7 @@
 			],
 			"formulaText": "N * архкоэф(Модели; 1=1; 2=1,75; 3=2,5; 4=3,25; 5=4; 6=4,75; 7=5,5; 8=6,25; 9=7; 10=7,75; 11=8,5; 12=9,25; 13=10; 14=10,75; 15=11,5) * коэф(complexity) * коэф(overallUncertainty) * коэф(readyPromReports)",
 			"roundingMode": "CEIL",
-			"roundingStep": 2,
+			"roundingStep": 0.01,
 			"laborArchCounts": [
 				{
 					"kind": "model",
@@ -8649,7 +8649,7 @@
 			],
 			"formulaText": "N * коэф(overallUncertainty) * архкоэф(Система-источник; 1=1; 2=1,2; 3=1,4; 4=1,6; 5=1,8; 6=2; 7=2,2; 8=2,4; 9=2,6; 10=3) * коэф(assessedInitiativesCount)",
 			"roundingMode": "CEIL",
-			"roundingStep": 2,
+			"roundingStep": 0.01,
 			"laborArchCounts": [
 				{
 					"kind": "sourceSystem",
@@ -9174,7 +9174,7 @@
 			],
 			"formulaText": "N * коэф(complexity) * коэф(overallUncertainty) * коэф(assessedInitiativesCount)",
 			"roundingMode": "CEIL",
-			"roundingStep": 2,
+			"roundingStep": 0.01,
 			"triggerArchCount": {
 				"kind": "dataMart",
 				"steps": [
@@ -9277,11 +9277,11 @@
 							"coefficient": 1.4
 						},
 						{
-							"label": "Аудио аналитика",
+							"label": "Аудио-аналитика",
 							"coefficient": 1.6
 						},
 						{
-							"label": "CV)",
+							"label": "Компьютерное зрение",
 							"coefficient": 1.8
 						},
 						{
@@ -9303,7 +9303,7 @@
 			],
 			"formulaText": "N * архкоэф(Модели; 1=1; 2=1,75; 3=2,5; 4=3,25; 5=4; 6=4,75; 7=5,5; 8=6,25; 9=7; 10=7,75; 11=8,5; 12=9,25; 13=10; 14=10,75; 15=11,5) * коэф(complexity) * коэф(overallUncertainty) * коэф(readyPromReports) * коэф(algorithmType)",
 			"roundingMode": "CEIL",
-			"roundingStep": 2,
+			"roundingStep": 0.01,
 			"laborArchCounts": [
 				{
 					"kind": "model",
@@ -9459,11 +9459,11 @@
 							"coefficient": 1.4
 						},
 						{
-							"label": "Аудио аналитика",
+							"label": "Аудио-аналитика",
 							"coefficient": 1.6
 						},
 						{
-							"label": "CV)",
+							"label": "Компьютерное зрение",
 							"coefficient": 1.8
 						},
 						{
@@ -9485,7 +9485,7 @@
 			],
 			"formulaText": "N * архкоэф(Модели; 1=1; 2=1,75; 3=2,5; 4=3,25; 5=4; 6=4,75; 7=5,5; 8=6,25; 9=7; 10=7,75; 11=8,5; 12=9,25; 13=10; 14=10,75; 15=11,5) * коэф(complexity) * коэф(overallUncertainty) * коэф(readyPromReports) * коэф(algorithmType)",
 			"roundingMode": "CEIL",
-			"roundingStep": 2,
+			"roundingStep": 0.01,
 			"laborArchCounts": [
 				{
 					"kind": "model",
@@ -9616,7 +9616,7 @@
 			],
 			"formulaText": "N * архкоэф(Модели; 1=1; 2=1,75; 3=2,5; 4=3,25; 5=4; 6=4,75; 7=5,5; 8=6,25; 9=7; 10=7,75; 11=8,5; 12=9,25; 13=10; 14=10,75; 15=11,5) * коэф(complexity) * коэф(overallUncertainty)",
 			"roundingMode": "CEIL",
-			"roundingStep": 2,
+			"roundingStep": 0.01,
 			"laborArchCounts": [
 				{
 					"kind": "model",
@@ -9735,7 +9735,7 @@
 			],
 			"formulaText": "N * коэф(overallUncertainty) * коэф(readyPromReports)",
 			"roundingMode": "CEIL",
-			"roundingStep": 2
+			"roundingStep": 0.01
 		},
 		{
 			"stream": "Модельный стрим",
@@ -10610,7 +10610,7 @@
 			],
 			"formulaText": "N * коэф(complexity) * коэф(overallUncertainty) * коэф(productionAdditionalReports) * коэф(assessedInitiativesCount)",
 			"roundingMode": "CEIL",
-			"roundingStep": 2
+			"roundingStep": 0.01
 		},
 		{
 			"stream": "Модельный стрим",
@@ -10684,11 +10684,11 @@
 							"coefficient": 1.4
 						},
 						{
-							"label": "Аудио аналитика",
+							"label": "Аудио-аналитика",
 							"coefficient": 1.6
 						},
 						{
-							"label": "CV)",
+							"label": "Компьютерное зрение",
 							"coefficient": 1.8
 						},
 						{
@@ -10765,7 +10765,7 @@
 			],
 			"formulaText": "N * архкоэф(Модели; 1=1; 2=1,75; 3=2,5; 4=3,25; 5=4; 6=4,75; 7=5,5; 8=6,25; 9=7; 10=7,75; 11=8,5; 12=9,25; 13=10; 14=10,75; 15=11,5) * коэф(complexity) * коэф(overallUncertainty) * коэф(algorithmType) * коэф(field_jUm5syZf)",
 			"roundingMode": "CEIL",
-			"roundingStep": 2,
+			"roundingStep": 0.01,
 			"laborArchCounts": [
 				{
 					"kind": "model",
@@ -10896,7 +10896,7 @@
 			],
 			"formulaText": "N * архкоэф(Модели; 1=1; 2=1,75; 3=2,5; 4=3,25; 5=4; 6=4,75; 7=5,5; 8=6,25; 9=7; 10=7,75; 11=8,5; 12=9,25; 13=10; 14=10,75; 15=11,5) * коэф(complexity) * коэф(overallUncertainty)",
 			"roundingMode": "CEIL",
-			"roundingStep": 2,
+			"roundingStep": 0.01,
 			"laborArchCounts": [
 				{
 					"kind": "model",

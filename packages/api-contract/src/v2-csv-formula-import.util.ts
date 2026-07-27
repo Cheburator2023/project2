@@ -7,6 +7,19 @@ import {
 
 export type CsvFormulaRoundingMode = "CEIL" | "FLOOR" | "ROUND" | "NONE";
 
+/**
+ * Второй аргумент Excel `ОКРУГЛ.ВВЕРХ/ВНИЗ/ОКРУГЛ(x; n)` — число разрядов.
+ * Дробь вроде `0,1` в CSV уже означает абсолютный шаг округления.
+ */
+export function excelRoundingArgumentToStep(raw: number): number {
+	if (!Number.isFinite(raw) || raw < 0) return 0.1;
+	if (raw > 0 && raw < 1) return raw;
+	if (Number.isInteger(raw) && raw <= 15) {
+		return 10 ** -raw;
+	}
+	return raw;
+}
+
 export type CsvFormulaImportRow = {
 	stream: string;
 	component: string;
@@ -798,7 +811,9 @@ export function extractFormulaCoreFromCsvText(formulaRaw: string): {
 		return {
 			core: clean(ceilMatch[1]),
 			roundingMode: "CEIL",
-			roundingStep: Number(ceilMatch[2].replace(",", ".")) || 0.1,
+			roundingStep: excelRoundingArgumentToStep(
+				Number(ceilMatch[2].replace(",", ".")) || 0.1,
+			),
 		};
 	}
 	const floorMatch = flat.match(
@@ -808,7 +823,9 @@ export function extractFormulaCoreFromCsvText(formulaRaw: string): {
 		return {
 			core: clean(floorMatch[1]),
 			roundingMode: "FLOOR",
-			roundingStep: Number(floorMatch[2].replace(",", ".")) || 0.1,
+			roundingStep: excelRoundingArgumentToStep(
+				Number(floorMatch[2].replace(",", ".")) || 0.1,
+			),
 		};
 	}
 	const roundMatch = flat.match(/ОКРУГЛ\s*\(\s*(.+?)\s*;\s*([\d,.]+)\s*\)/iu);
@@ -816,7 +833,9 @@ export function extractFormulaCoreFromCsvText(formulaRaw: string): {
 		return {
 			core: clean(roundMatch[1]),
 			roundingMode: "ROUND",
-			roundingStep: Number(roundMatch[2].replace(",", ".")) || 0.1,
+			roundingStep: excelRoundingArgumentToStep(
+				Number(roundMatch[2].replace(",", ".")) || 0.1,
+			),
 		};
 	}
 	if (

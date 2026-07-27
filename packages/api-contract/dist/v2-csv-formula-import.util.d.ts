@@ -1,4 +1,9 @@
 export type CsvFormulaRoundingMode = "CEIL" | "FLOOR" | "ROUND" | "NONE";
+/**
+ * Второй аргумент Excel `ОКРУГЛ.ВВЕРХ/ВНИЗ/ОКРУГЛ(x; n)` — число разрядов.
+ * Дробь вроде `0,1` в CSV уже означает абсолютный шаг округления.
+ */
+export declare function excelRoundingArgumentToStep(raw: number): number;
 export type CsvFormulaImportRow = {
     stream: string;
     component: string;

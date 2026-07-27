@@ -8,6 +8,50 @@ const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
         (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.laborValueMatches)("7", "7", "7")).toBe(true);
         (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.laborValueMatches)("Не требуется", null, "Не требуется")).toBe(true);
     });
+    (0, vitest_1.it)("matches regulatory enum prefix against short labor labels", () => {
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.laborValueMatches)("4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором", "4", "4")).toBe(true);
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.laborValueMatches)("1 — Проведение регулярной валидации Регулятором нормативно не установлено", null, "1")).toBe(true);
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.laborValueMatches)("4 — …", null, "5")).toBe(false);
+    });
+    (0, vitest_1.it)("matches enum prefix when only valueCode is set", () => {
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.laborValueMatches)("4 — Банком не планируется предоставление Модели Регулятору", "4", null)).toBe(true);
+    });
+    (0, vitest_1.it)("matches non-digit short codes with enum prefix", () => {
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.laborValueMatches)("ОК — Оперативный контроль", "ОК", "ОК")).toBe(true);
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.laborValueMatches)("КД — Качество данных", null, "КД")).toBe(true);
+    });
+    (0, vitest_1.it)("matches boolean productivization Да/Нет labels", () => {
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.laborValueMatches)(true, null, "Да")).toBe(true);
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.laborValueMatches)(false, null, "Нет")).toBe(true);
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.laborValueMatches)("Да", null, "Да")).toBe(true);
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.laborValueMatches)("Нет", null, "Нет")).toBe(true);
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.laborValueMatches)(true, null, "Нет")).toBe(false);
+    });
+    (0, vitest_1.it)("resolves complexity and readyPromReports coefficients from form answers", () => {
+        const coeffs = (0, v2_works_catalog_match_util_1.resolveByValueLaborParamCoefficients)({
+            complexity: "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+            readyPromReports: true,
+        }, [
+            {
+                paramCode: "complexity",
+                paramName: "Сложность постановки",
+                valueCode: "4",
+                valueLabel: "4",
+                coefficient: 1.75,
+            },
+            {
+                paramCode: "readyPromReports",
+                paramName: "Наличие готовых промышленных витрин",
+                valueCode: "Да",
+                valueLabel: "Да",
+                coefficient: 0.5,
+            },
+        ]);
+        (0, vitest_1.expect)(coeffs).toEqual({
+            complexity: 1.75,
+            readyPromReports: 0.5,
+        });
+    });
     (0, vitest_1.it)("matches non-overlapping Russian range labels", () => {
         (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.laborValueMatches)(20, "do_20", "до 20 метрик")).toBe(true);
         (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.laborValueMatches)(35, "20_50", "20–50 метрик")).toBe(true);

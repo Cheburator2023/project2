@@ -101,6 +101,11 @@ const v2_csv_formula_import_util_1 = require("./v2-csv-formula-import.util");
         (0, vitest_1.expect)(extracted?.roundingMode).toBe("CEIL");
         (0, vitest_1.expect)(extracted?.roundingStep).toBe(0.1);
     });
+    (0, vitest_1.it)("maps Excel digit count ;2 to step 0.01", () => {
+        const extracted = (0, v2_csv_formula_import_util_1.extractFormulaCoreFromCsvText)("ЧД(работы) =ОКРУГЛ.ВВЕРХ(Норматив × [Кол-во моделей]; 2)");
+        (0, vitest_1.expect)(extracted?.roundingMode).toBe("CEIL");
+        (0, vitest_1.expect)(extracted?.roundingStep).toBe(0.01);
+    });
     (0, vitest_1.it)("builds N * coef formula text", () => {
         const built = (0, v2_csv_formula_import_util_1.buildFormulaTextFromCsvCore)("Норматив × [Param A] × [Param B]", (label) => label === "Param A"
             ? "param_a"

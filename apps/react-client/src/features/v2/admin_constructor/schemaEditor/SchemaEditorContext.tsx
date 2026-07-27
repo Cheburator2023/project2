@@ -27,6 +27,29 @@ export type SchemaEditorContextValue = {
 	templateId: string;
 	/** Активная версия шаблона — для независимого опроса проблем типовых работ. */
 	templateVersionId: string | null;
+	/**
+	 * Редактирование черновика разрешено (`status === "draft"`).
+	 * Актуальная / опубликованная / архивная версия — только просмотр.
+	 */
+	schemaDraftEditable: boolean;
+	/**
+	 * Сбросить отложенные записи панелей в logic/ui перед save / новой версией.
+	 * Может вернуть патч для DTO (setState ещё не применился).
+	 */
+	flushPendingPanelDrafts: () => {
+		jsonSchema?: RJSFSchema;
+		uiSchema?: UiSchema;
+		logic?: { rules: V2LogicRuleDto[] };
+		formData?: Record<string, unknown>;
+	} | null;
+	registerPendingPanelDraftFlush: (
+		flush: (() => {
+			jsonSchema?: RJSFSchema;
+			uiSchema?: UiSchema;
+			logic?: { rules: V2LogicRuleDto[] };
+			formData?: Record<string, unknown>;
+		} | null) | null,
+	) => void;
 	mainTab: SchemaEditorMainTab;
 	setMainTab: (tab: SchemaEditorMainTab) => void;
 

@@ -14,6 +14,79 @@ describe("numeric labor coefficient ranges", () => {
 		expect(laborValueMatches("Не требуется", null, "Не требуется")).toBe(true);
 	});
 
+	it("matches regulatory enum prefix against short labor labels", () => {
+		expect(
+			laborValueMatches(
+				"4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+				"4",
+				"4",
+			),
+		).toBe(true);
+		expect(
+			laborValueMatches(
+				"1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+				null,
+				"1",
+			),
+		).toBe(true);
+		expect(laborValueMatches("4 — …", null, "5")).toBe(false);
+	});
+
+	it("matches enum prefix when only valueCode is set", () => {
+		expect(
+			laborValueMatches(
+				"4 — Банком не планируется предоставление Модели Регулятору",
+				"4",
+				null,
+			),
+		).toBe(true);
+	});
+
+	it("matches non-digit short codes with enum prefix", () => {
+		expect(laborValueMatches("ОК — Оперативный контроль", "ОК", "ОК")).toBe(
+			true,
+		);
+		expect(laborValueMatches("КД — Качество данных", null, "КД")).toBe(true);
+	});
+
+	it("matches boolean productivization Да/Нет labels", () => {
+		expect(laborValueMatches(true, null, "Да")).toBe(true);
+		expect(laborValueMatches(false, null, "Нет")).toBe(true);
+		expect(laborValueMatches("Да", null, "Да")).toBe(true);
+		expect(laborValueMatches("Нет", null, "Нет")).toBe(true);
+		expect(laborValueMatches(true, null, "Нет")).toBe(false);
+	});
+
+	it("resolves complexity and readyPromReports coefficients from form answers", () => {
+		const coeffs = resolveByValueLaborParamCoefficients(
+			{
+				complexity:
+					"4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+				readyPromReports: true,
+			},
+			[
+				{
+					paramCode: "complexity",
+					paramName: "Сложность постановки",
+					valueCode: "4",
+					valueLabel: "4",
+					coefficient: 1.75,
+				},
+				{
+					paramCode: "readyPromReports",
+					paramName: "Наличие готовых промышленных витрин",
+					valueCode: "Да",
+					valueLabel: "Да",
+					coefficient: 0.5,
+				},
+			],
+		);
+		expect(coeffs).toEqual({
+			complexity: 1.75,
+			readyPromReports: 0.5,
+		});
+	});
+
 	it("matches non-overlapping Russian range labels", () => {
 		expect(laborValueMatches(20, "do_20", "до 20 метрик")).toBe(true);
 		expect(laborValueMatches(35, "20_50", "20–50 метрик")).toBe(true);

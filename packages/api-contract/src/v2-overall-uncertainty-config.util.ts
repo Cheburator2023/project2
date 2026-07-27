@@ -65,6 +65,12 @@ export type V2OverallUncertaintyConfig = {
 	/** Строки = серьёзность (низ→выс), столбцы = вероятность (низ→выс). */
 	matrix: string[][];
 	risks: V2UncertaintyRiskCatalogItem[];
+	/**
+	 * Дефолты правой панели (то, что видит/заполняет пользователь анкеты):
+	 * тоггл «Заполняется» / «Не применимо», сроки, стоимость, отмеченные риски, поправка.
+	 * Версия шаблона не хранит formData — поэтому состояние лежит здесь, в logic-config.
+	 */
+	calculator?: V2OverallUncertaintyPreviewState;
 };
 
 export type V2OverallUncertaintyPreviewState = {
@@ -222,7 +228,7 @@ export function createDefaultOverallUncertaintyConfig(): V2OverallUncertaintyCon
 			label,
 		}));
 
-	return {
+	const base: V2OverallUncertaintyConfig = {
 		version: 2,
 		severityLevels,
 		probabilityLevels,
@@ -247,6 +253,7 @@ export function createDefaultOverallUncertaintyConfig(): V2OverallUncertaintyCon
 			name: V2_UNCERTAINTY_RISK_GROUP_LABELS[key] ?? key,
 		})),
 	};
+	return withNormalizedOverallUncertaintyCalculator(base);
 }
 
 export function createDefaultOverallUncertaintyPreviewState(
@@ -270,6 +277,69 @@ function clampIdx(idx: number, len: number): number {
 	if (len <= 0) return 0;
 	if (!Number.isFinite(idx)) return 0;
 	return Math.max(0, Math.min(len - 1, Math.trunc(idx)));
+}
+
+/**
+ * Подгоняет состояние калькулятора под актуальные шкалы/каталог рисков
+ * (индексы, id рисков, adjPct).
+ */
+export function normalizeOverallUncertaintyCalculatorState(
+	config: V2OverallUncertaintyConfig,
+	calculator?: V2OverallUncertaintyPreviewState | null,
+): V2OverallUncertaintyPreviewState {
+	const defaults = createDefaultOverallUncertaintyPreviewState(config);
+	if (!calculator) return defaults;
+
+	const prevById = new Map(
+		(Array.isArray(calculator.risks) ? calculator.risks : []).map((risk) => [
+			risk.id,
+			risk,
+		]),
+	);
+	const adjRaw = calculator.adjPct;
+	const adjNum = adjRaw == null ? Number.NaN : Number(adjRaw);
+	const adjPct = Number.isFinite(adjNum)
+		? Math.min(30, Math.max(0, adjNum))
+		: null;
+
+	return {
+		enabled: Boolean(calculator.enabled),
+		timelineIdx: clampIdx(
+			Number(calculator.timelineIdx),
+			config.severityLevels.length,
+		),
+		costIdx: clampIdx(Number(calculator.costIdx), config.severityLevels.length),
+		adjPct,
+		risks: config.risks.map((risk) => {
+			const prev = prevById.get(risk.id);
+			return {
+				id: risk.id,
+				enabled: Boolean(prev?.enabled),
+				probIdx: clampIdx(
+					Number(prev?.probIdx ?? 0),
+					config.probabilityLevels.length,
+				),
+				goalsIdx: clampIdx(
+					Number(prev?.goalsIdx ?? 0),
+					config.severityLevels.length,
+				),
+			};
+		}),
+	};
+}
+
+/** Вшивает нормализованный calculator в конфиг (после parse / resize / правок шкал). */
+export function withNormalizedOverallUncertaintyCalculator(
+	config: V2OverallUncertaintyConfig,
+	calculator?: V2OverallUncertaintyPreviewState | null,
+): V2OverallUncertaintyConfig {
+	return {
+		...config,
+		calculator: normalizeOverallUncertaintyCalculatorState(
+			config,
+			calculator ?? config.calculator,
+		),
+	};
 }
 
 function round4(n: number): number {
@@ -485,7 +555,7 @@ export function resizeUncertaintyMatrix(
 			);
 		}),
 	);
-	return { ...config, matrix: next };
+	return withNormalizedOverallUncertaintyCalculator({ ...config, matrix: next });
 }
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
@@ -579,6 +649,36 @@ function asRisks(value: unknown): V2UncertaintyRiskCatalogItem[] | null {
 		out.push({ id, name });
 	}
 	return out.length > 0 ? out : null;
+}
+
+function asCalculator(
+	value: unknown,
+): V2OverallUncertaintyPreviewState | null {
+	if (!isPlainRecord(value)) return null;
+	const risksRaw = Array.isArray(value.risks) ? value.risks : [];
+	const risks = risksRaw
+		.filter(isPlainRecord)
+		.map((risk) => ({
+			id: String(risk.id ?? "").trim(),
+			enabled: Boolean(risk.enabled),
+			probIdx: Number(risk.probIdx) || 0,
+			goalsIdx: Number(risk.goalsIdx) || 0,
+		}))
+		.filter((risk) => risk.id);
+	const adjRaw = value.adjPct;
+	const adjPct =
+		adjRaw == null || adjRaw === ""
+			? null
+			: Number.isFinite(Number(adjRaw))
+				? Number(adjRaw)
+				: null;
+	return {
+		enabled: Boolean(value.enabled),
+		timelineIdx: Number(value.timelineIdx) || 0,
+		costIdx: Number(value.costIdx) || 0,
+		adjPct,
+		risks,
+	};
 }
 
 function asMatrix(
@@ -721,6 +821,7 @@ export function parseOverallUncertaintyConfigFromLogic(
 			asCountRanges(src.riskCountRanges) ?? defaults.riskCountRanges,
 		matrix,
 		risks: asRisks(src.risks) ?? defaults.risks,
+		calculator: asCalculator(src.calculator) ?? undefined,
 	});
 }
 
@@ -734,7 +835,7 @@ export function buildOverallUncertaintyConfigLogicRule(
 		dependencies: [],
 		condition: true,
 		description:
-			"Конфигурация модуля «Общая неопределённость» (шкалы, группы, матрица).",
+			"Конфигурация модуля «Общая неопределённость» (шкалы, группы, матрица, калькулятор).",
 		payload: {
 			role: V2_OVERALL_UNCERTAINTY_CONFIG_PAYLOAD_ROLE,
 			version: 2,

@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MODEL_STREAM_SOURCE_COUNT_STEPS = void 0;
+exports.excelRoundingArgumentToStep = excelRoundingArgumentToStep;
 exports.parseCsvSemicolon = parseCsvSemicolon;
 exports.parseNormFromCsv = parseNormFromCsv;
 exports.normalizeCsvArchComponent = normalizeCsvArchComponent;
@@ -28,6 +29,20 @@ exports.validateImportedFormulaText = validateImportedFormulaText;
 const v2_work_formula_util_1 = require("./v2-work-formula.util");
 const v2_param_slug_util_1 = require("./v2-param-slug.util");
 const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
+/**
+ * Второй аргумент Excel `ОКРУГЛ.ВВЕРХ/ВНИЗ/ОКРУГЛ(x; n)` — число разрядов.
+ * Дробь вроде `0,1` в CSV уже означает абсолютный шаг округления.
+ */
+function excelRoundingArgumentToStep(raw) {
+    if (!Number.isFinite(raw) || raw < 0)
+        return 0.1;
+    if (raw > 0 && raw < 1)
+        return raw;
+    if (Number.isInteger(raw) && raw <= 15) {
+        return 10 ** -raw;
+    }
+    return raw;
+}
 /** RFC4180-подобный парсер CSV с `;` и многострочными полями в кавычках. */
 function parseCsvSemicolon(text) {
     const rows = [];
@@ -643,7 +658,7 @@ function extractFormulaCoreFromCsvText(formulaRaw) {
         return {
             core: clean(ceilMatch[1]),
             roundingMode: "CEIL",
-            roundingStep: Number(ceilMatch[2].replace(",", ".")) || 0.1,
+            roundingStep: excelRoundingArgumentToStep(Number(ceilMatch[2].replace(",", ".")) || 0.1),
         };
     }
     const floorMatch = flat.match(/ОКРУГЛ\.ВНИЗ\s*\(\s*(.+?)\s*;\s*([\d,.]+)\s*\)/iu);
@@ -651,7 +666,7 @@ function extractFormulaCoreFromCsvText(formulaRaw) {
         return {
             core: clean(floorMatch[1]),
             roundingMode: "FLOOR",
-            roundingStep: Number(floorMatch[2].replace(",", ".")) || 0.1,
+            roundingStep: excelRoundingArgumentToStep(Number(floorMatch[2].replace(",", ".")) || 0.1),
         };
     }
     const roundMatch = flat.match(/ОКРУГЛ\s*\(\s*(.+?)\s*;\s*([\d,.]+)\s*\)/iu);
@@ -659,7 +674,7 @@ function extractFormulaCoreFromCsvText(formulaRaw) {
         return {
             core: clean(roundMatch[1]),
             roundingMode: "ROUND",
-            roundingStep: Number(roundMatch[2].replace(",", ".")) || 0.1,
+            roundingStep: excelRoundingArgumentToStep(Number(roundMatch[2].replace(",", ".")) || 0.1),
         };
     }
     if (/^Норматив\s*$/iu.test(clean(flat)) ||

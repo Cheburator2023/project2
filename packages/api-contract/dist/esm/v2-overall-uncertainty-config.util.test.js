@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { calculateOverallUncertaintyPreview, createDefaultOverallUncertaintyConfig, createDefaultOverallUncertaintyPreviewState, mergeOverallUncertaintyConfigIntoLogic, parseOverallUncertaintyConfigFromLogic, resolveUncertaintyRiskCountCoef, } from "./v2-overall-uncertainty-config.util";
+import { mapFormDataToOverallUncertaintyPreview, mapOverallUncertaintyPreviewToFormData, } from "./v2-overall-uncertainty-runtime.util";
 describe("v2-overall-uncertainty-config.util v2", () => {
     it("returns coefficient 1 when section is not applicable", () => {
         const config = createDefaultOverallUncertaintyConfig();
@@ -81,6 +82,52 @@ describe("v2-overall-uncertainty-config.util v2", () => {
             { minCount: 2, maxCount: 3, coef: 1.1 },
             { minCount: 4, maxCount: null, coef: 1.25 },
         ])).toBe(1.25);
+    });
+    it("round-trips calculator state including Заполняется toggle", () => {
+        const config = createDefaultOverallUncertaintyConfig();
+        const preview = createDefaultOverallUncertaintyPreviewState(config);
+        preview.enabled = true;
+        preview.timelineIdx = 2;
+        preview.costIdx = 1;
+        preview.adjPct = 12;
+        preview.risks[0].enabled = true;
+        preview.risks[0].probIdx = 3;
+        preview.risks[0].goalsIdx = 2;
+        config.calculator = preview;
+        const merged = mergeOverallUncertaintyConfigIntoLogic([], config);
+        const parsed = parseOverallUncertaintyConfigFromLogic(merged);
+        expect(parsed.calculator?.enabled).toBe(true);
+        expect(parsed.calculator?.timelineIdx).toBe(2);
+        expect(parsed.calculator?.costIdx).toBe(1);
+        expect(parsed.calculator?.adjPct).toBe(12);
+        expect(parsed.calculator?.risks[0]).toMatchObject({
+            enabled: true,
+            probIdx: 3,
+            goalsIdx: 2,
+        });
+    });
+    it("round-trips calculator defaults through formData.uncertaintyCalculation", () => {
+        const config = createDefaultOverallUncertaintyConfig();
+        const preview = createDefaultOverallUncertaintyPreviewState(config);
+        preview.enabled = true;
+        preview.timelineIdx = 1;
+        preview.costIdx = 2;
+        preview.risks[0].enabled = true;
+        preview.risks[0].probIdx = 2;
+        preview.risks[0].goalsIdx = 1;
+        const formData = mapOverallUncertaintyPreviewToFormData({}, config, preview);
+        const back = mapFormDataToOverallUncertaintyPreview(formData, config);
+        expect(back.enabled).toBe(true);
+        expect(back.timelineIdx).toBe(1);
+        expect(back.costIdx).toBe(2);
+        expect(back.risks[0]).toMatchObject({
+            enabled: true,
+            probIdx: 2,
+            goalsIdx: 1,
+        });
+        preview.enabled = false;
+        const off = mapOverallUncertaintyPreviewToFormData({}, config, preview);
+        expect(mapFormDataToOverallUncertaintyPreview(off, config).enabled).toBe(false);
     });
     it("round-trips v2 config through logic and migrates v1", () => {
         const config = createDefaultOverallUncertaintyConfig();

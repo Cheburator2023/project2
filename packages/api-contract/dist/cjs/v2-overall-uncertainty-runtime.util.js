@@ -5,6 +5,7 @@ exports.isStructuredUncertaintyRiskEntry = isStructuredUncertaintyRiskEntry;
 exports.riskGroupHasStructuredEntries = riskGroupHasStructuredEntries;
 exports.isLegacyUncertaintyGroupName = isLegacyUncertaintyGroupName;
 exports.mapFormDataToOverallUncertaintyPreview = mapFormDataToOverallUncertaintyPreview;
+exports.mapOverallUncertaintyPreviewToFormData = mapOverallUncertaintyPreviewToFormData;
 exports.resolveOverallUncertaintyConfig = resolveOverallUncertaintyConfig;
 exports.resolveLegacyUncertaintyCoefficientFromRiskGroupNames = resolveLegacyUncertaintyCoefficientFromRiskGroupNames;
 const v2_overall_uncertainty_config_util_1 = require("./v2-overall-uncertainty-config.util");
@@ -121,16 +122,54 @@ function mapFormDataToOverallUncertaintyPreview(formData, config) {
         }
     }
     const hasRisks = risks.some((risk) => risk.enabled);
-    const enabled = Boolean(timelineLabel) ||
-        Boolean(costLabel) ||
-        hasRisks ||
-        adjPct != null;
+    const applicableFlag = uncertainty?.applicable ?? uncertainty?.enabled;
+    const enabled = typeof applicableFlag === "boolean"
+        ? applicableFlag
+        : Boolean(timelineLabel) ||
+            Boolean(costLabel) ||
+            hasRisks ||
+            adjPct != null;
     return {
         enabled,
         timelineIdx,
         costIdx,
         adjPct,
         risks,
+    };
+}
+/**
+ * Пишет дефолты калькулятора в formData.uncertaintyCalculation
+ * (для превью редактора / локального черновика).
+ */
+function mapOverallUncertaintyPreviewToFormData(formData, config, preview) {
+    const prev = readRecord(formData.uncertaintyCalculation) ?? {};
+    const timelineLabel = config.severityLevels[preview.timelineIdx]?.timelineLabel ?? "";
+    const costLabel = config.severityLevels[preview.costIdx]?.costLabel ?? "";
+    const probLabels = config.probabilityLevels.map((level) => level.label);
+    const goalsLabels = config.severityLevels.map((level) => level.goalsLabel);
+    const riskGroup = {};
+    for (const risk of config.risks) {
+        const state = preview.risks.find((item) => item.id === risk.id);
+        if (state?.enabled) {
+            riskGroup[risk.id] = {
+                probability: probLabels[state.probIdx] ?? "",
+                goals: goalsLabels[state.goalsIdx] ?? "",
+            };
+        }
+        else {
+            riskGroup[risk.id] = { probability: "", goals: "" };
+        }
+    }
+    return {
+        ...formData,
+        uncertaintyCalculation: {
+            ...prev,
+            applicable: preview.enabled,
+            initiativeTimeline: preview.enabled ? timelineLabel : "",
+            initiativeCost: preview.enabled ? costLabel : "",
+            uncertaintyAdjustment: preview.enabled && preview.adjPct != null ? preview.adjPct : null,
+            riskGroup,
+        },
     };
 }
 function resolveOverallUncertaintyConfig(options) {

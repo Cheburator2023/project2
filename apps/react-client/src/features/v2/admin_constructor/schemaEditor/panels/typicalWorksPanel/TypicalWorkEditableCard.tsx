@@ -23,6 +23,7 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import FormatListBulletedIcon from "@mui/icons-material/FormatListBulleted";
 import type {
 	V2TypicalWorkCardDto,
 	V2TypicalWorkParameterDto,
@@ -88,7 +89,10 @@ import {
 	resolveCanonicalWorkArchComponentType,
 	WORK_ARCH_COMPONENT_TYPES,
 } from "./typicalWorkPatchErrors";
-import { isWorkCoefficientValueAvailable } from "@smart-anketa/api-contract";
+import {
+	isWorkCoefficientValueAvailable,
+	resolveWorkCoefficientCatalogParam,
+} from "@smart-anketa/api-contract";
 import {
 	useTypicalWorkTriggerAnalysis,
 } from "./useTypicalWorkTriggerPreview";
@@ -180,6 +184,7 @@ export function TypicalWorkEditableCard({
 	const {
 		data: methodologyCatalogData,
 		isLoading: methodologyCatalogLoading,
+		isError: methodologyCatalogError,
 	} = useV2WorkParametersCatalog();
 	const createVersion = useCreateV2TemplateVersion();
 	const [draft, setDraft] = useState<V2TypicalWorkCardDto | null>(null);
@@ -794,25 +799,35 @@ export function TypicalWorkEditableCard({
 		}
 	};
 
-	/** Карточка + справочники/каталог: без них значения параметров «всплывают» позже. */
-	if (loading || dictionaryEnumsLoading || methodologyCatalogLoading) {
+	/** Полный экран только пока грузится сама карточка работы. */
+	const secondaryCatalogPending =
+		!methodologyCatalogError &&
+		methodologyCatalogLoading &&
+		!methodologyCatalogData;
+	if (loading) {
 		return (
 			<Flex
 				flexDirection="column"
 				alignItems="center"
 				justifyContent="center"
-				gap={8}
-				sx={{ p: 4 }}
+				flexGrow={1}
+				height="100%"
+				minHeight="0"
+				width="100%"
+				gap={10}
+				style={{ padding: 24 }}
 			>
-				<CircularProgress size={28} />
-				<Typography variant="caption" color="text.secondary">
-					{loading
-						? "Загрузка типовой работы…"
-						: "Загрузка параметров и справочников…"}
+				<CircularProgress size={32} />
+				<Typography variant="body2" color="text.secondary">
+					Загрузка типовой работы…
 				</Typography>
 			</Flex>
 		);
 	}
+
+	/** Справочники/каталог — мягкий оверлей: не блокируем UI навечно при stale pending. */
+	const secondaryLoading =
+		dictionaryEnumsLoading || secondaryCatalogPending;
 
 	if (error) {
 		return (
@@ -824,9 +839,46 @@ export function TypicalWorkEditableCard({
 
 	if (!draft) {
 		return (
-			<Alert severity="info" sx={{ m: 2 }}>
-				Выберите работу в списке слева.
-			</Alert>
+			<Flex
+				flexDirection="column"
+				alignItems="center"
+				justifyContent="center"
+				flexGrow={1}
+				height="100%"
+				minHeight="0"
+				width="100%"
+				gap={12}
+				style={{ padding: 32 }}
+			>
+				<Flex
+					alignItems="center"
+					justifyContent="center"
+					style={{
+						width: 64,
+						height: 64,
+						borderRadius: 16,
+						background: "#eef2f8",
+						color: "#8a93a3",
+					}}
+				>
+					<FormatListBulletedIcon sx={{ fontSize: 30 }} />
+				</Flex>
+				<Typography
+					variant="subtitle1"
+					fontWeight={700}
+					sx={{ color: "#1d2435", textAlign: "center" }}
+				>
+					Работа не выбрана
+				</Typography>
+				<Typography
+					variant="body2"
+					color="text.secondary"
+					sx={{ maxWidth: 360, textAlign: "center", lineHeight: 1.5 }}
+				>
+					Выберите типовую работу в списке слева, чтобы открыть параметры,
+					триггеры и формулу.
+				</Typography>
+			</Flex>
 		);
 	}
 
@@ -846,6 +898,23 @@ export function TypicalWorkEditableCard({
 			minWidth="0"
 			height="100%"
 		>
+			{secondaryLoading ? (
+				<Flex
+					alignItems="center"
+					gap={8}
+					style={{
+						flexShrink: 0,
+						padding: "8px 22px",
+						borderBottom: "1px solid #e8ecf2",
+						background: "#f8fafc",
+					}}
+				>
+					<CircularProgress size={14} />
+					<Typography variant="caption" color="text.secondary">
+						Загрузка параметров и справочников…
+					</Typography>
+				</Flex>
+			) : null}
 			{/* <TypicalWorkSaveStatusBar
 				status={status}
 				workName={draft.name}
@@ -1403,17 +1472,58 @@ export function TypicalWorkEditableCard({
 									const laborTableCollapsed =
 										coeffCount > 24 &&
 										expandedLaborCoeffGroups[group.paramCode] !== true;
+									const missingSchemaBinding =
+										group.kind !== "any_of" &&
+										!group.schemaFieldUid?.trim();
+									const catalogParam = resolveWorkCoefficientCatalogParam(
+										coefficientCatalog,
+										group.paramCode,
+										group.schemaFieldUid,
+									);
+									const unavailableCoeffCount = numericLaborRows
+										? 0
+										: group.coefficients.filter(
+												(row) =>
+													(row.valueCode || row.valueLabel) &&
+													!isWorkCoefficientValueAvailable(
+														{
+															paramCode: group.paramCode,
+															schemaFieldUid: group.schemaFieldUid,
+															valueCode: row.valueCode ?? null,
+															valueLabel: row.valueLabel ?? null,
+														},
+														coefficientCatalog,
+													),
+											).length;
+									const laborCalcRiskMessage = missingSchemaBinding
+										? catalogParam
+											? "Параметр без привязки к полю схемы (schemaFieldUid). Если справочник методики не совпадёт со схемой, коэффициенты могут дать ×1 в расчёте."
+											: "Параметр не привязан к полю схемы и не найден в справочнике — в расчёте анкеты будет ×1. Привяжите поле схемы."
+										: unavailableCoeffCount > 0
+											? `${unavailableCoeffCount} знач. недоступны в справочнике и исключены из расчёта.`
+											: null;
 									return (
 										<Box
 											key={group.paramCode}
 											data-work-labor-param={group.paramCode}
 											sx={{
-												border: "1px solid #eef0f4",
+												border: laborCalcRiskMessage
+													? "1px solid #f5c6c6"
+													: "1px solid #eef0f4",
 												borderRadius: "10px",
 												p: "11px 12px",
 												mb: 1.25,
+												bgcolor: laborCalcRiskMessage ? "#fff8f8" : undefined,
 											}}
 										>
+											{laborCalcRiskMessage ? (
+												<Alert
+													severity="warning"
+													sx={{ mb: 1.25, py: 0.5 }}
+												>
+													{laborCalcRiskMessage}
+												</Alert>
+											) : null}
 											<Box
 												sx={{
 													display: "flex",
@@ -1773,7 +1883,12 @@ export function TypicalWorkEditableCard({
 															const valueAvailable =
 																numericLaborRows ||
 																isWorkCoefficientValueAvailable(
-																	row,
+																	{
+																		paramCode: group.paramCode,
+																		schemaFieldUid: group.schemaFieldUid,
+																		valueCode: row.valueCode ?? null,
+																		valueLabel: row.valueLabel ?? null,
+																	},
 																	coefficientCatalog,
 																);
 															const editableValueLabel =

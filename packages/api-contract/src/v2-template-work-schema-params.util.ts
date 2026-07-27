@@ -417,6 +417,7 @@ export function collectTypicalWorkSchemaConsistencyIssues(
 		laborParams: input.laborParamCodes,
 		schemaParams: input.schemaParams,
 		methodologyCatalog: input.methodologyCatalog,
+		formulaParamCodes: input.formulaParamCodes,
 	})) {
 		report(
 			unavailable.kind,

@@ -483,6 +483,10 @@ function isSchemaFieldLaborParamCode(paramCode) {
  *
  * Строки-флаги без значения (valueCode/valueLabel = null) задают «параметр
  * присутствует» и не ссылаются на словарь — они всегда доступны.
+ *
+ * Параметры `field_*` — из схемы анкеты, не из глобального CSV методики.
+ * Привязку `schemaFieldUid` runtime обрабатывает отдельно (не через этот хелпер),
+ * чтобы админка по-прежнему ловила удалённые значения словаря схемы.
  */
 function isWorkCoefficientValueAvailable(row, catalog, atDate) {
     if (row.valueCode == null && row.valueLabel == null)
@@ -494,8 +498,17 @@ function isWorkCoefficientValueAvailable(row, catalog, atDate) {
         return false;
     if (param.values.length === 0)
         return true;
-    return param.values.some((value) => (value.code === row.valueCode || value.label === row.valueLabel) &&
-        (!atDate || isTypicalWorkParameterValueActiveOnDate(value, atDate)));
+    return param.values.some((value) => {
+        if (atDate && !isTypicalWorkParameterValueActiveOnDate(value, atDate)) {
+            return false;
+        }
+        if (value.code === row.valueCode || value.label === row.valueLabel) {
+            return true;
+        }
+        // Labor «4» ↔ словарь/схема «4 — Высокая…»; «Да» ↔ boolean.
+        return ((0, v2_works_catalog_match_util_1.laborValueMatches)(value.label, row.valueCode, row.valueLabel) ||
+            (0, v2_works_catalog_match_util_1.laborValueMatches)(value.code, row.valueCode, row.valueLabel));
+    });
 }
 function isWorkSchemaLaborParamCandidate(param) {
     return ((param.values?.length ?? 0) > 0 ||
@@ -635,6 +648,10 @@ function buildWorkCoefficientCatalog(input) {
     }
     return [...merged.values()];
 }
+/**
+ * Риски расчёта трудоёмкости: недоступные значения, параметр без привязки
+ * к схеме/справочнику (тихо даёт ×1), все строки отсечены.
+ */
 function collectUnavailableLaborCoefficientIssues(input) {
     const catalog = buildWorkCoefficientCatalog({
         schemaParams: input.schemaParams,
@@ -642,19 +659,36 @@ function collectUnavailableLaborCoefficientIssues(input) {
         methodologyCatalog: input.methodologyCatalog,
     });
     const issues = [];
+    const formulaCodes = new Set(input.formulaParamCodes ?? []);
     for (const group of input.laborParams) {
         if (group.kind === "any_of")
             continue;
+        const paramTitle = group.paramName?.trim() || group.paramCode;
         const catalogParam = resolveWorkCoefficientCatalogParam(catalog, group.paramCode, group.schemaFieldUid);
+        const boundToSchema = Boolean(group.schemaFieldUid?.trim());
+        if (!boundToSchema &&
+            !catalogParam &&
+            (group.coefficients?.length ?? 0) > 0) {
+            issues.push({
+                kind: "labor_value",
+                paramCode: group.paramCode,
+                paramName: group.paramName,
+                message: `Параметр трудоёмкости «${paramTitle}» не привязан к полю схемы и не найден в справочнике — коэффициенты не попадут в расчёт (будет ×1). Привяжите поле схемы или добавьте параметр в справочник методики.`,
+            });
+            continue;
+        }
         if ((0, v2_numeric_labor_range_util_1.isNumericLaborByValueParam)({
             name: group.paramName,
             values: catalogParam?.values,
         })) {
             continue;
         }
+        let unavailableCount = 0;
+        let valueCount = 0;
         for (const row of group.coefficients ?? []) {
             if (!row.valueCode && !row.valueLabel)
                 continue;
+            valueCount += 1;
             if (isWorkCoefficientValueAvailable({
                 paramCode: group.paramCode,
                 schemaFieldUid: group.schemaFieldUid,
@@ -663,11 +697,33 @@ function collectUnavailableLaborCoefficientIssues(input) {
             }, catalog, input.atDate)) {
                 continue;
             }
+            unavailableCount += 1;
             issues.push({
                 kind: "labor_value",
                 paramCode: group.paramCode,
                 paramName: group.paramName,
-                message: `Значение параметра трудоёмкости «${row.valueLabel ?? row.valueCode}» недоступно в справочнике`,
+                message: `Значение параметра трудоёмкости «${row.valueLabel ?? row.valueCode}» недоступно в справочнике — коэффициент исключён из расчёта`,
+            });
+        }
+        if (valueCount > 0 &&
+            unavailableCount === valueCount &&
+            (formulaCodes.size === 0 || formulaCodes.has(group.paramCode))) {
+            issues.push({
+                kind: "labor_value",
+                paramCode: group.paramCode,
+                paramName: group.paramName,
+                message: `Все значения «${paramTitle}» недоступны — в формуле будет ×1`,
+            });
+        }
+        if (!boundToSchema &&
+            catalogParam &&
+            (group.coefficients?.length ?? 0) > 0 &&
+            (formulaCodes.size === 0 || formulaCodes.has(group.paramCode))) {
+            issues.push({
+                kind: "labor_value",
+                paramCode: group.paramCode,
+                paramName: group.paramName,
+                message: `Параметр «${paramTitle}» без привязки к полю схемы (schemaFieldUid). Расчёт может игнорировать коэффициенты, если справочник методики не совпадает со схемой. Рекомендуется привязать поле.`,
             });
         }
     }

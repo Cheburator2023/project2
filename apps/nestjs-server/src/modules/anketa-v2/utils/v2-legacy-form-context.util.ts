@@ -136,26 +136,24 @@ export function resolveLegacyFormContext(
 			1,
 	);
 
+	const readyPromFromModels = modelsList.some((model) =>
+		isPositiveBinaryFormValue(readRecord(model)?.readyPromReports),
+	);
+	// Legacy: на старых анкетах поле иногда лежало на dataMart.
+	const readyPromFromDataMart = isPositiveBinaryFormValue(
+		dataMart?.readyPromReports,
+	);
 	const readyPromReports: "Да" | "Нет" =
-		isPositiveBinaryFormValue(dataMart?.readyPromReports) ||
-		isPositiveBinaryFormValue(dataMart?.field_lovKvLZc) ||
-		dataMart?.field_le47srI7 === "Да"
-			? "Да"
-			: "Нет";
+		readyPromFromModels || readyPromFromDataMart ? "Да" : "Нет";
 
 	const productionAdditionalReportsRaw = generalInfo?.productionAdditionalReports;
+	// Не подставлять metricsCount / «кол-во признаков» — это другой параметр.
+	// Пустое поле → дефолт v1 «1» (см. getProductionAdditionalReportsCoefficient).
 	const productionAdditionalReports =
 		typeof productionAdditionalReportsRaw === "string" &&
 		productionAdditionalReportsRaw.trim()
 			? productionAdditionalReportsRaw.trim()
-			: (() => {
-					const metricsCount =
-						parseFormNumber(dataMart?.metricsCount) ??
-						parseFormNumber(dataMart?.field_28IPlEQu);
-					return metricsCount !== null && metricsCount >= 1
-						? String(Math.min(99, Math.floor(metricsCount)))
-						: "1";
-				})();
+			: "1";
 
 	const assessedInitiativesCount = Math.min(
 		99,

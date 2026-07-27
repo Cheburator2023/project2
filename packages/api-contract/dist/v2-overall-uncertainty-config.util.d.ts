@@ -45,6 +45,12 @@ export type V2OverallUncertaintyConfig = {
     /** Строки = серьёзность (низ→выс), столбцы = вероятность (низ→выс). */
     matrix: string[][];
     risks: V2UncertaintyRiskCatalogItem[];
+    /**
+     * Дефолты правой панели (то, что видит/заполняет пользователь анкеты):
+     * тоггл «Заполняется» / «Не применимо», сроки, стоимость, отмеченные риски, поправка.
+     * Версия шаблона не хранит formData — поэтому состояние лежит здесь, в logic-config.
+     */
+    calculator?: V2OverallUncertaintyPreviewState;
 };
 export type V2OverallUncertaintyPreviewState = {
     /** false = «Не применимо», поправка 0, коэфф. = 1. */
@@ -93,6 +99,13 @@ export type V2OverallUncertaintyCalcBreakdown = {
 };
 export declare function createDefaultOverallUncertaintyConfig(): V2OverallUncertaintyConfig;
 export declare function createDefaultOverallUncertaintyPreviewState(config: V2OverallUncertaintyConfig): V2OverallUncertaintyPreviewState;
+/**
+ * Подгоняет состояние калькулятора под актуальные шкалы/каталог рисков
+ * (индексы, id рисков, adjPct).
+ */
+export declare function normalizeOverallUncertaintyCalculatorState(config: V2OverallUncertaintyConfig, calculator?: V2OverallUncertaintyPreviewState | null): V2OverallUncertaintyPreviewState;
+/** Вшивает нормализованный calculator в конфиг (после parse / resize / правок шкал). */
+export declare function withNormalizedOverallUncertaintyCalculator(config: V2OverallUncertaintyConfig, calculator?: V2OverallUncertaintyPreviewState | null): V2OverallUncertaintyConfig;
 export declare function resolveUncertaintyRiskCountCoef(count: number, ranges: readonly V2UncertaintyRiskCountRange[]): number;
 /**
  * Предпросмотр коэффициента п.3 по методике настройщика:

@@ -201,6 +201,15 @@ const v2_typical_work_types_1 = require("./v2-typical-work.types");
         (0, vitest_1.expect)((0, v2_work_formula_util_1.applyWorkRounding)(-5, { mode: "CEIL", step: 1 })).toBe(0);
         (0, vitest_1.expect)((0, v2_work_formula_util_1.applyWorkRounding)(20.55 - 30, { mode: "CEIL", step: 1 })).toBe(0);
     });
+    (0, vitest_1.it)("treats legacy Excel step=2 as ceil to 2 decimals", () => {
+        // 33 × 1.75 = 57.75; старый баг CEIL step 2 давал 58
+        (0, vitest_1.expect)((0, v2_work_formula_util_1.applyWorkRounding)(57.75, { mode: "CEIL", step: 2 })).toBe(57.75);
+        (0, vitest_1.expect)((0, v2_work_formula_util_1.applyWorkRounding)(57.751, { mode: "CEIL", step: 2 })).toBe(57.76);
+    });
+    (0, vitest_1.it)("maps Excel digit steps 2..15 but keeps absolute step 1", () => {
+        (0, vitest_1.expect)((0, v2_work_formula_util_1.applyWorkRounding)(1.2345, { mode: "CEIL", step: 3 })).toBe(1.235);
+        (0, vitest_1.expect)((0, v2_work_formula_util_1.applyWorkRounding)(1.2, { mode: "CEIL", step: 1 })).toBe(2);
+    });
     (0, vitest_1.it)("validateWorkFormulaTokens catches double operator", () => {
         const err = (0, v2_work_formula_util_1.validateWorkFormulaTokens)([
             { kind: "norm" },

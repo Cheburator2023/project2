@@ -268,6 +268,7 @@ export function collectTypicalWorkSchemaConsistencyIssues(input) {
         laborParams: input.laborParamCodes,
         schemaParams: input.schemaParams,
         methodologyCatalog: input.methodologyCatalog,
+        formulaParamCodes: input.formulaParamCodes,
     })) {
         report(unavailable.kind, unavailable.paramCode, unavailable.paramName, unavailable.message);
     }

@@ -15,6 +15,11 @@ export declare function isLegacyUncertaintyGroupName(value: string, config: V2Ov
  * Structured risk = { probability, goals }; legacy string goals/group handled separately.
  */
 export declare function mapFormDataToOverallUncertaintyPreview(formData: Record<string, unknown>, config: V2OverallUncertaintyConfig): V2OverallUncertaintyPreviewState;
+/**
+ * Пишет дефолты калькулятора в formData.uncertaintyCalculation
+ * (для превью редактора / локального черновика).
+ */
+export declare function mapOverallUncertaintyPreviewToFormData(formData: Record<string, unknown>, config: V2OverallUncertaintyConfig, preview: V2OverallUncertaintyPreviewState): Record<string, unknown>;
 export type ResolveOverallUncertaintyOptions = {
     config?: V2OverallUncertaintyConfig;
     logicRules?: readonly V2LogicRuleDto[];

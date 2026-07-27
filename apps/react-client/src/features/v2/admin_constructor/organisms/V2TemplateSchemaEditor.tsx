@@ -139,6 +139,7 @@ import {
 	snapshotFromTemplateVersion,
 	type SchemaEditorDraftSnapshot,
 } from "../utils/schemaEditorLocalDraft";
+import { applyOverallUncertaintyDraftToVersionSnapshot } from "../schemaEditor/panels/overallUncertainty/overallUncertaintyDraftStore";
 import {
 	resolveEffectiveLogicRules,
 	resolveRulesForSelectedExact,
@@ -347,12 +348,43 @@ export const V2TemplateSchemaEditor = ({
 		typicalWorkSaveGate?.message ??
 		"Сохраните типовую работу в панели логики перед сохранением схемы";
 
+	const schemaDraftEditable = activeVersion?.status === "draft";
+
 	const [jsonSchema, setJsonSchema] = useState<RJSFSchema>(EMPTY_JSON_SCHEMA);
 	const [uiSchema, setUiSchema] = useState<UiSchema>({});
 	const [logic, setLogic] = useState(coerceLogicGraph(undefined));
 	const [formData, setFormData] = useState<Record<string, unknown>>({});
 	const [previewResetPending, setPreviewResetPending] = useState(false);
 	const [previewFormRemountKey, setPreviewFormRemountKey] = useState(0);
+
+	type PanelDraftFlushPatch = {
+		jsonSchema?: RJSFSchema;
+		uiSchema?: UiSchema;
+		logic?: { rules: import("@smart-anketa/api-contract").V2LogicRuleDto[] };
+		formData?: Record<string, unknown>;
+	};
+	const pendingPanelDraftFlushRef = useRef<
+		(() => PanelDraftFlushPatch | null) | null
+	>(null);
+	const flushedPanelDraftOverrideRef = useRef<PanelDraftFlushPatch | null>(
+		null,
+	);
+	const registerPendingPanelDraftFlush = useCallback(
+		(flush: (() => PanelDraftFlushPatch | null) | null) => {
+			pendingPanelDraftFlushRef.current = flush;
+		},
+		[],
+	);
+	const flushPendingPanelDrafts = useCallback(() => {
+		const patch = pendingPanelDraftFlushRef.current?.() ?? null;
+		flushedPanelDraftOverrideRef.current = patch;
+		if (!patch) return null;
+		if (patch.jsonSchema) setJsonSchema(patch.jsonSchema);
+		if (patch.uiSchema) setUiSchema(patch.uiSchema);
+		if (patch.logic) setLogic(patch.logic);
+		if (patch.formData) setFormData(patch.formData);
+		return patch;
+	}, []);
 
 	const [selectedPointer, setSelectedPointer] = useState<string | null>(
 		initialPointer ? normalizeJsonPointer(initialPointer) : null,
@@ -621,10 +653,14 @@ export const V2TemplateSchemaEditor = ({
 
 	useEffect(() => {
 		if (!activeVersion?.id) {
-			draftHydratedVersionIdRef.current = null;
-			baselineSnapshotRef.current = null;
-			setBaselineSnapshot(null);
-			setHasUnsavedChanges(false);
+			// Не сбрасываем draftHydratedVersionIdRef при кратком undefined
+			// во время invalidate/refetch — иначе apply snapshot затрёт локальный draft.
+			if (!activeVersionId) {
+				draftHydratedVersionIdRef.current = null;
+				baselineSnapshotRef.current = null;
+				setBaselineSnapshot(null);
+				setHasUnsavedChanges(false);
+			}
 			return;
 		}
 
@@ -639,7 +675,7 @@ export const V2TemplateSchemaEditor = ({
 		setDraftFuture([]);
 		draftHydratedVersionIdRef.current = activeVersion.id;
 		setHasUnsavedChanges(false);
-	}, [activeVersion, applyDraftSnapshotToEditor]);
+	}, [activeVersion, activeVersionId, applyDraftSnapshotToEditor]);
 
 	useEffect(() => {
 		if (!activeVersion?.id) return;
@@ -1210,19 +1246,31 @@ export const V2TemplateSchemaEditor = ({
 		}
 	};
 
-	const versionSnapshotDto = useCallback(
-		(): CreateV2TemplateVersionRequestDto => ({
-			jsonSchema,
+	const versionSnapshotDto = useCallback((): CreateV2TemplateVersionRequestDto => {
+		const override = flushedPanelDraftOverrideRef.current;
+		flushedPanelDraftOverrideRef.current = null;
+		const baseJson = override?.jsonSchema ?? jsonSchema;
+		const baseUi = override?.uiSchema ?? uiSchema;
+		const baseLogic = override?.logic ?? logic;
+		const withUncertainty = applyOverallUncertaintyDraftToVersionSnapshot({
+			templateId,
+			jsonSchema: baseJson,
+			uiSchema: baseUi,
+			logic: baseLogic,
+		});
+		return {
+			jsonSchema: withUncertainty.jsonSchema,
 			uiSchema: stripUiObjectFieldTemplatesFromUi(
-				uiSchema as Record<string, unknown>,
+				withUncertainty.uiSchema as Record<string, unknown>,
 			) as UiSchema,
-			logic,
+			logic: withUncertainty.logic,
 			dictionariesSnapshot: {
-				referencedDictionaryCodes: collectDictionaryCodesFromUiSchema(uiSchema),
+				referencedDictionaryCodes: collectDictionaryCodesFromUiSchema(
+					withUncertainty.uiSchema,
+				),
 			},
-		}),
-		[jsonSchema, logic, uiSchema],
-	);
+		};
+	}, [jsonSchema, logic, templateId, uiSchema]);
 
 	const persistVersionInUrl = useCallback(
 		(versionId: string, options?: { skipLeaveGuard?: boolean }) => {
@@ -1261,6 +1309,7 @@ export const V2TemplateSchemaEditor = ({
 			return;
 		}
 
+		flushPendingPanelDrafts();
 		try {
 			await updateVersion.mutateAsync({
 				templateId,
@@ -1299,6 +1348,7 @@ export const V2TemplateSchemaEditor = ({
 		commitBaselineToCurrent,
 		typicalWorkSaveBlocked,
 		typicalWorkSaveBlockedMessage,
+		flushPendingPanelDrafts,
 	]);
 
 	const handleSaveAsNewVersion = useCallback(
@@ -1307,6 +1357,7 @@ export const V2TemplateSchemaEditor = ({
 				toast.warning(typicalWorkSaveBlockedMessage);
 				return;
 			}
+			flushPendingPanelDrafts();
 			try {
 				const created = await createVersion.mutateAsync({
 					templateId,
@@ -1350,6 +1401,7 @@ export const V2TemplateSchemaEditor = ({
 			versionSnapshotDto,
 			typicalWorkSaveBlocked,
 			typicalWorkSaveBlockedMessage,
+			flushPendingPanelDrafts,
 		],
 	);
 
@@ -1357,6 +1409,7 @@ export const V2TemplateSchemaEditor = ({
 		if (!activeVersion || isSystemCurrent) return;
 
 		try {
+			flushPendingPanelDrafts();
 			if (activeVersion.status === "draft") {
 				await updateVersion.mutateAsync({
 					templateId,
@@ -1402,6 +1455,7 @@ export const V2TemplateSchemaEditor = ({
 		updateVersion,
 		versionSnapshotDto,
 		commitBaselineToCurrent,
+		flushPendingPanelDrafts,
 	]);
 
 	const activateAsCurrentRef = useRef(handleActivateAsCurrent);
@@ -2369,6 +2423,9 @@ export const V2TemplateSchemaEditor = ({
 		() => ({
 			templateId,
 			templateVersionId: activeVersion?.id ?? null,
+			schemaDraftEditable,
+			flushPendingPanelDrafts,
+			registerPendingPanelDraftFlush,
 			mainTab,
 			setMainTab: activateMainTab,
 			jsonSchema,
@@ -2485,6 +2542,9 @@ export const V2TemplateSchemaEditor = ({
 		[
 			templateId,
 			activeVersion?.id,
+			schemaDraftEditable,
+			flushPendingPanelDrafts,
+			registerPendingPanelDraftFlush,
 			mainTab,
 			activateMainTab,
 			jsonSchema,

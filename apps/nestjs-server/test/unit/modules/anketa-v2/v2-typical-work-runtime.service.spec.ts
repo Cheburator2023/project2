@@ -58,6 +58,7 @@ function createService({
 		paramCode: string;
 		paramName?: string | null;
 		kind: string;
+		schemaFieldUid?: string | null;
 		anyOfValueCodes?: string[] | null;
 		anyOfValueLabels?: string[] | null;
 		coeffOn?: string;
@@ -582,6 +583,87 @@ describe("V2TypicalWorkRuntimeService", () => {
 
 		expect(yes[0]?.coefficient).toBe(20);
 		expect(no[0]?.coefficient).toBe(10);
+	});
+
+	it("applies schema-bound readyPromReports coeffs even when methodology catalog is empty", async () => {
+		const service = createService({
+			rules: [
+				{
+					workId: WORK_WITH_TRIGGER,
+					streamExecutor: STREAM,
+					paramCode: "type",
+					paramName: "Тип",
+					operator: "=",
+					valueCode: null,
+					valueLabel: "Внутренний",
+				},
+			],
+			laborParams: [
+				{
+					workId: WORK_WITH_TRIGGER,
+					streamExecutor: STREAM,
+					paramCode: "readyPromReports",
+					paramName: "Наличие готовых промышленных витрин",
+					kind: "by_value",
+					schemaFieldUid: "field_ready-prom",
+				},
+			],
+			laborRows: [
+				{
+					workId: WORK_WITH_TRIGGER,
+					streamExecutor: STREAM,
+					paramCode: "readyPromReports",
+					paramName: "Наличие готовых промышленных витрин",
+					valueCode: null,
+					valueLabel: "Да",
+					coefficient: "0.5",
+				},
+				{
+					workId: WORK_WITH_TRIGGER,
+					streamExecutor: STREAM,
+					paramCode: "readyPromReports",
+					paramName: "Наличие готовых промышленных витрин",
+					valueCode: null,
+					valueLabel: "Нет",
+					coefficient: "666",
+				},
+			],
+			versionConfigs: [
+				{
+					workId: WORK_WITH_TRIGGER,
+					streamExecutor: STREAM,
+					templateVersionId: "tpl-v1",
+					formula: [
+						{ kind: "norm" },
+						{ kind: "param_coeff", paramCode: "readyPromReports" },
+					],
+					formulaText: null,
+					roundingMode: "none",
+					roundingStep: null,
+					calculationLogic: null,
+				},
+			],
+		});
+
+		const yes = await service.buildCatalogTasks({
+			archComponentType: "Система-источник",
+			streamExecutor: STREAM,
+			source: { type: "Внутренний", readyPromReports: true },
+			formData: { readyPromReports: true },
+			templateVersionId: "tpl-v1",
+			atDate: "2025-06-01",
+		});
+		const no = await service.buildCatalogTasks({
+			archComponentType: "Система-источник",
+			streamExecutor: STREAM,
+			source: { type: "Внутренний", readyPromReports: false },
+			formData: { readyPromReports: false },
+			templateVersionId: "tpl-v1",
+			atDate: "2025-06-01",
+		});
+
+		expect(yes[0]?.coefficient).toBe(0.5);
+		expect(no[0]?.coefficient).toBe(666);
 	});
 
 	it("falls back to global catalog works when template has no own works", async () => {

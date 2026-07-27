@@ -1236,7 +1236,7 @@ export function roundWorkEffortValue(
 	rounding: V2TypicalWorkRoundingDto,
 ): number {
 	if (rounding.mode === "NONE") return value;
-	const step = rounding.step ?? 0.1;
+	const step = normalizeWorkRoundingStep(rounding.step);
 	if (step <= 0) return value;
 	const scaled = value / step;
 	switch (rounding.mode as V2WorkRoundingMode) {
@@ -1249,6 +1249,21 @@ export function roundWorkEffortValue(
 		default:
 			return value;
 	}
+}
+
+/**
+ * Excel `ОКРУГЛ.*(x; n)` для модельного стрима ошибочно сохраняли как
+ * абсолютный шаг `n` (`; 2` → шаг 2 вместо округления до 2 знаков = 0.01).
+ * `1` не трогаем — валидный шаг в целых человеко-днях.
+ */
+export function normalizeWorkRoundingStep(
+	step: number | null | undefined,
+): number {
+	if (step == null || !Number.isFinite(step) || step <= 0) return 0.1;
+	if (Number.isInteger(step) && step >= 2 && step <= 15) {
+		return 10 ** -step;
+	}
+	return step;
 }
 
 export function applyWorkRounding(

@@ -80,5 +80,11 @@ export declare function evaluateWorkFormula(formula: V2TypicalWorkFormulaDto, ct
 export declare function clampTypicalWorkEffort(value: number): number;
 /** Округление без ограничения снизу — для валидации формулы перед сохранением. */
 export declare function roundWorkEffortValue(value: number, rounding: V2TypicalWorkRoundingDto): number;
+/**
+ * Excel `ОКРУГЛ.*(x; n)` для модельного стрима ошибочно сохраняли как
+ * абсолютный шаг `n` (`; 2` → шаг 2 вместо округления до 2 знаков = 0.01).
+ * `1` не трогаем — валидный шаг в целых человеко-днях.
+ */
+export declare function normalizeWorkRoundingStep(step: number | null | undefined): number;
 export declare function applyWorkRounding(value: number, rounding: V2TypicalWorkRoundingDto): number;
 export declare function previewWorkFormula(formula: V2TypicalWorkFormulaDto, rounding: V2TypicalWorkRoundingDto, ctx: WorkFormulaEvalContext): WorkFormulaEvalResult;

@@ -62,18 +62,27 @@ describe("v2-legacy-form-context.util", () => {
 		expect(ctx.uncertaintyAdjustmentPercent).toBe(15);
 	});
 
-	it("derives readyPromReports from dataMart readyPromReports", () => {
+	it("derives readyPromReports from modelsList readyPromReports", () => {
+		const ctx = resolveLegacyFormContext({
+			detailInfo: {
+				modelsList: [{ readyPromReports: true }, { readyPromReports: false }],
+			},
+		});
+		expect(ctx.readyPromReports).toBe("Да");
+	});
+
+	it("falls back to dataMart readyPromReports for legacy ankety", () => {
 		const ctx = resolveLegacyFormContext({
 			detailInfo: { dataMart: [{ readyPromReports: true }] },
 		});
 		expect(ctx.readyPromReports).toBe("Да");
 	});
 
-	it("derives readyPromReports from legacy dataMart field_lovKvLZc", () => {
+	it("does not treat feature-store checkbox as readyPromReports", () => {
 		const ctx = resolveLegacyFormContext({
 			detailInfo: { dataMart: [{ field_lovKvLZc: true }] },
 		});
-		expect(ctx.readyPromReports).toBe("Да");
+		expect(ctx.readyPromReports).toBe("Нет");
 	});
 
 	it("derives productionAdditionalReports from generalInfo", () => {
@@ -83,11 +92,11 @@ describe("v2-legacy-form-context.util", () => {
 		expect(ctx.productionAdditionalReports).toBe("Не требуется");
 	});
 
-	it("derives productionAdditionalReports from dataMart metricsCount fallback", () => {
+	it("does not derive productionAdditionalReports from dataMart metricsCount", () => {
 		const ctx = resolveLegacyFormContext({
 			detailInfo: { dataMart: [{ metricsCount: 7 }] },
 		});
-		expect(ctx.productionAdditionalReports).toBe("7");
+		expect(ctx.productionAdditionalReports).toBe("1");
 	});
 
 	it("reads assessedInitiativesCount from generalInfo", () => {
@@ -136,6 +145,26 @@ describe("evaluateLegacyV2Summary snapshot sensitivity", () => {
 			detailInfo: { modelsList: [{ algorithmType: "CV" }] },
 		});
 		expect(stageScore(cv, "05. Разработка модели")).toBeGreaterThan(
+			stageScore(tabular, "05. Разработка модели") ?? 0,
+		);
+	});
+
+	it("maps schema algorithmType enums in stage05", () => {
+		const tabular = evaluateLegacyV2Summary({
+			detailInfo: { modelsList: [{ algorithmType: "Табличные данные" }] },
+		});
+		const cv = evaluateLegacyV2Summary({
+			detailInfo: {
+				modelsList: [{ algorithmType: "Компьютерное зрение" }],
+			},
+		});
+		const audio = evaluateLegacyV2Summary({
+			detailInfo: { modelsList: [{ algorithmType: "Аудио-аналитика" }] },
+		});
+		expect(stageScore(cv, "05. Разработка модели")).toBeGreaterThan(
+			stageScore(tabular, "05. Разработка модели") ?? 0,
+		);
+		expect(stageScore(audio, "05. Разработка модели")).toBeGreaterThan(
 			stageScore(tabular, "05. Разработка модели") ?? 0,
 		);
 	});

@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { In, IsNull, Repository } from "typeorm";
 import {
@@ -7,6 +7,7 @@ import {
 	applyComputedOverallUncertaintyToTypicalWorkParamCoefficients,
 	buildTypicalWorkFactorCoeffResolver,
 	buildTypicalWorkFormulaBreakdown,
+	buildWorkCoefficientCatalog,
 	computeTypicalWorkFormulaTotal,
 	defaultWorkRounding,
 	formatTypicalWorkCoefficientDisplay,
@@ -26,6 +27,7 @@ import {
 	remapFactoryAllowedWorkIdsToTemplateWorks,
 	type TypicalWorkTriggerMatchInput,
 	type TypicalWorkFormulaBreakdownDto,
+	type WorkCoefficientCatalogParam,
 	buildWorkSchemaParamsFromTemplate,
 	remapLaborCoefficientRowsForSchema,
 	resolveWorkSchemaParamForRule,
@@ -47,6 +49,8 @@ import { V2TemplateVersionEntity } from "../entities/v2-template-version.entity"
 import { V2TypicalWorkParamCatalogService } from "./v2-typical-work-param-catalog.service";
 import { V2StreamCatalogService } from "./v2-stream-catalog.service";
 import { V2_FACTORY_TEMPLATE_TYPICAL_WORKS_REGISTRY } from "../constants/v2-factory-template-typical-works-registry";
+
+const runtimeLogger = new Logger("V2TypicalWorkRuntime");
 
 export type CatalogGeneratedTask = {
 	taskCode: string;
@@ -95,9 +99,7 @@ type RuntimeWorkContext = {
 	laborParams: V2TypicalWorkLaborParamEntity[];
 	config: V2TypicalWorkVersionConfigEntity | undefined;
 	assignmentByWorkId: Map<string, V2TypicalWorkAssignmentEntity>;
-	coefficientValueCatalog: Awaited<
-		ReturnType<V2TypicalWorkParamCatalogService["listTriggerStatusCatalog"]>
-	>;
+	coefficientValueCatalog: WorkCoefficientCatalogParam[];
 	hiddenParamCodes?: ReadonlySet<string>;
 	schemaParams: WorkSchemaParamDef[];
 	triggersMatch: boolean;
@@ -150,12 +152,7 @@ function resolveParamCoefficients(ctx: RuntimeWorkContext): Record<string, numbe
 	const laborParamsByCode = new Map(
 		ctx.laborParams.map((row) => [row.paramCode, row]),
 	);
-	const laborParamCodes = [
-		...new Set([
-			...ctx.laborParams.map((row) => row.paramCode),
-			...ctx.laborRows.map((row) => row.paramCode),
-		]),
-	];
+	const laborParamCodes = listLaborParamCodes(ctx);
 	const lookupSource = buildLaborCoefficientLookupSource(
 		ctx.source,
 		ctx.formData,
@@ -191,17 +188,36 @@ function resolveParamCoefficients(ctx: RuntimeWorkContext): Record<string, numbe
 		valueLabel: string | null;
 		coefficient: number;
 	}> = [];
+	const skippedUnavailable: Array<{
+		paramCode: string;
+		valueLabel: string | null;
+		valueCode: string | null;
+		schemaFieldUid: string | null;
+	}> = [];
 	for (const row of ctx.laborRows) {
 		if (ctx.hiddenParamCodes?.has(row.paramCode)) continue;
 		const header = laborParamsByCode.get(row.paramCode);
 		if (header?.kind === "any_of") continue;
+		const schemaBound = Boolean(header?.schemaFieldUid?.trim());
 		if (
+			!schemaBound &&
 			!isWorkCoefficientValueAvailable(
-				row,
+				{
+					paramCode: row.paramCode,
+					valueCode: row.valueCode,
+					valueLabel: row.valueLabel,
+					schemaFieldUid: header?.schemaFieldUid,
+				},
 				ctx.coefficientValueCatalog,
 				ctx.atDate,
 			)
 		) {
+			skippedUnavailable.push({
+				paramCode: row.paramCode,
+				valueLabel: row.valueLabel,
+				valueCode: row.valueCode,
+				schemaFieldUid: header?.schemaFieldUid ?? null,
+			});
 			continue;
 		}
 		byValueRows.push({
@@ -211,6 +227,17 @@ function resolveParamCoefficients(ctx: RuntimeWorkContext): Record<string, numbe
 			valueLabel: row.valueLabel,
 			coefficient: decimalToNumber(row.coefficient),
 		});
+	}
+	if (skippedUnavailable.length > 0) {
+		runtimeLogger.warn(
+			`[${ctx.work.name}] отсечены коэффициенты трудоёмкости (недоступны в справочнике / без привязки к схеме): ${skippedUnavailable
+				.map(
+					(row) =>
+						`${row.paramCode}=«${row.valueLabel ?? row.valueCode ?? "—"}»` +
+						(row.schemaFieldUid ? "" : " [no schemaFieldUid]"),
+				)
+				.join("; ")}`,
+		);
 	}
 	const remappedRows = remapLaborCoefficientRowsForSchema(
 		byValueRows,
@@ -229,6 +256,15 @@ function resolveParamCoefficients(ctx: RuntimeWorkContext): Record<string, numbe
 		if (remapped.paramCode !== original.paramCode) {
 			paramCoefficients[original.paramCode] = value;
 		}
+	}
+
+	const unmatchedByValueParams = [
+		...new Set(byValueRows.map((row) => row.paramCode)),
+	].filter((paramCode) => !Object.hasOwn(paramCoefficients, paramCode));
+	if (unmatchedByValueParams.length > 0) {
+		runtimeLogger.warn(
+			`[${ctx.work.name}] ответы анкеты не совпали ни с одной строкой коэффициента (будет ×1): ${unmatchedByValueParams.join(", ")}. lookupKeys=${Object.keys(lookupSource).slice(0, 20).join(",")}`,
+		);
 	}
 
 	const terms = ctx.config
@@ -256,7 +292,44 @@ function resolveParamCoefficients(ctx: RuntimeWorkContext): Record<string, numbe
 		},
 	);
 
+	const silentDefaultFactors = [...new Set(formulaParamCodes)].filter(
+		(paramCode) =>
+			Boolean(paramCode) &&
+			!Object.hasOwn(paramCoefficients, paramCode) &&
+			laborParamsByCode.get(paramCode)?.kind !== "any_of",
+	);
+	if (silentDefaultFactors.length > 0) {
+		runtimeLogger.warn(
+			`[${ctx.work.name}] факторы формулы без коэффициента → ×1: ${silentDefaultFactors.join(", ")}`,
+		);
+	}
+
 	return paramCoefficients;
+}
+
+function listLaborParamCodes(ctx: RuntimeWorkContext): string[] {
+	return [
+		...new Set([
+			...ctx.laborParams.map((row) => row.paramCode),
+			...ctx.laborRows.map((row) => row.paramCode),
+		]),
+	];
+}
+
+function buildRuntimeFactorCoeffResolver(
+	ctx: RuntimeWorkContext,
+	paramCoefficients: Record<string, number>,
+) {
+	return buildTypicalWorkFactorCoeffResolver({
+		paramCoefficients,
+		anyOfParams: listAnyOfLaborParams(ctx.laborParams),
+		source: buildLaborCoefficientLookupSource(
+			ctx.source,
+			ctx.formData,
+			ctx.schemaParams,
+			listLaborParamCodes(ctx),
+		),
+	});
 }
 
 function listAnyOfLaborParams(
@@ -425,9 +498,18 @@ export class V2TypicalWorkRuntimeService {
 			}
 		}
 		const assignmentById = new Map(assignments.map((a) => [a.id, a]));
-		const coefficientValueCatalog =
+		const methodologyCatalog =
 			await this.paramCatalogService.listTriggerStatusCatalog(params.atDate);
 		const schemaParams = await this.loadSchemaParams(params.templateVersionId);
+		const coefficientValueCatalog = buildWorkCoefficientCatalog({
+			schemaParams,
+			laborParams: laborParams.map((row) => ({
+				paramCode: row.paramCode,
+				paramName: row.paramName,
+				schemaFieldUid: row.schemaFieldUid,
+			})),
+			methodologyCatalog,
+		});
 
 		const contexts = new Map<string, RuntimeWorkContext>();
 		for (const work of filteredWorks) {
@@ -506,11 +588,10 @@ export class V2TypicalWorkRuntimeService {
 
 			visiting.add(workId);
 			const paramCoefficients = resolveParamCoefficients(ctx);
-			const resolveFactorCoeff = buildTypicalWorkFactorCoeffResolver({
+			const resolveFactorCoeff = buildRuntimeFactorCoeffResolver(
+				ctx,
 				paramCoefficients,
-				anyOfParams: listAnyOfLaborParams(ctx.laborParams),
-				source: ctx.source,
-			});
+			);
 			const rounding = resolveRounding(ctx.config);
 			const terms = ctx.config
 				? normalizeStoredFormula(ctx.config.formula, ctx.config.formulaText)
@@ -561,11 +642,10 @@ export class V2TypicalWorkRuntimeService {
 			const terms = ctx.config
 				? normalizeStoredFormula(ctx.config.formula, ctx.config.formulaText)
 				: normalizeStoredFormula(null);
-			const resolveFactorCoeff = buildTypicalWorkFactorCoeffResolver({
+			const resolveFactorCoeff = buildRuntimeFactorCoeffResolver(
+				ctx,
 				paramCoefficients,
-				anyOfParams: listAnyOfLaborParams(ctx.laborParams),
-				source: ctx.source,
-			});
+			);
 			const rounding = resolveRounding(ctx.config);
 			const paramNames = Object.fromEntries(
 				ctx.laborParams.map((row) => [

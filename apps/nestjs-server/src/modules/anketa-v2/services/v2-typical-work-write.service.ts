@@ -1198,9 +1198,19 @@ export class V2TypicalWorkWriteService {
 		for (const group of card.laborParams) {
 			if (group.kind === "any_of") continue;
 			const eligibleRows = group.coefficients
-				.filter((row) =>
-					isWorkCoefficientValueAvailable(row, coefficientValueCatalog, atDate),
-				)
+				.filter((row) => {
+					if (group.schemaFieldUid?.trim()) return true;
+					return isWorkCoefficientValueAvailable(
+						{
+							paramCode: group.paramCode,
+							schemaFieldUid: group.schemaFieldUid,
+							valueCode: row.valueCode ?? null,
+							valueLabel: row.valueLabel ?? null,
+						},
+						coefficientValueCatalog,
+						atDate,
+					);
+				})
 				.map((row) => ({
 					paramCode: group.paramCode,
 					paramName: group.paramName,

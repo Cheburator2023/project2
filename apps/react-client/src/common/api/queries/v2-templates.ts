@@ -859,29 +859,32 @@ export const useV2DictionaryAsJson = (code: string) => {
 
 /** Загрузка enum для всех указанных кодов словарников одним bulk-запросом. */
 export const useV2DictionaryEnumsMaps = (dictionaryCodes: string[]) => {
+	const codesKey = [
+		...new Set(
+			dictionaryCodes
+				.filter((c) => typeof c === "string" && String(c).trim())
+				.map((c) => String(c).trim()),
+		),
+	]
+		.sort()
+		.join("\0");
 	const uniqueSorted = useMemo(
-		() =>
-			[
-				...new Set(
-					dictionaryCodes.filter(
-						(c) => typeof c === "string" && String(c).trim(),
-					),
-				),
-			].sort(),
-		[dictionaryCodes],
+		() => (codesKey ? codesKey.split("\0") : []),
+		[codesKey],
 	);
 
-	const { data, isPending } = useQuery<BulkV2DictionaryJsonResponseDto>({
-		queryKey: ["v2-dictionaries", "json", "bulk", uniqueSorted],
-		queryFn: () =>
-			apiClient<BulkV2DictionaryJsonResponseDto>({
-				url: "/v2/dictionaries/json/bulk",
-				method: "POST",
-				data: { codes: uniqueSorted },
-			}),
-		enabled: uniqueSorted.length > 0,
-		staleTime: 5 * 60_000,
-	});
+	const { data, isPending, isFetching } =
+		useQuery<BulkV2DictionaryJsonResponseDto>({
+			queryKey: ["v2-dictionaries", "json", "bulk", uniqueSorted],
+			queryFn: () =>
+				apiClient<BulkV2DictionaryJsonResponseDto>({
+					url: "/v2/dictionaries/json/bulk",
+					method: "POST",
+					data: { codes: uniqueSorted },
+				}),
+			enabled: uniqueSorted.length > 0,
+			staleTime: 5 * 60_000,
+		});
 
 	const enumMapByCode = useMemo(() => {
 		const result: Record<string, { enums: string[]; enumNames: string[] }> = {};
@@ -895,7 +898,10 @@ export const useV2DictionaryEnumsMaps = (dictionaryCodes: string[]) => {
 		return result;
 	}, [data, uniqueSorted]);
 
-	return { enumMapByCode, isLoading: isPending, uniqueSorted };
+	// RQ v5: при enabled:false isPending=true без fetch — не считать это загрузкой.
+	const isLoading = uniqueSorted.length > 0 && isPending && isFetching;
+
+	return { enumMapByCode, isLoading, uniqueSorted };
 };
 
 export const useV2FactorySnapshotSetting = () => {

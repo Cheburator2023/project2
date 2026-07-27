@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	countActiveNormsOnDate,
 	collectTypicalWorkPatchValidationErrors,
+	collectUnavailableLaborCoefficientIssues,
 	computeWorkTriggerStatus,
 	isWorkCoefficientValueAvailable,
 	isTypicalWorkParameterValueActiveOnDate,
@@ -316,6 +317,34 @@ describe("isWorkCoefficientValueAvailable (F-03 §578)", () => {
 		).toBe(true);
 	});
 
+	it("does not treat schemaFieldUid alone as available without catalog values", () => {
+		expect(
+			isWorkCoefficientValueAvailable(
+				{
+					paramCode: "readyPromReports",
+					schemaFieldUid: "field_12d42005-7d15-4d0f-9aa0-2b6eebc596c8",
+					valueCode: null,
+					valueLabel: "Да",
+				},
+				[],
+			),
+		).toBe(false);
+	});
+
+	it("matches short labor labels against full catalog enum labels", () => {
+		expect(
+			isWorkCoefficientValueAvailable(
+				{ paramCode: "complexity", valueCode: "4", valueLabel: "4" },
+				[
+					{
+						code: "complexity",
+						values: [{ code: "4", label: "4 — Высокая ×2.00" }],
+					},
+				],
+			),
+		).toBe(true);
+	});
+
 	it("keeps presence-flag rows (no value) available — no dictionary to delete from", () => {
 		expect(
 			isWorkCoefficientValueAvailable(
@@ -366,6 +395,54 @@ describe("isWorkCoefficientValueAvailable (F-03 §578)", () => {
 					},
 				],
 			),
+		).toBe(true);
+	});
+});
+
+describe("collectUnavailableLaborCoefficientIssues", () => {
+	it("warns when labor param is unbound and missing from catalogs", () => {
+		const issues = collectUnavailableLaborCoefficientIssues({
+			laborParams: [
+				{
+					paramCode: "readyPromReports",
+					paramName: "Наличие готовых промышленных витрин",
+					schemaFieldUid: null,
+					kind: "by_value",
+					coefficients: [
+						{ valueCode: null, valueLabel: "Да" },
+						{ valueCode: null, valueLabel: "Нет" },
+					],
+				},
+			],
+			schemaParams: [],
+			methodologyCatalog: [],
+			formulaParamCodes: ["readyPromReports"],
+		});
+		expect(issues.some((issue) => /×1/.test(issue.message))).toBe(true);
+	});
+
+	it("warns when schemaFieldUid is missing but param exists in catalog", () => {
+		const issues = collectUnavailableLaborCoefficientIssues({
+			laborParams: [
+				{
+					paramCode: "complexity",
+					paramName: "Сложность",
+					schemaFieldUid: null,
+					kind: "by_value",
+					coefficients: [{ valueCode: "1", valueLabel: "1" }],
+				},
+			],
+			schemaParams: [
+				{
+					code: "complexity",
+					name: "Сложность",
+					values: [{ code: "1", label: "1" }],
+				},
+			],
+			formulaParamCodes: ["complexity"],
+		});
+		expect(
+			issues.some((issue) => /без привязки к полю схемы/.test(issue.message)),
 		).toBe(true);
 	});
 });

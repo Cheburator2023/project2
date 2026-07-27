@@ -74,11 +74,11 @@ export function OverallUncertaintyScalesPanel({ config, onChange }: ScalesProps)
 		<Flex flexDirection="column" gap={12}>
 			<div>
 				<Typography variant="subtitle1" fontWeight={700}>
-					Шкалы и веса
+					Шкалы и веса (сохраняются в схему)
 				</Typography>
 				<Typography variant="caption" color="text.secondary">
-					Методика п.3 Опросника СА. Меняете таблицы — предпросмотр справа
-					пересчитывается сразу.
+					Методика п.3 Опросника СА: уровни, группы с коэффициентами, матрица,
+					каталог рисков. Эти значения пишутся в logic при «Сохранить схему».
 				</Typography>
 			</div>
 
@@ -578,8 +578,11 @@ type CalculatorProps = {
 	config: V2OverallUncertaintyConfig;
 	preview: V2OverallUncertaintyPreviewState;
 	breakdown: V2OverallUncertaintyCalcBreakdown;
-	onConfigChange: (next: V2OverallUncertaintyConfig) => void;
-	onPreviewChange: (next: V2OverallUncertaintyPreviewState) => void;
+	/** Один commit: каталог рисков (config) и/или ответы калькулятора (preview). */
+	onCommit: (next: {
+		config: V2OverallUncertaintyConfig;
+		preview: V2OverallUncertaintyPreviewState;
+	}) => void;
 };
 
 function SeverityOptionList({
@@ -639,17 +642,16 @@ export function OverallUncertaintyCalculatorPanel({
 	config,
 	preview,
 	breakdown,
-	onConfigChange,
-	onPreviewChange,
+	onCommit,
 }: CalculatorProps) {
 	const patchPreview = (partial: Partial<V2OverallUncertaintyPreviewState>) =>
-		onPreviewChange({ ...preview, ...partial });
+		onCommit({ config, preview: { ...preview, ...partial } });
 
 	return (
 		<Flex flexDirection="column" gap={12}>
 			<Flex alignItems="center" justifyContent="space-between" gap={12}>
 				<Typography variant="subtitle1" fontWeight={700}>
-					Общая неопределённость
+					Дефолты анкеты (п.3)
 				</Typography>
 				<FormControlLabel
 					control={
@@ -669,8 +671,10 @@ export function OverallUncertaintyCalculatorPanel({
 
 			{!preview.enabled ? (
 				<Typography variant="body2" color="text.secondary">
-					Включите переключатель выше, чтобы задать сроки, стоимость, риски и
-					поправку.
+					По умолчанию раздел выключен (как в шаблоне СА) — поправка 0,
+					коэффициент 1. Включите «Заполняется», чтобы задать дефолтные ответы
+					для анкеты. Список рисков ниже — каталог вопросов: названия можно
+					менять, риски добавлять и удалять.
 				</Typography>
 			) : (
 				<>
@@ -749,16 +753,18 @@ export function OverallUncertaintyCalculatorPanel({
 							sx={{ textTransform: "none" }}
 							onClick={() => {
 								const id = newLocalId("risk");
-								onConfigChange({
-									...config,
-									risks: [...config.risks, { id, name: "Новый риск" }],
-								});
-								onPreviewChange({
-									...preview,
-									risks: [
-										...preview.risks,
-										{ id, enabled: false, probIdx: 0, goalsIdx: 0 },
-									],
+								onCommit({
+									config: {
+										...config,
+										risks: [...config.risks, { id, name: "Новый риск" }],
+									},
+									preview: {
+										...preview,
+										risks: [
+											...preview.risks,
+											{ id, enabled: false, probIdx: 0, goalsIdx: 0 },
+										],
+									},
 								});
 							}}
 						>
@@ -806,13 +812,16 @@ export function OverallUncertaintyCalculatorPanel({
 											fullWidth
 											value={risk.name}
 											onChange={(e) =>
-												onConfigChange({
-													...config,
-													risks: config.risks.map((r) =>
-														r.id === risk.id
-															? { ...r, name: e.target.value }
-															: r,
-													),
+												onCommit({
+													config: {
+														...config,
+														risks: config.risks.map((r) =>
+															r.id === risk.id
+																? { ...r, name: e.target.value }
+																: r,
+														),
+													},
+													preview,
 												})
 											}
 										/>
@@ -874,13 +883,15 @@ export function OverallUncertaintyCalculatorPanel({
 										title="Удалить риск"
 										aria-label="Удалить риск"
 										onClick={() => {
-											onConfigChange({
-												...config,
-												risks: config.risks.filter((r) => r.id !== risk.id),
-											});
-											onPreviewChange({
-												...preview,
-												risks: preview.risks.filter((r) => r.id !== risk.id),
+											onCommit({
+												config: {
+													...config,
+													risks: config.risks.filter((r) => r.id !== risk.id),
+												},
+												preview: {
+													...preview,
+													risks: preview.risks.filter((r) => r.id !== risk.id),
+												},
 											});
 										}}
 										sx={{ color: "error.main" }}

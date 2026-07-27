@@ -91,6 +91,10 @@ export declare function isSchemaFieldLaborParamCode(paramCode: string): boolean;
  *
  * Строки-флаги без значения (valueCode/valueLabel = null) задают «параметр
  * присутствует» и не ссылаются на словарь — они всегда доступны.
+ *
+ * Параметры `field_*` — из схемы анкеты, не из глобального CSV методики.
+ * Привязку `schemaFieldUid` runtime обрабатывает отдельно (не через этот хелпер),
+ * чтобы админка по-прежнему ловила удалённые значения словаря схемы.
  */
 export declare function isWorkCoefficientValueAvailable(row: WorkCoefficientRowInput, catalog: WorkCoefficientCatalogParam[], atDate?: string): boolean;
 export type WorkCoefficientCatalogSourceParam = {
@@ -118,11 +122,15 @@ export declare function buildWorkCoefficientCatalog(input: {
     methodologyCatalog?: WorkCoefficientCatalogSourceParam[];
 }): WorkCoefficientCatalogParam[];
 export type UnavailableLaborCoefficientIssue = {
-    kind: "labor_value";
+    kind: "labor_value" | "labor";
     paramCode: string;
     paramName?: string | null;
     message: string;
 };
+/**
+ * Риски расчёта трудоёмкости: недоступные значения, параметр без привязки
+ * к схеме/справочнику (тихо даёт ×1), все строки отсечены.
+ */
 export declare function collectUnavailableLaborCoefficientIssues(input: {
     laborParams: Array<{
         paramCode: string;
@@ -136,5 +144,6 @@ export declare function collectUnavailableLaborCoefficientIssues(input: {
     }>;
     schemaParams: WorkSchemaParamDef[];
     methodologyCatalog?: WorkCoefficientCatalogSourceParam[];
+    formulaParamCodes?: string[];
     atDate?: string;
 }): UnavailableLaborCoefficientIssue[];

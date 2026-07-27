@@ -4,6 +4,7 @@ import {
 	isAlwaysShownTriggerParam,
 	normalizeLegacySchemaParamLabel,
 	normalizeParamLabel,
+	normalizeWorkRoundingStep,
 } from "@smart-anketa/api-contract";
 import {
 	dictionaryByName,
@@ -265,7 +266,7 @@ export function findCatalogFormulaForStream(
 		return {
 			formulaText,
 			roundingMode: row.roundingMode ?? "CEIL",
-			roundingStep: row.roundingStep ?? 0.1,
+			roundingStep: normalizeWorkRoundingStep(row.roundingStep ?? 0.1),
 		};
 	}
 	return null;

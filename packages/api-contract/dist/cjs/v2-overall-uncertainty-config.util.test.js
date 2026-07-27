@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const vitest_1 = require("vitest");
 const v2_overall_uncertainty_config_util_1 = require("./v2-overall-uncertainty-config.util");
+const v2_overall_uncertainty_runtime_util_1 = require("./v2-overall-uncertainty-runtime.util");
 (0, vitest_1.describe)("v2-overall-uncertainty-config.util v2", () => {
     (0, vitest_1.it)("returns coefficient 1 when section is not applicable", () => {
         const config = (0, v2_overall_uncertainty_config_util_1.createDefaultOverallUncertaintyConfig)();
@@ -83,6 +84,52 @@ const v2_overall_uncertainty_config_util_1 = require("./v2-overall-uncertainty-c
             { minCount: 2, maxCount: 3, coef: 1.1 },
             { minCount: 4, maxCount: null, coef: 1.25 },
         ])).toBe(1.25);
+    });
+    (0, vitest_1.it)("round-trips calculator state including Заполняется toggle", () => {
+        const config = (0, v2_overall_uncertainty_config_util_1.createDefaultOverallUncertaintyConfig)();
+        const preview = (0, v2_overall_uncertainty_config_util_1.createDefaultOverallUncertaintyPreviewState)(config);
+        preview.enabled = true;
+        preview.timelineIdx = 2;
+        preview.costIdx = 1;
+        preview.adjPct = 12;
+        preview.risks[0].enabled = true;
+        preview.risks[0].probIdx = 3;
+        preview.risks[0].goalsIdx = 2;
+        config.calculator = preview;
+        const merged = (0, v2_overall_uncertainty_config_util_1.mergeOverallUncertaintyConfigIntoLogic)([], config);
+        const parsed = (0, v2_overall_uncertainty_config_util_1.parseOverallUncertaintyConfigFromLogic)(merged);
+        (0, vitest_1.expect)(parsed.calculator?.enabled).toBe(true);
+        (0, vitest_1.expect)(parsed.calculator?.timelineIdx).toBe(2);
+        (0, vitest_1.expect)(parsed.calculator?.costIdx).toBe(1);
+        (0, vitest_1.expect)(parsed.calculator?.adjPct).toBe(12);
+        (0, vitest_1.expect)(parsed.calculator?.risks[0]).toMatchObject({
+            enabled: true,
+            probIdx: 3,
+            goalsIdx: 2,
+        });
+    });
+    (0, vitest_1.it)("round-trips calculator defaults through formData.uncertaintyCalculation", () => {
+        const config = (0, v2_overall_uncertainty_config_util_1.createDefaultOverallUncertaintyConfig)();
+        const preview = (0, v2_overall_uncertainty_config_util_1.createDefaultOverallUncertaintyPreviewState)(config);
+        preview.enabled = true;
+        preview.timelineIdx = 1;
+        preview.costIdx = 2;
+        preview.risks[0].enabled = true;
+        preview.risks[0].probIdx = 2;
+        preview.risks[0].goalsIdx = 1;
+        const formData = (0, v2_overall_uncertainty_runtime_util_1.mapOverallUncertaintyPreviewToFormData)({}, config, preview);
+        const back = (0, v2_overall_uncertainty_runtime_util_1.mapFormDataToOverallUncertaintyPreview)(formData, config);
+        (0, vitest_1.expect)(back.enabled).toBe(true);
+        (0, vitest_1.expect)(back.timelineIdx).toBe(1);
+        (0, vitest_1.expect)(back.costIdx).toBe(2);
+        (0, vitest_1.expect)(back.risks[0]).toMatchObject({
+            enabled: true,
+            probIdx: 2,
+            goalsIdx: 1,
+        });
+        preview.enabled = false;
+        const off = (0, v2_overall_uncertainty_runtime_util_1.mapOverallUncertaintyPreviewToFormData)({}, config, preview);
+        (0, vitest_1.expect)((0, v2_overall_uncertainty_runtime_util_1.mapFormDataToOverallUncertaintyPreview)(off, config).enabled).toBe(false);
     });
     (0, vitest_1.it)("round-trips v2 config through logic and migrates v1", () => {
         const config = (0, v2_overall_uncertainty_config_util_1.createDefaultOverallUncertaintyConfig)();

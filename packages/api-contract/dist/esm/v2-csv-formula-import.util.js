@@ -1,6 +1,20 @@
 import { parseWorkFormulaText } from "./v2-work-formula.util";
 import { slugParamCode } from "./v2-param-slug.util";
 import { normalizeTypicalWorkTriggerRuleForMatch, V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME, } from "./v2-works-catalog-match.util";
+/**
+ * Второй аргумент Excel `ОКРУГЛ.ВВЕРХ/ВНИЗ/ОКРУГЛ(x; n)` — число разрядов.
+ * Дробь вроде `0,1` в CSV уже означает абсолютный шаг округления.
+ */
+export function excelRoundingArgumentToStep(raw) {
+    if (!Number.isFinite(raw) || raw < 0)
+        return 0.1;
+    if (raw > 0 && raw < 1)
+        return raw;
+    if (Number.isInteger(raw) && raw <= 15) {
+        return 10 ** -raw;
+    }
+    return raw;
+}
 /** RFC4180-подобный парсер CSV с `;` и многострочными полями в кавычках. */
 export function parseCsvSemicolon(text) {
     const rows = [];
@@ -616,7 +630,7 @@ export function extractFormulaCoreFromCsvText(formulaRaw) {
         return {
             core: clean(ceilMatch[1]),
             roundingMode: "CEIL",
-            roundingStep: Number(ceilMatch[2].replace(",", ".")) || 0.1,
+            roundingStep: excelRoundingArgumentToStep(Number(ceilMatch[2].replace(",", ".")) || 0.1),
         };
     }
     const floorMatch = flat.match(/ОКРУГЛ\.ВНИЗ\s*\(\s*(.+?)\s*;\s*([\d,.]+)\s*\)/iu);
@@ -624,7 +638,7 @@ export function extractFormulaCoreFromCsvText(formulaRaw) {
         return {
             core: clean(floorMatch[1]),
             roundingMode: "FLOOR",
-            roundingStep: Number(floorMatch[2].replace(",", ".")) || 0.1,
+            roundingStep: excelRoundingArgumentToStep(Number(floorMatch[2].replace(",", ".")) || 0.1),
         };
     }
     const roundMatch = flat.match(/ОКРУГЛ\s*\(\s*(.+?)\s*;\s*([\d,.]+)\s*\)/iu);
@@ -632,7 +646,7 @@ export function extractFormulaCoreFromCsvText(formulaRaw) {
         return {
             core: clean(roundMatch[1]),
             roundingMode: "ROUND",
-            roundingStep: Number(roundMatch[2].replace(",", ".")) || 0.1,
+            roundingStep: excelRoundingArgumentToStep(Number(roundMatch[2].replace(",", ".")) || 0.1),
         };
     }
     if (/^Норматив\s*$/iu.test(clean(flat)) ||

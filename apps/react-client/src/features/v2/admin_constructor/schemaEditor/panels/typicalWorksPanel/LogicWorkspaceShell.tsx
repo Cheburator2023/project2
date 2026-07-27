@@ -105,8 +105,28 @@ export function LogicWorkspaceShell({
 				>
 					<AtypicalWorksLogicPanel />
 				</Box>
-				{tab === "dependencies" ? <ParameterDependenciesPanel /> : null}
-				{tab === "uncertainty" ? <OverallUncertaintyPanel /> : null}
+				<Box
+					sx={{
+						display: tab === "dependencies" ? "flex" : "none",
+						flexDirection: "column",
+						height: "100%",
+						minHeight: 0,
+					}}
+				>
+					{/* Keep mounted: иначе draft/flush теряются при смене сегмента. */}
+					<ParameterDependenciesPanel />
+				</Box>
+				<Box
+					sx={{
+						display: tab === "uncertainty" ? "flex" : "none",
+						flexDirection: "column",
+						height: "100%",
+						minHeight: 0,
+					}}
+				>
+					{/* Keep mounted: иначе правки шкал не доживают до «Сохранить схему». */}
+					<OverallUncertaintyPanel />
+				</Box>
 				{tab === "jsonlogic" ? (
 					<Box sx={{ height: "100%", minHeight: 0 }}>{jsonLogicPanel}</Box>
 				) : null}

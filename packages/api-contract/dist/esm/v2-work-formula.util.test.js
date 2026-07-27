@@ -199,6 +199,15 @@ describe("v2-work-formula.util", () => {
         expect(applyWorkRounding(-5, { mode: "CEIL", step: 1 })).toBe(0);
         expect(applyWorkRounding(20.55 - 30, { mode: "CEIL", step: 1 })).toBe(0);
     });
+    it("treats legacy Excel step=2 as ceil to 2 decimals", () => {
+        // 33 × 1.75 = 57.75; старый баг CEIL step 2 давал 58
+        expect(applyWorkRounding(57.75, { mode: "CEIL", step: 2 })).toBe(57.75);
+        expect(applyWorkRounding(57.751, { mode: "CEIL", step: 2 })).toBe(57.76);
+    });
+    it("maps Excel digit steps 2..15 but keeps absolute step 1", () => {
+        expect(applyWorkRounding(1.2345, { mode: "CEIL", step: 3 })).toBe(1.235);
+        expect(applyWorkRounding(1.2, { mode: "CEIL", step: 1 })).toBe(2);
+    });
     it("validateWorkFormulaTokens catches double operator", () => {
         const err = validateWorkFormulaTokens([
             { kind: "norm" },

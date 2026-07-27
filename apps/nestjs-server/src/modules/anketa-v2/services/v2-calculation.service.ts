@@ -32,7 +32,9 @@ import {
 	resolveStreamsFromSourceSystems,
 	flattenSourceContextValue,
 	resolveSourceTypicalWorksOutputPath,
+	resolveV2QuestionnaireUncertaintyCoefficient,
 	shouldSkipLegacyModelStreamStageSummary,
+	syncAtypicalWorkCoefficientsInFormData,
 	V2_MODEL_STREAM_EXECUTOR,
 	V2_MODEL_STREAM_SOURCE_ARRAY_PATH,
 	V2_SOURCE_SYSTEMS_ARRAY_PATH,
@@ -390,6 +392,19 @@ export class V2CalculationService {
 		let liveData = migrateV2AnketaFormData({ ...(formData ?? {}) });
 		/** Неактивные groupActivatable-стримы (в т.ч. Источники/Контроль по умолчанию). */
 		liveData = ensureGroupActivationDefaults(liveData, options?.uiSchema);
+
+		// Нетиповые работы: коэффициент K из общей неопределённости (раньше только на клиенте).
+		if (options?.uiSchema) {
+			const { coefficient } = resolveV2QuestionnaireUncertaintyCoefficient(
+				liveData,
+				{ config: uncertaintyConfig },
+			);
+			liveData = syncAtypicalWorkCoefficientsInFormData(
+				liveData,
+				options.uiSchema,
+				coefficient,
+			).formData;
+		}
 
 		// 1) task_trigger/generated_rows — материализуем автозадачи до расчёта строк.
 		for (const rule of taskTriggers) {

@@ -218,6 +218,22 @@ const v2_work_terms_formula_util_1 = require("./v2-work-terms-formula.util");
             valueLabel: "Да",
         }, [])).toBe(true);
     });
+    (0, vitest_1.it)("does not treat schemaFieldUid alone as available without catalog values", () => {
+        (0, vitest_1.expect)((0, v2_typical_work_validation_util_1.isWorkCoefficientValueAvailable)({
+            paramCode: "readyPromReports",
+            schemaFieldUid: "field_12d42005-7d15-4d0f-9aa0-2b6eebc596c8",
+            valueCode: null,
+            valueLabel: "Да",
+        }, [])).toBe(false);
+    });
+    (0, vitest_1.it)("matches short labor labels against full catalog enum labels", () => {
+        (0, vitest_1.expect)((0, v2_typical_work_validation_util_1.isWorkCoefficientValueAvailable)({ paramCode: "complexity", valueCode: "4", valueLabel: "4" }, [
+            {
+                code: "complexity",
+                values: [{ code: "4", label: "4 — Высокая ×2.00" }],
+            },
+        ])).toBe(true);
+    });
     (0, vitest_1.it)("keeps presence-flag rows (no value) available — no dictionary to delete from", () => {
         (0, vitest_1.expect)((0, v2_typical_work_validation_util_1.isWorkCoefficientValueAvailable)({ paramCode: "flag", valueCode: null, valueLabel: null }, catalog)).toBe(true);
     });
@@ -251,6 +267,50 @@ const v2_work_terms_formula_util_1 = require("./v2-work-terms-formula.util");
                 ],
             },
         ])).toBe(true);
+    });
+});
+(0, vitest_1.describe)("collectUnavailableLaborCoefficientIssues", () => {
+    (0, vitest_1.it)("warns when labor param is unbound and missing from catalogs", () => {
+        const issues = (0, v2_typical_work_validation_util_1.collectUnavailableLaborCoefficientIssues)({
+            laborParams: [
+                {
+                    paramCode: "readyPromReports",
+                    paramName: "Наличие готовых промышленных витрин",
+                    schemaFieldUid: null,
+                    kind: "by_value",
+                    coefficients: [
+                        { valueCode: null, valueLabel: "Да" },
+                        { valueCode: null, valueLabel: "Нет" },
+                    ],
+                },
+            ],
+            schemaParams: [],
+            methodologyCatalog: [],
+            formulaParamCodes: ["readyPromReports"],
+        });
+        (0, vitest_1.expect)(issues.some((issue) => /×1/.test(issue.message))).toBe(true);
+    });
+    (0, vitest_1.it)("warns when schemaFieldUid is missing but param exists in catalog", () => {
+        const issues = (0, v2_typical_work_validation_util_1.collectUnavailableLaborCoefficientIssues)({
+            laborParams: [
+                {
+                    paramCode: "complexity",
+                    paramName: "Сложность",
+                    schemaFieldUid: null,
+                    kind: "by_value",
+                    coefficients: [{ valueCode: "1", valueLabel: "1" }],
+                },
+            ],
+            schemaParams: [
+                {
+                    code: "complexity",
+                    name: "Сложность",
+                    values: [{ code: "1", label: "1" }],
+                },
+            ],
+            formulaParamCodes: ["complexity"],
+        });
+        (0, vitest_1.expect)(issues.some((issue) => /без привязки к полю схемы/.test(issue.message))).toBe(true);
     });
 });
 (0, vitest_1.describe)("collectTypicalWorkPatchValidationErrors", () => {
