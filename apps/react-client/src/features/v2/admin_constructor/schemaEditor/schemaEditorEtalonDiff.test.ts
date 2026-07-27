@@ -293,6 +293,44 @@ describe("schemaEditorEtalonDiff", () => {
 		);
 	});
 
+	it("prints full allowedWorkIds without truncation", () => {
+		const ids = [
+			"Модельный сервис|1. Качество модельных данных [КД]",
+			"Модельный сервис|2. Технический контроль [ТМ]",
+			"Модельный сервис|3. Оперативный контроль [ОК]",
+			"Модельный сервис|4. Аналитический контроль [АК]",
+			"Модельный сервис|5. Контроль модельных значений [КМЗ]",
+			"Модельный сервис|Оценка влияния моделей [ОВ]",
+			"Модельный сервис|Разработка интеграционного решения",
+			"Модельный сервис|Дополнительная длинная работа для проверки полного вывода",
+		];
+		const report = buildSnapshotChangesReport({
+			etalon: {
+				jsonSchema: {},
+				uiSchema: {},
+				logic: { rules: [] },
+				typicalWorks: [],
+			},
+			current: {
+				jsonSchema: {},
+				uiSchema: {
+					streamModelControl: {
+						field_G0AoYAl8: {
+							"ui:options": { boundWorkIds: ids },
+						},
+					},
+				},
+				logic: { rules: [] },
+				typicalWorks: [],
+			},
+		});
+
+		expect(report).not.toContain("…");
+		for (const id of ids) {
+			expect(report).toContain(id);
+		}
+	});
+
 	it("reports no changes for identical normalized dumps", () => {
 		const dump = {
 			jsonSchema: { title: "Same" },

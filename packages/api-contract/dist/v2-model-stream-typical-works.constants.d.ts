@@ -1,5 +1,5 @@
 /** Эталонные id 10 типовых работ модельного стрима (factory registry). */
-export declare const V2_MODEL_STREAM_FACTORY_WORK_IDS: readonly ["f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4001", "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4002", "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4003", "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4004", "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4005", "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4006", "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4007", "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4008", "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4009", "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4010"];
+export declare const V2_MODEL_STREAM_FACTORY_WORK_IDS: readonly ["f5667ca4-4de8-4e65-a305-0a34b8945268", "6ee9b8be-c732-4444-8f77-c19a38304a7e", "b31f0862-349d-44df-9cd7-2fbafdc88c40", "ea346f5c-c67f-430c-b56a-53b59b5bc18c", "91929b5d-3e46-4c1e-95c7-0df362a74773", "744fddb7-0705-4c89-a389-32d802dcb37c", "86bb45a8-47da-425e-99be-3ff76b633378", "ddfd88fb-e256-4e2b-ba41-f15642109db2", "80e02a43-c142-4b67-bbd7-39e01e3a6f62", "91538af2-084d-442a-a860-cd8b36f5c0ec"];
 export declare const V2_MODEL_STREAM_EXECUTOR = "\u041C\u043E\u0434\u0435\u043B\u044C\u043D\u044B\u0439 \u0441\u0442\u0440\u0438\u043C";
 /**
  * Код зонтичного стрима в реестре implementationStream (не выбирается в анкете

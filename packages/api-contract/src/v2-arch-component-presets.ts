@@ -802,8 +802,7 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 					"enum": [
 						"Разработка",
 						"Доработка",
-						"Настройка",
-						"Без изменений"
+						"Настройка"
 					],
 					"type": "string",
 					"title": "Тип работ"

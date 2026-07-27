@@ -2,6 +2,7 @@ import {
 	V2_SOURCE_STREAM,
 	V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_CODE,
 	isAlwaysShownTriggerParam,
+	normalizeLegacySchemaParamLabel,
 	normalizeParamLabel,
 } from "@smart-anketa/api-contract";
 import {
@@ -101,10 +102,19 @@ export function findCatalogLaborParamGroup(
 	const trimmed = paramName.trim();
 	if (!trimmed) return undefined;
 	const norm = normalizeParamLabel(trimmed);
+	const legacyNorm = normalizeParamLabel(
+		normalizeLegacySchemaParamLabel(trimmed),
+	);
 	for (const group of row.laborCoefficients ?? []) {
 		const groupNorm = normalizeParamLabel(group.paramName);
+		const groupLegacyNorm = normalizeParamLabel(
+			normalizeLegacySchemaParamLabel(group.paramName),
+		);
 		if (
 			groupNorm === norm ||
+			groupNorm === legacyNorm ||
+			groupLegacyNorm === norm ||
+			groupLegacyNorm === legacyNorm ||
 			groupNorm.startsWith(norm) ||
 			norm.startsWith(groupNorm)
 		) {

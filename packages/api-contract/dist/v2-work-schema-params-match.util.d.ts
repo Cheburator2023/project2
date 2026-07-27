@@ -20,11 +20,16 @@ export type TypicalWorkRuleRefLike = {
     schemaFieldUid?: string | null;
 };
 /**
- * Нормализует legacy-ярлыки каталога (АвтоМЛ / Маркер) к названиям полей схемы.
+ * Нормализует legacy-ярлыки каталога (АвтоМЛ / Маркер / mdlctl) к названиям полей схемы.
  */
 export declare function normalizeLegacySchemaParamLabel(name: string): string;
-/** Нормализует legacy paramCode (`автомл_*`, `*_в_маркере`) к slug поля схемы. */
+/** Нормализует legacy paramCode (`автомл_*`, `*_в_маркере`, mdlctl CSV) к коду/slug поля схемы. */
 export declare function normalizeLegacySchemaParamCode(code: string): string;
+/** Labor-параметр из устаревшего CSV без поля схемы (безопасно удалить при sync). */
+export declare function isObsoleteCatalogLaborParam(ref: {
+    paramCode?: string | null;
+    paramName?: string | null;
+}): boolean;
 export declare function findWorkSchemaParameter<T extends WorkSchemaParamDef>(params: T[], paramCode: string, paramName?: string | null): T | undefined;
 /** CSV/seed-триггер → поле схемы анкеты (алиас «Тип источника» → `type`). */
 export declare function resolveWorkSchemaParamForRule<T extends WorkSchemaParamDef>(rule: TypicalWorkRuleRefLike, params: T[]): T | undefined;

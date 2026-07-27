@@ -13,16 +13,16 @@ exports.isModelStreamTypicalWorkVisibleInSummary = isModelStreamTypicalWorkVisib
 const v2_implementation_streams_util_1 = require("./v2-implementation-streams.util");
 /** Эталонные id 10 типовых работ модельного стрима (factory registry). */
 exports.V2_MODEL_STREAM_FACTORY_WORK_IDS = [
-    "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4001",
-    "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4002",
-    "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4003",
-    "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4004",
-    "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4005",
-    "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4006",
-    "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4007",
-    "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4008",
-    "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4009",
-    "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4010",
+    "f5667ca4-4de8-4e65-a305-0a34b8945268",
+    "6ee9b8be-c732-4444-8f77-c19a38304a7e",
+    "b31f0862-349d-44df-9cd7-2fbafdc88c40",
+    "ea346f5c-c67f-430c-b56a-53b59b5bc18c",
+    "91929b5d-3e46-4c1e-95c7-0df362a74773",
+    "744fddb7-0705-4c89-a389-32d802dcb37c",
+    "86bb45a8-47da-425e-99be-3ff76b633378",
+    "ddfd88fb-e256-4e2b-ba41-f15642109db2",
+    "80e02a43-c142-4b67-bbd7-39e01e3a6f62",
+    "91538af2-084d-442a-a860-cd8b36f5c0ec",
 ];
 exports.V2_MODEL_STREAM_EXECUTOR = "Модельный стрим";
 /**
@@ -77,15 +77,15 @@ function resolveModelStreamCatalogScopeDbStreams() {
 }
 /** Всегда показываются в блоке типовых работ и в «Подробном расчёте». */
 exports.V2_MODEL_STREAM_ALWAYS_SHOWN_WORK_IDS = new Set([
-    "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4001",
-    "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4003",
-    "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4005",
-    "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4008",
+    "f5667ca4-4de8-4e65-a305-0a34b8945268",
+    "b31f0862-349d-44df-9cd7-2fbafdc88c40",
+    "91929b5d-3e46-4c1e-95c7-0df362a74773",
+    "ddfd88fb-e256-4e2b-ba41-f15642109db2",
 ]);
 /** Всегда активны (формула считается даже без явных триггеров). */
 exports.V2_MODEL_STREAM_ALWAYS_ACTIVE_WORK_IDS = new Set([
-    "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4001",
-    "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4005",
+    "f5667ca4-4de8-4e65-a305-0a34b8945268",
+    "91929b5d-3e46-4c1e-95c7-0df362a74773",
 ]);
 const MODEL_STREAM_WORK_ORDER = [
     /^01[\.\s]/i,

@@ -211,6 +211,68 @@ const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
             }),
         ]);
     });
+    (0, vitest_1.it)("resolves mdlctl CSV labor aliases to modelClass / pkRegulatory", () => {
+        const schemaParams = [
+            {
+                code: "modelClass",
+                name: "Класс моделей",
+                schemaFieldUid: "uid-model-class",
+                values: [],
+            },
+            {
+                code: "pkRegulatory",
+                name: "ПВР/Регуляторная",
+                schemaFieldUid: "uid-pk",
+                values: [],
+            },
+        ];
+        const issues = (0, v2_template_work_schema_params_util_1.collectTypicalWorkSchemaConsistencyIssues)({
+            schemaParams,
+            rules: [],
+            laborParamCodes: [
+                {
+                    paramCode: "выбор_класса_моделей",
+                    paramName: "Выбор класса моделей",
+                },
+                {
+                    paramCode: "выбор_класса_моделей_тип_работ",
+                    paramName: "Выбор класса моделей Тип работ",
+                },
+                {
+                    paramCode: "пвр_регуляторный",
+                    paramName: "ПВР/Регуляторный",
+                },
+            ],
+        });
+        (0, vitest_1.expect)(issues.every((issue) => issue.message.includes("legacy-код"))).toBe(true);
+        (0, vitest_1.expect)(issues.some((issue) => issue.message.includes("не найден"))).toBe(false);
+    });
+    (0, vitest_1.it)("still reports obsolete industrial-necessity labor without a schema field", () => {
+        const issues = (0, v2_template_work_schema_params_util_1.collectTypicalWorkSchemaConsistencyIssues)({
+            schemaParams: [
+                {
+                    code: "modelClass",
+                    name: "Класс моделей",
+                    schemaFieldUid: "uid-model-class",
+                    values: [],
+                },
+            ],
+            rules: [],
+            laborParamCodes: [
+                {
+                    paramCode: "определение_необходимости_промышленной_реализации",
+                    paramName: "Определение необходимости промышленной реализации",
+                },
+            ],
+        });
+        (0, vitest_1.expect)(issues).toEqual([
+            vitest_1.expect.objectContaining({
+                kind: "labor",
+                paramCode: "определение_необходимости_промышленной_реализации",
+                message: "Параметр трудоёмкости не найден в схеме шаблона",
+            }),
+        ]);
+    });
     (0, vitest_1.it)("uses schemaFieldUid to disambiguate fields with the same code", () => {
         const issues = (0, v2_template_work_schema_params_util_1.collectTypicalWorkSchemaConsistencyIssues)({
             schemaParams: [

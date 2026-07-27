@@ -341,11 +341,10 @@ function pathJoin(base: string, key: string): string {
 	return base ? `${base}.${key}` : key;
 }
 
-function shortJson(value: unknown, max = 180): string {
+/** Полный JSON значения для панели изменений (без обрезки). */
+function formatChangeValue(value: unknown): string {
 	const text = JSON.stringify(value);
-	if (text == null) return "null";
-	if (text.length <= max) return text;
-	return `${text.slice(0, max - 1)}…`;
+	return text == null ? "null" : text;
 }
 
 /**
@@ -512,13 +511,15 @@ export function buildSnapshotChangesReport(input: {
 	for (const change of changes) {
 		if (change.kind === "added") {
 			lines.push(`+ ${change.path}`);
-			lines.push(`  = ${shortJson(change.value)}`);
+			lines.push(`  = ${formatChangeValue(change.value)}`);
 		} else if (change.kind === "removed") {
 			lines.push(`− ${change.path}`);
-			lines.push(`  (было ${shortJson(change.value)})`);
+			lines.push(`  (было ${formatChangeValue(change.value)})`);
 		} else {
 			lines.push(`~ ${change.path}`);
-			lines.push(`  ${shortJson(change.from)} → ${shortJson(change.to)}`);
+			lines.push(
+				`  ${formatChangeValue(change.from)} → ${formatChangeValue(change.to)}`,
+			);
 		}
 		lines.push("");
 	}

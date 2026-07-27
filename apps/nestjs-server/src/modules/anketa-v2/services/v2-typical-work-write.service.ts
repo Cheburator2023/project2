@@ -44,6 +44,7 @@ import {
 	defaultWorkRounding,
 	detectTransitiveCycle,
 	evaluateTermsFormula,
+	isObsoleteCatalogLaborParam,
 	isWorkCoefficientValueAvailable,
 	needsCalculationLogicBackfill,
 	normalizeStoredFormula,
@@ -1511,6 +1512,65 @@ export class V2TypicalWorkWriteService {
 				aggregate.laborParamsRemoved += impact.laborParamsRemoved;
 				aggregate.formulasInvalidated += impact.formulasInvalidated;
 			}
+		}
+
+		for (const config of configs) {
+			let card: Awaited<
+				ReturnType<V2TypicalWorkService["getWorkCardForSchemaSync"]>
+			>;
+			try {
+				card = await this.typicalWorkService.getWorkCardForSchemaSync(
+					config.workId,
+					config.streamExecutor,
+					templateVersionId,
+				);
+			} catch (error) {
+				if (error instanceof NotFoundException) continue;
+				throw error;
+			}
+
+			const obsoleteLabor = card.laborParams.filter((labor) =>
+				isObsoleteCatalogLaborParam(labor),
+			);
+			if (obsoleteLabor.length === 0) continue;
+
+			const obsoleteCodes = new Set(
+				obsoleteLabor.map((labor) => labor.paramCode.trim()).filter(Boolean),
+			);
+			const nextLaborParams = card.laborParams.filter(
+				(labor) => !isObsoleteCatalogLaborParam(labor),
+			);
+			const nextFormulaTokens = card.formula.tokens.filter(
+				(token) =>
+					!(
+						(token.kind === "param_coeff" || token.kind === "param_anyof") &&
+						obsoleteCodes.has(token.paramCode)
+					),
+			);
+			const formulaChanged =
+				nextFormulaTokens.length !== card.formula.tokens.length;
+
+			aggregate.worksMatched++;
+			aggregate.laborParamsRemoved += obsoleteLabor.length;
+			if (formulaChanged) {
+				aggregate.formulasInvalidated++;
+			}
+			if (mode !== "apply") continue;
+
+			await this.patchWork(config.workId, {
+				streamExecutor: config.streamExecutor,
+				templateVersionId,
+				laborParams: nextLaborParams,
+				...(formulaChanged
+					? {
+							formula: {
+								tokens: nextFormulaTokens,
+								text: tokensToText(nextFormulaTokens),
+							},
+						}
+					: {}),
+			});
+			aggregate.worksUpdated++;
 		}
 
 		if (!options?.skipConsistencyReport) {

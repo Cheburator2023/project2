@@ -239,6 +239,74 @@ describe("collectTypicalWorkSchemaConsistencyIssues", () => {
 		]);
 	});
 
+	it("resolves mdlctl CSV labor aliases to modelClass / pkRegulatory", () => {
+		const schemaParams = [
+			{
+				code: "modelClass",
+				name: "Класс моделей",
+				schemaFieldUid: "uid-model-class",
+				values: [],
+			},
+			{
+				code: "pkRegulatory",
+				name: "ПВР/Регуляторная",
+				schemaFieldUid: "uid-pk",
+				values: [],
+			},
+		];
+		const issues = collectTypicalWorkSchemaConsistencyIssues({
+			schemaParams,
+			rules: [],
+			laborParamCodes: [
+				{
+					paramCode: "выбор_класса_моделей",
+					paramName: "Выбор класса моделей",
+				},
+				{
+					paramCode: "выбор_класса_моделей_тип_работ",
+					paramName: "Выбор класса моделей Тип работ",
+				},
+				{
+					paramCode: "пвр_регуляторный",
+					paramName: "ПВР/Регуляторный",
+				},
+			],
+		});
+		expect(issues.every((issue) => issue.message.includes("legacy-код"))).toBe(
+			true,
+		);
+		expect(issues.some((issue) => issue.message.includes("не найден"))).toBe(
+			false,
+		);
+	});
+
+	it("still reports obsolete industrial-necessity labor without a schema field", () => {
+		const issues = collectTypicalWorkSchemaConsistencyIssues({
+			schemaParams: [
+				{
+					code: "modelClass",
+					name: "Класс моделей",
+					schemaFieldUid: "uid-model-class",
+					values: [],
+				},
+			],
+			rules: [],
+			laborParamCodes: [
+				{
+					paramCode: "определение_необходимости_промышленной_реализации",
+					paramName: "Определение необходимости промышленной реализации",
+				},
+			],
+		});
+		expect(issues).toEqual([
+			expect.objectContaining({
+				kind: "labor",
+				paramCode: "определение_необходимости_промышленной_реализации",
+				message: "Параметр трудоёмкости не найден в схеме шаблона",
+			}),
+		]);
+	});
+
 	it("uses schemaFieldUid to disambiguate fields with the same code", () => {
 		const issues = collectTypicalWorkSchemaConsistencyIssues({
 			schemaParams: [
