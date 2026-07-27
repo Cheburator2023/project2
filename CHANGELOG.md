@@ -1,5 +1,20 @@
 # Semantic Versioning Changelog
 
+# [1.46.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.45.0...v1.46.0) (2026-07-25)
+
+
+### Features
+
+* add Keycloak etalon overlay functionality and enhance role sync service ([5aaa84a](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/5aaa84a6d7b01628acf16019be37e17c63d76d83))
+* enhance Keycloak role management and UI adjustments ([6ddee32](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/6ddee322c1474924752373ca9a5c69824a1d989d))
+* enhance Keycloak role sync service and UI feedback ([9f2fb89](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/9f2fb89f505137d69be4fee1713a0726fa7d1498))
+* enhance user access management with logout functionality ([31d7ee3](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/31d7ee3946e8f31d38e6bf6c68129ded8c8113d9))
+* implement logout overlay functionality and enhance logout experience ([862d465](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/862d4654ed345f1a0dc69dcf8e7722d572117027))
+* remove outdated files related to questionnaire management ([a401b18](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/a401b1811f073edc7e5440d967b7cbb23e16303b))
+* update anketa-v2 snapshots and Keycloak role definitions ([e42405b](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/e42405b26643639fc3c85de24603ccde98be7234))
+* update questionnaire management and improve UI components ([4810846](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/4810846377972d2df8c6db8276f34fe2dd6b1315))
+* update work type labels and coefficients in anketa-v2 snapshots ([6b72e14](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/6b72e1497af3ed35b27541b06cfb5ddfd0861113))
+
 # [1.45.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.44.0...v1.45.0) (2026-07-25)
 
 
