@@ -30,7 +30,9 @@ import type {
 	V2TemplateRegistryListResponseDto,
 	V2TemplateVersionDto,
 	UpdateV2FactorySnapshotSettingDto,
+	V2EffectiveFactoryEditorSnapshotDto,
 	V2FactorySnapshotSettingDto,
+	V2TemplateVersionEditorSnapshotDto,
 } from "@smart-anketa/api-contract";
 import { useMemo } from "react";
 
@@ -80,6 +82,15 @@ export function invalidateV2TemplateVersions(
 ) {
 	return queryClient.invalidateQueries({
 		queryKey: ["v2-templates", templateId, "versions"],
+	});
+}
+
+/** Сброс кэша полных editor-snapshot (схема + работы) после правок типовых работ. */
+export function invalidateV2EditorSnapshots(queryClient: QueryClient) {
+	return queryClient.invalidateQueries({
+		predicate: (query) =>
+			Array.isArray(query.queryKey) &&
+			query.queryKey.includes("editor-snapshot"),
 	});
 }
 
@@ -303,6 +314,30 @@ export const useV2TemplateVersion = (
 				method: "GET",
 			}),
 		enabled: !!templateId && !!versionId,
+	});
+};
+
+export const useV2TemplateVersionEditorSnapshot = (
+	templateId: string,
+	versionId: string | undefined | null,
+	enabled = true,
+) => {
+	return useQuery<V2TemplateVersionEditorSnapshotDto>({
+		queryKey: [
+			"v2-templates",
+			templateId,
+			"versions",
+			versionId,
+			"editor-snapshot",
+		],
+		queryFn: () =>
+			apiClient<V2TemplateVersionEditorSnapshotDto>({
+				url: `/v2/templates/${templateId}/versions/${versionId}/editor-snapshot`,
+				method: "GET",
+			}),
+		enabled: Boolean(enabled && templateId && versionId),
+		staleTime: 0,
+		refetchOnMount: "always",
 	});
 };
 
@@ -875,6 +910,19 @@ export const useV2FactorySnapshotSetting = () => {
 	});
 };
 
+export const useV2EffectiveFactoryEditorSnapshot = (enabled = true) => {
+	return useQuery<V2EffectiveFactoryEditorSnapshotDto>({
+		queryKey: ["v2-factory-snapshot", "effective-editor-snapshot"],
+		queryFn: () =>
+			apiClient<V2EffectiveFactoryEditorSnapshotDto>({
+				url: "/v2/factory-snapshot/effective-editor-snapshot",
+				method: "GET",
+			}),
+		enabled,
+		staleTime: 30_000,
+	});
+};
+
 export const useUpdateV2FactorySnapshotSetting = () => {
 	const queryClient = useQueryClient();
 
@@ -891,6 +939,9 @@ export const useUpdateV2FactorySnapshotSetting = () => {
 			}),
 		onSuccess: (data) => {
 			queryClient.setQueryData(["v2-factory-snapshot"], data);
+			void queryClient.invalidateQueries({
+				queryKey: ["v2-factory-snapshot", "effective-editor-snapshot"],
+			});
 		},
 	});
 };

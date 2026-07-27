@@ -27,6 +27,14 @@ import {
 	API_ENTITY_CREATE_TIMEOUT_MS,
 	API_HEAVY_OPERATION_TIMEOUT_MS,
 } from "../helpers/apiClient";
+import { invalidateV2EditorSnapshots } from "./v2-templates";
+
+function invalidateV2WorksQueries(
+	queryClient: ReturnType<typeof useQueryClient>,
+) {
+	void queryClient.invalidateQueries({ queryKey: ["v2-works"] });
+	void invalidateV2EditorSnapshots(queryClient);
+}
 
 export const useV2TypicalWorksCatalog = (params?: {
 	templateId?: string | null;
@@ -93,7 +101,7 @@ export const useCreateV2TypicalWorkAssignment = () => {
 				data: dto,
 			}),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["v2-works"] });
+			invalidateV2WorksQueries(queryClient);
 		},
 	});
 };
@@ -204,7 +212,7 @@ export const useV2ParameterDependencies = () =>
 function invalidateV2WorkParameterCatalog(
 	queryClient: ReturnType<typeof useQueryClient>,
 ) {
-	queryClient.invalidateQueries({ queryKey: ["v2-works"] });
+	invalidateV2WorksQueries(queryClient);
 }
 
 export const useCreateV2WorkParameter = () => {
@@ -336,6 +344,7 @@ export const usePatchV2TypicalWork = () => {
 					queryKey: ["v2-works", "", "", templateId],
 				});
 			}
+			void invalidateV2EditorSnapshots(queryClient);
 		},
 	});
 };
@@ -371,7 +380,7 @@ export const useBulkSyncV2TypicalWorksSchemaFields = () => {
 				timeout: API_HEAVY_OPERATION_TIMEOUT_MS,
 			}),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["v2-works"] });
+			invalidateV2WorksQueries(queryClient);
 		},
 	});
 };
@@ -405,7 +414,7 @@ export const useCopyV2TypicalWork = () => {
 				timeout: API_ENTITY_CREATE_TIMEOUT_MS,
 			}),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["v2-works"] });
+			invalidateV2WorksQueries(queryClient);
 		},
 	});
 };
@@ -425,7 +434,7 @@ export const useCreateV2TypicalWork = () => {
 				timeout: API_ENTITY_CREATE_TIMEOUT_MS,
 			}),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["v2-works"] });
+			invalidateV2WorksQueries(queryClient);
 		},
 	});
 };
@@ -451,7 +460,7 @@ export const useDeleteV2TypicalWork = () => {
 			});
 		},
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["v2-works"] });
+			invalidateV2WorksQueries(queryClient);
 		},
 	});
 };
@@ -471,7 +480,7 @@ export const useBulkDeleteV2TypicalWorks = () => {
 				timeout: API_ENTITY_CREATE_TIMEOUT_MS,
 			}),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["v2-works"] });
+			invalidateV2WorksQueries(queryClient);
 		},
 	});
 };
@@ -486,7 +495,7 @@ export const useBackfillV2TypicalWorkCalculationLogic = () => {
 				timeout: API_ENTITY_CREATE_TIMEOUT_MS,
 			}),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["v2-works"] });
+			invalidateV2WorksQueries(queryClient);
 		},
 	});
 };

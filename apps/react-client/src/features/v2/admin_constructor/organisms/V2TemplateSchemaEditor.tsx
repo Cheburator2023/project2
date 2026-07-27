@@ -1185,6 +1185,7 @@ export const V2TemplateSchemaEditor = ({
 						v.dictionariesSnapshot,
 					),
 					releaseNotes: `Копия опубликованной v${v.versionNumber}`,
+					parentVersionId: template.currentVersionId,
 				};
 			}
 

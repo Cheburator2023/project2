@@ -22,6 +22,7 @@ import type {
 	V2WorkTriggerStatus,
 	WorkTriggerStatusCatalogParam,
 	V2FormulaRegistryListResponseDto,
+	V2TemplateVersionEditorSnapshotDto,
 } from "@smart-anketa/api-contract";
 import {
 	defaultWorkFormula,
@@ -86,6 +87,7 @@ import {
 	slugParamCode,
 } from "../utils/v2-typical-work-catalog.util";
 import { V2_FACTORY_TEMPLATE_TYPICAL_WORKS_REGISTRY } from "../constants/v2-factory-template-typical-works-registry";
+import { V2FactorySnapshotService } from "./v2-factory-snapshot.service";
 
 const LEGACY_FACTORY_BOUND_WORK_NAMES = new Set([
 	"Этап 212. Реализация процесса загрузки внутренних данных в Платформу данных для целей моделирования",
@@ -233,6 +235,7 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 		@InjectRepository(V2TemplateEntity)
 		private readonly templateRepository: Repository<V2TemplateEntity>,
 		private readonly paramCatalogService: V2TypicalWorkParamCatalogService,
+		private readonly factorySnapshotService: V2FactorySnapshotService,
 	) {}
 
 	async onModuleInit(): Promise<void> {
@@ -438,6 +441,20 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 		trimmedTemplateId: string,
 		trimmedVersionId: string,
 	): Promise<number> {
+		const setting = await this.factorySnapshotService.getSettingDto();
+		if (
+			setting.source === "template" &&
+			setting.templateId &&
+			setting.versionId
+		) {
+			return this.cloneTypicalWorksFromTemplate(
+				setting.templateId,
+				setting.versionId,
+				trimmedTemplateId,
+				trimmedVersionId,
+			);
+		}
+
 		const existingCount = await this.workRepository.count({
 			where: { templateId: trimmedTemplateId },
 		});
@@ -549,6 +566,404 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 			templateId,
 			templateVersionId,
 		);
+	}
+
+	/**
+	 * Клонирует типовые работы с UI-эталона (source=template).
+	 * - тот же template: только version configs с эталонной версии;
+	 * - новый пустой template: deep-copy works + связанные сущности;
+	 * - существующий template: sync rules/labor/assignments/version configs по имени.
+	 */
+	async cloneTypicalWorksFromTemplate(
+		sourceTemplateId: string,
+		sourceVersionId: string,
+		targetTemplateId: string,
+		targetVersionId: string,
+	): Promise<number> {
+		if (sourceTemplateId === targetTemplateId) {
+			const copied = await this.copyVersionConfigsBetweenVersions(
+				targetTemplateId,
+				sourceVersionId,
+				targetVersionId,
+			);
+			this.logger.log(
+				`Cloned ${copied} version configs within template ${targetTemplateId} (${sourceVersionId} → ${targetVersionId})`,
+			);
+			return copied;
+		}
+
+		const existingCount = await this.workRepository.count({
+			where: { templateId: targetTemplateId },
+		});
+		if (existingCount === 0) {
+			return this.deepCloneWorksFromTemplate(
+				sourceTemplateId,
+				sourceVersionId,
+				targetTemplateId,
+				targetVersionId,
+			);
+		}
+
+		return this.syncWorksFromEtalonTemplate(
+			sourceTemplateId,
+			sourceVersionId,
+			targetTemplateId,
+			targetVersionId,
+		);
+	}
+
+	private async copyVersionConfigsBetweenVersions(
+		templateId: string,
+		sourceVersionId: string,
+		targetVersionId: string,
+	): Promise<number> {
+		const works = await this.workRepository.find({ where: { templateId } });
+		const workIds = works.map((work) => work.id);
+		if (workIds.length === 0) return 0;
+
+		const parentConfigs = await this.versionConfigRepository.find({
+			where: { templateVersionId: sourceVersionId, workId: In(workIds) },
+		});
+
+		let copied = 0;
+		for (const parent of parentConfigs) {
+			const existing = await this.versionConfigRepository.findOne({
+				where: {
+					templateVersionId: targetVersionId,
+					workId: parent.workId,
+					streamExecutor: parent.streamExecutor,
+				},
+			});
+			if (existing) {
+				existing.formula = parent.formula;
+				existing.formulaText = parent.formulaText;
+				existing.roundingMode = parent.roundingMode;
+				existing.roundingStep = parent.roundingStep;
+				existing.calculationLogic = parent.calculationLogic;
+				await this.versionConfigRepository.save(existing);
+				copied += 1;
+				continue;
+			}
+
+			await this.versionConfigRepository.save(
+				this.versionConfigRepository.create({
+					workId: parent.workId,
+					templateVersionId: targetVersionId,
+					streamExecutor: parent.streamExecutor,
+					formula: parent.formula,
+					formulaText: parent.formulaText,
+					roundingMode: parent.roundingMode,
+					roundingStep: parent.roundingStep,
+					calculationLogic: parent.calculationLogic,
+				}),
+			);
+			copied += 1;
+		}
+		return copied;
+	}
+
+	private async deepCloneWorksFromTemplate(
+		sourceTemplateId: string,
+		sourceVersionId: string,
+		targetTemplateId: string,
+		targetVersionId: string,
+	): Promise<number> {
+		const sourceWorks = await this.workRepository.find({
+			where: { templateId: sourceTemplateId },
+			order: { name: "ASC" },
+		});
+		if (sourceWorks.length === 0) {
+			return 0;
+		}
+
+		const sourceIds = sourceWorks.map((work) => work.id);
+		const [
+			assignments,
+			norms,
+			rules,
+			laborRows,
+			laborParams,
+			versionConfigs,
+		] = await Promise.all([
+			this.assignmentRepository.find({ where: { workId: In(sourceIds) } }),
+			this.normRepository.find({ where: { workId: In(sourceIds) } }),
+			this.ruleRepository.find({ where: { workId: In(sourceIds) } }),
+			this.laborRepository.find({ where: { workId: In(sourceIds) } }),
+			this.laborParamRepository.find({ where: { workId: In(sourceIds) } }),
+			this.versionConfigRepository.find({
+				where: {
+					workId: In(sourceIds),
+					templateVersionId: sourceVersionId,
+				},
+			}),
+		]);
+
+		const workIdMap = new Map<string, string>();
+		for (const source of sourceWorks) {
+			const nextId = randomUUID();
+			workIdMap.set(source.id, nextId);
+			await this.workRepository.save(
+				this.workRepository.create({
+					id: nextId,
+					name: source.name,
+					archComponentType: source.archComponentType,
+					workType: source.workType,
+					catalogKey: null,
+					templateId: targetTemplateId,
+				}),
+			);
+		}
+
+		const strip = <
+			T extends { id?: string; createdAt?: Date; updatedAt?: Date },
+		>(
+			row: T,
+		): Omit<T, "id" | "createdAt" | "updatedAt"> => {
+			const { id: _id, createdAt: _c, updatedAt: _u, ...rest } = row;
+			return rest;
+		};
+
+		for (const row of assignments) {
+			const workId = workIdMap.get(row.workId);
+			if (!workId) continue;
+			await this.assignmentRepository.save(
+				this.assignmentRepository.create({
+					...strip(row),
+					workId,
+				}),
+			);
+		}
+		for (const row of norms) {
+			const workId = workIdMap.get(row.workId);
+			if (!workId) continue;
+			await this.normRepository.save(
+				this.normRepository.create({ ...strip(row), workId }),
+			);
+		}
+		for (const row of rules) {
+			const workId = workIdMap.get(row.workId);
+			if (!workId) continue;
+			await this.ruleRepository.save(
+				this.ruleRepository.create({ ...strip(row), workId }),
+			);
+		}
+		for (const row of laborRows) {
+			const workId = workIdMap.get(row.workId);
+			if (!workId) continue;
+			await this.laborRepository.save(
+				this.laborRepository.create({ ...strip(row), workId }),
+			);
+		}
+		for (const row of laborParams) {
+			const workId = workIdMap.get(row.workId);
+			if (!workId) continue;
+			await this.laborParamRepository.save(
+				this.laborParamRepository.create({ ...strip(row), workId }),
+			);
+		}
+		for (const row of versionConfigs) {
+			const workId = workIdMap.get(row.workId);
+			if (!workId) continue;
+			await this.versionConfigRepository.save(
+				this.versionConfigRepository.create({
+					...strip(row),
+					workId,
+					templateVersionId: targetVersionId,
+				}),
+			);
+		}
+
+		await this.remapWorkIdsInVersionUiSchema(targetVersionId, workIdMap);
+		/**
+		 * Только remap boundWorkIds. backfill/syncTypicalWorksCatalogLogicSnapshot
+		 * переписывает logic/ui и даёт ложный дифф vs эталон сразу после создания.
+		 */
+
+		this.logger.log(
+			`Deep-cloned ${sourceWorks.length} typical works from template ${sourceTemplateId} → ${targetTemplateId}`,
+		);
+		return sourceWorks.length;
+	}
+
+	private async syncWorksFromEtalonTemplate(
+		sourceTemplateId: string,
+		sourceVersionId: string,
+		targetTemplateId: string,
+		targetVersionId: string,
+	): Promise<number> {
+		const [sourceWorks, targetWorks] = await Promise.all([
+			this.workRepository.find({ where: { templateId: sourceTemplateId } }),
+			this.workRepository.find({ where: { templateId: targetTemplateId } }),
+		]);
+		if (sourceWorks.length === 0) {
+			return 0;
+		}
+
+		const workKey = (work: {
+			archComponentType: string;
+			name: string;
+		}) =>
+			`${normalizeArchComponentType(work.archComponentType)}|${work.name.trim()}`;
+
+		const targetByKey = new Map(
+			targetWorks.map((work) => [workKey(work), work] as const),
+		);
+		const workIdMap = new Map<string, string>();
+		let touched = 0;
+
+		const sourceIds = sourceWorks.map((work) => work.id);
+		const [
+			sourceAssignments,
+			sourceNorms,
+			sourceRules,
+			sourceLabor,
+			sourceLaborParams,
+			sourceConfigs,
+		] = await Promise.all([
+			this.assignmentRepository.find({ where: { workId: In(sourceIds) } }),
+			this.normRepository.find({ where: { workId: In(sourceIds) } }),
+			this.ruleRepository.find({ where: { workId: In(sourceIds) } }),
+			this.laborRepository.find({ where: { workId: In(sourceIds) } }),
+			this.laborParamRepository.find({ where: { workId: In(sourceIds) } }),
+			this.versionConfigRepository.find({
+				where: {
+					workId: In(sourceIds),
+					templateVersionId: sourceVersionId,
+				},
+			}),
+		]);
+
+		const groupByWork = <T extends { workId: string }>(rows: T[]) => {
+			const map = new Map<string, T[]>();
+			for (const row of rows) {
+				const list = map.get(row.workId) ?? [];
+				list.push(row);
+				map.set(row.workId, list);
+			}
+			return map;
+		};
+
+		const assignmentsByWork = groupByWork(sourceAssignments);
+		const normsByWork = groupByWork(sourceNorms);
+		const rulesByWork = groupByWork(sourceRules);
+		const laborByWork = groupByWork(sourceLabor);
+		const laborParamsByWork = groupByWork(sourceLaborParams);
+		const configsByWork = groupByWork(sourceConfigs);
+
+		const strip = <
+			T extends { id?: string; createdAt?: Date; updatedAt?: Date },
+		>(
+			row: T,
+		): Omit<T, "id" | "createdAt" | "updatedAt"> => {
+			const { id: _id, createdAt: _c, updatedAt: _u, ...rest } = row;
+			return rest;
+		};
+
+		for (const source of sourceWorks) {
+			const key = workKey(source);
+			let target = targetByKey.get(key);
+			if (!target) {
+				const nextId = randomUUID();
+				target = await this.workRepository.save(
+					this.workRepository.create({
+						id: nextId,
+						name: source.name,
+						archComponentType: source.archComponentType,
+						workType: source.workType,
+						catalogKey: null,
+						templateId: targetTemplateId,
+					}),
+				);
+				targetByKey.set(key, target);
+			} else {
+				if (target.workType !== source.workType) {
+					target.workType = source.workType;
+					await this.workRepository.save(target);
+				}
+			}
+			workIdMap.set(source.id, target.id);
+
+			await this.ruleRepository.delete({ workId: target.id });
+			await this.laborRepository.delete({ workId: target.id });
+			await this.laborParamRepository.delete({ workId: target.id });
+			await this.normRepository.delete({ workId: target.id });
+			await this.assignmentRepository.delete({ workId: target.id });
+
+			for (const row of assignmentsByWork.get(source.id) ?? []) {
+				await this.assignmentRepository.save(
+					this.assignmentRepository.create({
+						...strip(row),
+						workId: target.id,
+					}),
+				);
+			}
+			for (const row of normsByWork.get(source.id) ?? []) {
+				await this.normRepository.save(
+					this.normRepository.create({
+						...strip(row),
+						workId: target.id,
+					}),
+				);
+			}
+			for (const row of rulesByWork.get(source.id) ?? []) {
+				await this.ruleRepository.save(
+					this.ruleRepository.create({
+						...strip(row),
+						workId: target.id,
+					}),
+				);
+			}
+			for (const row of laborByWork.get(source.id) ?? []) {
+				await this.laborRepository.save(
+					this.laborRepository.create({
+						...strip(row),
+						workId: target.id,
+					}),
+				);
+			}
+			for (const row of laborParamsByWork.get(source.id) ?? []) {
+				await this.laborParamRepository.save(
+					this.laborParamRepository.create({
+						...strip(row),
+						workId: target.id,
+					}),
+				);
+			}
+
+			for (const row of configsByWork.get(source.id) ?? []) {
+				const existing = await this.versionConfigRepository.findOne({
+					where: {
+						workId: target.id,
+						templateVersionId: targetVersionId,
+						streamExecutor: row.streamExecutor,
+					},
+				});
+				if (existing) {
+					existing.formula = row.formula;
+					existing.formulaText = row.formulaText;
+					existing.roundingMode = row.roundingMode;
+					existing.roundingStep = row.roundingStep;
+					existing.calculationLogic = row.calculationLogic;
+					await this.versionConfigRepository.save(existing);
+				} else {
+					await this.versionConfigRepository.save(
+						this.versionConfigRepository.create({
+							...strip(row),
+							workId: target.id,
+							templateVersionId: targetVersionId,
+						}),
+					);
+				}
+			}
+			touched += 1;
+		}
+
+		await this.remapWorkIdsInVersionUiSchema(targetVersionId, workIdMap);
+
+		this.logger.log(
+			`Synced ${touched} typical works from etalon template ${sourceTemplateId} → ${targetTemplateId}`,
+		);
+		return touched;
 	}
 
 	/** Записывает boundWorkIds на legacy-блоки typicalWork по назначениям работ на стрим. */
@@ -2090,6 +2505,100 @@ export class V2TypicalWorkService {
 		};
 	}
 
+	/** Карточки типовых работ шаблона для всех стримов (для editor-snapshot / диффа). */
+	async listWorkCardsForVersion(
+		templateId: string,
+		templateVersionId: string,
+	): Promise<V2TypicalWorkCardDto[]> {
+		const list = await this.listWorks({ templateId });
+		const cards: V2TypicalWorkCardDto[] = [];
+		for (const item of list.items) {
+			const streams =
+				item.streams.length > 0 ? item.streams : ([""] as string[]);
+			for (const stream of streams) {
+				if (!stream) continue;
+				cards.push(
+					await this.getWorkCard(item.id, stream, templateVersionId),
+				);
+			}
+		}
+		return cards;
+	}
+
+	/**
+	 * Карточки эталона для диффа при source=builtin (работ в БД нет).
+	 * Условия/триггеры — как при сиде из registry + CSV-каталога.
+	 */
+	listFactoryBundleTypicalWorksForDiff(): V2TypicalWorkCardDto[] {
+		const catalogGroups = groupCatalogWorks();
+		const cards: V2TypicalWorkCardDto[] = [];
+
+		for (const entry of V2_FACTORY_TEMPLATE_TYPICAL_WORKS_REGISTRY.works) {
+			const catalogRows = findCatalogRowsForRegistryWork(entry, catalogGroups);
+			const registryStreams = entry.streams
+				.map((stream) => stream.trim())
+				.filter(Boolean);
+			if (registryStreams.length === 0) continue;
+
+			for (const stream of registryStreams) {
+				const { rules, triggerArchCount } = buildFactoryDiffTriggersForStream(
+					catalogRows,
+					stream,
+					registryStreams,
+				);
+				cards.push({
+					id: entry.id.trim(),
+					name: entry.name.trim(),
+					archComponentType: normalizeArchComponentType(
+						entry.archComponentType,
+					),
+					workType: entry.workType?.trim() || null,
+					streamExecutor: stream,
+					triggerStatus: "appears",
+					norms: [],
+					rules,
+					triggerArchCount,
+					triggerMode: "simple",
+					triggerFormula: defaultTriggerFormula(),
+					laborParams: [],
+					formula: defaultWorkFormula(),
+					rounding: defaultWorkRounding(),
+				});
+			}
+		}
+
+		return cards;
+	}
+
+	async getEditorSnapshot(
+		templateId: string,
+		versionId: string,
+	): Promise<V2TemplateVersionEditorSnapshotDto> {
+		const version = await this.templateVersionRepository.findOne({
+			where: { id: versionId, templateId },
+		});
+		if (!version) {
+			throw new NotFoundException(
+				`Version ${versionId} not found for template ${templateId}`,
+			);
+		}
+
+		const typicalWorks = await this.listWorkCardsForVersion(
+			templateId,
+			versionId,
+		);
+
+		return {
+			jsonSchema: structuredClone(version.jsonSchema ?? {}),
+			uiSchema: structuredClone(version.uiSchema ?? {}),
+			logic: structuredClone(version.logic ?? { rules: [] }),
+			dictionariesSnapshot: version.dictionariesSnapshot
+				? structuredClone(version.dictionariesSnapshot)
+				: null,
+			typicalWorks,
+		};
+	}
+
 	async listFormulaRegistry(query?: {
 		templateId?: string;
 	}): Promise<V2FormulaRegistryListResponseDto> {
@@ -2973,6 +3482,97 @@ function resolveCatalogTriggerRuleStoredValues(
 		valueLabel: stored.valueLabel,
 		valueCodes: null,
 	};
+}
+
+/**
+ * Условия появления для диффа builtin-эталона (без записи в БД) —
+ * та же логика, что seedRegistryWorkNormsAndCatalog для одного стрима.
+ */
+function buildFactoryDiffTriggersForStream(
+	catalogRows: V2FactoryTypicalWork[],
+	stream: string,
+	registryStreams: readonly string[],
+): {
+	rules: V2TypicalWorkRuleDto[];
+	triggerArchCount: NonNullable<V2TypicalWorkCardDto["triggerArchCount"]>;
+} {
+	const rules: V2TypicalWorkRuleDto[] = [];
+	const seenRuleKeys = new Set<string>();
+	let triggerArchCount = defaultTriggerArchCount();
+
+	for (const row of catalogRows) {
+		const applyStreams = resolveCatalogApplyStreams(row.stream, registryStreams);
+		if (!applyStreams.includes(stream)) continue;
+
+		const originalStream = row.stream.trim();
+		const triggerRules = row.triggerRules?.length
+			? row.triggerRules
+			: row.triggerParams.map((paramName) => ({
+					paramName,
+					operator: "exists" as const,
+					values: [] as string[],
+				}));
+
+		for (const triggerRule of triggerRules) {
+			if (triggerRule.operator === "unresolved") continue;
+			const trimmed = triggerRule.paramName.trim();
+			if (!trimmed) continue;
+			if (isArchCountLaborParamName(trimmed)) {
+				const arch =
+					row.triggerArchCount ??
+					resolveArchCountLaborFromCatalog(trimmed);
+				if (arch?.kind && arch.steps.length > 0) {
+					triggerArchCount = {
+						kind: arch.kind as NonNullable<
+							V2TypicalWorkCardDto["triggerArchCount"]
+						>["kind"],
+						steps: arch.steps,
+						combinator: row.triggerArchCount?.combinator ?? "and",
+					};
+				}
+				continue;
+			}
+			const paramCode = resolveCatalogTriggerParamCode(row, trimmed);
+			const ruleKey = `${paramCode}`;
+			if (seenRuleKeys.has(ruleKey)) continue;
+			seenRuleKeys.add(ruleKey);
+
+			const stored = resolveCatalogTriggerRuleStoredValues(
+				triggerRule,
+				trimmed,
+				originalStream,
+			);
+			const alwaysTrigger = isAlwaysShownTriggerParam(paramCode, trimmed);
+			rules.push({
+				id: `${paramCode}`,
+				streamExecutor: stream,
+				schemaFieldUid: null,
+				paramCode,
+				paramName: alwaysTrigger
+					? V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME
+					: trimmed,
+				operator: stored.operator as V2TypicalWorkRuleDto["operator"],
+				valueCode: alwaysTrigger ? null : stored.valueCode,
+				valueLabel: alwaysTrigger ? null : stored.valueLabel,
+				values: alwaysTrigger
+					? undefined
+					: (stored.valueCodes ?? undefined),
+				sortOrder: rules.length,
+			});
+		}
+
+		if (row.triggerArchCount?.kind && row.triggerArchCount.steps.length > 0) {
+			triggerArchCount = {
+				kind: row.triggerArchCount.kind as NonNullable<
+					V2TypicalWorkCardDto["triggerArchCount"]
+				>["kind"],
+				steps: row.triggerArchCount.steps,
+				combinator: row.triggerArchCount.combinator ?? "and",
+			};
+		}
+	}
+
+	return { rules, triggerArchCount };
 }
 
 function buildLaborRefsFromGroupedParams(

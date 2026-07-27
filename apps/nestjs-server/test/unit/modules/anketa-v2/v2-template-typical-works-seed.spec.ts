@@ -36,6 +36,9 @@ describe("V2TypicalWorkSeedService.seedTemplateTypicalWorksFromDocCatalog", () =
 				ensureSeededFromDocCatalog: jest.fn(),
 				listParameters: jest.fn(),
 			} as never,
+			{
+				getSettingDto: jest.fn(async () => ({ source: "builtin" })),
+			} as never,
 		);
 
 		workRepository.find.mockResolvedValue([

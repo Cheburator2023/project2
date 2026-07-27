@@ -329,4 +329,14 @@ describe("v2-work-formula.util", () => {
 			},
 		]);
 	});
+
+	it("keeps trailing operator when no labor tokens were removed", () => {
+		const tokens = [
+			{ kind: "norm" as const },
+			{ kind: "number" as const, value: 2 },
+			{ kind: "operator" as const, op: "*" as const },
+		];
+		const next = removeIncompatibleLaborKindFormulaTokens(tokens, []);
+		expect(next).toEqual(tokens);
+	});
 });

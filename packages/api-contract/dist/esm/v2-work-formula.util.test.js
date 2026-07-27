@@ -265,4 +265,13 @@ describe("v2-work-formula.util", () => {
             },
         ]);
     });
+    it("keeps trailing operator when no labor tokens were removed", () => {
+        const tokens = [
+            { kind: "norm" },
+            { kind: "number", value: 2 },
+            { kind: "operator", op: "*" },
+        ];
+        const next = removeIncompatibleLaborKindFormulaTokens(tokens, []);
+        expect(next).toEqual(tokens);
+    });
 });

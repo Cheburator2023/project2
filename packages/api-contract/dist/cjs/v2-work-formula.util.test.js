@@ -267,4 +267,13 @@ const v2_typical_work_types_1 = require("./v2-typical-work.types");
             },
         ]);
     });
+    (0, vitest_1.it)("keeps trailing operator when no labor tokens were removed", () => {
+        const tokens = [
+            { kind: "norm" },
+            { kind: "number", value: 2 },
+            { kind: "operator", op: "*" },
+        ];
+        const next = (0, v2_work_formula_util_1.removeIncompatibleLaborKindFormulaTokens)(tokens, []);
+        (0, vitest_1.expect)(next).toEqual(tokens);
+    });
 });

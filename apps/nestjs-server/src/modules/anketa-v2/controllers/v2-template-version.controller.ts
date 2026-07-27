@@ -13,6 +13,7 @@ import {
 	ParseUUIDPipe,
 } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiResponse } from "@nestjs/swagger";
+import type { V2TemplateVersionEditorSnapshotDto } from "@smart-anketa/api-contract";
 import { V2TemplateVersionService } from "../services/v2-template-version.service";
 import { V2TemplateService } from "../services/v2-template.service";
 import { V2TypicalWorkService } from "../services/v2-typical-work.service";
@@ -48,6 +49,17 @@ export class V2TemplateVersionController {
 	): Promise<V2TemplateVersionResponseDto[]> {
 		const versions = await this.versionService.findAll(templateId);
 		return versions.map((v) => this.toResponseDto(v));
+	}
+
+	@Get(":id/editor-snapshot")
+	@ApiOperation({
+		summary: "Полный editor-snapshot версии (схема + типовые работы)",
+	})
+	async getEditorSnapshot(
+		@Param("templateId", ParseUUIDPipe) templateId: string,
+		@Param("id", ParseUUIDPipe) id: string,
+	): Promise<V2TemplateVersionEditorSnapshotDto> {
+		return this.typicalWorkService.getEditorSnapshot(templateId, id);
 	}
 
 	@Get(":id")

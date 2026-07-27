@@ -980,6 +980,9 @@ export function removeIncompatibleLaborKindFormulaTokens(
 		if (!group) return false;
 		return isLaborKindCompatibleWithToken(token, group.kind);
 	});
+	// cleanup срезает «осиротевшие» операторы — только если реально удалили операнд.
+	// Иначе нельзя дописать оператор в конец формулы (× сразу пропадает).
+	if (filtered.length === tokens.length) return tokens;
 	return cleanupWorkFormulaTokensAfterOperandRemoval(filtered);
 }
 
