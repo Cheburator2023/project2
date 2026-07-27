@@ -1,5 +1,13 @@
 # Semantic Versioning Changelog
 
+# [1.47.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.46.0...v1.47.0) (2026-07-27)
+
+
+### Features
+
+* add effective factory editor snapshot and template version editor snapshot functionality ([feaecba](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/feaecbaaad81ce619cc374cda6a0b49cceb951e8))
+* enhance stream filtering and role management in Keycloak integration ([3f47659](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/3f4765978517b81158623c63f541d9de6e93e7fd))
+
 # [1.46.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.45.0...v1.46.0) (2026-07-25)
 
 
