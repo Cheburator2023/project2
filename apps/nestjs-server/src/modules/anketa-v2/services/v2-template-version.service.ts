@@ -222,9 +222,14 @@ export class V2TemplateVersionService {
 			userId,
 		);
 		if (!options?.withoutTypicalWorks) {
-			/** Ждём сид: иначе editor-snapshot сразу после создания пустой по работам → ложный дифф. */
-			await this.seedTypicalWorksForVersion(templateId, version.id);
-			return this.findOne(version.id);
+			/**
+			 * Сид работ + reconcile — самая тяжёлая часть и может упираться в HTTP timeout.
+			 * Возвращаем draft сразу, а сид выполняем в фоне; UI уже ждёт готовность poll-ом.
+			 */
+			this.logger.log(
+				`Start async typical works seed for template ${templateId} version ${version.id}`,
+			);
+			this.seedTypicalWorksInBackground(templateId, version.id);
 		}
 		return version;
 	}

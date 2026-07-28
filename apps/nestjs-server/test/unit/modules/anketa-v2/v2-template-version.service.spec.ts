@@ -29,6 +29,7 @@ describe("V2TemplateVersionService.createDraftFromDefault", () => {
 				dictionariesSnapshot: null,
 				releaseNotes: null,
 			})),
+			getSettingDto: jest.fn(async () => ({ source: "builtin" })),
 		};
 		const typicalWorkSeedService = {
 			seedTemplateTypicalWorksFromFactorySnapshot: jest
