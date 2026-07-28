@@ -1,5 +1,13 @@
 # Semantic Versioning Changelog
 
+# [1.48.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.47.1...v1.48.0) (2026-07-28)
+
+
+### Features
+
+* add role compatibility settings and migration for v2 runtime settings ([03b3999](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/03b39994d9a7ff5b23cb85795bc7427780ecad8f))
+* implement group activation handling in schema editor components ([dd779ca](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/dd779cafd3960b2b25dcdb159bc1906714c46edd))
+
 ## [1.47.1](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.47.0...v1.47.1) (2026-07-28)
 
 # [1.47.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.46.0...v1.47.0) (2026-07-27)
