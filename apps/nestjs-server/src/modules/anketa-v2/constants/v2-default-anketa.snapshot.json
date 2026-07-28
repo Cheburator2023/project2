@@ -3251,12 +3251,14 @@
 				"field_u-7AkDrP"
 			],
 			"ui:options": {
+				"groupActive": false,
 				"sectionRole": "main",
 				"streamBlock": true,
 				"schemaFieldUid": "field_c37298ad-14f3-4b8c-ba41-aaae021c004c",
 				"sectionCaption": "Платформенные и поддерживающие стримы",
 				"streamExecutor": "idsrc",
 				"defaultExpanded": false,
+				"groupActivatable": true,
 				"workflowSectionId": "streamDataSources"
 			},
 			"localParams": {
@@ -3432,12 +3434,14 @@
 				"field_hQeUoQl4"
 			],
 			"ui:options": {
+				"groupActive": false,
 				"sectionRole": "main",
 				"streamBlock": true,
 				"schemaFieldUid": "field_9d964cb9-c074-4484-a952-ca1f1d28bfa8",
 				"sectionCaption": "Платформенные и поддерживающие стримы",
 				"streamExecutor": "mdlctl",
 				"defaultExpanded": false,
+				"groupActivatable": true,
 				"workflowSectionId": "streamModelControl"
 			},
 			"localParams": {

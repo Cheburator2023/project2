@@ -175,12 +175,12 @@ export type LaborCoefficientResolvedDetail = {
     parts: LaborCoefficientAnswerPart[];
 };
 /**
- * Детальный разбор коэффициента «по значениям» с учётом нескольких
- * арх-компонентов: части по каждому ответу + агрегация max.
+ * Детальный разбор коэффициента «по значениям» для одного source-контекста
+ * (per-instance: скаляр текущего экземпляра).
  */
-export declare function resolveByValueLaborParamCoefficientDetails(source: Record<string, unknown>, rows: readonly ByValueLaborCoefficientRow[], formData?: Record<string, unknown> | null): Record<string, LaborCoefficientResolvedDetail>;
+export declare function resolveByValueLaborParamCoefficientDetails(source: Record<string, unknown>, rows: readonly ByValueLaborCoefficientRow[], _formData?: Record<string, unknown> | null): Record<string, LaborCoefficientResolvedDetail>;
 /** Коэффициенты режима «По значениям» по фактическому ответу в анкете. */
-export declare function resolveByValueLaborParamCoefficients(source: Record<string, unknown>, rows: readonly ByValueLaborCoefficientRow[], formData?: Record<string, unknown> | null): Record<string, number>;
+export declare function resolveByValueLaborParamCoefficients(source: Record<string, unknown>, rows: readonly ByValueLaborCoefficientRow[], _formData?: Record<string, unknown> | null): Record<string, number>;
 export type TypicalWorkAnyOfLaborParamLike = {
     paramCode: string;
     paramName?: string | null;

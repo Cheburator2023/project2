@@ -104,10 +104,15 @@ export type TypicalWorkFormulaFactorLine = {
     paramCode: string;
     paramName: string;
     value: number;
-    /** Например `max(0.5, 1)` для нескольких арх-компонентов. */
     valueLabel?: string;
     aggregation?: "single" | "max";
     parts?: TypicalWorkFormulaFactorPart[];
+};
+export type TypicalWorkInstanceBreakdownLine = {
+    sourceLabel: string;
+    index: number;
+    expanded: string;
+    total: number;
 };
 /** Разбор формулы типовой работы для «Подробного расчёта». */
 export type TypicalWorkFormulaBreakdownDto = {
@@ -117,6 +122,8 @@ export type TypicalWorkFormulaBreakdownDto = {
     baseNorm: number;
     coefficient: number;
     total: number;
+    /** Per-instance: строки по каждому экземпляру арх-компонента. */
+    instanceBreakdown?: TypicalWorkInstanceBreakdownLine[];
 };
 /** Собирает символьную формулу, подстановку и список коэффициентов с реальными значениями. */
 export declare function buildTypicalWorkFormulaBreakdown(params: {
@@ -139,4 +146,7 @@ export declare function buildTypicalWorkFormulaBreakdown(params: {
         formulaValueLabel: string;
         parts: TypicalWorkFormulaFactorPart[];
     }>;
+    instanceBreakdown?: TypicalWorkInstanceBreakdownLine[];
+    /** Если задан — подменяет expanded (сумма per-instance). */
+    expandedOverride?: string;
 }): TypicalWorkFormulaBreakdownDto;

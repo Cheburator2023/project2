@@ -13,6 +13,7 @@ import type {
 import {
 	clearStaleGeneratedTypicalWorkPaths,
 	dedupeTypicalWorkRowsByWorkId,
+	applyBooleanDefaultsToFormData,
 	ensureGroupActivationDefaults,
 	isCalculationPathActive,
 	mergeTypicalCoefficientContext,
@@ -390,6 +391,11 @@ export class V2CalculationService {
 		const taskTriggers = rules.filter((r) => r.kind === "task_trigger");
 
 		let liveData = migrateV2AnketaFormData({ ...(formData ?? {}) });
+		/** Boolean без третьего «пустого» состояния (unset → false). */
+		liveData = applyBooleanDefaultsToFormData(
+			liveData,
+			options?.jsonSchema as Record<string, unknown> | undefined,
+		);
 		/** Неактивные groupActivatable-стримы (в т.ч. Источники/Контроль по умолчанию). */
 		liveData = ensureGroupActivationDefaults(liveData, options?.uiSchema);
 
@@ -607,11 +613,14 @@ export class V2CalculationService {
 			(payload.worksCatalogAllArchComponents === true ||
 				catalogStream === V2_MODEL_STREAM_EXECUTOR);
 
-		// Модельный стрим: одна контекстная строка, без fan-out по источникам/моделям.
+		// Fan-out по экземплярам арх-компонента — внутри runtime (per-instance sum).
+		// Снаружи одна контекстная строка, иначе будет двойной масштаб.
 		const effectiveSourceRows =
-			usesCatalog && catalogStream === V2_MODEL_STREAM_EXECUTOR
+			usesCatalog && sourceRows.length > 0
 				? sourceRows.slice(0, 1)
-				: sourceRows;
+				: usesCatalog
+					? [{}]
+					: sourceRows;
 
 		const generated = (
 			await Promise.all(
@@ -825,7 +834,7 @@ export class V2CalculationService {
 		const referencePath = outputPath || arrayPath || "";
 		const catalogStream = payload.worksCatalogStream?.trim() ?? "";
 
-		// Модельный стрим всегда один контекст (arch-count / формула дают множитель).
+		// Модельный стрим / catalog: один контекст — per-instance fan-out в runtime.
 		if (payload.worksCatalog && catalogStream === V2_MODEL_STREAM_EXECUTOR) {
 			const modelServiceRows = readFilledArchComponentListRows(
 				readByDotPath(data, V2_MODEL_STREAM_SOURCE_ARRAY_PATH),
@@ -842,6 +851,33 @@ export class V2CalculationService {
 				}
 			}
 			return [{}];
+		}
+
+		// Works catalog (источники и др.): тоже один контекст — экземпляры считает runtime.
+		if (payload.worksCatalog && arrayPath) {
+			const filledFromPath = readFilledArchComponentListRows(
+				readByDotPath(data, arrayPath),
+			);
+			if (filledFromPath.length > 0) return [filledFromPath[0]!];
+
+			const legacyFilled = this.readFilledSourceSystemRows(
+				readByDotPath(data, arrayPath),
+			);
+			if (legacyFilled.length > 0) return [legacyFilled[0]!];
+
+			if (
+				arrayPath === "streamDataSources.sourceSystems" ||
+				arrayPath === V2_SOURCE_SYSTEMS_ARRAY_PATH
+			) {
+				const canonical = this.readFilledSourceSystemRows(
+					readByDotPath(data, V2_SOURCE_SYSTEMS_ARRAY_PATH),
+				);
+				if (canonical.length > 0) return [canonical[0]!];
+				const legacy = this.readFilledSourceSystemRows(
+					readByDotPath(data, "streamDataSources.sourceSystems"),
+				);
+				if (legacy.length > 0) return [legacy[0]!];
+			}
 		}
 
 		if (arrayPath) {

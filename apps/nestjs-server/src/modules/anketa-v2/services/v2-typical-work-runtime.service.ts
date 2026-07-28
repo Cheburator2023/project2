@@ -10,13 +10,16 @@ import {
 	buildWorkCoefficientCatalog,
 	computeTypicalWorkFormulaTotal,
 	defaultWorkRounding,
+	formDataWithSingleArchInstance,
+	formatPerInstanceBreakdownExpanded,
 	formatTypicalWorkCoefficientDisplay,
 	isWorkCoefficientValueAvailable,
+	listArchComponentInstances,
 	normalizeStoredFormula,
 	buildLaborCoefficientLookupSource,
 	parseStoredTypicalWorkCalculationLogic,
 	resolveActiveNormOnDate,
-	resolveByValueLaborParamCoefficientDetails,
+	resolveArchComponentKindFromType,
 	resolveByValueLaborParamCoefficients,
 	resolveLaborAnyOfCoefficient,
 	resolveStreamFromSourceType,
@@ -28,6 +31,7 @@ import {
 	remapFactoryAllowedWorkIdsToTemplateWorks,
 	type TypicalWorkTriggerMatchInput,
 	type TypicalWorkFormulaBreakdownDto,
+	type TypicalWorkInstanceBreakdownLine,
 	type WorkCoefficientCatalogParam,
 	buildWorkSchemaParamsFromTemplate,
 	remapLaborCoefficientRowsForSchema,
@@ -260,7 +264,6 @@ function resolveParamCoefficients(ctx: RuntimeWorkContext): Record<string, numbe
 	const resolvedCoeffs = resolveByValueLaborParamCoefficients(
 		lookupSource,
 		remappedRows,
-		ctx.formData,
 	);
 	for (let index = 0; index < byValueRows.length; index++) {
 		const original = byValueRows[index]!;
@@ -351,79 +354,159 @@ function buildRuntimeFactorCoeffResolver(
 	});
 }
 
-function buildRuntimeParamCoefficientDetails(ctx: RuntimeWorkContext) {
-	const laborParamsByCode = new Map(
-		ctx.laborParams.map((row) => [row.paramCode, row]),
+function evaluateWorkInstance(
+	ctx: RuntimeWorkContext,
+	source: Record<string, unknown>,
+	formData: Record<string, unknown>,
+): {
+	total: number | null;
+	paramCoefficients: Record<string, number>;
+	breakdown: TypicalWorkFormulaBreakdownDto;
+} {
+	const instanceCtx: RuntimeWorkContext = {
+		...ctx,
+		source,
+		formData,
+	};
+	const paramCoefficients = resolveParamCoefficients(instanceCtx);
+	const resolveFactorCoeff = buildRuntimeFactorCoeffResolver(
+		instanceCtx,
+		paramCoefficients,
 	);
-	const byValueRows = ctx.laborRows
-		.filter((row) => {
-			if (ctx.hiddenParamCodes?.has(row.paramCode)) return false;
-			const header = laborParamsByCode.get(row.paramCode);
-			if (header?.kind === "any_of") return false;
-			const schemaBound = Boolean(header?.schemaFieldUid?.trim());
-			if (
-				!schemaBound &&
-				!isWorkCoefficientValueAvailable(
-					{
-						paramCode: row.paramCode,
-						valueCode: row.valueCode,
-						valueLabel: row.valueLabel,
-						schemaFieldUid: header?.schemaFieldUid,
-					},
-					ctx.coefficientValueCatalog,
-					ctx.atDate,
-				)
-			) {
-				return false;
-			}
-			return true;
-		})
-		.map((row) => ({
-			paramCode: row.paramCode,
-			paramName: row.paramName,
-			valueCode: row.valueCode,
-			valueLabel: row.valueLabel,
-			coefficient: decimalToNumber(row.coefficient),
-		}));
-	const remappedRows = remapLaborCoefficientRowsForSchema(
-		byValueRows,
-		ctx.schemaParams,
+	const rounding = resolveRounding(ctx.config);
+	const terms = ctx.config
+		? normalizeStoredFormula(ctx.config.formula, ctx.config.formulaText)
+		: normalizeStoredFormula(null);
+	const paramNames = Object.fromEntries(
+		ctx.laborParams.map((row) => [
+			row.paramCode,
+			stripParamNameSourceKeys(row.paramName).trim() ||
+				row.paramName?.trim() ||
+				row.paramCode,
+		]),
 	);
-	const lookupSource = buildLaborCoefficientLookupSource(
-		ctx.source,
-		ctx.formData,
-		ctx.schemaParams,
-		listLaborParamCodes(ctx),
-	);
-	const remappedDetails = resolveByValueLaborParamCoefficientDetails(
-		lookupSource,
-		remappedRows,
-		ctx.formData,
-	);
-	const details: Record<
-		string,
-		{
-			value: number;
-			aggregation: "single" | "max";
-			formulaValueLabel: string;
-			parts: Array<{
-				sourceLabel: string | null;
-				answerLabel: string;
-				coefficient: number;
-			}>;
-		}
-	> = { ...remappedDetails };
-	for (let index = 0; index < byValueRows.length; index++) {
-		const original = byValueRows[index]!;
-		const remapped = remappedRows[index]!;
-		const detail = remappedDetails[remapped.paramCode];
-		if (!detail) continue;
-		details[remapped.paramCode] = detail;
-		if (remapped.paramCode !== original.paramCode) {
-			details[original.paramCode] = detail;
-		}
+	const raw = computeTypicalWorkFormulaTotal({
+		calculationLogic: parseStoredTypicalWorkCalculationLogic(
+			ctx.config?.calculationLogic,
+		),
+		formula: ctx.config?.formula,
+		formulaText: ctx.config?.formulaText,
+		terms,
+		rounding,
+		norm: ctx.normValue,
+		paramCoefficients,
+		source,
+		formData,
+		resolveFactorCoeff,
+	});
+	if (raw == null) {
+		return {
+			total: null,
+			paramCoefficients,
+			breakdown: {
+				symbolic: "N",
+				expanded: "—",
+				factors: [],
+				baseNorm: ctx.normValue,
+				coefficient: 1,
+				total: 0,
+			},
+		};
 	}
-	return details;
+	const total = applyWorkRounding(raw, rounding);
+	const coefficient = ctx.normValue > 0 ? total / ctx.normValue : 1;
+	const breakdown = buildTypicalWorkFormulaBreakdown({
+		calculationLogic: parseStoredTypicalWorkCalculationLogic(
+			ctx.config?.calculationLogic,
+		),
+		formula: ctx.config?.formula,
+		formulaText: ctx.config?.formulaText,
+		terms,
+		rounding,
+		norm: ctx.normValue,
+		paramCoefficients,
+		paramNames,
+		source,
+		formData,
+		resolveFactorCoeff,
+		coefficient,
+		total,
+	});
+	return { total, paramCoefficients, breakdown };
+}
+
+/**
+ * Per-instance: формула на каждый экземпляр archComponentType работы → сумма.
+ * arch_count того же kind принудительно 1 (через formData override / sliced list).
+ */
+function evaluateWorkAcrossArchInstances(ctx: RuntimeWorkContext): {
+	total: number | null;
+	paramCoefficients: Record<string, number>;
+	instanceBreakdown: TypicalWorkInstanceBreakdownLine[];
+	expandedOverride: string;
+} {
+	const kind = resolveArchComponentKindFromType(ctx.work.archComponentType);
+	const instances = listArchComponentInstances(
+		ctx.formData,
+		ctx.work.archComponentType,
+		{ schemaParams: ctx.schemaParams },
+	);
+
+	if (kind != null && kind !== "modelService" && instances.length === 0) {
+		return {
+			total: 0,
+			paramCoefficients: {},
+			instanceBreakdown: [],
+			expandedOverride: "0 = 0",
+		};
+	}
+
+	const instanceBreakdown: TypicalWorkInstanceBreakdownLine[] = [];
+	let sum = 0;
+	let lastCoeffs: Record<string, number> = {};
+	let anyOk = false;
+
+	for (const instance of instances) {
+		const useBaseSource = kind == null || kind === "modelService";
+		const source = useBaseSource
+			? ctx.source
+			: { ...ctx.source, ...instance.row };
+		const formData = formDataWithSingleArchInstance(
+			ctx.formData,
+			kind,
+			instance,
+		);
+		const evaluated = evaluateWorkInstance(ctx, source, formData);
+		if (evaluated.total == null) continue;
+		anyOk = true;
+		sum += evaluated.total;
+		lastCoeffs = evaluated.paramCoefficients;
+		instanceBreakdown.push({
+			sourceLabel: instance.sourceLabel,
+			index: instance.index,
+			expanded: evaluated.breakdown.expanded,
+			total: evaluated.total,
+		});
+	}
+
+	if (!anyOk) {
+		return {
+			total: null,
+			paramCoefficients: {},
+			instanceBreakdown: [],
+			expandedOverride: "",
+		};
+	}
+
+	return {
+		total: sum,
+		paramCoefficients: lastCoeffs,
+		instanceBreakdown,
+		expandedOverride: formatPerInstanceBreakdownExpanded(
+			instanceBreakdown,
+			sum,
+		),
+	};
 }
 
 function listAnyOfLaborParams(
@@ -669,6 +752,10 @@ export class V2TypicalWorkRuntimeService {
 
 		const memo = new Map<string, number>();
 		const visiting = new Set<string>();
+		const evaluationByWorkId = new Map<
+			string,
+			ReturnType<typeof evaluateWorkAcrossArchInstances>
+		>();
 
 		const computeTotal = (workId: string): number | null => {
 			if (memo.has(workId)) return memo.get(workId) ?? null;
@@ -681,43 +768,25 @@ export class V2TypicalWorkRuntimeService {
 			}
 
 			visiting.add(workId);
-			const paramCoefficients = resolveParamCoefficients(ctx);
-			const resolveFactorCoeff = buildRuntimeFactorCoeffResolver(
-				ctx,
-				paramCoefficients,
-			);
-			const rounding = resolveRounding(ctx.config);
 			const terms = ctx.config
 				? normalizeStoredFormula(ctx.config.formula, ctx.config.formulaText)
 				: normalizeStoredFormula(null);
 
 			const transitive = terms.terms.find((t) => t.kind === "transitive");
-			let raw: number | null;
+			let total: number | null;
 			if (transitive?.sourceAssignmentId) {
 				const sourceAssignment = assignmentById.get(transitive.sourceAssignmentId);
-				raw = sourceAssignment
+				total = sourceAssignment
 					? computeTotal(sourceAssignment.workId)
 					: null;
 			} else {
-				raw = computeTypicalWorkFormulaTotal({
-					calculationLogic: parseStoredTypicalWorkCalculationLogic(
-						ctx.config?.calculationLogic,
-					),
-					formula: ctx.config?.formula,
-					formulaText: ctx.config?.formulaText,
-					terms,
-					rounding,
-					norm: ctx.normValue,
-					paramCoefficients,
-					source: ctx.source,
-					formData: ctx.formData,
-					resolveFactorCoeff,
-				});
+				const evaluated = evaluateWorkAcrossArchInstances(ctx);
+				evaluationByWorkId.set(workId, evaluated);
+				total = evaluated.total;
 			}
 
 			visiting.delete(workId);
-			if (raw == null) return null;
-			const total = applyWorkRounding(raw, rounding);
+			if (total == null) return null;
 			memo.set(workId, total);
 			return total;
 		};
@@ -732,7 +801,10 @@ export class V2TypicalWorkRuntimeService {
 				coefficient = total / ctx.normValue;
 			}
 
-			const paramCoefficients = resolveParamCoefficients(ctx);
+			const evaluated =
+				evaluationByWorkId.get(workId) ??
+				evaluateWorkAcrossArchInstances(ctx);
+			const paramCoefficients = evaluated.paramCoefficients;
 			const terms = ctx.config
 				? normalizeStoredFormula(ctx.config.formula, ctx.config.formulaText)
 				: normalizeStoredFormula(null);
@@ -771,7 +843,8 @@ export class V2TypicalWorkRuntimeService {
 				resolveFactorCoeff,
 				coefficient,
 				total,
-				paramCoefficientDetails: buildRuntimeParamCoefficientDetails(ctx),
+				instanceBreakdown: evaluated.instanceBreakdown,
+				expandedOverride: evaluated.expandedOverride,
 			});
 
 			tasks.push({

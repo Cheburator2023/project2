@@ -7,25 +7,31 @@ const WORK_ID = "33333333-3333-3333-3333-333333333333";
 const STREAM = "Источники данных";
 
 describe("V2TypicalWorkService.copyVersionConfigsFromParent", () => {
-	it("copies version configs from parent template version", async () => {
+	it("bulk-copies version configs from parent template version", async () => {
 		const saved: Array<Record<string, unknown>> = [];
 		const versionConfigRepo = {
-			find: jest.fn(async () => [
-				{
-					workId: WORK_ID,
-					templateVersionId: PARENT_VERSION,
-					streamExecutor: STREAM,
-					formula: [{ kind: "norm" }],
-					formulaText: "N * 6 + (Кэф-П1)",
-					roundingMode: "CEIL",
-					roundingStep: "0.1",
-					calculationLogic: { version: 1, result: { var: "norm" } },
-				},
-			]),
-			findOne: jest.fn(async () => null),
+			find: jest.fn(async (opts: { where?: { templateVersionId?: string } }) => {
+				if (opts?.where?.templateVersionId === PARENT_VERSION) {
+					return [
+						{
+							workId: WORK_ID,
+							templateVersionId: PARENT_VERSION,
+							streamExecutor: STREAM,
+							formula: [{ kind: "norm" }],
+							formulaText: "N * 6 + (Кэф-П1)",
+							roundingMode: "CEIL",
+							roundingStep: "0.1",
+							calculationLogic: { version: 1, result: { var: "norm" } },
+						},
+					];
+				}
+				// Existing configs for the new version (idempotent skip set).
+				return [];
+			}),
 			create: jest.fn((input: Record<string, unknown>) => ({ ...input })),
-			save: jest.fn(async (input: Record<string, unknown>) => {
-				saved.push(input);
+			save: jest.fn(async (input: Record<string, unknown> | Record<string, unknown>[]) => {
+				const rows = Array.isArray(input) ? input : [input];
+				saved.push(...rows);
 				return input;
 			}),
 		};
@@ -53,11 +59,67 @@ describe("V2TypicalWorkService.copyVersionConfigsFromParent", () => {
 		);
 
 		expect(copied).toBe(1);
+		expect(versionConfigRepo.find).toHaveBeenCalledTimes(2);
+		expect(saved).toHaveLength(1);
 		expect(saved[0]).toMatchObject({
 			workId: WORK_ID,
 			templateVersionId: NEW_VERSION,
 			streamExecutor: STREAM,
 			formulaText: "N * 6 + (Кэф-П1)",
 		});
+	});
+
+	it("skips configs that already exist on the new version", async () => {
+		const saved: Array<Record<string, unknown>> = [];
+		const versionConfigRepo = {
+			find: jest.fn(async (opts: { where?: { templateVersionId?: string } }) => {
+				if (opts?.where?.templateVersionId === PARENT_VERSION) {
+					return [
+						{
+							workId: WORK_ID,
+							templateVersionId: PARENT_VERSION,
+							streamExecutor: STREAM,
+							formula: [],
+							formulaText: null,
+							roundingMode: "CEIL",
+							roundingStep: null,
+							calculationLogic: null,
+						},
+					];
+				}
+				return [{ workId: WORK_ID, streamExecutor: STREAM }];
+			}),
+			create: jest.fn((input: Record<string, unknown>) => ({ ...input })),
+			save: jest.fn(async (input: Record<string, unknown> | Record<string, unknown>[]) => {
+				const rows = Array.isArray(input) ? input : [input];
+				saved.push(...rows);
+				return input;
+			}),
+		};
+
+		const service = new V2TypicalWorkService(
+			{
+				find: jest.fn(async () => [{ id: WORK_ID, templateId: TEMPLATE_ID }]),
+			} as never,
+			{} as never,
+			{} as never,
+			{} as never,
+			{} as never,
+			{} as never,
+			{} as never,
+			versionConfigRepo as never,
+			{} as never,
+			{} as never,
+			{ listTriggerStatusCatalog: jest.fn() } as never,
+		);
+
+		const copied = await service.copyVersionConfigsFromParent(
+			TEMPLATE_ID,
+			PARENT_VERSION,
+			NEW_VERSION,
+		);
+
+		expect(copied).toBe(0);
+		expect(saved).toHaveLength(0);
 	});
 });

@@ -21,6 +21,7 @@ exports.formatTriggerArchCountConditionLabel = formatTriggerArchCountConditionLa
 exports.validateTriggerArchCountCondition = validateTriggerArchCountCondition;
 exports.archCountTriggerMatches = archCountTriggerMatches;
 const v2_anketa_section_ui_util_1 = require("./v2-anketa-section-ui.util");
+const v2_typical_work_per_instance_util_1 = require("./v2-typical-work-per-instance.util");
 const v2_typical_works_util_1 = require("./v2-typical-works.util");
 exports.V2_WORK_ARCH_COUNT_LIMITS = {
     model: { min: 1, max: 99 },
@@ -350,6 +351,9 @@ function formatLaborArchCountStepLabel(step) {
 }
 /** Количество арх. компонентов в formData анкеты (не в строке каталога). */
 function resolveWorkArchComponentCount(formData, kind) {
+    const forced = (0, v2_typical_work_per_instance_util_1.readPerInstanceArchCountOverride)(formData, kind);
+    if (forced != null)
+        return forced;
     const detailInfo = readRecord(formData.detailInfo);
     const generalInfo = readRecord(formData.generalInfo);
     const streamModelControl = readRecord(formData.streamModelControl);

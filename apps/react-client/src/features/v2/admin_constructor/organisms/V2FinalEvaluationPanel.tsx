@@ -508,13 +508,34 @@ function readFormulaBreakdown(
 								: undefined,
 						aggregation:
 							factor.aggregation === "max" || factor.aggregation === "single"
-								? factor.aggregation
+								? (factor.aggregation as "max" | "single")
 								: undefined,
 						parts: parts?.length ? parts : undefined,
 					};
 				})
 				.filter((factor) => Number.isFinite(factor.value))
 		: [];
+	const instanceBreakdown = Array.isArray(record.instanceBreakdown)
+		? record.instanceBreakdown
+				.filter(
+					(row): row is Record<string, unknown> =>
+						row != null && typeof row === "object" && !Array.isArray(row),
+				)
+				.map((row) => ({
+					sourceLabel:
+						typeof row.sourceLabel === "string" ? row.sourceLabel : "—",
+					index:
+						typeof row.index === "number" && Number.isFinite(row.index)
+							? row.index
+							: 0,
+					expanded: typeof row.expanded === "string" ? row.expanded : "",
+					total:
+						typeof row.total === "number" && Number.isFinite(row.total)
+							? row.total
+							: Number.NaN,
+				}))
+				.filter((row) => Number.isFinite(row.total))
+		: undefined;
 	return {
 		symbolic: symbolic || "N",
 		expanded:
@@ -534,6 +555,7 @@ function readFormulaBreakdown(
 			typeof record.total === "number" && Number.isFinite(record.total)
 				? record.total
 				: Number(item.total) || 0,
+		...(instanceBreakdown?.length ? { instanceBreakdown } : {}),
 	};
 }
 
@@ -567,9 +589,7 @@ function TypicalWorkFormulaDetails({
 }) {
 	const breakdown =
 		readFormulaBreakdown(item) ?? buildFallbackFormulaBreakdown(item);
-	const multiFactors = breakdown.factors.filter(
-		(factor) => factor.aggregation === "max" && (factor.parts?.length ?? 0) > 1,
-	);
+	const instances = breakdown.instanceBreakdown ?? [];
 
 	return (
 		<Box
@@ -591,6 +611,34 @@ function TypicalWorkFormulaDetails({
 					{breakdown.symbolic}
 				</Typography>
 			) : null}
+			{instances.length > 1 ? (
+				<Stack spacing={0.5} sx={{ mb: 0.75 }}>
+					{instances.map((row) => (
+						<Typography
+							key={`${row.index}-${row.sourceLabel}`}
+							variant="body2"
+							sx={{
+								fontFamily:
+									"ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+								fontSize: 12.5,
+								letterSpacing: 0.1,
+								lineHeight: 1.4,
+								wordBreak: "break-word",
+							}}
+						>
+							{row.expanded || formatTypicalWorkNumberValue(row.total)}
+							<Typography
+								component="span"
+								variant="caption"
+								color="text.secondary"
+								sx={{ ml: 0.75 }}
+							>
+								· {row.sourceLabel}
+							</Typography>
+						</Typography>
+					))}
+				</Stack>
+			) : null}
 			<Typography
 				variant="body2"
 				fontWeight={600}
@@ -603,47 +651,10 @@ function TypicalWorkFormulaDetails({
 					wordBreak: "break-word",
 				}}
 			>
-				{breakdown.expanded}
+				{instances.length > 1
+					? `сумма = ${formatTypicalWorkNumberValue(breakdown.total)}`
+					: breakdown.expanded}
 			</Typography>
-			{multiFactors.length > 0 ? (
-				<Stack spacing={0.75} sx={{ mt: 1 }}>
-					{multiFactors.map((factor) => (
-						<Box key={factor.paramCode || factor.paramName}>
-							<Typography
-								variant="caption"
-								color="text.secondary"
-								display="block"
-								sx={{ lineHeight: 1.35 }}
-							>
-								{factor.paramName}: {factor.valueLabel ?? formatTypicalWorkNumberValue(factor.value)}
-								{" → "}
-								{formatTypicalWorkNumberValue(factor.value)}
-							</Typography>
-							<Stack spacing={0.15} sx={{ mt: 0.25, pl: 1 }}>
-								{(factor.parts ?? []).map((part, partIndex) => (
-									<Typography
-										key={`${factor.paramCode}-${partIndex}`}
-										variant="caption"
-										color="text.secondary"
-										sx={{
-											fontFamily:
-												"ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-											lineHeight: 1.35,
-										}}
-									>
-										·{" "}
-										{part.sourceLabel?.trim()
-											? `${part.sourceLabel.trim()}: `
-											: ""}
-										{part.answerLabel} →{" "}
-										{formatTypicalWorkNumberValue(part.coefficient)}
-									</Typography>
-								))}
-							</Stack>
-						</Box>
-					))}
-				</Stack>
-			) : null}
 		</Box>
 	);
 }

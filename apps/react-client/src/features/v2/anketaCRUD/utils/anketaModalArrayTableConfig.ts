@@ -25,6 +25,7 @@ export type AnketaArrayTableColumn = {
 
 function text(item: Record<string, unknown>, field: string): string {
 	const value = item[field];
+	if (typeof value === "boolean") return value ? "Да" : "Нет";
 	if (value == null || value === "") return "—";
 	return String(value);
 }

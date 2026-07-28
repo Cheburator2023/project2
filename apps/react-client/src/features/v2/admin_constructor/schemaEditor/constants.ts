@@ -158,7 +158,7 @@ export const FIELD_PRESETS: PalettePreset[] = [
 		title: "Да / нет",
 		section: "primitive",
 		chipLabel: "boolean",
-		make: () => ({ type: "boolean", title: "Логический" }),
+		make: () => ({ type: "boolean", title: "Логический", default: false }),
 	},
 ];
 

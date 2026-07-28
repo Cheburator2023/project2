@@ -784,11 +784,46 @@ function coerceBooleanLaborDefault(actual, paramRows) {
     return actual;
 }
 /**
- * Детальный разбор коэффициента «по значениям» с учётом нескольких
- * арх-компонентов: части по каждому ответу + агрегация max.
+ * Детальный разбор коэффициента «по значениям» для одного source-контекста
+ * (per-instance: скаляр текущего экземпляра).
  */
-function resolveByValueLaborParamCoefficientDetails(source, rows, formData) {
+function resolveByValueLaborParamCoefficientDetails(source, rows, _formData) {
     const details = {};
+    const coeffs = resolveByValueLaborParamCoefficients(source, rows);
+    const rowsByParam = new Map();
+    for (const row of rows) {
+        const paramRows = rowsByParam.get(row.paramCode) ?? [];
+        paramRows.push(row);
+        rowsByParam.set(row.paramCode, paramRows);
+    }
+    for (const [paramCode, value] of Object.entries(coeffs)) {
+        const paramRows = rowsByParam.get(paramCode) ?? [];
+        const paramName = paramRows[0]?.paramName ?? null;
+        const actual = coerceBooleanLaborDefault(readLaborParamAnswer(source, paramCode, paramName), paramRows);
+        const matched = matchLaborCoefficientRow(Array.isArray(actual) ? actual[0] : actual, paramRows);
+        details[paramCode] = {
+            paramCode,
+            value,
+            aggregation: "single",
+            formulaValueLabel: formatLaborCoeffNumber(value),
+            parts: matched
+                ? [
+                    {
+                        sourceLabel: null,
+                        answerLabel: matched.valueLabel?.trim() ||
+                            matched.valueCode?.trim() ||
+                            formatLaborAnswerLabel(Array.isArray(actual) ? actual[0] : actual),
+                        coefficient: value,
+                    },
+                ]
+                : [],
+        };
+    }
+    return details;
+}
+/** Коэффициенты режима «По значениям» по фактическому ответу в анкете. */
+function resolveByValueLaborParamCoefficients(source, rows, _formData) {
+    const paramCoefficients = {};
     const rowsByParam = new Map();
     for (const row of rows) {
         const paramRows = rowsByParam.get(row.paramCode) ?? [];
@@ -798,59 +833,13 @@ function resolveByValueLaborParamCoefficientDetails(source, rows, formData) {
     for (const [paramCode, paramRows] of rowsByParam) {
         const paramName = paramRows[0]?.paramName ?? null;
         let actual = coerceBooleanLaborDefault(readLaborParamAnswer(source, paramCode, paramName), paramRows);
-        const contextual = formData != null
-            ? findFieldValuesWithSourceLabels(formData, paramCode)
-            : [];
-        const answerParts = contextual.length > 0
-            ? contextual
-            : Array.isArray(actual)
-                ? actual.map((value) => ({ value, sourceLabel: null }))
-                : actual === undefined
-                    ? []
-                    : [{ value: actual, sourceLabel: null }];
-        if (answerParts.length === 0 && actual === undefined) {
-            continue;
+        if (Array.isArray(actual)) {
+            actual = actual[0];
         }
-        if (answerParts.length === 0 && actual !== undefined) {
-            answerParts.push({ value: actual, sourceLabel: null });
+        const matched = matchLaborCoefficientRow(actual, paramRows);
+        if (matched) {
+            paramCoefficients[paramCode] = matched.coefficient;
         }
-        const parts = [];
-        for (const part of answerParts) {
-            const matched = matchLaborCoefficientRow(part.value, paramRows);
-            if (!matched)
-                continue;
-            parts.push({
-                sourceLabel: part.sourceLabel,
-                answerLabel: matched.valueLabel?.trim() ||
-                    matched.valueCode?.trim() ||
-                    formatLaborAnswerLabel(part.value),
-                coefficient: matched.coefficient,
-            });
-        }
-        if (parts.length === 0)
-            continue;
-        const value = parts.length === 1
-            ? parts[0].coefficient
-            : Math.max(...parts.map((part) => part.coefficient));
-        const aggregation = parts.length > 1 ? "max" : "single";
-        details[paramCode] = {
-            paramCode,
-            value,
-            aggregation,
-            formulaValueLabel: aggregation === "max"
-                ? `max(${parts.map((part) => formatLaborCoeffNumber(part.coefficient)).join(", ")})`
-                : formatLaborCoeffNumber(value),
-            parts,
-        };
-    }
-    return details;
-}
-/** Коэффициенты режима «По значениям» по фактическому ответу в анкете. */
-function resolveByValueLaborParamCoefficients(source, rows, formData) {
-    const details = resolveByValueLaborParamCoefficientDetails(source, rows, formData);
-    const paramCoefficients = {};
-    for (const [paramCode, detail] of Object.entries(details)) {
-        paramCoefficients[paramCode] = detail.value;
     }
     return paramCoefficients;
 }

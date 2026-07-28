@@ -664,19 +664,16 @@ function buildTypicalWorkFormulaBreakdown(params) {
         (0, v2_work_terms_formula_util_1.formatTermsSummary)(params.terms.terms) ||
         "N";
     const totalLabel = formatBreakdownNumber(params.total);
-    const paramCoefficientValueLabels = Object.fromEntries(Object.entries(params.paramCoefficientDetails ?? {})
-        .filter(([, detail]) => detail.aggregation === "max")
-        .map(([code, detail]) => [code, detail.formulaValueLabel]));
     const valuesFormula = (0, v2_work_formula_util_1.formatWorkFormulaReadableWithValues)(namedTokens, {
         norm: params.norm,
         paramCoefficients,
         formData: ctx.formData,
         resolveFactorCoeff: params.resolveFactorCoeff,
-        paramCoefficientValueLabels,
     });
-    const expanded = valuesFormula
-        ? `${valuesFormula} = ${totalLabel}`
-        : `${formatBreakdownNumber(params.norm)} × ${formatBreakdownNumber(params.coefficient)} = ${totalLabel}`;
+    const expanded = params.expandedOverride?.trim() ||
+        (valuesFormula
+            ? `${valuesFormula} = ${totalLabel}`
+            : `${formatBreakdownNumber(params.norm)} × ${formatBreakdownNumber(params.coefficient)} = ${totalLabel}`);
     return {
         symbolic,
         expanded,
@@ -692,5 +689,8 @@ function buildTypicalWorkFormulaBreakdown(params) {
         baseNorm: params.norm,
         coefficient: params.coefficient,
         total: params.total,
+        ...(params.instanceBreakdown?.length
+            ? { instanceBreakdown: params.instanceBreakdown }
+            : {}),
     };
 }

@@ -286,36 +286,26 @@ describe("v2-typical-work-jsonlogic.util", () => {
 				readyPromReports: "Наличие готовых промышленных витрин",
 			},
 			resolveFactorCoeff: (code) => (code === "readyPromReports" ? 1 : 1),
-			coefficient: 1,
-			total: 33,
-			paramCoefficientDetails: {
-				readyPromReports: {
-					value: 1,
-					aggregation: "max",
-					formulaValueLabel: "max(0.5, 1)",
-					parts: [
-						{
-							sourceLabel: "вава",
-							answerLabel: "Да",
-							coefficient: 0.5,
-						},
-						{
-							sourceLabel: "выавыавы",
-							answerLabel: "Нет",
-							coefficient: 1,
-						},
-					],
+			coefficient: 1.5,
+			total: 49.5,
+			instanceBreakdown: [
+				{
+					sourceLabel: "вава",
+					index: 0,
+					expanded: "33 × 0.5 = 16.5",
+					total: 16.5,
 				},
-			},
+				{
+					sourceLabel: "выавыавы",
+					index: 1,
+					expanded: "33 × 1 = 33",
+					total: 33,
+				},
+			],
+			expandedOverride: "16.5 (вава) + 33 (выавыавы) = 49.5",
 		});
-		expect(breakdown.expanded).toBe("33 × max(0.5, 1) = 33");
-		expect(breakdown.factors[0]).toMatchObject({
-			paramCode: "readyPromReports",
-			paramName: "Наличие готовых промышленных витрин",
-			value: 1,
-			valueLabel: "max(0.5, 1)",
-			aggregation: "max",
-		});
-		expect(breakdown.factors[0]?.parts).toHaveLength(2);
+		expect(breakdown.expanded).toBe("16.5 (вава) + 33 (выавыавы) = 49.5");
+		expect(breakdown.instanceBreakdown).toHaveLength(2);
+		expect(breakdown.total).toBe(49.5);
 	});
 });

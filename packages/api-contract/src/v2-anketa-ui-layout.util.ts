@@ -5,7 +5,19 @@ import {
 } from "./v2-anketa-section-ui.util";
 import { serializeStreamBlockExecutors } from "./v2-stream-block-executor.util";
 import { serializeStreamBlockRoles } from "./v2-stream-block-role.util";
+import { V2_IMPLEMENTATION_STREAM } from "./v2-implementation-streams.util";
 import type { V2JsonSchemaDto, V2UiSchemaDto } from "./v2-template.types";
+
+/**
+ * Стримы с кнопкой активации, по умолчанию выключены.
+ * Всегда активны без кнопки: Общая/Детальная информация, ПиРМ, ДАДМ.
+ */
+export const V2_OPTIONAL_ACTIVATABLE_STREAM_CODES = new Set([
+	V2_IMPLEMENTATION_STREAM.IDSRC,
+	V2_IMPLEMENTATION_STREAM.MDLCTL,
+	V2_IMPLEMENTATION_STREAM.DIGAGT,
+	V2_IMPLEMENTATION_STREAM.STRDAT,
+]);
 
 function readRecord(value: unknown): Record<string, unknown> | undefined {
 	return value && typeof value === "object" && !Array.isArray(value)
@@ -49,6 +61,23 @@ function mergeUiOptions(
 ): void {
 	const prev = readRecord(node["ui:options"]) ?? {};
 	node["ui:options"] = { ...prev, ...patch };
+}
+
+function isOptionalActivatableStreamBlock(
+	blockKey: string,
+	streamExecutors: readonly string[],
+): boolean {
+	if (
+		blockKey === "streamDataSources" ||
+		blockKey === "streamModelControl" ||
+		blockKey === "streamDigitalAgents" ||
+		blockKey === "streamStreamingData"
+	) {
+		return true;
+	}
+	return streamExecutors.some((code) =>
+		V2_OPTIONAL_ACTIVATABLE_STREAM_CODES.has(code as never),
+	);
 }
 
 /**
@@ -119,6 +148,19 @@ export function enrichAnketaLayoutUiSchema(
 			delete uiOpts.workflowSectionId;
 			blockUi["ui:options"] = uiOpts;
 		}
+
+		// Soft-sync: Источники / Контроль / Цифровые агенты / Потоковые —
+		// кнопка активации, по умолчанию выключены (ПиРМ и ДАДМ без кнопки).
+		if (
+			isOptionalActivatableStreamBlock(blockKey, streamBlock.streamExecutors) &&
+			blockOpts.groupActivatable !== true
+		) {
+			mergeUiOptions(blockUi, {
+				groupActivatable: true,
+				groupActive: false,
+			});
+		}
+
 		const blockProps = readSchemaProperties(blockSchema);
 		for (const [key, childSchema] of Object.entries(blockProps)) {
 			if (readSchemaType(childSchema) !== "object") continue;

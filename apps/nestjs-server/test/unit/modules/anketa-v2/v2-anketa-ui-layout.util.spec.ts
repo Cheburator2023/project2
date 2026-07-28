@@ -48,5 +48,17 @@ describe("enrichAnketaLayoutUiSchema", () => {
 				expect(opts?.defaultExpanded).toBe(false);
 			}
 		}
+
+		const sources = (ui.streamDataSources as Record<string, unknown>)?.[
+			"ui:options"
+		] as Record<string, unknown>;
+		expect(sources?.groupActivatable).toBe(true);
+		expect(sources?.groupActive).toBe(false);
+
+		const control = (ui.streamModelControl as Record<string, unknown>)?.[
+			"ui:options"
+		] as Record<string, unknown>;
+		expect(control?.groupActivatable).toBe(true);
+		expect(control?.groupActive).toBe(false);
 	});
 });

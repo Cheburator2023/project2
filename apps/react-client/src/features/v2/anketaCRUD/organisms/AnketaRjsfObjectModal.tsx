@@ -20,6 +20,7 @@ import {
 	omitUnsetOptionalFields,
 } from "../utils/anketaModalFormValidation.util";
 import { anketaModalNoAjvValidator } from "../utils/anketaModalNoAjvValidator";
+import { applyBooleanDefaultsToObject } from "@smart-anketa/api-contract";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 type Props = {
@@ -97,11 +98,14 @@ export function AnketaRjsfObjectModal({
 	useEffect(() => {
 		if (open && !wasOpenRef.current) {
 			setFormSession((n) => n + 1);
-			const initial = { ...(defaultValues ?? {}) };
+			const initial = applyBooleanDefaultsToObject(
+				{ ...(defaultValues ?? {}) },
+				formSchema,
+			);
 			setFormData(transformFormData ? transformFormData(initial) : initial);
 		}
 		wasOpenRef.current = open;
-	}, [open, defaultValues, transformFormData]);
+	}, [open, defaultValues, transformFormData, formSchema]);
 
 	const handleSave = () => {
 		if (!canSave) {
@@ -113,7 +117,8 @@ export function AnketaRjsfObjectModal({
 			);
 			return;
 		}
-		onSubmit(omitUnsetOptionalFields(formData, formSchema));
+		const withBooleans = applyBooleanDefaultsToObject(formData, formSchema);
+		onSubmit(omitUnsetOptionalFields(withBooleans, formSchema));
 	};
 
 	return (

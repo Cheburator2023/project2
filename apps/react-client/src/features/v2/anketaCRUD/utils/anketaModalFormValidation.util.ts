@@ -1,6 +1,7 @@
 import type { CustomValidator, RJSFSchema, UiSchema } from "@rjsf/utils";
 import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
 import {
+	applyBooleanDefaultsToObject,
 	isV2AnketaHiddenUiNode,
 	readV2AnketaSectionUiOptions,
 	resolveGroupIsActive,
@@ -69,9 +70,10 @@ export function omitUnsetOptionalFields(
 	formData: Record<string, unknown>,
 	schema: RJSFSchema,
 ): Record<string, unknown> {
+	const withBooleans = applyBooleanDefaultsToObject(formData, schema);
 	const required = new Set(collectRequiredFieldKeys(schema));
 	const next: Record<string, unknown> = {};
-	for (const [key, value] of Object.entries(formData)) {
+	for (const [key, value] of Object.entries(withBooleans)) {
 		if (!required.has(key) && isUnsetOptionalValue(value)) {
 			continue;
 		}
@@ -82,6 +84,14 @@ export function omitUnsetOptionalFields(
 			continue;
 		}
 		next[key] = value;
+	}
+	// Boolean keys from schema may be missing in formData entries loop above —
+	// applyBooleanDefaults already put them on withBooleans.
+	for (const [key, value] of Object.entries(withBooleans)) {
+		const prop = readPropSchema(schema, key);
+		if (prop?.type === "boolean" && typeof value === "boolean") {
+			next[key] = value;
+		}
 	}
 	return next;
 }

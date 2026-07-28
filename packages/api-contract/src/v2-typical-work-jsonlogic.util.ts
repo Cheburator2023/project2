@@ -792,10 +792,16 @@ export type TypicalWorkFormulaFactorLine = {
 	paramCode: string;
 	paramName: string;
 	value: number;
-	/** Например `max(0.5, 1)` для нескольких арх-компонентов. */
 	valueLabel?: string;
 	aggregation?: "single" | "max";
 	parts?: TypicalWorkFormulaFactorPart[];
+};
+
+export type TypicalWorkInstanceBreakdownLine = {
+	sourceLabel: string;
+	index: number;
+	expanded: string;
+	total: number;
 };
 
 /** Разбор формулы типовой работы для «Подробного расчёта». */
@@ -806,6 +812,8 @@ export type TypicalWorkFormulaBreakdownDto = {
 	baseNorm: number;
 	coefficient: number;
 	total: number;
+	/** Per-instance: строки по каждому экземпляру арх-компонента. */
+	instanceBreakdown?: TypicalWorkInstanceBreakdownLine[];
 };
 
 function formatBreakdownNumber(value: number): string {
@@ -946,6 +954,9 @@ export function buildTypicalWorkFormulaBreakdown(params: {
 			parts: TypicalWorkFormulaFactorPart[];
 		}
 	>;
+	instanceBreakdown?: TypicalWorkInstanceBreakdownLine[];
+	/** Если задан — подменяет expanded (сумма per-instance). */
+	expandedOverride?: string;
 }): TypicalWorkFormulaBreakdownDto {
 	const tokenFormula = resolveVersionConfigTokenFormula(
 		params.formula,
@@ -972,21 +983,17 @@ export function buildTypicalWorkFormulaBreakdown(params: {
 		"N";
 
 	const totalLabel = formatBreakdownNumber(params.total);
-	const paramCoefficientValueLabels = Object.fromEntries(
-		Object.entries(params.paramCoefficientDetails ?? {})
-			.filter(([, detail]) => detail.aggregation === "max")
-			.map(([code, detail]) => [code, detail.formulaValueLabel]),
-	);
 	const valuesFormula = formatWorkFormulaReadableWithValues(namedTokens, {
 		norm: params.norm,
 		paramCoefficients,
 		formData: ctx.formData,
 		resolveFactorCoeff: params.resolveFactorCoeff,
-		paramCoefficientValueLabels,
 	});
-	const expanded = valuesFormula
-		? `${valuesFormula} = ${totalLabel}`
-		: `${formatBreakdownNumber(params.norm)} × ${formatBreakdownNumber(params.coefficient)} = ${totalLabel}`;
+	const expanded =
+		params.expandedOverride?.trim() ||
+		(valuesFormula
+			? `${valuesFormula} = ${totalLabel}`
+			: `${formatBreakdownNumber(params.norm)} × ${formatBreakdownNumber(params.coefficient)} = ${totalLabel}`);
 
 	return {
 		symbolic,
@@ -1003,5 +1010,8 @@ export function buildTypicalWorkFormulaBreakdown(params: {
 		baseNorm: params.norm,
 		coefficient: params.coefficient,
 		total: params.total,
+		...(params.instanceBreakdown?.length
+			? { instanceBreakdown: params.instanceBreakdown }
+			: {}),
 	};
 }

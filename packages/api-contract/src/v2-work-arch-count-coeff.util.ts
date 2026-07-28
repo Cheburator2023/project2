@@ -4,6 +4,7 @@ import type {
 	V2WorkArchCountCoeffStep,
 	V2WorkFormulaArchCountKind,
 } from "./v2-typical-work.types";
+import { readPerInstanceArchCountOverride } from "./v2-typical-work-per-instance.util";
 import { isFilledTypicalWorkSourceRow } from "./v2-typical-works.util";
 
 export const V2_WORK_ARCH_COUNT_LIMITS: Record<
@@ -367,6 +368,9 @@ export function resolveWorkArchComponentCount(
 	formData: Record<string, unknown>,
 	kind: V2WorkFormulaArchCountKind,
 ): number {
+	const forced = readPerInstanceArchCountOverride(formData, kind);
+	if (forced != null) return forced;
+
 	const detailInfo = readRecord(formData.detailInfo);
 	const generalInfo = readRecord(formData.generalInfo);
 	const streamModelControl = readRecord(formData.streamModelControl);

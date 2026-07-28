@@ -1,4 +1,5 @@
 import { V2_ARCH_COMPONENT_LABELS } from "./v2-anketa-section-ui.util";
+import { readPerInstanceArchCountOverride } from "./v2-typical-work-per-instance.util";
 import { isFilledTypicalWorkSourceRow } from "./v2-typical-works.util";
 export const V2_WORK_ARCH_COUNT_LIMITS = {
     model: { min: 1, max: 99 },
@@ -327,6 +328,9 @@ export function formatLaborArchCountStepLabel(step) {
 }
 /** Количество арх. компонентов в formData анкеты (не в строке каталога). */
 export function resolveWorkArchComponentCount(formData, kind) {
+    const forced = readPerInstanceArchCountOverride(formData, kind);
+    if (forced != null)
+        return forced;
     const detailInfo = readRecord(formData.detailInfo);
     const generalInfo = readRecord(formData.generalInfo);
     const streamModelControl = readRecord(formData.streamModelControl);

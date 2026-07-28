@@ -14,6 +14,7 @@ import {
 } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiResponse } from "@nestjs/swagger";
 import type { V2TemplateVersionEditorSnapshotDto } from "@smart-anketa/api-contract";
+import type { V2TemplateAuditAction } from "@smart-anketa/api-contract";
 import { V2TemplateVersionService } from "../services/v2-template-version.service";
 import { V2TemplateService } from "../services/v2-template.service";
 import { V2TypicalWorkService } from "../services/v2-typical-work.service";
@@ -88,11 +89,11 @@ export class V2TemplateVersionController {
 				version.id,
 			);
 		}
-		await this.auditService.log(
+		await this.safeAuditLog(
 			templateId,
 			"version.created",
 			version.id,
-			{ version },
+			this.auditVersionPayload(version),
 			user?.id ?? null,
 		);
 		return this.toResponseDto(version);
@@ -107,11 +108,14 @@ export class V2TemplateVersionController {
 		@CurrentUser() user: { id: string } | null,
 	): Promise<V2TemplateVersionResponseDto> {
 		const version = await this.versionService.update(id, dto, user?.id ?? null);
-		await this.auditService.log(
+		await this.safeAuditLog(
 			version.templateId,
 			"version.updated",
 			version.id,
-			{ version, changes: dto },
+			{
+				...this.auditVersionPayload(version),
+				changedFields: Object.keys(dto),
+			},
 			user?.id ?? null,
 		);
 		return this.toResponseDto(version);
@@ -130,11 +134,11 @@ export class V2TemplateVersionController {
 		@CurrentUser() user: { id: string } | null,
 	): Promise<V2TemplateVersionResponseDto> {
 		const version = await this.versionService.publish(id, dto, user?.id ?? null);
-		await this.auditService.log(
+		await this.safeAuditLog(
 			version.templateId,
 			"version.published",
 			version.id,
-			{ version },
+			this.auditVersionPayload(version),
 			user?.id ?? null,
 		);
 		return this.toResponseDto(version);
@@ -148,11 +152,11 @@ export class V2TemplateVersionController {
 		@CurrentUser() user: { id: string } | null,
 	): Promise<V2TemplateVersionResponseDto> {
 		const version = await this.versionService.archive(id);
-		await this.auditService.log(
+		await this.safeAuditLog(
 			version.templateId,
 			"version.archived",
 			version.id,
-			{ version },
+			this.auditVersionPayload(version),
 			user?.id ?? null,
 		);
 		return this.toResponseDto(version);
@@ -167,11 +171,14 @@ export class V2TemplateVersionController {
 		@CurrentUser() user: { id: string } | null,
 	): Promise<V2TemplateVersionResponseDto> {
 		const version = await this.versionService.rollback(templateId, dto);
-		await this.auditService.log(
+		await this.safeAuditLog(
 			templateId,
 			"version.rolled_back",
 			version.id,
-			{ version, targetVersionId: dto.targetVersionId },
+			{
+				...this.auditVersionPayload(version),
+				targetVersionId: dto.targetVersionId,
+			},
 			user?.id ?? null,
 		);
 		return this.toResponseDto(version);
@@ -194,15 +201,16 @@ export class V2TemplateVersionController {
 			user?.id ?? null,
 			{ withoutTypicalWorks: withoutTypicalWorks === "true" },
 		);
-		await this.auditService.log(
+		await this.safeAuditLog(
 			templateId,
 			"version.created",
 			version.id,
 			{
-				version,
-				source: withoutTypicalWorks === "true"
-					? "default_factory_without_typical_works"
-					: "default_factory",
+				...this.auditVersionPayload(version),
+				source:
+					withoutTypicalWorks === "true"
+						? "default_factory_without_typical_works"
+						: "default_factory",
 			},
 			user?.id ?? null,
 		);
@@ -249,11 +257,11 @@ export class V2TemplateVersionController {
 		@CurrentUser() user: { id: string } | null,
 	): Promise<V2TemplateVersionResponseDto> {
 		const version = await this.versionService.resetToDefault(templateId, user?.id ?? null);
-		await this.auditService.log(
+		await this.safeAuditLog(
 			templateId,
 			"version.reset_to_default",
 			version.id,
-			{ version },
+			this.auditVersionPayload(version),
 			user?.id ?? null,
 		);
 		return this.toResponseDto(version);
@@ -278,20 +286,13 @@ export class V2TemplateVersionController {
 		);
 
 		if (changed) {
-			try {
-				await this.auditService.log(
-					templateId,
-					"version.activated_as_current",
-					version.id,
-					this.auditVersionPayload(version),
-					user?.id ?? null,
-				);
-			} catch (error) {
-				this.logger.warn(
-					`Audit log failed for version.activated_as_current (${version.id})`,
-					error instanceof Error ? error.stack : String(error),
-				);
-			}
+			await this.safeAuditLog(
+				templateId,
+				"version.activated_as_current",
+				version.id,
+				this.auditVersionPayload(version),
+				user?.id ?? null,
+			);
 		}
 
 		return this.toResponseDto(version);
@@ -307,13 +308,31 @@ export class V2TemplateVersionController {
 	): Promise<void> {
 		const version = await this.versionService.findOne(id);
 		await this.versionService.delete(id);
-		await this.auditService.log(
+		await this.safeAuditLog(
 			version.templateId,
 			"version.deleted",
 			version.id,
 			{ versionId: id },
 			user?.id ?? null,
 		);
+	}
+
+	/** Never fail the main request because audit write timed out / bloated. */
+	private async safeAuditLog(
+		templateId: string,
+		action: V2TemplateAuditAction,
+		entityId: string,
+		payload: Record<string, unknown>,
+		userId: string | null,
+	): Promise<void> {
+		try {
+			await this.auditService.log(templateId, action, entityId, payload, userId);
+		} catch (error) {
+			this.logger.warn(
+				`Audit log failed for ${action} (${entityId})`,
+				error instanceof Error ? error.stack : String(error),
+			);
+		}
 	}
 
 	private auditVersionPayload(version: {

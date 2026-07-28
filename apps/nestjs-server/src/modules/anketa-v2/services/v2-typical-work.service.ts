@@ -3091,26 +3091,32 @@ export class V2TypicalWorkService {
 		parentVersionId: string,
 		newVersionId: string,
 	): Promise<number> {
-		const works = await this.workRepository.find({ where: { templateId } });
+		const works = await this.workRepository.find({
+			where: { templateId },
+			select: ["id"],
+		});
 		const workIds = works.map((work) => work.id);
 		if (workIds.length === 0) return 0;
 
 		const parentConfigs = await this.versionConfigRepository.find({
 			where: { templateVersionId: parentVersionId, workId: In(workIds) },
 		});
+		if (parentConfigs.length === 0) return 0;
 
-		let copied = 0;
-		for (const parent of parentConfigs) {
-			const existing = await this.versionConfigRepository.findOne({
-				where: {
-					templateVersionId: newVersionId,
-					workId: parent.workId,
-					streamExecutor: parent.streamExecutor,
-				},
-			});
-			if (existing) continue;
+		const existingRows = await this.versionConfigRepository.find({
+			where: { templateVersionId: newVersionId, workId: In(workIds) },
+			select: ["workId", "streamExecutor"],
+		});
+		const existingKeys = new Set(
+			existingRows.map((row) => `${row.workId}\0${row.streamExecutor}`),
+		);
 
-			await this.versionConfigRepository.save(
+		const toCreate = parentConfigs
+			.filter(
+				(parent) =>
+					!existingKeys.has(`${parent.workId}\0${parent.streamExecutor}`),
+			)
+			.map((parent) =>
 				this.versionConfigRepository.create({
 					workId: parent.workId,
 					templateVersionId: newVersionId,
@@ -3122,10 +3128,16 @@ export class V2TypicalWorkService {
 					calculationLogic: parent.calculationLogic,
 				}),
 			);
-			copied += 1;
+
+		if (toCreate.length === 0) return 0;
+
+		// Bulk save in chunks — avoids N+1 findOne+save that timed out behind the gateway (502).
+		const CHUNK_SIZE = 100;
+		for (let i = 0; i < toCreate.length; i += CHUNK_SIZE) {
+			await this.versionConfigRepository.save(toCreate.slice(i, i + CHUNK_SIZE));
 		}
 
-		return copied;
+		return toCreate.length;
 	}
 }
 

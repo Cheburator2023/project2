@@ -2,6 +2,17 @@ import { V2_ANKETA_MAIN_SECTION_IDS } from "./v2-anketa-workflow.types";
 import { readV2AnketaSectionUiOptions, resolveV2AnketaStreamBlockOptions, } from "./v2-anketa-section-ui.util";
 import { serializeStreamBlockExecutors } from "./v2-stream-block-executor.util";
 import { serializeStreamBlockRoles } from "./v2-stream-block-role.util";
+import { V2_IMPLEMENTATION_STREAM } from "./v2-implementation-streams.util";
+/**
+ * Стримы с кнопкой активации, по умолчанию выключены.
+ * Всегда активны без кнопки: Общая/Детальная информация, ПиРМ, ДАДМ.
+ */
+export const V2_OPTIONAL_ACTIVATABLE_STREAM_CODES = new Set([
+    V2_IMPLEMENTATION_STREAM.IDSRC,
+    V2_IMPLEMENTATION_STREAM.MDLCTL,
+    V2_IMPLEMENTATION_STREAM.DIGAGT,
+    V2_IMPLEMENTATION_STREAM.STRDAT,
+]);
 function readRecord(value) {
     return value && typeof value === "object" && !Array.isArray(value)
         ? value
@@ -35,6 +46,15 @@ function ensureUiNode(ui, segments) {
 function mergeUiOptions(node, patch) {
     const prev = readRecord(node["ui:options"]) ?? {};
     node["ui:options"] = { ...prev, ...patch };
+}
+function isOptionalActivatableStreamBlock(blockKey, streamExecutors) {
+    if (blockKey === "streamDataSources" ||
+        blockKey === "streamModelControl" ||
+        blockKey === "streamDigitalAgents" ||
+        blockKey === "streamStreamingData") {
+        return true;
+    }
+    return streamExecutors.some((code) => V2_OPTIONAL_ACTIVATABLE_STREAM_CODES.has(code));
 }
 /**
  * Проставляет layout-метаданные (`ui:options.sectionRole`, defaultExpanded, …)
@@ -94,6 +114,15 @@ export function enrichAnketaLayoutUiSchema(uiSchema, jsonSchema) {
             const uiOpts = readRecord(blockUi["ui:options"]) ?? {};
             delete uiOpts.workflowSectionId;
             blockUi["ui:options"] = uiOpts;
+        }
+        // Soft-sync: Источники / Контроль / Цифровые агенты / Потоковые —
+        // кнопка активации, по умолчанию выключены (ПиРМ и ДАДМ без кнопки).
+        if (isOptionalActivatableStreamBlock(blockKey, streamBlock.streamExecutors) &&
+            blockOpts.groupActivatable !== true) {
+            mergeUiOptions(blockUi, {
+                groupActivatable: true,
+                groupActive: false,
+            });
         }
         const blockProps = readSchemaProperties(blockSchema);
         for (const [key, childSchema] of Object.entries(blockProps)) {

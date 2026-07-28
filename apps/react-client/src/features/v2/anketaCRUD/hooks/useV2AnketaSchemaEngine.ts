@@ -24,6 +24,7 @@ import { ensureAnketaFormDataWithWorkflow } from "./useAnketaWorkflow";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
 	collectGeneratedTypicalWorkArrayPaths,
+	applyBooleanDefaultsToFormData,
 	ensureGroupActivationDefaults,
 	resolveAnketaCalculationLogic,
 	syncTriggerGatedGroupActivationFromTypicalWorks,
@@ -120,6 +121,12 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 		if (!uiSchema || Object.keys(uiSchema).length === 0) return;
 		setFormData((prev) => ensureGroupActivationDefaults(prev, uiSchema));
 	}, [uiSchema]);
+
+	useEffect(() => {
+		const props = (jsonSchema as RJSFSchema)?.properties;
+		if (!props || typeof props !== "object") return;
+		setFormData((prev) => applyBooleanDefaultsToFormData(prev, jsonSchema));
+	}, [jsonSchema]);
 
 	const uncertaintySyncSignature = useMemo(
 		() =>

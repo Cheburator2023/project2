@@ -100,6 +100,27 @@ describe("anketaModalFormValidation.util", () => {
 		).toEqual({ name: "CRM" });
 	});
 
+	it("always persists boolean fields as false when unset", () => {
+		const schema: RJSFSchema = {
+			type: "object",
+			properties: {
+				name: { type: "string" },
+				readyPromReports: { type: "boolean" },
+			},
+			required: ["name"],
+		};
+		expect(omitUnsetOptionalFields({ name: "Модель 1" }, schema)).toEqual({
+			name: "Модель 1",
+			readyPromReports: false,
+		});
+		expect(
+			omitUnsetOptionalFields(
+				{ name: "Модель 1", readyPromReports: true },
+				schema,
+			),
+		).toEqual({ name: "Модель 1", readyPromReports: true });
+	});
+
 	it("allows save when required name is set and optional enums are empty strings", () => {
 		expect(
 			isAnketaModalFormValid(

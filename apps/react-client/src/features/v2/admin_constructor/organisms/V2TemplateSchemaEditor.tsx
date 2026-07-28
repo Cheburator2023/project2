@@ -274,6 +274,7 @@ export const V2TemplateSchemaEditor = ({
 	const createVersion = useCreateV2TemplateVersion();
 	const updateVersion = useUpdateV2TemplateVersion();
 	const activateVersion = useActivateV2TemplateVersionAsCurrent();
+	const saveInFlightRef = useRef(false);
 
 	const latestDraft = useMemo(() => {
 		const drafts =
@@ -1308,6 +1309,8 @@ export const V2TemplateSchemaEditor = ({
 			toast.warning(typicalWorkSaveBlockedMessage);
 			return;
 		}
+		if (saveInFlightRef.current) return;
+		saveInFlightRef.current = true;
 
 		flushPendingPanelDrafts();
 		try {
@@ -1337,6 +1340,8 @@ export const V2TemplateSchemaEditor = ({
 				});
 			}
 			throw error;
+		} finally {
+			saveInFlightRef.current = false;
 		}
 	}, [
 		activeVersion,
@@ -1357,6 +1362,8 @@ export const V2TemplateSchemaEditor = ({
 				toast.warning(typicalWorkSaveBlockedMessage);
 				return;
 			}
+			if (saveInFlightRef.current) return;
+			saveInFlightRef.current = true;
 			flushPendingPanelDrafts();
 			try {
 				const created = await createVersion.mutateAsync({
@@ -1388,6 +1395,8 @@ export const V2TemplateSchemaEditor = ({
 					});
 				}
 				throw error;
+			} finally {
+				saveInFlightRef.current = false;
 			}
 		},
 		[
