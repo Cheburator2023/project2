@@ -37,7 +37,7 @@ import {
 import { createResetSchemaEditorPreviewFormData } from "../utils/previewFormReset";
 import { evaluateRuleLive } from "../schemaEditor/panels/logicPanel/helpers";
 import { nanoid } from "nanoid";
-import { Box, Button, Typography } from "@mui/material";
+import { Box, Button, CircularProgress, Typography } from "@mui/material";
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
@@ -128,7 +128,6 @@ import {
 	toggleRequiredAtPointer,
 	updatePropertyAtPointer,
 } from "../utils/schemaMutators";
-import { FullScreenLoader } from "@react-client/common/muiCustom/FullScreenLoader";
 import { V2TemplateSaveDialog } from "./V2TemplateSaveDialog";
 import { SchemaEditorLeaveDialog } from "./SchemaEditorLeaveDialog";
 import type { V2TemplateStatus } from "@smart-anketa/api-contract";
@@ -2665,14 +2664,37 @@ export const V2TemplateSchemaEditor = ({
 	}
 
 	if (isEditorBootstrapping && !editorHasLoadedRef.current) {
+		if (wording === "adminSchema") {
+			return (
+				<Card
+					padding="0"
+					overflow="hidden"
+					sx={{
+						flex: 1,
+						alignSelf: "stretch",
+						minHeight: 480,
+						height: "100%",
+						position: "relative",
+					}}
+				>
+					{/* Задаёт высоту Card: иначе %/flex схлопывают область и спиннер обрезается в «черточку». */}
+					<Box aria-hidden sx={{ height: 480 }} />
+					<Box
+						sx={{
+							position: "absolute",
+							inset: 0,
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+						}}
+					>
+						<CircularProgress size={40} thickness={4} />
+					</Box>
+				</Card>
+			);
+		}
 		return (
-			<Typography component="div">
-				{wording === "adminSchema" ? (
-					<FullScreenLoader />
-				) : (
-					"Шаблон не найден или загрузка..."
-				)}
-			</Typography>
+			<Typography component="div">Шаблон не найден или загрузка...</Typography>
 		);
 	}
 

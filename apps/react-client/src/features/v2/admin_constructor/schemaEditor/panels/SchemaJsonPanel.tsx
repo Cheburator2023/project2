@@ -2,14 +2,13 @@ import FileDownloadOutlinedIcon from "@mui/icons-material/FileDownloadOutlined";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import Tab from "@mui/material/Tab";
-import Tabs from "@mui/material/Tabs";
 import Typography from "@mui/material/Typography";
 import Editor from "@monaco-editor/react";
 import {
 	useV2EffectiveFactoryEditorSnapshot,
 	useV2TemplateVersionEditorSnapshot,
 } from "@react-client/common/api/queries/v2-templates";
+import { SegmentBar } from "@react-client/common/muiCustom/SegmentBar";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { useCallback, useMemo, useState } from "react";
 import { useSchemaEditor } from "../SchemaEditorContext";
@@ -19,6 +18,33 @@ import { V2_TEMPLATE_EDIT_TEST_IDS } from "../../testIds";
 import { PanelChrome } from "../components/PanelChrome";
 
 type JsonPanelTab = "schema" | "works" | "full" | "diff";
+
+const JSON_PANEL_SEGMENTS: Array<{
+	id: JsonPanelTab;
+	label: string;
+	title?: string;
+}> = [
+	{
+		id: "schema",
+		label: "Схема",
+		title: "Редактируемый снепшот jsonSchema / uiSchema / logic",
+	},
+	{
+		id: "works",
+		label: "Типовые работы",
+		title: "Read-only карточки типовых работ активной версии",
+	},
+	{
+		id: "full",
+		label: "Полный dump",
+		title: "Схема + dictionaries + typicalWorks для выгрузки",
+	},
+	{
+		id: "diff",
+		label: "Изменения",
+		title: "Отличия от эталонной заводской схемы",
+	},
+];
 
 export function SchemaJsonPanel({ embedded = false }: { embedded?: boolean }) {
 	const {
@@ -230,22 +256,13 @@ export function SchemaJsonPanel({ embedded = false }: { embedded?: boolean }) {
 				height={fillHeight ? "100%" : undefined}
 				style={{ overflow: "hidden" }}
 			>
-				<Tabs
-					value={tab}
-					onChange={(_, next: JsonPanelTab) => setTab(next)}
-					variant="scrollable"
-					scrollButtons="auto"
-					sx={{ flexShrink: 0, minHeight: 36 }}
-				>
-					<Tab value="schema" label="Схема" sx={{ minHeight: 36, py: 0 }} />
-					<Tab
-						value="works"
-						label="Типовые работы"
-						sx={{ minHeight: 36, py: 0 }}
+				<Box sx={{ flexShrink: 0 }}>
+					<SegmentBar
+						segments={JSON_PANEL_SEGMENTS}
+						value={tab}
+						onChange={setTab}
 					/>
-					<Tab value="full" label="Полный dump" sx={{ minHeight: 36, py: 0 }} />
-					<Tab value="diff" label="Изменения" sx={{ minHeight: 36, py: 0 }} />
-				</Tabs>
+				</Box>
 
 				{monacoError && tab === "schema" ? (
 					<Alert severity="error" sx={{ flexShrink: 0 }}>
