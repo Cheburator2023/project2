@@ -463,20 +463,56 @@ function readFormulaBreakdown(
 						typeof factor === "object" &&
 						!Array.isArray(factor),
 				)
-				.map((factor) => ({
-					paramCode:
-						typeof factor.paramCode === "string" ? factor.paramCode : "",
-					paramName:
-						typeof factor.paramName === "string"
-							? factor.paramName
-							: typeof factor.paramCode === "string"
-								? factor.paramCode
-								: "Параметр",
-					value:
-						typeof factor.value === "number" && Number.isFinite(factor.value)
-							? factor.value
-							: Number.NaN,
-				}))
+				.map((factor) => {
+					const parts = Array.isArray(factor.parts)
+						? factor.parts
+								.filter(
+									(part): part is Record<string, unknown> =>
+										part != null &&
+										typeof part === "object" &&
+										!Array.isArray(part),
+								)
+								.map((part) => ({
+									sourceLabel:
+										typeof part.sourceLabel === "string"
+											? part.sourceLabel
+											: null,
+									answerLabel:
+										typeof part.answerLabel === "string"
+											? part.answerLabel
+											: "—",
+									coefficient:
+										typeof part.coefficient === "number" &&
+										Number.isFinite(part.coefficient)
+											? part.coefficient
+											: Number.NaN,
+								}))
+								.filter((part) => Number.isFinite(part.coefficient))
+						: undefined;
+					return {
+						paramCode:
+							typeof factor.paramCode === "string" ? factor.paramCode : "",
+						paramName:
+							typeof factor.paramName === "string"
+								? factor.paramName
+								: typeof factor.paramCode === "string"
+									? factor.paramCode
+									: "Параметр",
+						value:
+							typeof factor.value === "number" && Number.isFinite(factor.value)
+								? factor.value
+								: Number.NaN,
+						valueLabel:
+							typeof factor.valueLabel === "string"
+								? factor.valueLabel
+								: undefined,
+						aggregation:
+							factor.aggregation === "max" || factor.aggregation === "single"
+								? factor.aggregation
+								: undefined,
+						parts: parts?.length ? parts : undefined,
+					};
+				})
 				.filter((factor) => Number.isFinite(factor.value))
 		: [];
 	return {
@@ -531,6 +567,9 @@ function TypicalWorkFormulaDetails({
 }) {
 	const breakdown =
 		readFormulaBreakdown(item) ?? buildFallbackFormulaBreakdown(item);
+	const multiFactors = breakdown.factors.filter(
+		(factor) => factor.aggregation === "max" && (factor.parts?.length ?? 0) > 1,
+	);
 
 	return (
 		<Box
@@ -566,6 +605,45 @@ function TypicalWorkFormulaDetails({
 			>
 				{breakdown.expanded}
 			</Typography>
+			{multiFactors.length > 0 ? (
+				<Stack spacing={0.75} sx={{ mt: 1 }}>
+					{multiFactors.map((factor) => (
+						<Box key={factor.paramCode || factor.paramName}>
+							<Typography
+								variant="caption"
+								color="text.secondary"
+								display="block"
+								sx={{ lineHeight: 1.35 }}
+							>
+								{factor.paramName}: {factor.valueLabel ?? formatTypicalWorkNumberValue(factor.value)}
+								{" → "}
+								{formatTypicalWorkNumberValue(factor.value)}
+							</Typography>
+							<Stack spacing={0.15} sx={{ mt: 0.25, pl: 1 }}>
+								{(factor.parts ?? []).map((part, partIndex) => (
+									<Typography
+										key={`${factor.paramCode}-${partIndex}`}
+										variant="caption"
+										color="text.secondary"
+										sx={{
+											fontFamily:
+												"ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+											lineHeight: 1.35,
+										}}
+									>
+										·{" "}
+										{part.sourceLabel?.trim()
+											? `${part.sourceLabel.trim()}: `
+											: ""}
+										{part.answerLabel} →{" "}
+										{formatTypicalWorkNumberValue(part.coefficient)}
+									</Typography>
+								))}
+							</Stack>
+						</Box>
+					))}
+				</Stack>
+			) : null}
 		</Box>
 	);
 }

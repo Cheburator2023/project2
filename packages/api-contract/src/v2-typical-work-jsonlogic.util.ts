@@ -782,10 +782,20 @@ export function computeTypicalWorkFormulaTotal(params: {
 	});
 }
 
+export type TypicalWorkFormulaFactorPart = {
+	sourceLabel: string | null;
+	answerLabel: string;
+	coefficient: number;
+};
+
 export type TypicalWorkFormulaFactorLine = {
 	paramCode: string;
 	paramName: string;
 	value: number;
+	/** Например `max(0.5, 1)` для нескольких арх-компонентов. */
+	valueLabel?: string;
+	aggregation?: "single" | "max";
+	parts?: TypicalWorkFormulaFactorPart[];
 };
 
 /** Разбор формулы типовой работы для «Подробного расчёта». */
@@ -814,11 +824,28 @@ function collectFormulaFactorLines(params: {
 	paramNames?: Record<string, string>;
 	formData?: Record<string, unknown>;
 	resolveFactorCoeff: (paramCode: string) => number;
+	paramCoefficientDetails?: Record<
+		string,
+		{
+			value: number;
+			aggregation: "single" | "max";
+			formulaValueLabel: string;
+			parts: TypicalWorkFormulaFactorPart[];
+		}
+	>;
 }): TypicalWorkFormulaFactorLine[] {
 	const seen = new Set<string>();
 	const factors: TypicalWorkFormulaFactorLine[] = [];
 
-	const push = (paramCode: string, paramName: string, value: number) => {
+	const push = (
+		paramCode: string,
+		paramName: string,
+		value: number,
+		extra?: Pick<
+			TypicalWorkFormulaFactorLine,
+			"valueLabel" | "aggregation" | "parts"
+		>,
+	) => {
 		const key = paramCode.trim() || paramName.trim();
 		if (!key || seen.has(key)) return;
 		seen.add(key);
@@ -830,6 +857,9 @@ function collectFormulaFactorLines(params: {
 			paramCode: paramCode.trim() || key,
 			paramName: displayName,
 			value,
+			...(extra?.valueLabel ? { valueLabel: extra.valueLabel } : {}),
+			...(extra?.aggregation ? { aggregation: extra.aggregation } : {}),
+			...(extra?.parts?.length ? { parts: extra.parts } : {}),
 		});
 	};
 
@@ -839,10 +869,18 @@ function collectFormulaFactorLines(params: {
 				params.paramNames?.[token.paramCode]?.trim() ||
 				token.paramName?.trim() ||
 				token.paramCode;
+			const detail = params.paramCoefficientDetails?.[token.paramCode];
 			push(
 				token.paramCode,
 				name,
-				params.resolveFactorCoeff(token.paramCode),
+				detail?.value ?? params.resolveFactorCoeff(token.paramCode),
+				detail
+					? {
+							valueLabel: detail.formulaValueLabel,
+							aggregation: detail.aggregation,
+							parts: detail.parts,
+						}
+					: undefined,
 			);
 			continue;
 		}
@@ -864,10 +902,18 @@ function collectFormulaFactorLines(params: {
 					params.paramNames?.[factor.paramCode]?.trim() ||
 					factor.paramName?.trim() ||
 					factor.paramCode;
+				const detail = params.paramCoefficientDetails?.[factor.paramCode];
 				push(
 					factor.paramCode,
 					name,
-					params.resolveFactorCoeff(factor.paramCode),
+					detail?.value ?? params.resolveFactorCoeff(factor.paramCode),
+					detail
+						? {
+								valueLabel: detail.formulaValueLabel,
+								aggregation: detail.aggregation,
+								parts: detail.parts,
+							}
+						: undefined,
 				);
 			}
 		}
@@ -891,6 +937,15 @@ export function buildTypicalWorkFormulaBreakdown(params: {
 	resolveFactorCoeff: (paramCode: string) => number;
 	coefficient: number;
 	total: number;
+	paramCoefficientDetails?: Record<
+		string,
+		{
+			value: number;
+			aggregation: "single" | "max";
+			formulaValueLabel: string;
+			parts: TypicalWorkFormulaFactorPart[];
+		}
+	>;
 }): TypicalWorkFormulaBreakdownDto {
 	const tokenFormula = resolveVersionConfigTokenFormula(
 		params.formula,
@@ -917,11 +972,17 @@ export function buildTypicalWorkFormulaBreakdown(params: {
 		"N";
 
 	const totalLabel = formatBreakdownNumber(params.total);
+	const paramCoefficientValueLabels = Object.fromEntries(
+		Object.entries(params.paramCoefficientDetails ?? {})
+			.filter(([, detail]) => detail.aggregation === "max")
+			.map(([code, detail]) => [code, detail.formulaValueLabel]),
+	);
 	const valuesFormula = formatWorkFormulaReadableWithValues(namedTokens, {
 		norm: params.norm,
 		paramCoefficients,
 		formData: ctx.formData,
 		resolveFactorCoeff: params.resolveFactorCoeff,
+		paramCoefficientValueLabels,
 	});
 	const expanded = valuesFormula
 		? `${valuesFormula} = ${totalLabel}`
@@ -937,6 +998,7 @@ export function buildTypicalWorkFormulaBreakdown(params: {
 			paramNames: params.paramNames,
 			formData: ctx.formData,
 			resolveFactorCoeff: params.resolveFactorCoeff,
+			paramCoefficientDetails: params.paramCoefficientDetails,
 		}),
 		baseNorm: params.norm,
 		coefficient: params.coefficient,

@@ -218,4 +218,55 @@ const v2_work_formula_util_1 = require("./v2-work-formula.util");
         ]);
         (0, vitest_1.expect)(breakdown.total).toBe(60);
     });
+    (0, vitest_1.it)("buildTypicalWorkFormulaBreakdown expands multi-arch max coefficients", () => {
+        const formulaText = "N × коэф(readyPromReports)";
+        const parsed = (0, v2_work_formula_util_1.parseWorkFormulaText)(formulaText);
+        (0, vitest_1.expect)(parsed.error).toBeNull();
+        const terms = (0, v2_work_terms_formula_util_1.tokensToTermsFormula)({
+            tokens: parsed.tokens,
+            text: formulaText,
+        });
+        const breakdown = (0, v2_typical_work_jsonlogic_util_1.buildTypicalWorkFormulaBreakdown)({
+            formula: terms,
+            formulaText,
+            terms,
+            rounding: (0, v2_typical_work_types_1.defaultWorkRounding)(),
+            norm: 33,
+            paramCoefficients: { readyPromReports: 1 },
+            paramNames: {
+                readyPromReports: "Наличие готовых промышленных витрин",
+            },
+            resolveFactorCoeff: (code) => (code === "readyPromReports" ? 1 : 1),
+            coefficient: 1,
+            total: 33,
+            paramCoefficientDetails: {
+                readyPromReports: {
+                    value: 1,
+                    aggregation: "max",
+                    formulaValueLabel: "max(0.5, 1)",
+                    parts: [
+                        {
+                            sourceLabel: "вава",
+                            answerLabel: "Да",
+                            coefficient: 0.5,
+                        },
+                        {
+                            sourceLabel: "выавыавы",
+                            answerLabel: "Нет",
+                            coefficient: 1,
+                        },
+                    ],
+                },
+            },
+        });
+        (0, vitest_1.expect)(breakdown.expanded).toBe("33 × max(0.5, 1) = 33");
+        (0, vitest_1.expect)(breakdown.factors[0]).toMatchObject({
+            paramCode: "readyPromReports",
+            paramName: "Наличие готовых промышленных витрин",
+            value: 1,
+            valueLabel: "max(0.5, 1)",
+            aggregation: "max",
+        });
+        (0, vitest_1.expect)(breakdown.factors[0]?.parts).toHaveLength(2);
+    });
 });

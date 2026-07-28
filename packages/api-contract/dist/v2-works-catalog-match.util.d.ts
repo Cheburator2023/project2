@@ -127,6 +127,12 @@ export declare function readValueAtSchemaPointer(root: Record<string, unknown>, 
  * UI хранит dataProcess/dataMart/modelService как массив записей — берём первую.
  */
 export declare function flattenSourceContextValue(value: unknown): Record<string, unknown>;
+export type LaborFieldValueWithSource = {
+    value: unknown;
+    sourceLabel: string | null;
+};
+/** Ищет все вхождения поля по коду с подписью арх-компонента (name и т.п.). */
+export declare function findFieldValuesWithSourceLabels(formData: Record<string, unknown>, fieldCode: string): LaborFieldValueWithSource[];
 /** Ищет значение поля по коду в глубине formData (массивы арх. блоков и т.п.). */
 export declare function findFieldValueInFormData(formData: Record<string, unknown>, fieldCode: string): unknown;
 /** Контекст для коэффициентов: строка arch-компонента + поля formData вне строки (generalInfo и т.д.). */
@@ -155,8 +161,26 @@ export type ByValueLaborCoefficientRow = {
     valueLabel: string | null;
     coefficient: number;
 };
+export type LaborCoefficientAnswerPart = {
+    sourceLabel: string | null;
+    answerLabel: string;
+    coefficient: number;
+};
+export type LaborCoefficientResolvedDetail = {
+    paramCode: string;
+    value: number;
+    aggregation: "single" | "max";
+    /** Подстановка в разборе формулы: `0.5` или `max(0.5, 1)`. */
+    formulaValueLabel: string;
+    parts: LaborCoefficientAnswerPart[];
+};
+/**
+ * Детальный разбор коэффициента «по значениям» с учётом нескольких
+ * арх-компонентов: части по каждому ответу + агрегация max.
+ */
+export declare function resolveByValueLaborParamCoefficientDetails(source: Record<string, unknown>, rows: readonly ByValueLaborCoefficientRow[], formData?: Record<string, unknown> | null): Record<string, LaborCoefficientResolvedDetail>;
 /** Коэффициенты режима «По значениям» по фактическому ответу в анкете. */
-export declare function resolveByValueLaborParamCoefficients(source: Record<string, unknown>, rows: readonly ByValueLaborCoefficientRow[]): Record<string, number>;
+export declare function resolveByValueLaborParamCoefficients(source: Record<string, unknown>, rows: readonly ByValueLaborCoefficientRow[], formData?: Record<string, unknown> | null): Record<string, number>;
 export type TypicalWorkAnyOfLaborParamLike = {
     paramCode: string;
     paramName?: string | null;

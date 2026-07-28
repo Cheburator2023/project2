@@ -323,6 +323,9 @@ function scalarRuleValueMatches(actual, rule) {
 }
 /** Сопоставление значения поля анкеты с кодом/меткой из справочника или схемы. */
 export function coerceNumericLaborActual(actual) {
+    if (Array.isArray(actual)) {
+        return actual.map((item) => coerceNumericLaborActual(item));
+    }
     if (typeof actual === "string") {
         const trimmed = actual.trim();
         if (!trimmed)
@@ -357,6 +360,41 @@ export function readValueAtSchemaPointer(root, pointer) {
     }
     return cur;
 }
+function isPresentLaborLookupValue(value) {
+    return value !== undefined && value !== null && value !== "";
+}
+function toLaborLookupItems(value) {
+    if (!isPresentLaborLookupValue(value))
+        return [];
+    if (Array.isArray(value)) {
+        return value.flatMap((item) => toLaborLookupItems(item));
+    }
+    return [value];
+}
+function laborLookupItemKey(value) {
+    if (typeof value === "string")
+        return `s:${value}`;
+    if (typeof value === "number")
+        return `n:${value}`;
+    if (typeof value === "boolean")
+        return `b:${value ? "1" : "0"}`;
+    return `j:${JSON.stringify(value)}`;
+}
+function mergeLaborLookupValue(existing, next) {
+    const merged = [...toLaborLookupItems(existing), ...toLaborLookupItems(next)];
+    if (merged.length === 0)
+        return undefined;
+    const seen = new Set();
+    const deduped = [];
+    for (const item of merged) {
+        const key = laborLookupItemKey(item);
+        if (seen.has(key))
+            continue;
+        seen.add(key);
+        deduped.push(item);
+    }
+    return deduped.length === 1 ? deduped[0] : deduped;
+}
 /**
  * Разворачивает значение sourceContextPaths в плоский объект полей.
  * UI хранит dataProcess/dataMart/modelService как массив записей — берём первую.
@@ -374,39 +412,64 @@ export function flattenSourceContextValue(value) {
     }
     return { ...value };
 }
-/** Ищет значение поля по коду в глубине formData (массивы арх. блоков и т.п.). */
-export function findFieldValueInFormData(formData, fieldCode) {
+function readArchComponentSourceLabel(record, fallbackIndex) {
+    for (const key of ["name", "title", "label", "modelName"]) {
+        const raw = record[key];
+        if (typeof raw === "string" && raw.trim())
+            return raw.trim();
+    }
+    if (fallbackIndex != null && fallbackIndex >= 0) {
+        return `Компонент ${fallbackIndex + 1}`;
+    }
+    return null;
+}
+/** Ищет все вхождения поля по коду с подписью арх-компонента (name и т.п.). */
+export function findFieldValuesWithSourceLabels(formData, fieldCode) {
     const code = fieldCode.trim();
     if (!code)
-        return undefined;
-    const visit = (node) => {
+        return [];
+    const results = [];
+    const seen = new Set();
+    const push = (value, sourceLabel) => {
+        for (const item of toLaborLookupItems(value)) {
+            const key = `${sourceLabel ?? ""}|${laborLookupItemKey(item)}`;
+            if (seen.has(key))
+                continue;
+            seen.add(key);
+            results.push({ value: item, sourceLabel });
+        }
+    };
+    const visit = (node, parentLabel, arrayIndex) => {
         if (node == null || typeof node !== "object")
-            return undefined;
+            return;
         if (Array.isArray(node)) {
-            for (const item of node) {
-                const found = visit(item);
-                if (found !== undefined)
-                    return found;
-            }
-            return undefined;
+            node.forEach((item, index) => visit(item, parentLabel, index));
+            return;
         }
         const record = node;
-        if (Object.hasOwn(record, code))
-            return record[code];
-        for (const child of Object.values(record)) {
-            const found = visit(child);
-            if (found !== undefined)
-                return found;
+        const ownLabel = readArchComponentSourceLabel(record, arrayIndex) ?? parentLabel;
+        if (Object.hasOwn(record, code)) {
+            push(record[code], ownLabel);
         }
-        return undefined;
+        for (const child of Object.values(record)) {
+            visit(child, ownLabel, null);
+        }
     };
-    return visit(formData);
+    visit(formData, null, null);
+    return results;
+}
+/** Ищет значение поля по коду в глубине formData (массивы арх. блоков и т.п.). */
+export function findFieldValueInFormData(formData, fieldCode) {
+    const values = findFieldValuesWithSourceLabels(formData, fieldCode).map((row) => row.value);
+    if (values.length === 0)
+        return undefined;
+    return values.length === 1 ? values[0] : values;
 }
 /** Контекст для коэффициентов: строка arch-компонента + поля formData вне строки (generalInfo и т.д.). */
 export function buildLaborCoefficientLookupSource(source, formData, schemaParams, paramCodes) {
     const merged = { ...source };
     const codes = new Set(paramCodes);
-    const isPresent = (value) => value !== undefined && value !== null && value !== "";
+    const isPresent = (value) => isPresentLaborLookupValue(value);
     for (const param of schemaParams) {
         if (!codes.has(param.code))
             continue;
@@ -417,7 +480,7 @@ export function buildLaborCoefficientLookupSource(source, formData, schemaParams
             continue;
         const fromForm = readValueAtSchemaPointer(formData, pointer);
         if (isPresent(fromForm) || typeof fromForm === "boolean") {
-            merged[param.code] = fromForm;
+            merged[param.code] = mergeLaborLookupValue(merged[param.code], fromForm);
         }
     }
     // Одинаковые названия полей на разных арх. компонентах (напр. «Сложность реализации»
@@ -444,24 +507,25 @@ export function buildLaborCoefficientLookupSource(source, formData, schemaParams
                 continue;
             const aliasValue = merged[alias.code];
             if (isPresent(aliasValue) || typeof aliasValue === "boolean") {
-                merged[param.code] = aliasValue;
+                merged[param.code] = mergeLaborLookupValue(merged[param.code], aliasValue);
                 break;
             }
         }
     }
     // Fallback: поле лежит в массиве арх. блока, а schemaPointer/schemaParams недоступны.
     for (const code of codes) {
-        if (isPresent(merged[code]) || typeof merged[code] === "boolean")
-            continue;
         const fromDeep = findFieldValueInFormData(formData, code);
         if (isPresent(fromDeep) || typeof fromDeep === "boolean") {
-            merged[code] = fromDeep;
+            merged[code] = mergeLaborLookupValue(merged[code], fromDeep);
         }
     }
     return merged;
 }
 /** Сопоставление значения поля анкеты с кодом/меткой из справочника или схемы. */
 export function laborValueMatches(actual, valueCode, valueLabel) {
+    if (Array.isArray(actual)) {
+        return actual.some((item) => laborValueMatches(item, valueCode, valueLabel));
+    }
     const normalizedActual = coerceNumericLaborActual(actual);
     const actualStr = String(normalizedActual).trim();
     if (valueLabel != null && String(valueLabel).trim() !== "") {
@@ -645,9 +709,49 @@ function expectedBooleanLaborValue(valueCode, valueLabel) {
     }
     return null;
 }
-/** Коэффициенты режима «По значениям» по фактическому ответу в анкете. */
-export function resolveByValueLaborParamCoefficients(source, rows) {
-    const paramCoefficients = {};
+function formatLaborAnswerLabel(actual) {
+    if (actual === true)
+        return "Да";
+    if (actual === false)
+        return "Нет";
+    if (actual == null)
+        return "—";
+    const text = String(actual).trim();
+    return text || "—";
+}
+function formatLaborCoeffNumber(value) {
+    if (!Number.isFinite(value))
+        return "?";
+    const rounded = Math.round(value * 10000) / 10000;
+    if (Number.isInteger(rounded))
+        return String(rounded);
+    return String(rounded)
+        .replace(/(\.\d*?)0+$/, "$1")
+        .replace(/\.$/, "");
+}
+function matchLaborCoefficientRow(actual, paramRows) {
+    for (const row of paramRows) {
+        if (laborValueMatches(actual, row.valueCode, row.valueLabel)) {
+            return row;
+        }
+    }
+    return null;
+}
+function coerceBooleanLaborDefault(actual, paramRows) {
+    if (actual !== undefined)
+        return actual;
+    const booleanValues = new Set(paramRows.map((row) => expectedBooleanLaborValue(row.valueCode, row.valueLabel)));
+    if (booleanValues.has(true) && booleanValues.has(false)) {
+        return false;
+    }
+    return actual;
+}
+/**
+ * Детальный разбор коэффициента «по значениям» с учётом нескольких
+ * арх-компонентов: части по каждому ответу + агрегация max.
+ */
+export function resolveByValueLaborParamCoefficientDetails(source, rows, formData) {
+    const details = {};
     const rowsByParam = new Map();
     for (const row of rows) {
         const paramRows = rowsByParam.get(row.paramCode) ?? [];
@@ -656,22 +760,60 @@ export function resolveByValueLaborParamCoefficients(source, rows) {
     }
     for (const [paramCode, paramRows] of rowsByParam) {
         const paramName = paramRows[0]?.paramName ?? null;
-        let actual = readLaborParamAnswer(source, paramCode, paramName);
-        // Неотмеченный чекбокс часто отсутствует в formData целиком. Если набор
-        // коэффициентов явно логический (есть и Да/true, и Нет/false), отсутствие
-        // поля эквивалентно false и должно выбрать коэффициент строки «Нет».
-        if (actual === undefined) {
-            const booleanValues = new Set(paramRows.map((row) => expectedBooleanLaborValue(row.valueCode, row.valueLabel)));
-            if (booleanValues.has(true) && booleanValues.has(false)) {
-                actual = false;
-            }
+        let actual = coerceBooleanLaborDefault(readLaborParamAnswer(source, paramCode, paramName), paramRows);
+        const contextual = formData != null
+            ? findFieldValuesWithSourceLabels(formData, paramCode)
+            : [];
+        const answerParts = contextual.length > 0
+            ? contextual
+            : Array.isArray(actual)
+                ? actual.map((value) => ({ value, sourceLabel: null }))
+                : actual === undefined
+                    ? []
+                    : [{ value: actual, sourceLabel: null }];
+        if (answerParts.length === 0 && actual === undefined) {
+            continue;
         }
-        for (const row of paramRows) {
-            if (laborValueMatches(actual, row.valueCode, row.valueLabel)) {
-                paramCoefficients[paramCode] = row.coefficient;
-                break;
-            }
+        if (answerParts.length === 0 && actual !== undefined) {
+            answerParts.push({ value: actual, sourceLabel: null });
         }
+        const parts = [];
+        for (const part of answerParts) {
+            const matched = matchLaborCoefficientRow(part.value, paramRows);
+            if (!matched)
+                continue;
+            parts.push({
+                sourceLabel: part.sourceLabel,
+                answerLabel: matched.valueLabel?.trim() ||
+                    matched.valueCode?.trim() ||
+                    formatLaborAnswerLabel(part.value),
+                coefficient: matched.coefficient,
+            });
+        }
+        if (parts.length === 0)
+            continue;
+        const value = parts.length === 1
+            ? parts[0].coefficient
+            : Math.max(...parts.map((part) => part.coefficient));
+        const aggregation = parts.length > 1 ? "max" : "single";
+        details[paramCode] = {
+            paramCode,
+            value,
+            aggregation,
+            formulaValueLabel: aggregation === "max"
+                ? `max(${parts.map((part) => formatLaborCoeffNumber(part.coefficient)).join(", ")})`
+                : formatLaborCoeffNumber(value),
+            parts,
+        };
+    }
+    return details;
+}
+/** Коэффициенты режима «По значениям» по фактическому ответу в анкете. */
+export function resolveByValueLaborParamCoefficients(source, rows, formData) {
+    const details = resolveByValueLaborParamCoefficientDetails(source, rows, formData);
+    const paramCoefficients = {};
+    for (const [paramCode, detail] of Object.entries(details)) {
+        paramCoefficients[paramCode] = detail.value;
     }
     return paramCoefficients;
 }

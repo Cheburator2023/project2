@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
 	buildLaborCoefficientLookupSource,
 	coerceNumericLaborActual,
+	findFieldValueInFormData,
 	flattenSourceContextValue,
 	laborValueMatches,
+	resolveByValueLaborParamCoefficientDetails,
 	resolveByValueLaborParamCoefficients,
 } from "./v2-works-catalog-match.util";
 
@@ -55,6 +57,13 @@ describe("numeric labor coefficient ranges", () => {
 		expect(laborValueMatches("Да", null, "Да")).toBe(true);
 		expect(laborValueMatches("Нет", null, "Нет")).toBe(true);
 		expect(laborValueMatches(true, null, "Нет")).toBe(false);
+	});
+
+	it("matches labor values against array answers", () => {
+		expect(laborValueMatches(["Низкая", "Высокая"], "Высокая", "Высокая")).toBe(
+			true,
+		);
+		expect(laborValueMatches(["Нет", "Иногда"], "Да", "Да")).toBe(false);
 	});
 
 	it("resolves complexity and readyPromReports coefficients from form answers", () => {
@@ -238,6 +247,94 @@ describe("numeric labor coefficient ranges", () => {
 				},
 			]),
 		).toEqual({ field_qMxSfHk1: 1.5 });
+	});
+
+	it("collects all matching field values from multiple arch components", () => {
+		const formData = {
+			detailInfo: {
+				dataProcess: [
+					{ field_archComplexity: "Низкая" },
+					{ field_archComplexity: "Высокая" },
+				],
+			},
+		};
+		expect(findFieldValueInFormData(formData, "field_archComplexity")).toEqual([
+			"Низкая",
+			"Высокая",
+		]);
+	});
+
+	it("resolves multi-model readyPromReports with max and source labels", () => {
+		const formData = {
+			detailInfo: {
+				modelsList: [
+					{ name: "вава", readyPromReports: true },
+					{ name: "вавыаы" },
+					{ name: "выавыавы", readyPromReports: false },
+				],
+			},
+		};
+		const lookup = buildLaborCoefficientLookupSource(
+			{},
+			formData,
+			[],
+			["readyPromReports"],
+		);
+		expect(lookup.readyPromReports).toEqual([true, false]);
+		const details = resolveByValueLaborParamCoefficientDetails(
+			lookup,
+			[
+				{
+					paramCode: "readyPromReports",
+					paramName: "Наличие готовых промышленных витрин",
+					valueCode: "Да",
+					valueLabel: "Да",
+					coefficient: 0.5,
+				},
+				{
+					paramCode: "readyPromReports",
+					paramName: "Наличие готовых промышленных витрин",
+					valueCode: "Нет",
+					valueLabel: "Нет",
+					coefficient: 1,
+				},
+			],
+			formData,
+		);
+		expect(details.readyPromReports).toMatchObject({
+			value: 1,
+			aggregation: "max",
+			formulaValueLabel: "max(0.5, 1)",
+		});
+		expect(details.readyPromReports?.parts).toEqual([
+			{ sourceLabel: "вава", answerLabel: "Да", coefficient: 0.5 },
+			{ sourceLabel: "выавыавы", answerLabel: "Нет", coefficient: 1 },
+		]);
+	});
+
+	it("uses max coefficient when several component values match", () => {
+		const coeffs = resolveByValueLaborParamCoefficients(
+			{
+				complexity: ["Низкая", "Высокая"],
+			},
+			[
+				{
+					paramCode: "complexity",
+					paramName: "Сложность",
+					valueCode: "Низкая",
+					valueLabel: "Низкая",
+					coefficient: 0.8,
+				},
+				{
+					paramCode: "complexity",
+					paramName: "Сложность",
+					valueCode: "Высокая",
+					valueLabel: "Высокая",
+					coefficient: 1.4,
+				},
+			],
+		);
+		expect(coeffs).toEqual({ complexity: 1.4 });
 	});
 
 	it("flattenSourceContextValue unwraps arch-object arrays", () => {

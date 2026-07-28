@@ -302,6 +302,8 @@ export function formatWorkFormulaReadableWithValues(
 		paramCoefficients: Record<string, number>;
 		formData?: Record<string, unknown>;
 		resolveFactorCoeff?: (paramCode: string) => number;
+		/** Подписи для мульти-арх коэффициентов: `max(0.5, 1)` вместо свёрнутого числа. */
+		paramCoefficientValueLabels?: Record<string, string>;
 	},
 ): string {
 	const resolveCoeff =
@@ -318,6 +320,9 @@ export function formatWorkFormulaReadableWithValues(
 					return formatReadableFormulaNumber(ctx.norm);
 				case "param_coeff":
 				case "param_anyof": {
+					const labeled =
+						ctx.paramCoefficientValueLabels?.[token.paramCode]?.trim();
+					if (labeled) return labeled;
 					const value = resolveCoeff(token.paramCode);
 					return Number.isFinite(value)
 						? formatReadableFormulaNumber(value)

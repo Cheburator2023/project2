@@ -42,6 +42,8 @@ export declare function formatWorkFormulaReadableWithValues(tokens: V2WorkFormul
     paramCoefficients: Record<string, number>;
     formData?: Record<string, unknown>;
     resolveFactorCoeff?: (paramCode: string) => number;
+    /** Подписи для мульти-арх коэффициентов: `max(0.5, 1)` вместо свёрнутого числа. */
+    paramCoefficientValueLabels?: Record<string, string>;
 }): string;
 /** Краткая запись для блока «Общая формула норматива» (N, Кэф-П1, …). */
 export declare function formatWorkFormulaGeneralSummary(tokens: V2WorkFormulaToken[], paramOrder: readonly string[]): string;

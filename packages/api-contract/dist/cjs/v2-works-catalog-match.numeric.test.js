@@ -27,6 +27,10 @@ const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
         (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.laborValueMatches)("Нет", null, "Нет")).toBe(true);
         (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.laborValueMatches)(true, null, "Нет")).toBe(false);
     });
+    (0, vitest_1.it)("matches labor values against array answers", () => {
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.laborValueMatches)(["Низкая", "Высокая"], "Высокая", "Высокая")).toBe(true);
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.laborValueMatches)(["Нет", "Иногда"], "Да", "Да")).toBe(false);
+    });
     (0, vitest_1.it)("resolves complexity and readyPromReports coefficients from form answers", () => {
         const coeffs = (0, v2_works_catalog_match_util_1.resolveByValueLaborParamCoefficients)({
             complexity: "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
@@ -176,6 +180,79 @@ const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
                 coefficient: 1,
             },
         ])).toEqual({ field_qMxSfHk1: 1.5 });
+    });
+    (0, vitest_1.it)("collects all matching field values from multiple arch components", () => {
+        const formData = {
+            detailInfo: {
+                dataProcess: [
+                    { field_archComplexity: "Низкая" },
+                    { field_archComplexity: "Высокая" },
+                ],
+            },
+        };
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.findFieldValueInFormData)(formData, "field_archComplexity")).toEqual([
+            "Низкая",
+            "Высокая",
+        ]);
+    });
+    (0, vitest_1.it)("resolves multi-model readyPromReports with max and source labels", () => {
+        const formData = {
+            detailInfo: {
+                modelsList: [
+                    { name: "вава", readyPromReports: true },
+                    { name: "вавыаы" },
+                    { name: "выавыавы", readyPromReports: false },
+                ],
+            },
+        };
+        const lookup = (0, v2_works_catalog_match_util_1.buildLaborCoefficientLookupSource)({}, formData, [], ["readyPromReports"]);
+        (0, vitest_1.expect)(lookup.readyPromReports).toEqual([true, false]);
+        const details = (0, v2_works_catalog_match_util_1.resolveByValueLaborParamCoefficientDetails)(lookup, [
+            {
+                paramCode: "readyPromReports",
+                paramName: "Наличие готовых промышленных витрин",
+                valueCode: "Да",
+                valueLabel: "Да",
+                coefficient: 0.5,
+            },
+            {
+                paramCode: "readyPromReports",
+                paramName: "Наличие готовых промышленных витрин",
+                valueCode: "Нет",
+                valueLabel: "Нет",
+                coefficient: 1,
+            },
+        ], formData);
+        (0, vitest_1.expect)(details.readyPromReports).toMatchObject({
+            value: 1,
+            aggregation: "max",
+            formulaValueLabel: "max(0.5, 1)",
+        });
+        (0, vitest_1.expect)(details.readyPromReports?.parts).toEqual([
+            { sourceLabel: "вава", answerLabel: "Да", coefficient: 0.5 },
+            { sourceLabel: "выавыавы", answerLabel: "Нет", coefficient: 1 },
+        ]);
+    });
+    (0, vitest_1.it)("uses max coefficient when several component values match", () => {
+        const coeffs = (0, v2_works_catalog_match_util_1.resolveByValueLaborParamCoefficients)({
+            complexity: ["Низкая", "Высокая"],
+        }, [
+            {
+                paramCode: "complexity",
+                paramName: "Сложность",
+                valueCode: "Низкая",
+                valueLabel: "Низкая",
+                coefficient: 0.8,
+            },
+            {
+                paramCode: "complexity",
+                paramName: "Сложность",
+                valueCode: "Высокая",
+                valueLabel: "Высокая",
+                coefficient: 1.4,
+            },
+        ]);
+        (0, vitest_1.expect)(coeffs).toEqual({ complexity: 1.4 });
     });
     (0, vitest_1.it)("flattenSourceContextValue unwraps arch-object arrays", () => {
         (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.flattenSourceContextValue)([{ field_qMxSfHk1: true, a: 1 }])).toEqual({ field_qMxSfHk1: true, a: 1 });

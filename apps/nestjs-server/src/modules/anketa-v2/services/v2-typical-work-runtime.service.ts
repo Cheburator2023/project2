@@ -16,6 +16,7 @@ import {
 	buildLaborCoefficientLookupSource,
 	parseStoredTypicalWorkCalculationLogic,
 	resolveActiveNormOnDate,
+	resolveByValueLaborParamCoefficientDetails,
 	resolveByValueLaborParamCoefficients,
 	resolveLaborAnyOfCoefficient,
 	resolveStreamFromSourceType,
@@ -259,6 +260,7 @@ function resolveParamCoefficients(ctx: RuntimeWorkContext): Record<string, numbe
 	const resolvedCoeffs = resolveByValueLaborParamCoefficients(
 		lookupSource,
 		remappedRows,
+		ctx.formData,
 	);
 	for (let index = 0; index < byValueRows.length; index++) {
 		const original = byValueRows[index]!;
@@ -347,6 +349,81 @@ function buildRuntimeFactorCoeffResolver(
 			listLaborParamCodes(ctx),
 		),
 	});
+}
+
+function buildRuntimeParamCoefficientDetails(ctx: RuntimeWorkContext) {
+	const laborParamsByCode = new Map(
+		ctx.laborParams.map((row) => [row.paramCode, row]),
+	);
+	const byValueRows = ctx.laborRows
+		.filter((row) => {
+			if (ctx.hiddenParamCodes?.has(row.paramCode)) return false;
+			const header = laborParamsByCode.get(row.paramCode);
+			if (header?.kind === "any_of") return false;
+			const schemaBound = Boolean(header?.schemaFieldUid?.trim());
+			if (
+				!schemaBound &&
+				!isWorkCoefficientValueAvailable(
+					{
+						paramCode: row.paramCode,
+						valueCode: row.valueCode,
+						valueLabel: row.valueLabel,
+						schemaFieldUid: header?.schemaFieldUid,
+					},
+					ctx.coefficientValueCatalog,
+					ctx.atDate,
+				)
+			) {
+				return false;
+			}
+			return true;
+		})
+		.map((row) => ({
+			paramCode: row.paramCode,
+			paramName: row.paramName,
+			valueCode: row.valueCode,
+			valueLabel: row.valueLabel,
+			coefficient: decimalToNumber(row.coefficient),
+		}));
+	const remappedRows = remapLaborCoefficientRowsForSchema(
+		byValueRows,
+		ctx.schemaParams,
+	);
+	const lookupSource = buildLaborCoefficientLookupSource(
+		ctx.source,
+		ctx.formData,
+		ctx.schemaParams,
+		listLaborParamCodes(ctx),
+	);
+	const remappedDetails = resolveByValueLaborParamCoefficientDetails(
+		lookupSource,
+		remappedRows,
+		ctx.formData,
+	);
+	const details: Record<
+		string,
+		{
+			value: number;
+			aggregation: "single" | "max";
+			formulaValueLabel: string;
+			parts: Array<{
+				sourceLabel: string | null;
+				answerLabel: string;
+				coefficient: number;
+			}>;
+		}
+	> = { ...remappedDetails };
+	for (let index = 0; index < byValueRows.length; index++) {
+		const original = byValueRows[index]!;
+		const remapped = remappedRows[index]!;
+		const detail = remappedDetails[remapped.paramCode];
+		if (!detail) continue;
+		details[remapped.paramCode] = detail;
+		if (remapped.paramCode !== original.paramCode) {
+			details[original.paramCode] = detail;
+		}
+	}
+	return details;
 }
 
 function listAnyOfLaborParams(
@@ -694,6 +771,7 @@ export class V2TypicalWorkRuntimeService {
 				resolveFactorCoeff,
 				coefficient,
 				total,
+				paramCoefficientDetails: buildRuntimeParamCoefficientDetails(ctx),
 			});
 
 			tasks.push({

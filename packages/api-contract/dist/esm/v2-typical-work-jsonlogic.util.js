@@ -573,7 +573,7 @@ function formatBreakdownNumber(value) {
 function collectFormulaFactorLines(params) {
     const seen = new Set();
     const factors = [];
-    const push = (paramCode, paramName, value) => {
+    const push = (paramCode, paramName, value, extra) => {
         const key = paramCode.trim() || paramName.trim();
         if (!key || seen.has(key))
             return;
@@ -585,6 +585,9 @@ function collectFormulaFactorLines(params) {
             paramCode: paramCode.trim() || key,
             paramName: displayName,
             value,
+            ...(extra?.valueLabel ? { valueLabel: extra.valueLabel } : {}),
+            ...(extra?.aggregation ? { aggregation: extra.aggregation } : {}),
+            ...(extra?.parts?.length ? { parts: extra.parts } : {}),
         });
     };
     for (const token of params.tokens) {
@@ -592,7 +595,14 @@ function collectFormulaFactorLines(params) {
             const name = params.paramNames?.[token.paramCode]?.trim() ||
                 token.paramName?.trim() ||
                 token.paramCode;
-            push(token.paramCode, name, params.resolveFactorCoeff(token.paramCode));
+            const detail = params.paramCoefficientDetails?.[token.paramCode];
+            push(token.paramCode, name, detail?.value ?? params.resolveFactorCoeff(token.paramCode), detail
+                ? {
+                    valueLabel: detail.formulaValueLabel,
+                    aggregation: detail.aggregation,
+                    parts: detail.parts,
+                }
+                : undefined);
             continue;
         }
         if (token.kind === "arch_count_coeff") {
@@ -607,7 +617,14 @@ function collectFormulaFactorLines(params) {
                 const name = params.paramNames?.[factor.paramCode]?.trim() ||
                     factor.paramName?.trim() ||
                     factor.paramCode;
-                push(factor.paramCode, name, params.resolveFactorCoeff(factor.paramCode));
+                const detail = params.paramCoefficientDetails?.[factor.paramCode];
+                push(factor.paramCode, name, detail?.value ?? params.resolveFactorCoeff(factor.paramCode), detail
+                    ? {
+                        valueLabel: detail.formulaValueLabel,
+                        aggregation: detail.aggregation,
+                        parts: detail.parts,
+                    }
+                    : undefined);
             }
         }
     }
@@ -628,11 +645,15 @@ export function buildTypicalWorkFormulaBreakdown(params) {
         formatTermsSummary(params.terms.terms) ||
         "N";
     const totalLabel = formatBreakdownNumber(params.total);
+    const paramCoefficientValueLabels = Object.fromEntries(Object.entries(params.paramCoefficientDetails ?? {})
+        .filter(([, detail]) => detail.aggregation === "max")
+        .map(([code, detail]) => [code, detail.formulaValueLabel]));
     const valuesFormula = formatWorkFormulaReadableWithValues(namedTokens, {
         norm: params.norm,
         paramCoefficients,
         formData: ctx.formData,
         resolveFactorCoeff: params.resolveFactorCoeff,
+        paramCoefficientValueLabels,
     });
     const expanded = valuesFormula
         ? `${valuesFormula} = ${totalLabel}`
@@ -647,6 +668,7 @@ export function buildTypicalWorkFormulaBreakdown(params) {
             paramNames: params.paramNames,
             formData: ctx.formData,
             resolveFactorCoeff: params.resolveFactorCoeff,
+            paramCoefficientDetails: params.paramCoefficientDetails,
         }),
         baseNorm: params.norm,
         coefficient: params.coefficient,

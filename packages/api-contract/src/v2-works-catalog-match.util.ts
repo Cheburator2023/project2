@@ -489,6 +489,9 @@ function scalarRuleValueMatches(
 
 /** Сопоставление значения поля анкеты с кодом/меткой из справочника или схемы. */
 export function coerceNumericLaborActual(actual: unknown): unknown {
+	if (Array.isArray(actual)) {
+		return actual.map((item) => coerceNumericLaborActual(item));
+	}
 	if (typeof actual === "string") {
 		const trimmed = actual.trim();
 		if (!trimmed) return actual;
@@ -520,6 +523,39 @@ export function readValueAtSchemaPointer(
 	return cur;
 }
 
+function isPresentLaborLookupValue(value: unknown): boolean {
+	return value !== undefined && value !== null && value !== "";
+}
+
+function toLaborLookupItems(value: unknown): unknown[] {
+	if (!isPresentLaborLookupValue(value)) return [];
+	if (Array.isArray(value)) {
+		return value.flatMap((item) => toLaborLookupItems(item));
+	}
+	return [value];
+}
+
+function laborLookupItemKey(value: unknown): string {
+	if (typeof value === "string") return `s:${value}`;
+	if (typeof value === "number") return `n:${value}`;
+	if (typeof value === "boolean") return `b:${value ? "1" : "0"}`;
+	return `j:${JSON.stringify(value)}`;
+}
+
+function mergeLaborLookupValue(existing: unknown, next: unknown): unknown {
+	const merged = [...toLaborLookupItems(existing), ...toLaborLookupItems(next)];
+	if (merged.length === 0) return undefined;
+	const seen = new Set<string>();
+	const deduped: unknown[] = [];
+	for (const item of merged) {
+		const key = laborLookupItemKey(item);
+		if (seen.has(key)) continue;
+		seen.add(key);
+		deduped.push(item);
+	}
+	return deduped.length === 1 ? deduped[0] : deduped;
+}
+
 /**
  * Разворачивает значение sourceContextPaths в плоский объект полей.
  * UI хранит dataProcess/dataMart/modelService как массив записей — берём первую.
@@ -539,33 +575,80 @@ export function flattenSourceContextValue(
 	return { ...(value as Record<string, unknown>) };
 }
 
+export type LaborFieldValueWithSource = {
+	value: unknown;
+	sourceLabel: string | null;
+};
+
+function readArchComponentSourceLabel(
+	record: Record<string, unknown>,
+	fallbackIndex: number | null,
+): string | null {
+	for (const key of ["name", "title", "label", "modelName"]) {
+		const raw = record[key];
+		if (typeof raw === "string" && raw.trim()) return raw.trim();
+	}
+	if (fallbackIndex != null && fallbackIndex >= 0) {
+		return `Компонент ${fallbackIndex + 1}`;
+	}
+	return null;
+}
+
+/** Ищет все вхождения поля по коду с подписью арх-компонента (name и т.п.). */
+export function findFieldValuesWithSourceLabels(
+	formData: Record<string, unknown>,
+	fieldCode: string,
+): LaborFieldValueWithSource[] {
+	const code = fieldCode.trim();
+	if (!code) return [];
+
+	const results: LaborFieldValueWithSource[] = [];
+	const seen = new Set<string>();
+
+	const push = (value: unknown, sourceLabel: string | null) => {
+		for (const item of toLaborLookupItems(value)) {
+			const key = `${sourceLabel ?? ""}|${laborLookupItemKey(item)}`;
+			if (seen.has(key)) continue;
+			seen.add(key);
+			results.push({ value: item, sourceLabel });
+		}
+	};
+
+	const visit = (
+		node: unknown,
+		parentLabel: string | null,
+		arrayIndex: number | null,
+	): void => {
+		if (node == null || typeof node !== "object") return;
+		if (Array.isArray(node)) {
+			node.forEach((item, index) => visit(item, parentLabel, index));
+			return;
+		}
+		const record = node as Record<string, unknown>;
+		const ownLabel =
+			readArchComponentSourceLabel(record, arrayIndex) ?? parentLabel;
+		if (Object.hasOwn(record, code)) {
+			push(record[code], ownLabel);
+		}
+		for (const child of Object.values(record)) {
+			visit(child, ownLabel, null);
+		}
+	};
+
+	visit(formData, null, null);
+	return results;
+}
+
 /** Ищет значение поля по коду в глубине formData (массивы арх. блоков и т.п.). */
 export function findFieldValueInFormData(
 	formData: Record<string, unknown>,
 	fieldCode: string,
 ): unknown {
-	const code = fieldCode.trim();
-	if (!code) return undefined;
-
-	const visit = (node: unknown): unknown => {
-		if (node == null || typeof node !== "object") return undefined;
-		if (Array.isArray(node)) {
-			for (const item of node) {
-				const found = visit(item);
-				if (found !== undefined) return found;
-			}
-			return undefined;
-		}
-		const record = node as Record<string, unknown>;
-		if (Object.hasOwn(record, code)) return record[code];
-		for (const child of Object.values(record)) {
-			const found = visit(child);
-			if (found !== undefined) return found;
-		}
-		return undefined;
-	};
-
-	return visit(formData);
+	const values = findFieldValuesWithSourceLabels(formData, fieldCode).map(
+		(row) => row.value,
+	);
+	if (values.length === 0) return undefined;
+	return values.length === 1 ? values[0] : values;
 }
 
 /** Контекст для коэффициентов: строка arch-компонента + поля formData вне строки (generalInfo и т.д.). */
@@ -582,8 +665,7 @@ export function buildLaborCoefficientLookupSource(
 	const merged: Record<string, unknown> = { ...source };
 	const codes = new Set(paramCodes);
 
-	const isPresent = (value: unknown) =>
-		value !== undefined && value !== null && value !== "";
+	const isPresent = (value: unknown) => isPresentLaborLookupValue(value);
 
 	for (const param of schemaParams) {
 		if (!codes.has(param.code)) continue;
@@ -592,7 +674,7 @@ export function buildLaborCoefficientLookupSource(
 		if (!pointer) continue;
 		const fromForm = readValueAtSchemaPointer(formData, pointer);
 		if (isPresent(fromForm) || typeof fromForm === "boolean") {
-			merged[param.code] = fromForm;
+			merged[param.code] = mergeLaborLookupValue(merged[param.code], fromForm);
 		}
 	}
 
@@ -616,7 +698,10 @@ export function buildLaborCoefficientLookupSource(
 			if (aliasName !== name) continue;
 			const aliasValue = merged[alias.code];
 			if (isPresent(aliasValue) || typeof aliasValue === "boolean") {
-				merged[param.code] = aliasValue;
+				merged[param.code] = mergeLaborLookupValue(
+					merged[param.code],
+					aliasValue,
+				);
 				break;
 			}
 		}
@@ -624,10 +709,9 @@ export function buildLaborCoefficientLookupSource(
 
 	// Fallback: поле лежит в массиве арх. блока, а schemaPointer/schemaParams недоступны.
 	for (const code of codes) {
-		if (isPresent(merged[code]) || typeof merged[code] === "boolean") continue;
 		const fromDeep = findFieldValueInFormData(formData, code);
 		if (isPresent(fromDeep) || typeof fromDeep === "boolean") {
-			merged[code] = fromDeep;
+			merged[code] = mergeLaborLookupValue(merged[code], fromDeep);
 		}
 	}
 
@@ -640,6 +724,9 @@ export function laborValueMatches(
 	valueCode: string | null | undefined,
 	valueLabel: string | null | undefined,
 ): boolean {
+	if (Array.isArray(actual)) {
+		return actual.some((item) => laborValueMatches(item, valueCode, valueLabel));
+	}
 	const normalizedActual = coerceNumericLaborActual(actual);
 	const actualStr = String(normalizedActual).trim();
 
@@ -926,12 +1013,76 @@ function expectedBooleanLaborValue(
 	return null;
 }
 
-/** Коэффициенты режима «По значениям» по фактическому ответу в анкете. */
-export function resolveByValueLaborParamCoefficients(
+export type LaborCoefficientAnswerPart = {
+	sourceLabel: string | null;
+	answerLabel: string;
+	coefficient: number;
+};
+
+export type LaborCoefficientResolvedDetail = {
+	paramCode: string;
+	value: number;
+	aggregation: "single" | "max";
+	/** Подстановка в разборе формулы: `0.5` или `max(0.5, 1)`. */
+	formulaValueLabel: string;
+	parts: LaborCoefficientAnswerPart[];
+};
+
+function formatLaborAnswerLabel(actual: unknown): string {
+	if (actual === true) return "Да";
+	if (actual === false) return "Нет";
+	if (actual == null) return "—";
+	const text = String(actual).trim();
+	return text || "—";
+}
+
+function formatLaborCoeffNumber(value: number): string {
+	if (!Number.isFinite(value)) return "?";
+	const rounded = Math.round(value * 10000) / 10000;
+	if (Number.isInteger(rounded)) return String(rounded);
+	return String(rounded)
+		.replace(/(\.\d*?)0+$/, "$1")
+		.replace(/\.$/, "");
+}
+
+function matchLaborCoefficientRow(
+	actual: unknown,
+	paramRows: readonly ByValueLaborCoefficientRow[],
+): ByValueLaborCoefficientRow | null {
+	for (const row of paramRows) {
+		if (laborValueMatches(actual, row.valueCode, row.valueLabel)) {
+			return row;
+		}
+	}
+	return null;
+}
+
+function coerceBooleanLaborDefault(
+	actual: unknown,
+	paramRows: readonly ByValueLaborCoefficientRow[],
+): unknown {
+	if (actual !== undefined) return actual;
+	const booleanValues = new Set(
+		paramRows.map((row) =>
+			expectedBooleanLaborValue(row.valueCode, row.valueLabel),
+		),
+	);
+	if (booleanValues.has(true) && booleanValues.has(false)) {
+		return false;
+	}
+	return actual;
+}
+
+/**
+ * Детальный разбор коэффициента «по значениям» с учётом нескольких
+ * арх-компонентов: части по каждому ответу + агрегация max.
+ */
+export function resolveByValueLaborParamCoefficientDetails(
 	source: Record<string, unknown>,
 	rows: readonly ByValueLaborCoefficientRow[],
-): Record<string, number> {
-	const paramCoefficients: Record<string, number> = {};
+	formData?: Record<string, unknown> | null,
+): Record<string, LaborCoefficientResolvedDetail> {
+	const details: Record<string, LaborCoefficientResolvedDetail> = {};
 	const rowsByParam = new Map<string, ByValueLaborCoefficientRow[]>();
 	for (const row of rows) {
 		const paramRows = rowsByParam.get(row.paramCode) ?? [];
@@ -941,28 +1092,79 @@ export function resolveByValueLaborParamCoefficients(
 
 	for (const [paramCode, paramRows] of rowsByParam) {
 		const paramName = paramRows[0]?.paramName ?? null;
-		let actual = readLaborParamAnswer(source, paramCode, paramName);
+		const actual = coerceBooleanLaborDefault(
+			readLaborParamAnswer(source, paramCode, paramName),
+			paramRows,
+		);
 
-		// Неотмеченный чекбокс часто отсутствует в formData целиком. Если набор
-		// коэффициентов явно логический (есть и Да/true, и Нет/false), отсутствие
-		// поля эквивалентно false и должно выбрать коэффициент строки «Нет».
-		if (actual === undefined) {
-			const booleanValues = new Set(
-				paramRows.map((row) =>
-					expectedBooleanLaborValue(row.valueCode, row.valueLabel),
-				),
-			);
-			if (booleanValues.has(true) && booleanValues.has(false)) {
-				actual = false;
-			}
+		const contextual =
+			formData != null
+				? findFieldValuesWithSourceLabels(formData, paramCode)
+				: [];
+		const answerParts: Array<{ value: unknown; sourceLabel: string | null }> =
+			contextual.length > 0
+				? contextual
+				: Array.isArray(actual)
+					? actual.map((value) => ({ value, sourceLabel: null }))
+					: actual === undefined
+						? []
+						: [{ value: actual, sourceLabel: null }];
+
+		if (answerParts.length === 0 && actual === undefined) {
+			continue;
+		}
+		if (answerParts.length === 0 && actual !== undefined) {
+			answerParts.push({ value: actual, sourceLabel: null });
 		}
 
-		for (const row of paramRows) {
-			if (laborValueMatches(actual, row.valueCode, row.valueLabel)) {
-				paramCoefficients[paramCode] = row.coefficient;
-				break;
-			}
+		const parts: LaborCoefficientAnswerPart[] = [];
+		for (const part of answerParts) {
+			const matched = matchLaborCoefficientRow(part.value, paramRows);
+			if (!matched) continue;
+			parts.push({
+				sourceLabel: part.sourceLabel,
+				answerLabel:
+					matched.valueLabel?.trim() ||
+					matched.valueCode?.trim() ||
+					formatLaborAnswerLabel(part.value),
+				coefficient: matched.coefficient,
+			});
 		}
+		if (parts.length === 0) continue;
+
+		const value =
+			parts.length === 1
+				? parts[0]!.coefficient
+				: Math.max(...parts.map((part) => part.coefficient));
+		const aggregation = parts.length > 1 ? "max" : "single";
+		details[paramCode] = {
+			paramCode,
+			value,
+			aggregation,
+			formulaValueLabel:
+				aggregation === "max"
+					? `max(${parts.map((part) => formatLaborCoeffNumber(part.coefficient)).join(", ")})`
+					: formatLaborCoeffNumber(value),
+			parts,
+		};
+	}
+	return details;
+}
+
+/** Коэффициенты режима «По значениям» по фактическому ответу в анкете. */
+export function resolveByValueLaborParamCoefficients(
+	source: Record<string, unknown>,
+	rows: readonly ByValueLaborCoefficientRow[],
+	formData?: Record<string, unknown> | null,
+): Record<string, number> {
+	const details = resolveByValueLaborParamCoefficientDetails(
+		source,
+		rows,
+		formData,
+	);
+	const paramCoefficients: Record<string, number> = {};
+	for (const [paramCode, detail] of Object.entries(details)) {
+		paramCoefficients[paramCode] = detail.value;
 	}
 	return paramCoefficients;
 }

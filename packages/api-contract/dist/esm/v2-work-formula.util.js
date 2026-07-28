@@ -234,6 +234,9 @@ export function formatWorkFormulaReadableWithValues(tokens, ctx) {
                 return formatReadableFormulaNumber(ctx.norm);
             case "param_coeff":
             case "param_anyof": {
+                const labeled = ctx.paramCoefficientValueLabels?.[token.paramCode]?.trim();
+                if (labeled)
+                    return labeled;
                 const value = resolveCoeff(token.paramCode);
                 return Number.isFinite(value)
                     ? formatReadableFormulaNumber(value)

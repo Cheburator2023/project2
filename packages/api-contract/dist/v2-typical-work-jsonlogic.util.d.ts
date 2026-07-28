@@ -95,10 +95,19 @@ export declare function computeTypicalWorkFormulaTotal(params: {
     formData?: Record<string, unknown>;
     resolveFactorCoeff: (paramCode: string) => number;
 }): number | null;
+export type TypicalWorkFormulaFactorPart = {
+    sourceLabel: string | null;
+    answerLabel: string;
+    coefficient: number;
+};
 export type TypicalWorkFormulaFactorLine = {
     paramCode: string;
     paramName: string;
     value: number;
+    /** Например `max(0.5, 1)` для нескольких арх-компонентов. */
+    valueLabel?: string;
+    aggregation?: "single" | "max";
+    parts?: TypicalWorkFormulaFactorPart[];
 };
 /** Разбор формулы типовой работы для «Подробного расчёта». */
 export type TypicalWorkFormulaBreakdownDto = {
@@ -124,4 +133,10 @@ export declare function buildTypicalWorkFormulaBreakdown(params: {
     resolveFactorCoeff: (paramCode: string) => number;
     coefficient: number;
     total: number;
+    paramCoefficientDetails?: Record<string, {
+        value: number;
+        aggregation: "single" | "max";
+        formulaValueLabel: string;
+        parts: TypicalWorkFormulaFactorPart[];
+    }>;
 }): TypicalWorkFormulaBreakdownDto;
