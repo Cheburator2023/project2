@@ -34,6 +34,30 @@ export class V2RuntimeSettingsEntity {
 	})
 	keycloakEtalonOverlay!: Record<string, unknown> | null;
 
+	/**
+	 * Совместимость: `/admin_it` → доменная роль appadmin.
+	 * null = env `ADMIN_IT_AS_APPADMIN` (default ON).
+	 */
+	@Column({
+		name: "admin_it_as_appadmin",
+		type: "boolean",
+		nullable: true,
+		default: null,
+	})
+	adminItAsAppadmin!: boolean | null;
+
+	/**
+	 * Совместимость: nested lead-группы `/de/de_lead` и implied permissions.
+	 * null = env `ALLOW_NESTED_LEAD_GROUPS` (default ON).
+	 */
+	@Column({
+		name: "allow_nested_lead_groups",
+		type: "boolean",
+		nullable: true,
+		default: null,
+	})
+	allowNestedLeadGroups!: boolean | null;
+
 	@UpdateDateColumn({ name: "updated_at", type: "timestamptz" })
 	updatedAt!: Date;
 

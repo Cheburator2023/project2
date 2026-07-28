@@ -1,16 +1,27 @@
 import { Body, Controller, Delete, Get, Put } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
-import { IsBoolean } from "class-validator";
+import { IsBoolean, IsOptional } from "class-validator";
 import { DomainRoles } from "../../../shared/decorators/domain-roles.decorator";
 import { CurrentUser } from "../../../shared/decorators/user.decorator";
 import {
 	V2RuntimeSettingsService,
+	type V2RoleCompatSettingDto,
 	type V2StreamFilterSettingDto,
 } from "../services/v2-runtime-settings.service";
 
 class UpdateV2StreamFilterSettingDto {
 	@IsBoolean()
 	enabled!: boolean;
+}
+
+class UpdateV2RoleCompatSettingDto {
+	@IsOptional()
+	@IsBoolean()
+	adminItAsAppadmin?: boolean;
+
+	@IsOptional()
+	@IsBoolean()
+	allowNestedLeadGroups?: boolean;
 }
 
 @ApiTags("v2-runtime-settings")
@@ -52,5 +63,40 @@ export class V2RuntimeSettingsController {
 		const updatedBy =
 			user?.preferred_username || user?.username || null;
 		return this.settings.clearStreamFilterOverride(updatedBy);
+	}
+
+	@Get("role-compat")
+	@ApiOperation({
+		summary:
+			"Совместимость ролей с п-прод: /admin_it→appadmin и nested lead-группы",
+	})
+	async getRoleCompat(): Promise<V2RoleCompatSettingDto> {
+		return this.settings.getRoleCompatSetting();
+	}
+
+	@Put("role-compat")
+	@DomainRoles("appadmin", "sacfg")
+	@ApiOperation({ summary: "Override совместимости ролей (п-прод)" })
+	async putRoleCompat(
+		@Body() body: UpdateV2RoleCompatSettingDto,
+		@CurrentUser() user?: { preferred_username?: string; username?: string },
+	): Promise<V2RoleCompatSettingDto> {
+		const updatedBy =
+			user?.preferred_username || user?.username || null;
+		return this.settings.setRoleCompatSetting(body, updatedBy);
+	}
+
+	@Delete("role-compat/override")
+	@DomainRoles("appadmin", "sacfg")
+	@ApiOperation({
+		summary:
+			"Сбросить override — ADMIN_IT_AS_APPADMIN / ALLOW_NESTED_LEAD_GROUPS",
+	})
+	async clearRoleCompatOverride(
+		@CurrentUser() user?: { preferred_username?: string; username?: string },
+	): Promise<V2RoleCompatSettingDto> {
+		const updatedBy =
+			user?.preferred_username || user?.username || null;
+		return this.settings.clearRoleCompatOverride(updatedBy);
 	}
 }

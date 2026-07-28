@@ -242,4 +242,38 @@ const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
         });
         (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.flattenSourceContextValue)([])).toEqual({});
     });
+    (0, vitest_1.it)("remaps stale trigger paramCode to schema field by name", () => {
+        const remapped = (0, v2_works_catalog_match_util_1.remapTriggerRulesToSchemaParams)([
+            {
+                paramCode: "field_Ad1msOl7",
+                paramName: "Необходима продуктивизация",
+                operator: "=",
+                valueCode: "Да",
+                valueLabel: "Да",
+            },
+        ], [
+            {
+                code: "field_x-1d7wUh",
+                name: "Необходима продуктивизация",
+            },
+        ]);
+        (0, vitest_1.expect)(remapped[0]?.paramCode).toBe("field_x-1d7wUh");
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.typicalWorkRulesMatchSource)([
+            {
+                paramCode: "field_Ad1msOl7",
+                paramName: "Необходима продуктивизация",
+                operator: "=",
+                valueCode: "Да",
+                valueLabel: "Да",
+            },
+        ], {}, { detailInfo: { dataMart: { "field_x-1d7wUh": true } } }, null, {
+            schemaParams: [
+                {
+                    code: "field_x-1d7wUh",
+                    name: "Необходима продуктивизация",
+                    schemaPointer: "/detailInfo/dataMart/field_x-1d7wUh",
+                },
+            ],
+        })).toBe(true);
+    });
 });

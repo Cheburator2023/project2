@@ -26,7 +26,7 @@ const v2_anketa_section_ui_util_1 = require("./v2-anketa-section-ui.util");
         const enriched = (0, v2_anketa_ui_layout_util_1.enrichAnketaLayoutUiSchema)(uiSchema, jsonSchema);
         const opts = enriched.field_aJEu5ziT?.["ui:options"];
         (0, vitest_1.expect)(opts?.workflowSectionId).toBeUndefined();
-        (0, vitest_1.expect)(opts?.streamExecutor).toBe("ПиРМ");
+        (0, vitest_1.expect)(opts?.streamExecutor).toBe("pirm");
         (0, vitest_1.expect)(opts?.groupActivatable).toBeUndefined();
     });
     (0, vitest_1.it)("soft-syncs activation toggle for Sources and Model Control streams", () => {

@@ -271,7 +271,15 @@ describe("v2 factory snapshot", () => {
 
 	it("dictionariesSnapshot из v35", () => {
 		expect(file.dictionariesSnapshot?.referencedDictionaryCodes?.length).toBe(
-			70,
+			67,
+		);
+		expect(
+			file.dictionariesSnapshot?.referencedDictionaryCodes,
+		).not.toEqual(
+			expect.arrayContaining([
+				"v2.method.21.сроки_инициативы",
+				"v2.method.22.стоимость_инициативы",
+			]),
 		);
 	});
 

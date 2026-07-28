@@ -4,8 +4,9 @@ import {
 	Injectable,
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
+import { normalizeV2UserGroupsWithCompat } from "@smart-anketa/api-contract";
 import { DOMAIN_ROLES_KEY } from "../decorators/domain-roles.decorator";
-import { normalizeUserGroups } from "../utils/user-groups.util";
+import { getV2RoleCompatRuntime } from "../utils/v2-role-compat-runtime";
 
 @Injectable()
 export class DomainRolesGuard implements CanActivate {
@@ -28,7 +29,12 @@ export class DomainRolesGuard implements CanActivate {
 			  }
 			| undefined;
 
-		const fromGroups = new Set(normalizeUserGroups(user?.groups ?? []));
+		const fromGroups = new Set(
+			normalizeV2UserGroupsWithCompat(
+				user?.groups ?? [],
+				getV2RoleCompatRuntime(),
+			),
+		);
 		const fromRealm = new Set(user?.realm_access?.roles ?? []);
 
 		return required.some(

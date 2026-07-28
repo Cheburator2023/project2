@@ -100,8 +100,11 @@ function matchesField(
 	},
 	request: V2TypicalWorkSchemaFieldSyncRequestDto,
 ): boolean {
-	if (ref.schemaFieldUid) {
-		return ref.schemaFieldUid === request.field.schemaFieldUid;
+	if (
+		ref.schemaFieldUid &&
+		ref.schemaFieldUid === request.field.schemaFieldUid
+	) {
+		return true;
 	}
 
 	const aliases = collectFieldAliasCodes(request);

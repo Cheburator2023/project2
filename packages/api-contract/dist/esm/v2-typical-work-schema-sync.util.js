@@ -33,8 +33,9 @@ function formatSyncedParamName(request, currentName, nextCode, previousCode) {
     return formatParamNameWithSourceKeys(displayName, [...new Set(aliasCodes)]);
 }
 function matchesField(ref, request) {
-    if (ref.schemaFieldUid) {
-        return ref.schemaFieldUid === request.field.schemaFieldUid;
+    if (ref.schemaFieldUid &&
+        ref.schemaFieldUid === request.field.schemaFieldUid) {
+        return true;
     }
     const aliases = collectFieldAliasCodes(request);
     if (aliases.has(ref.paramCode))

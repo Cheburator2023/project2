@@ -46,6 +46,7 @@ __exportStar(require("./v2-anketa-section-ui.util"), exports);
 __exportStar(require("./v2-anketa-block-access.util"), exports);
 __exportStar(require("./v2-user-stream-mapping.util"), exports);
 __exportStar(require("./v2-ad-domain-groups.util"), exports);
+__exportStar(require("./v2-role-compat.util"), exports);
 __exportStar(require("./v2-arch-component-presets"), exports);
 __exportStar(require("./v2-anketa-editor-ui.util"), exports);
 __exportStar(require("./v2-typical-works.util"), exports);

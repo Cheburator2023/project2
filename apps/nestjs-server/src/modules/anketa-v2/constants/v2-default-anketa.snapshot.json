@@ -1695,103 +1695,312 @@
 						"title": "Группа рисков",
 						"properties": {
 							"sanctions": {
-								"enum": [
-									"Низкий",
-									"Средний",
-									"Высокий"
-								],
-								"type": "string",
-								"title": "Введение санкционных мер и других ограничений"
+								"type": "object",
+								"title": "Введение санкционных мер и других ограничений",
+								"properties": {
+									"goals": {
+										"enum": [
+											"Незначительное влияние на вторичные функции в рамках проектной деятельности",
+											"Незначительное влияние на задачи и сроки достижения целей проекта",
+											"Реализация проекта с контролируемыми отклонениями от изначальных целей",
+											"Значительный негативный эффект на возможность достижения целей проекта",
+											"Критичное отклонение качества реализации проекта"
+										],
+										"type": "string",
+										"title": "Влияние на Цели"
+									},
+									"probability": {
+										"enum": [
+											"Реализация не чаще 1 раза в 10 лет",
+											"Реализация 1 раз в 3-10 лет",
+											"Реализация 1 раз в 1-3 года",
+											"Реализация 1 раз в год",
+											"Реализация 1 раз в 6 мес. или чаще"
+										],
+										"type": "string",
+										"title": "Вероятность"
+									}
+								}
 							},
 							"staffShortage": {
-								"enum": [
-									"Низкий",
-									"Средний",
-									"Высокий"
-								],
-								"type": "string",
-								"title": "Отсутствие квалифицированного персонала или ошибок персонала"
+								"type": "object",
+								"title": "Отсутствие квалифицированного персонала или ошибок персонала",
+								"properties": {
+									"goals": {
+										"enum": [
+											"Незначительное влияние на вторичные функции в рамках проектной деятельности",
+											"Незначительное влияние на задачи и сроки достижения целей проекта",
+											"Реализация проекта с контролируемыми отклонениями от изначальных целей",
+											"Значительный негативный эффект на возможность достижения целей проекта",
+											"Критичное отклонение качества реализации проекта"
+										],
+										"type": "string",
+										"title": "Влияние на Цели"
+									},
+									"probability": {
+										"enum": [
+											"Реализация не чаще 1 раза в 10 лет",
+											"Реализация 1 раз в 3-10 лет",
+											"Реализация 1 раз в 1-3 года",
+											"Реализация 1 раз в год",
+											"Реализация 1 раз в 6 мес. или чаще"
+										],
+										"type": "string",
+										"title": "Вероятность"
+									}
+								}
 							},
 							"defectsInSolution": {
-								"enum": [
-									"Низкий",
-									"Средний",
-									"Высокий"
-								],
-								"type": "string",
-								"title": "Наличие дефектов во внедряемом решении/ ПО в рамках проекта"
+								"type": "object",
+								"title": "Наличие дефектов во внедряемом решении/ ПО в рамках проекта",
+								"properties": {
+									"goals": {
+										"enum": [
+											"Незначительное влияние на вторичные функции в рамках проектной деятельности",
+											"Незначительное влияние на задачи и сроки достижения целей проекта",
+											"Реализация проекта с контролируемыми отклонениями от изначальных целей",
+											"Значительный негативный эффект на возможность достижения целей проекта",
+											"Критичное отклонение качества реализации проекта"
+										],
+										"type": "string",
+										"title": "Влияние на Цели"
+									},
+									"probability": {
+										"enum": [
+											"Реализация не чаще 1 раза в 10 лет",
+											"Реализация 1 раз в 3-10 лет",
+											"Реализация 1 раз в 1-3 года",
+											"Реализация 1 раз в год",
+											"Реализация 1 раз в 6 мес. или чаще"
+										],
+										"type": "string",
+										"title": "Вероятность"
+									}
+								}
 							},
 							"laborCostIncrease": {
-								"enum": [
-									"Низкий",
-									"Средний",
-									"Высокий"
-								],
-								"type": "string",
-								"title": "Увеличение трудозатрат проекта по причине недостаточной проработки требований на этапе планирования проекта"
+								"type": "object",
+								"title": "Увеличение трудозатрат проекта по причине недостаточной проработки требований на этапе планирования проекта",
+								"properties": {
+									"goals": {
+										"enum": [
+											"Незначительное влияние на вторичные функции в рамках проектной деятельности",
+											"Незначительное влияние на задачи и сроки достижения целей проекта",
+											"Реализация проекта с контролируемыми отклонениями от изначальных целей",
+											"Значительный негативный эффект на возможность достижения целей проекта",
+											"Критичное отклонение качества реализации проекта"
+										],
+										"type": "string",
+										"title": "Влияние на Цели"
+									},
+									"probability": {
+										"enum": [
+											"Реализация не чаще 1 раза в 10 лет",
+											"Реализация 1 раз в 3-10 лет",
+											"Реализация 1 раз в 1-3 года",
+											"Реализация 1 раз в год",
+											"Реализация 1 раз в 6 мес. или чаще"
+										],
+										"type": "string",
+										"title": "Вероятность"
+									}
+								}
 							},
 							"regulatoryChanges": {
-								"enum": [
-									"Низкий",
-									"Средний",
-									"Высокий"
-								],
-								"type": "string",
-								"title": "Изменение регуляторных требований"
+								"type": "object",
+								"title": "Изменение регуляторных требований",
+								"properties": {
+									"goals": {
+										"enum": [
+											"Незначительное влияние на вторичные функции в рамках проектной деятельности",
+											"Незначительное влияние на задачи и сроки достижения целей проекта",
+											"Реализация проекта с контролируемыми отклонениями от изначальных целей",
+											"Значительный негативный эффект на возможность достижения целей проекта",
+											"Критичное отклонение качества реализации проекта"
+										],
+										"type": "string",
+										"title": "Влияние на Цели"
+									},
+									"probability": {
+										"enum": [
+											"Реализация не чаще 1 раза в 10 лет",
+											"Реализация 1 раз в 3-10 лет",
+											"Реализация 1 раз в 1-3 года",
+											"Реализация 1 раз в год",
+											"Реализация 1 раз в 6 мес. или чаще"
+										],
+										"type": "string",
+										"title": "Вероятность"
+									}
+								}
 							},
 							"businessComplexity": {
-								"enum": [
-									"Низкий",
-									"Средний",
-									"Высокий"
-								],
-								"type": "string",
-								"title": "Изменение, недостаточная проработка или сложности бизнес процессов Банка"
+								"type": "object",
+								"title": "Изменение, недостаточная проработка или сложности бизнес процессов Банка",
+								"properties": {
+									"goals": {
+										"enum": [
+											"Незначительное влияние на вторичные функции в рамках проектной деятельности",
+											"Незначительное влияние на задачи и сроки достижения целей проекта",
+											"Реализация проекта с контролируемыми отклонениями от изначальных целей",
+											"Значительный негативный эффект на возможность достижения целей проекта",
+											"Критичное отклонение качества реализации проекта"
+										],
+										"type": "string",
+										"title": "Влияние на Цели"
+									},
+									"probability": {
+										"enum": [
+											"Реализация не чаще 1 раза в 10 лет",
+											"Реализация 1 раз в 3-10 лет",
+											"Реализация 1 раз в 1-3 года",
+											"Реализация 1 раз в год",
+											"Реализация 1 раз в 6 мес. или чаще"
+										],
+										"type": "string",
+										"title": "Вероятность"
+									}
+								}
 							},
 							"thirdPartyNegligence": {
-								"enum": [
-									"Низкий",
-									"Средний",
-									"Высокий"
-								],
-								"type": "string",
-								"title": "Недобросовестное исполнение услуг со стороны привлеченных контрагентов/ подрядчиков"
+								"type": "object",
+								"title": "Недобросовестное исполнение услуг со стороны привлеченных контрагентов/ подрядчиков",
+								"properties": {
+									"goals": {
+										"enum": [
+											"Незначительное влияние на вторичные функции в рамках проектной деятельности",
+											"Незначительное влияние на задачи и сроки достижения целей проекта",
+											"Реализация проекта с контролируемыми отклонениями от изначальных целей",
+											"Значительный негативный эффект на возможность достижения целей проекта",
+											"Критичное отклонение качества реализации проекта"
+										],
+										"type": "string",
+										"title": "Влияние на Цели"
+									},
+									"probability": {
+										"enum": [
+											"Реализация не чаще 1 раза в 10 лет",
+											"Реализация 1 раз в 3-10 лет",
+											"Реализация 1 раз в 1-3 года",
+											"Реализация 1 раз в год",
+											"Реализация 1 раз в 6 мес. или чаще"
+										],
+										"type": "string",
+										"title": "Вероятность"
+									}
+								}
 							},
 							"controlProceduresLack": {
-								"enum": [
-									"Низкий",
-									"Средний",
-									"Высокий"
-								],
-								"type": "string",
-								"title": "Недостаток или отсутствие контрольных процедур"
+								"type": "object",
+								"title": "Недостаток или отсутствие контрольных процедур",
+								"properties": {
+									"goals": {
+										"enum": [
+											"Незначительное влияние на вторичные функции в рамках проектной деятельности",
+											"Незначительное влияние на задачи и сроки достижения целей проекта",
+											"Реализация проекта с контролируемыми отклонениями от изначальных целей",
+											"Значительный негативный эффект на возможность достижения целей проекта",
+											"Критичное отклонение качества реализации проекта"
+										],
+										"type": "string",
+										"title": "Влияние на Цели"
+									},
+									"probability": {
+										"enum": [
+											"Реализация не чаще 1 раза в 10 лет",
+											"Реализация 1 раз в 3-10 лет",
+											"Реализация 1 раз в 1-3 года",
+											"Реализация 1 раз в год",
+											"Реализация 1 раз в 6 мес. или чаще"
+										],
+										"type": "string",
+										"title": "Вероятность"
+									}
+								}
 							},
 							"isNotUsedAfterProject": {
-								"enum": [
-									"Низкий",
-									"Средний",
-									"Высокий"
-								],
-								"type": "string",
-								"title": "Неиспользование ИС после завершения проекта"
+								"type": "object",
+								"title": "Неиспользование ИС после завершения проекта",
+								"properties": {
+									"goals": {
+										"enum": [
+											"Незначительное влияние на вторичные функции в рамках проектной деятельности",
+											"Незначительное влияние на задачи и сроки достижения целей проекта",
+											"Реализация проекта с контролируемыми отклонениями от изначальных целей",
+											"Значительный негативный эффект на возможность достижения целей проекта",
+											"Критичное отклонение качества реализации проекта"
+										],
+										"type": "string",
+										"title": "Влияние на Цели"
+									},
+									"probability": {
+										"enum": [
+											"Реализация не чаще 1 раза в 10 лет",
+											"Реализация 1 раз в 3-10 лет",
+											"Реализация 1 раз в 1-3 года",
+											"Реализация 1 раз в год",
+											"Реализация 1 раз в 6 мес. или чаще"
+										],
+										"type": "string",
+										"title": "Вероятность"
+									}
+								}
 							},
 							"itArchitectureChanges": {
-								"enum": [
-									"Низкий",
-									"Средний",
-									"Высокий"
-								],
-								"type": "string",
-								"title": "Изменения целевой ИТ архитектуры Банка"
+								"type": "object",
+								"title": "Изменения целевой ИТ архитектуры Банка",
+								"properties": {
+									"goals": {
+										"enum": [
+											"Незначительное влияние на вторичные функции в рамках проектной деятельности",
+											"Незначительное влияние на задачи и сроки достижения целей проекта",
+											"Реализация проекта с контролируемыми отклонениями от изначальных целей",
+											"Значительный негативный эффект на возможность достижения целей проекта",
+											"Критичное отклонение качества реализации проекта"
+										],
+										"type": "string",
+										"title": "Влияние на Цели"
+									},
+									"probability": {
+										"enum": [
+											"Реализация не чаще 1 раза в 10 лет",
+											"Реализация 1 раз в 3-10 лет",
+											"Реализация 1 раз в 1-3 года",
+											"Реализация 1 раз в год",
+											"Реализация 1 раз в 6 мес. или чаще"
+										],
+										"type": "string",
+										"title": "Вероятность"
+									}
+								}
 							},
 							"adjacentProjectsImpact": {
-								"enum": [
-									"Низкий",
-									"Средний",
-									"Высокий"
-								],
-								"type": "string",
-								"title": "Негативное влияние смежных проектов на показатели проекта"
+								"type": "object",
+								"title": "Негативное влияние смежных проектов на показатели проекта",
+								"properties": {
+									"goals": {
+										"enum": [
+											"Незначительное влияние на вторичные функции в рамках проектной деятельности",
+											"Незначительное влияние на задачи и сроки достижения целей проекта",
+											"Реализация проекта с контролируемыми отклонениями от изначальных целей",
+											"Значительный негативный эффект на возможность достижения целей проекта",
+											"Критичное отклонение качества реализации проекта"
+										],
+										"type": "string",
+										"title": "Влияние на Цели"
+									},
+									"probability": {
+										"enum": [
+											"Реализация не чаще 1 раза в 10 лет",
+											"Реализация 1 раз в 3-10 лет",
+											"Реализация 1 раз в 1-3 года",
+											"Реализация 1 раз в год",
+											"Реализация 1 раз в 6 мес. или чаще"
+										],
+										"type": "string",
+										"title": "Вероятность"
+									}
+								}
 							}
 						}
 					},
@@ -1804,7 +2013,14 @@
 							"От 2 млрд"
 						],
 						"type": "string",
-						"title": "Стоимость инициативы"
+						"title": "Стоимость инициативы",
+						"enumNames": [
+							"до 45.3 млн",
+							"45.3 — 438 млн",
+							"438 — 870 млн",
+							"870 млн — 2 млрд",
+							"От 2 млрд"
+						]
 					},
 					"initiativeTimeline": {
 						"enum": [
@@ -1815,7 +2031,14 @@
 							"Более 18 мес."
 						],
 						"type": "string",
-						"title": "Сроки инициативы"
+						"title": "Сроки инициативы",
+						"enumNames": [
+							"Менее 1 мес.",
+							"1–4 мес.",
+							"4–10 мес.",
+							"10–18 мес.",
+							"Более 18 мес."
+						]
 					},
 					"uncertaintyAdjustment": {
 						"type": "number",
@@ -3550,7 +3773,17 @@
 					"orderable": false,
 					"removable": false,
 					"archComponent": "typicalWork",
-					"schemaFieldUid": "field_3e1d8681-5311-43fa-9710-5b3c3ee5e301"
+					"schemaFieldUid": "field_3e1d8681-5311-43fa-9710-5b3c3ee5e301",
+					"boundWorkIds": [
+						"6fb0b803-5466-4b9a-9961-ed3a617d88c1",
+						"b5033791-054f-4ab4-89d1-1102d10c3085",
+						"f20fea29-44ea-49e4-aba8-538460b3ae80",
+						"a15267b0-5b87-4653-8008-b9e47175145e",
+						"5f428aa7-3ae8-4e97-b468-59c0f9547ac5",
+						"f03437a1-cc7a-46df-9418-1df92467daaf",
+						"019240ea-de39-471a-bd5e-0c190fef339e",
+						"642d88fe-bbfc-4901-9558-7ab80892ec81"
+					]
 				},
 				"ui:description": "Список заполняется автоматически при срабатывании триггеров типовых работ.\n\nПоля: Название типовой работы · Базовая оценка · Коэффициент · Итог\nСуммарный итог — при нескольких работах"
 			},
@@ -3793,107 +4026,283 @@
 			],
 			"riskGroup": {
 				"ui:order": [
-					"businessComplexity",
-					"defectsInSolution",
-					"adjacentProjectsImpact",
-					"laborCostIncrease",
-					"thirdPartyNegligence",
-					"staffShortage",
 					"sanctions",
-					"controlProceduresLack",
+					"staffShortage",
+					"defectsInSolution",
+					"laborCostIncrease",
 					"regulatoryChanges",
+					"businessComplexity",
+					"thirdPartyNegligence",
+					"controlProceduresLack",
 					"isNotUsedAfterProject",
-					"itArchitectureChanges"
+					"itArchitectureChanges",
+					"adjacentProjectsImpact"
 				],
 				"sanctions": {
+					"goals": {
+						"ui:widget": "select",
+						"ui:options": {
+							"schemaFieldUid": "field_d4a57f56-4127-474c-9115-bec24e7db610"
+						}
+					},
+					"ui:order": [
+						"probability",
+						"goals"
+					],
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Запрет/задержка разрешения от внешних регуляторов на работы\n\\n* Отсутствие приемлемого контрагента (вендор/поставщик)",
 						"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.sanctions",
 						"schemaFieldUid": "field_dcc85a82-25e5-4cd7-b300-14f25048002d"
+					},
+					"probability": {
+						"ui:widget": "select",
+						"ui:options": {
+							"schemaFieldUid": "field_b8fdb241-8c68-42b9-bd36-fbaed8e2fcde"
+						}
 					}
 				},
 				"ui:options": {
 					"schemaFieldUid": "field_6da6e9c1-61ad-46d7-a573-a3aa8c0f237f"
 				},
 				"staffShortage": {
+					"goals": {
+						"ui:widget": "select",
+						"ui:options": {
+							"schemaFieldUid": "field_ac409196-e123-47ee-9747-ec3378c0f7ad"
+						}
+					},
+					"ui:order": [
+						"probability",
+						"goals"
+					],
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Недостаток / отсутствие ресурсов на работы по реализации проекта разработки и внедрению доработок проекта (в т.ч. у подрядчика)\n\\n* Недостаточные компетенции персонала\n\\n* Недостаточный уровень набора дополнительного персонала",
 						"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.staffShortage",
 						"schemaFieldUid": "field_cb1419d6-b570-4b5f-b46d-cf56edc07831"
+					},
+					"probability": {
+						"ui:widget": "select",
+						"ui:options": {
+							"schemaFieldUid": "field_4ec0ad4c-6f62-4182-ad49-308f6753f7a4"
+						}
 					}
 				},
 				"defectsInSolution": {
+					"goals": {
+						"ui:widget": "select",
+						"ui:options": {
+							"schemaFieldUid": "field_8c12cec4-56f5-441d-8e0d-eadca46e9a77"
+						}
+					},
+					"ui:order": [
+						"probability",
+						"goals"
+					],
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Сбои в работе инфраструктуры и сервисного обслуживания\n\\n* Сбои в работе ПО\n\\n* Сбои продукта на этапе интеграции\n\\n* Ошибки в системном ПО, интегрируемых системах",
 						"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.defectsInSolution",
 						"schemaFieldUid": "field_f67adc93-2753-43e7-a75a-4c83773e6664"
+					},
+					"probability": {
+						"ui:widget": "select",
+						"ui:options": {
+							"schemaFieldUid": "field_9099a996-a3e7-439e-b511-2aa15541b1b4"
+						}
 					}
 				},
 				"laborCostIncrease": {
+					"goals": {
+						"ui:widget": "select",
+						"ui:options": {
+							"schemaFieldUid": "field_593d6f1e-4d27-4d27-aaf2-62e30fa661f6"
+						}
+					},
+					"ui:order": [
+						"probability",
+						"goals"
+					],
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Недостаточная проработка требований на этапах детального анализа\n\\n* Недостатки планирования и обеспечения непрерывности деятельности\n\\n* Расширение границ задач проекта или изменение трудозатрат по задачам",
 						"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.laborCostIncrease",
 						"schemaFieldUid": "field_bf261be2-af08-4c5e-8022-8ec8b3d235e6"
+					},
+					"probability": {
+						"ui:widget": "select",
+						"ui:options": {
+							"schemaFieldUid": "field_a8e166d5-961e-4d08-bb19-64fa36850efb"
+						}
 					}
 				},
 				"regulatoryChanges": {
+					"goals": {
+						"ui:widget": "select",
+						"ui:options": {
+							"schemaFieldUid": "field_43131069-d1ad-45d4-95d3-ecb011101ac4"
+						}
+					},
+					"ui:order": [
+						"probability",
+						"goals"
+					],
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Изменение требований внешних регуляторов и прочие несовершенства правовой системы",
 						"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.regulatoryChanges",
 						"schemaFieldUid": "field_444ab7f8-e74d-4b62-9a40-76d5aed3c7e0"
+					},
+					"probability": {
+						"ui:widget": "select",
+						"ui:options": {
+							"schemaFieldUid": "field_93d62324-99d8-4f74-9947-a7989a5e8b9b"
+						}
 					}
 				},
 				"businessComplexity": {
+					"goals": {
+						"ui:widget": "select",
+						"ui:options": {
+							"schemaFieldUid": "field_0d7189b0-f075-4b1d-a55c-c2bf0f2ea693"
+						}
+					},
+					"ui:order": [
+						"probability",
+						"goals"
+					],
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Изменение бизнес-процессов Банка\n\\n* Недостатки коммуникаций / взаимодействия\n\\n* Неполные и нечеткие обязанности\n\\n* Отсутствие выделения ставок на наем персонала необходимого для реализации проекта\n\\n* Задержка заключения договоров с подрядчиками\n\\n* Длительное согласование проектных документов в Банке\n\\n* Отсутствие утвержденных нормативных документов",
 						"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.businessComplexity",
 						"schemaFieldUid": "field_41c55293-7225-4690-bbb6-598f7d5550bb"
+					},
+					"probability": {
+						"ui:widget": "select",
+						"ui:options": {
+							"schemaFieldUid": "field_c4596208-7d72-43e8-b16f-ae3d264a49be"
+						}
 					}
 				},
 				"thirdPartyNegligence": {
+					"goals": {
+						"ui:widget": "select",
+						"ui:options": {
+							"schemaFieldUid": "field_ee27dd8e-24d6-4f9a-86c8-84f97e047dde"
+						}
+					},
+					"ui:order": [
+						"probability",
+						"goals"
+					],
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Задержка в закупке, поставке и развертывании оборудования\n\\n* Ненадлежащее качество исполнения услуг со стороны привлеченных контрагентов/подрядчиков\n\\n* Нарушение подрядчиками сроков выполнения работ\n\\n* Экономические события, влиящие на состояние третьих лиц, в том числе банкротство",
 						"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.thirdPartyNegligence",
 						"schemaFieldUid": "field_8ca50850-3fa4-4a25-ab5d-96c57fca0e05"
+					},
+					"probability": {
+						"ui:widget": "select",
+						"ui:options": {
+							"schemaFieldUid": "field_88534f45-fdf7-49af-8b94-913b0360affd"
+						}
 					}
 				},
 				"controlProceduresLack": {
+					"goals": {
+						"ui:widget": "select",
+						"ui:options": {
+							"schemaFieldUid": "field_e4eb17ab-1b85-43da-ab2c-10a63479eb7d"
+						}
+					},
+					"ui:order": [
+						"probability",
+						"goals"
+					],
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Недостаточное вовлечение руководства\n\\n* Недостатки контрольных механизмов",
 						"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.controlProceduresLack",
 						"schemaFieldUid": "field_06370b46-6380-4b63-866c-d3f52e078a73"
+					},
+					"probability": {
+						"ui:widget": "select",
+						"ui:options": {
+							"schemaFieldUid": "field_ad46bc7a-b1cc-4fbd-bd59-2a75bf5e9ca9"
+						}
 					}
 				},
 				"isNotUsedAfterProject": {
+					"goals": {
+						"ui:widget": "select",
+						"ui:options": {
+							"schemaFieldUid": "field_85cd7a69-e7cd-41c3-9bad-443f712654bf"
+						}
+					},
+					"ui:order": [
+						"probability",
+						"goals"
+					],
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Создание ИС (с ID в РИС), не введенной в эксплуатацию про итогам завершения проекта",
 						"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.isNotUsedAfterProject",
 						"schemaFieldUid": "field_ecd39d17-7f85-4d3b-ac23-5ad79c9d639f"
+					},
+					"probability": {
+						"ui:widget": "select",
+						"ui:options": {
+							"schemaFieldUid": "field_7ba3eece-0f86-48a1-9b62-97a3a4ccedab"
+						}
 					}
 				},
 				"itArchitectureChanges": {
+					"goals": {
+						"ui:widget": "select",
+						"ui:options": {
+							"schemaFieldUid": "field_27425e38-0e84-4642-a739-4d6eb99b9cac"
+						}
+					},
+					"ui:order": [
+						"probability",
+						"goals"
+					],
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Изменения принципов реализации целевой архитектуры Банка",
 						"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.itArchitectureChanges",
 						"schemaFieldUid": "field_e2629ac3-9eee-4af6-84bf-9a565a7425d7"
+					},
+					"probability": {
+						"ui:widget": "select",
+						"ui:options": {
+							"schemaFieldUid": "field_ec8812e7-0451-421c-992b-7064eed2aa51"
+						}
 					}
 				},
 				"adjacentProjectsImpact": {
+					"goals": {
+						"ui:widget": "select",
+						"ui:options": {
+							"schemaFieldUid": "field_00f1f778-297c-47c6-9cc4-7937f53cc1cc"
+						}
+					},
+					"ui:order": [
+						"probability",
+						"goals"
+					],
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Пересечение с большим количеством проектов и увеличение сроков по смежным проектам\n\\n* Задержки из за изменения сроков реализации смежных ИТ систем и проектов",
 						"dictionaryCode": "v2.uncertaintyCalculation.riskGroup.adjacentProjectsImpact",
 						"schemaFieldUid": "field_af26c704-db2c-4d5d-8400-065dcb40858e"
+					},
+					"probability": {
+						"ui:widget": "select",
+						"ui:options": {
+							"schemaFieldUid": "field_62ac9fdd-9ac8-47d1-83b2-e9ebfb9a014b"
+						}
 					}
 				}
 			},
@@ -3906,14 +4315,12 @@
 			"initiativeCost": {
 				"ui:widget": "select",
 				"ui:options": {
-					"dictionaryCode": "v2.method.22.стоимость_инициативы",
 					"schemaFieldUid": "field_8c0fedd4-9ec5-4528-8376-e695e5bd0bc3"
 				}
 			},
 			"initiativeTimeline": {
 				"ui:widget": "select",
 				"ui:options": {
-					"dictionaryCode": "v2.method.21.сроки_инициативы",
 					"schemaFieldUid": "field_82339b7f-0791-4a0b-8348-815ee6258d4b"
 				}
 			},
@@ -4595,7 +5002,17 @@
 						"streamModelControl"
 					],
 					"worksCatalogStream": "Контроль моделей",
-					"worksCatalogAllArchComponents": true
+					"worksCatalogAllArchComponents": true,
+					"allowedWorkIds": [
+						"6fb0b803-5466-4b9a-9961-ed3a617d88c1",
+						"b5033791-054f-4ab4-89d1-1102d10c3085",
+						"f20fea29-44ea-49e4-aba8-538460b3ae80",
+						"a15267b0-5b87-4653-8008-b9e47175145e",
+						"5f428aa7-3ae8-4e97-b468-59c0f9547ac5",
+						"f03437a1-cc7a-46df-9418-1df92467daaf",
+						"019240ea-de39-471a-bd5e-0c190fef339e",
+						"642d88fe-bbfc-4901-9558-7ab80892ec81"
+					]
 				},
 				"condition": true,
 				"targetPath": "/streamModelControl/field_G0AoYAl8",
@@ -4912,17 +5329,283 @@
 					"/streamDataSources/field_u-7AkDrP",
 					"/streamModelControl/field_G0AoYAl8"
 				]
+			},
+			{
+				"id": "v2-overall-uncertainty-config",
+				"kind": "computed",
+				"payload": {
+					"role": "overall_uncertainty_config",
+					"config": {
+						"risks": [
+							{
+								"id": "sanctions",
+								"name": "Введение санкционных мер и других ограничений"
+							},
+							{
+								"id": "staffShortage",
+								"name": "Отсутствие квалифицированного персонала или ошибок персонала"
+							},
+							{
+								"id": "defectsInSolution",
+								"name": "Наличие дефектов во внедряемом решении/ ПО в рамках проекта"
+							},
+							{
+								"id": "laborCostIncrease",
+								"name": "Увеличение трудозатрат проекта по причине недостаточной проработки требований на этапе планирования проекта"
+							},
+							{
+								"id": "regulatoryChanges",
+								"name": "Изменение регуляторных требований"
+							},
+							{
+								"id": "businessComplexity",
+								"name": "Изменение, недостаточная проработка или сложности бизнес процессов Банка"
+							},
+							{
+								"id": "thirdPartyNegligence",
+								"name": "Недобросовестное исполнение услуг со стороны привлеченных контрагентов/ подрядчиков"
+							},
+							{
+								"id": "controlProceduresLack",
+								"name": "Недостаток или отсутствие контрольных процедур"
+							},
+							{
+								"id": "isNotUsedAfterProject",
+								"name": "Неиспользование ИС после завершения проекта"
+							},
+							{
+								"id": "itArchitectureChanges",
+								"name": "Изменения целевой ИТ архитектуры Банка"
+							},
+							{
+								"id": "adjacentProjectsImpact",
+								"name": "Негативное влияние смежных проектов на показатели проекта"
+							}
+						],
+						"groups": [
+							{
+								"id": "grp_very_high",
+								"coef": 0.1,
+								"name": "Очень высокий"
+							},
+							{
+								"id": "grp_high",
+								"coef": 0.07,
+								"name": "Высокий"
+							},
+							{
+								"id": "grp_medium",
+								"coef": 0.05,
+								"name": "Средний"
+							},
+							{
+								"id": "grp_low",
+								"coef": 0.03,
+								"name": "Низкий"
+							}
+						],
+						"matrix": [
+							[
+								"grp_low",
+								"grp_low",
+								"grp_low",
+								"grp_medium",
+								"grp_medium"
+							],
+							[
+								"grp_low",
+								"grp_low",
+								"grp_medium",
+								"grp_high",
+								"grp_high"
+							],
+							[
+								"grp_low",
+								"grp_medium",
+								"grp_high",
+								"grp_high",
+								"grp_very_high"
+							],
+							[
+								"grp_medium",
+								"grp_medium",
+								"grp_high",
+								"grp_very_high",
+								"grp_very_high"
+							],
+							[
+								"grp_medium",
+								"grp_high",
+								"grp_very_high",
+								"grp_very_high",
+								"grp_very_high"
+							]
+						],
+						"version": 2,
+						"calculator": {
+							"risks": [
+								{
+									"id": "sanctions",
+									"enabled": false,
+									"probIdx": 0,
+									"goalsIdx": 0
+								},
+								{
+									"id": "staffShortage",
+									"enabled": false,
+									"probIdx": 0,
+									"goalsIdx": 0
+								},
+								{
+									"id": "defectsInSolution",
+									"enabled": false,
+									"probIdx": 0,
+									"goalsIdx": 0
+								},
+								{
+									"id": "laborCostIncrease",
+									"enabled": false,
+									"probIdx": 0,
+									"goalsIdx": 0
+								},
+								{
+									"id": "regulatoryChanges",
+									"enabled": false,
+									"probIdx": 0,
+									"goalsIdx": 0
+								},
+								{
+									"id": "businessComplexity",
+									"enabled": false,
+									"probIdx": 0,
+									"goalsIdx": 0
+								},
+								{
+									"id": "thirdPartyNegligence",
+									"enabled": false,
+									"probIdx": 0,
+									"goalsIdx": 0
+								},
+								{
+									"id": "controlProceduresLack",
+									"enabled": false,
+									"probIdx": 0,
+									"goalsIdx": 0
+								},
+								{
+									"id": "isNotUsedAfterProject",
+									"enabled": false,
+									"probIdx": 0,
+									"goalsIdx": 0
+								},
+								{
+									"id": "itArchitectureChanges",
+									"enabled": false,
+									"probIdx": 0,
+									"goalsIdx": 0
+								},
+								{
+									"id": "adjacentProjectsImpact",
+									"enabled": false,
+									"probIdx": 0,
+									"goalsIdx": 0
+								}
+							],
+							"adjPct": null,
+							"costIdx": 0,
+							"enabled": false,
+							"timelineIdx": 0
+						},
+						"severityLevels": [
+							{
+								"id": "sev_1",
+								"costLabel": "до 45.3 млн",
+								"goalsLabel": "Незначительное влияние на вторичные функции в рамках проектной деятельности",
+								"timelineLabel": "Менее 1 мес."
+							},
+							{
+								"id": "sev_2",
+								"costLabel": "45.3 — 438 млн",
+								"goalsLabel": "Незначительное влияние на задачи и сроки достижения целей проекта",
+								"timelineLabel": "1–4 мес."
+							},
+							{
+								"id": "sev_3",
+								"costLabel": "438 — 870 млн",
+								"goalsLabel": "Реализация проекта с контролируемыми отклонениями от изначальных целей",
+								"timelineLabel": "4–10 мес."
+							},
+							{
+								"id": "sev_4",
+								"costLabel": "870 млн — 2 млрд",
+								"goalsLabel": "Значительный негативный эффект на возможность достижения целей проекта",
+								"timelineLabel": "10–18 мес."
+							},
+							{
+								"id": "sev_5",
+								"costLabel": "От 2 млрд",
+								"goalsLabel": "Критичное отклонение качества реализации проекта",
+								"timelineLabel": "Более 18 мес."
+							}
+						],
+						"riskCountRanges": [
+							{
+								"coef": 1,
+								"maxCount": 1,
+								"minCount": 1
+							},
+							{
+								"coef": 1.1,
+								"maxCount": 3,
+								"minCount": 2
+							},
+							{
+								"coef": 1.25,
+								"maxCount": null,
+								"minCount": 4
+							}
+						],
+						"probabilityLevels": [
+							{
+								"id": "prob_1",
+								"label": "Реализация не чаще 1 раза в 10 лет"
+							},
+							{
+								"id": "prob_2",
+								"label": "Реализация 1 раз в 3-10 лет"
+							},
+							{
+								"id": "prob_3",
+								"label": "Реализация 1 раз в 1-3 года"
+							},
+							{
+								"id": "prob_4",
+								"label": "Реализация 1 раз в год"
+							},
+							{
+								"id": "prob_5",
+								"label": "Реализация 1 раз в 6 мес. или чаще"
+							}
+						]
+					},
+					"version": 2
+				},
+				"condition": true,
+				"targetPath": "/uncertaintyCalculation",
+				"description": "Конфигурация модуля «Общая неопределённость» (шкалы, группы, матрица, калькулятор).",
+				"dependencies": []
 			}
 		]
 	},
 	"dictionariesSnapshot": {
 		"referencedDictionaryCodes": [
+			"Способ загрузки данных в BI-систему",
 			"v2.detailInfo.dataMart.deliveryMode",
 			"v2.detailInfo.dataMart.field_0uV7wafS",
 			"v2.detailInfo.dataMart.field_46LCnfWo",
 			"v2.detailInfo.dataMart.field_L-WWLDWY",
-			"v2.detailInfo.dataMart.field_N9LFD6Hu",
 			"v2.detailInfo.dataMart.field_le47srI7",
+			"v2.detailInfo.dataMart.field_N9LFD6Hu",
 			"v2.detailInfo.dataMart.workType",
 			"v2.detailInfo.dataProcess.confidentialData",
 			"v2.detailInfo.dataProcess.deliveryMode",
@@ -4941,8 +5624,8 @@
 			"v2.detailInfo.sourceSystems.items.field_HMnqITVb",
 			"v2.detailInfo.sourceSystems.items.field_K2ioHD8d",
 			"v2.detailInfo.sourceSystems.items.field_L1lRlgf1",
-			"v2.detailInfo.sourceSystems.items.field_VX7y3PsB",
 			"v2.detailInfo.sourceSystems.items.field_p4zxdNZG",
+			"v2.detailInfo.sourceSystems.items.field_VX7y3PsB",
 			"v2.detailInfo.sourceSystems.items.field_wuYlhnu0",
 			"v2.detailInfo.sourceSystems.items.nda",
 			"v2.detailInfo.sourceSystems.items.type",
@@ -4954,8 +5637,6 @@
 			"v2.method.13.роль_модели",
 			"v2.method.14.тип_работ_для_нетиповой_работы_пропро",
 			"v2.method.2.класс_моделей",
-			"v2.method.21.сроки_инициативы",
-			"v2.method.22.стоимость_инициативы",
 			"v2.method.26.необходимость_продуктивизации_и_количество_допол",
 			"v2.method.27.сложность_предметной_области",
 			"v2.method.28.объ_м_запроса_по_сущностям",
@@ -4984,8 +5665,7 @@
 			"v2.workflow.sections.detailInfo",
 			"v2.workflow.sections.generalInfo",
 			"v2.workflow.sections.streamDataSources",
-			"v2.workflow.sections.streamModelControl",
-			"Способ загрузки данных в BI-систему"
+			"v2.workflow.sections.streamModelControl"
 		]
 	}
 }

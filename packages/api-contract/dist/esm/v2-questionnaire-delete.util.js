@@ -55,7 +55,14 @@ export function canUserDeleteV2Questionnaire(userGroups, formData) {
         return { ok: true };
     }
     const stream = readImplementationStream(formData);
-    if (!stream || !streamMatchesScope(stream, scope)) {
+    /**
+     * Черновик/анкета без стрима: лид с известным scope всё равно может удалить
+     * (иначе UI показывает кнопку, а API отвечает wrong_stream).
+     */
+    if (!stream) {
+        return { ok: true };
+    }
+    if (!streamMatchesScope(stream, scope)) {
         return { ok: false, reason: "wrong_stream" };
     }
     return { ok: true };

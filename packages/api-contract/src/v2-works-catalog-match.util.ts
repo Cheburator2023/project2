@@ -931,6 +931,10 @@ export function typicalWorkRulesMatchSource(
 	/** Только arch-count (без ПТ) — как у модельного стрима «Модельный сервис >= 1». */
 	if (rules.length === 0) return archMatch;
 
+	const resolvedRules = remapTriggerRulesToSchemaParams(
+		rules,
+		matchContext?.schemaParams,
+	);
 	const lookupSource = buildTypicalWorkTriggerLookupSource(
 		source,
 		formData,
@@ -938,7 +942,7 @@ export function typicalWorkRulesMatchSource(
 		matchContext?.uiSchema,
 	);
 	const paramCodes = [
-		...new Set(rules.map((rule) => rule.paramCode.trim()).filter(Boolean)),
+		...new Set(resolvedRules.map((rule) => rule.paramCode.trim()).filter(Boolean)),
 	];
 	const enrichedLookup =
 		formData && matchContext?.schemaParams?.length
@@ -949,12 +953,41 @@ export function typicalWorkRulesMatchSource(
 					paramCodes,
 				)
 			: lookupSource;
-	const paramMatch = matchTypicalWorkParamRules(rules, enrichedLookup);
+	const paramMatch = matchTypicalWorkParamRules(resolvedRules, enrichedLookup);
 	if (!hasArch) return paramMatch;
 
 	const combinator = triggerArchCount?.combinator ?? "and";
 	if (combinator === "or") return paramMatch || archMatch;
 	return paramMatch && archMatch;
+}
+
+/**
+ * Устаревший paramCode в триггере (после пересоздания поля в схеме):
+ * перепривязка по имени параметра через schemaParams.
+ */
+export function remapTriggerRulesToSchemaParams(
+	rules: TypicalWorkRuleLike[],
+	schemaParams?: ReadonlyArray<{
+		code: string;
+		name?: string | null;
+	}> | null,
+): TypicalWorkRuleLike[] {
+	if (!schemaParams?.length) return rules;
+	const byCode = new Set(schemaParams.map((param) => param.code));
+	return rules.map((rule) => {
+		const code = rule.paramCode.trim();
+		if (!code || byCode.has(code)) return rule;
+		const ruleName = stripParamNameSourceKeys(rule.paramName)
+			.trim()
+			.toLowerCase();
+		if (!ruleName) return rule;
+		const byName = schemaParams.find(
+			(param) =>
+				stripParamNameSourceKeys(param.name).trim().toLowerCase() === ruleName,
+		);
+		if (!byName) return rule;
+		return { ...rule, paramCode: byName.code };
+	});
 }
 
 export function hasTypicalWorkTriggersConfiguredSimple(

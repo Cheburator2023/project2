@@ -7979,8 +7979,8 @@
 				},
 				{
 					"paramName": "Необходима продуктивизация",
-					"paramCode": "field_Ad1msOl7",
-					"schemaFieldUid": "field_08a71e6d-809b-41a3-aa63-10c8b89da9a0",
+					"paramCode": "field_x-1d7wUh",
+					"schemaFieldUid": "field_76bc5061-e89b-494f-a8e5-40e747ba45d6",
 					"operator": "=",
 					"values": [
 						"Да"
@@ -8061,8 +8061,8 @@
 				},
 				{
 					"paramName": "Необходима продуктивизация",
-					"paramCode": "field_Ad1msOl7",
-					"schemaFieldUid": "field_08a71e6d-809b-41a3-aa63-10c8b89da9a0",
+					"paramCode": "field_x-1d7wUh",
+					"schemaFieldUid": "field_76bc5061-e89b-494f-a8e5-40e747ba45d6",
 					"operator": "=",
 					"values": [
 						"Да"

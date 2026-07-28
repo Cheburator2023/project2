@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildLaborCoefficientLookupSource, coerceNumericLaborActual, findFieldValueInFormData, flattenSourceContextValue, laborValueMatches, resolveByValueLaborParamCoefficients, } from "./v2-works-catalog-match.util";
+import { buildLaborCoefficientLookupSource, coerceNumericLaborActual, findFieldValueInFormData, flattenSourceContextValue, laborValueMatches, remapTriggerRulesToSchemaParams, resolveByValueLaborParamCoefficients, typicalWorkRulesMatchSource, } from "./v2-works-catalog-match.util";
 describe("numeric labor coefficient ranges", () => {
     it("coerces string numbers for matching", () => {
         expect(coerceNumericLaborActual("7")).toBe(7);
@@ -239,5 +239,39 @@ describe("numeric labor coefficient ranges", () => {
             field_qMxSfHk1: false,
         });
         expect(flattenSourceContextValue([])).toEqual({});
+    });
+    it("remaps stale trigger paramCode to schema field by name", () => {
+        const remapped = remapTriggerRulesToSchemaParams([
+            {
+                paramCode: "field_Ad1msOl7",
+                paramName: "Необходима продуктивизация",
+                operator: "=",
+                valueCode: "Да",
+                valueLabel: "Да",
+            },
+        ], [
+            {
+                code: "field_x-1d7wUh",
+                name: "Необходима продуктивизация",
+            },
+        ]);
+        expect(remapped[0]?.paramCode).toBe("field_x-1d7wUh");
+        expect(typicalWorkRulesMatchSource([
+            {
+                paramCode: "field_Ad1msOl7",
+                paramName: "Необходима продуктивизация",
+                operator: "=",
+                valueCode: "Да",
+                valueLabel: "Да",
+            },
+        ], {}, { detailInfo: { dataMart: { "field_x-1d7wUh": true } } }, null, {
+            schemaParams: [
+                {
+                    code: "field_x-1d7wUh",
+                    name: "Необходима продуктивизация",
+                    schemaPointer: "/detailInfo/dataMart/field_x-1d7wUh",
+                },
+            ],
+        })).toBe(true);
     });
 });

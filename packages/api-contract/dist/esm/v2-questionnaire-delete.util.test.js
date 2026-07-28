@@ -26,6 +26,11 @@ describe("canUserDeleteV2Questionnaire", () => {
         expect(canUserDeleteV2Questionnaire(groups, formWithStream("RB"))).toEqual({ ok: true });
         expect(canUserDeleteV2Questionnaire(groups, formWithStream("KMBKCB"))).toEqual({ ok: false, reason: "wrong_stream" });
     });
+    it("ds_lead can delete when anketa has no implementationStream yet", () => {
+        const groups = ["/ds_lead", "sum_Lds_rb"];
+        expect(canUserDeleteV2Questionnaire(groups, {})).toEqual({ ok: true });
+        expect(canUserDeleteV2Questionnaire(groups, { generalInfo: {} })).toEqual({ ok: true });
+    });
     it("forbidden without delete role", () => {
         expect(canUserDeleteV2Questionnaire(["/saprg"], formWithStream("RB"))).toEqual({ ok: false, reason: "forbidden" });
     });

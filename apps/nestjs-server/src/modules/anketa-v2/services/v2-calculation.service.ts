@@ -414,7 +414,15 @@ export class V2CalculationService {
 
 		// 1) task_trigger/generated_rows — материализуем автозадачи до расчёта строк.
 		for (const rule of taskTriggers) {
-			if (!isCalculationPathActive(liveData, rule.targetPath)) continue;
+			if (
+				!isCalculationPathActive(
+					liveData,
+					rule.targetPath,
+					options?.uiSchema,
+				)
+			) {
+				continue;
+			}
 			liveData = await this.applyGeneratedRows(
 				rule,
 				liveData,
@@ -429,7 +437,15 @@ export class V2CalculationService {
 
 		// 2) row_computed — пишем per-row значения.
 		for (const rule of rowComputed) {
-			if (!isCalculationPathActive(liveData, rule.targetPath)) continue;
+			if (
+				!isCalculationPathActive(
+					liveData,
+					rule.targetPath,
+					options?.uiSchema,
+				)
+			) {
+				continue;
+			}
 			liveData = this.applyRowComputed(rule, liveData);
 		}
 
@@ -437,7 +453,15 @@ export class V2CalculationService {
 		const { sorted, cycles } = topoSortComputed(computed);
 		const items: V2CalculationItemDto[] = [];
 		for (const rule of sorted) {
-			if (!isCalculationPathActive(liveData, rule.targetPath)) continue;
+			if (
+				!isCalculationPathActive(
+					liveData,
+					rule.targetPath,
+					options?.uiSchema,
+				)
+			) {
+				continue;
+			}
 			const { item, nextData } = this.applyComputed(rule, liveData);
 			liveData = nextData;
 			items.push(item);

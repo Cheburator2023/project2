@@ -9,6 +9,7 @@ exports.ensureGroupActivationDefaults = ensureGroupActivationDefaults;
 exports.resolveGroupIsActive = resolveGroupIsActive;
 exports.findTriggerGatedGroupActivatableAncestor = findTriggerGatedGroupActivatableAncestor;
 exports.syncTriggerGatedGroupActivationFromTypicalWorks = syncTriggerGatedGroupActivationFromTypicalWorks;
+exports.isTriggerGatedActivatableGroup = isTriggerGatedActivatableGroup;
 exports.isCalculationPathActive = isCalculationPathActive;
 const v2_anketa_section_ui_util_1 = require("./v2-anketa-section-ui.util");
 const v2_typical_work_output_paths_util_1 = require("./v2-typical-work-output-paths.util");
@@ -162,8 +163,18 @@ function syncTriggerGatedGroupActivationFromTypicalWorks(formData, uiSchema, liv
     }
     return changed ? writeGroupActivationMap(formData, next) : formData;
 }
+/**
+ * Группа с `groupActivatable` + `groupActive: false`, внутри которой есть
+ * блок типовых работ (включается по факту генерации строк).
+ */
+function isTriggerGatedActivatableGroup(uiSchema, groupPath) {
+    if (!groupPath)
+        return false;
+    return (0, v2_typical_work_output_paths_util_1.collectGeneratedTypicalWorkArrayPaths)(uiSchema).some((typicalPath) => findTriggerGatedGroupActivatableAncestor(uiSchema, typicalPath) ===
+        groupPath);
+}
 /** Участвует ли путь в расчёте (не под неактивной группой). */
-function isCalculationPathActive(formData, pointer) {
+function isCalculationPathActive(formData, pointer, uiSchema) {
     const dotPath = pointer
         .replace(/^\//, "")
         .split("/")
@@ -176,6 +187,14 @@ function isCalculationPathActive(formData, pointer) {
         if (active !== false)
             continue;
         if (dotPath === groupPath || dotPath.startsWith(`${groupPath}.`)) {
+            /**
+             * Trigger-gated стримы (Источники данных и т.п.): каталог типовых работ
+             * должен отработать даже при groupActive=false, иначе deadlock —
+             * работы не появятся → sync не включит секцию.
+             */
+            if (uiSchema && isTriggerGatedActivatableGroup(uiSchema, groupPath)) {
+                continue;
+            }
             return false;
         }
     }

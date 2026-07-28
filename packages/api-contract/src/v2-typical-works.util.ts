@@ -194,6 +194,7 @@ export type TypicalWorkTriggerMatchContext = {
 	uiSchema?: Record<string, unknown>;
 	schemaParams?: ReadonlyArray<{
 		code: string;
+		name?: string | null;
 		schemaPointer?: string | null;
 	}>;
 };

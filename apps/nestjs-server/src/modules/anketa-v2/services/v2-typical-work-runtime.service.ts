@@ -35,6 +35,7 @@ import {
 	type WorkCoefficientCatalogParam,
 	buildWorkSchemaParamsFromTemplate,
 	remapLaborCoefficientRowsForSchema,
+	resolveTypicalWorkRulesForSourceMatch,
 	resolveWorkSchemaParamForRule,
 	stripParamNameSourceKeys,
 	type TypicalWorkAnyOfLaborParamLike,
@@ -703,7 +704,10 @@ export class V2TypicalWorkRuntimeService {
 			);
 			if (normValue == null) continue;
 
-			const workRules = (rulesByWork.get(work.id) ?? []).map(mapRuleEntity);
+			const workRules = resolveTypicalWorkRulesForSourceMatch(
+				(rulesByWork.get(work.id) ?? []).map(mapRuleEntity),
+				schemaParams,
+			);
 			const triggerInput: TypicalWorkTriggerMatchInput = {
 				mode:
 					(assignmentByWorkId.get(work.id)?.triggerMode as TypicalWorkTriggerMatchInput["mode"]) ??
@@ -720,6 +724,7 @@ export class V2TypicalWorkRuntimeService {
 				triggerInput,
 				params.source,
 				params.formData ?? params.source,
+				{ schemaParams },
 			);
 			const alwaysActive = isModelStreamAlwaysActiveWork(work.id);
 			const alwaysShown =

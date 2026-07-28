@@ -7,7 +7,7 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import {
-	expandV2KeycloakTargetsWithAdAliases,
+	expandV2KeycloakTargetsWithCompat,
 	isV2KeycloakIgnoredOrgGroupPath,
 	shouldEnsureV2KeycloakGroupPath,
 	resolveV2KeycloakGroupPath,
@@ -20,6 +20,7 @@ import {
 	V2_KEYCLOAK_ROLES_TO_ENSURE,
 } from "../constants/v2-keycloak-f05-sync";
 import { resolveV2KeycloakTestUsers } from "../constants/v2-keycloak-test-users";
+import { getV2RoleCompatRuntime } from "../../../shared/utils/v2-role-compat-runtime";
 import { V2RuntimeSettingsService } from "./v2-runtime-settings.service";
 
 type KcGroup = {
@@ -1666,9 +1667,11 @@ export class V2KeycloakRoleSyncService {
 		groupsCreated: string[];
 		groupRoleChanges: V2KeycloakRoleSyncResult["groupRoleChanges"];
 	}> {
-		const target = expandV2KeycloakTargetsWithAdAliases(
+		const compat = await this.runtimeSettings.getRoleCompatOptions();
+		const target = expandV2KeycloakTargetsWithCompat(
 			V2_KEYCLOAK_GROUP_ROLE_TARGET,
 			args.standPrefix,
+			compat,
 		);
 		/** Delegated-каноны вроде `/appadmin` не создаём — роли на AD `/admin_it/{stand}sum_appadmin`. */
 		const groupsToEnsure = [
@@ -1940,9 +1943,10 @@ export class V2KeycloakRoleSyncService {
 		testUsers: Array<{ username: string; label: string; groups: string[] }>;
 	} {
 		const standPrefix = this.normalizeStandPrefix(standPrefixRaw);
-		const baseTarget = expandV2KeycloakTargetsWithAdAliases(
+		const baseTarget = expandV2KeycloakTargetsWithCompat(
 			V2_KEYCLOAK_GROUP_ROLE_TARGET,
 			standPrefix,
+			getV2RoleCompatRuntime(),
 		);
 		const baseUsers = resolveV2KeycloakTestUsers(standPrefix).map((u) => ({
 			username: u.username,

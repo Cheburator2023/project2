@@ -39,8 +39,17 @@ describe("v2-group-activation.util", () => {
         const ui = {
             streamDataSources: {
                 "ui:options": { groupActivatable: true, groupActive: false },
+                field_u_7AkDrP: {
+                    "ui:options": { archComponent: "typicalWork" },
+                },
             },
             streamModelControl: {
+                "ui:options": { groupActivatable: true, groupActive: false },
+                field_G0AoYAl8: {
+                    "ui:options": { archComponent: "typicalWork" },
+                },
+            },
+            streamDigitalAgents: {
                 "ui:options": { groupActivatable: true, groupActive: false },
             },
         };
@@ -48,9 +57,15 @@ describe("v2-group-activation.util", () => {
         expect(seeded.groupActivation).toEqual({
             streamDataSources: false,
             streamModelControl: false,
+            streamDigitalAgents: false,
         });
-        expect(isCalculationPathActive(seeded, "/streamDataSources/field_u-7AkDrP")).toBe(false);
-        expect(isCalculationPathActive(seeded, "/streamModelControl/field_G0AoYAl8")).toBe(false);
+        // Без uiSchema — по-прежнему блокируем неактивное поддерево.
+        expect(isCalculationPathActive(seeded, "/streamDataSources/field_u_7AkDrP")).toBe(false);
+        // Trigger-gated: каталог должен считаться при groupActive=false.
+        expect(isCalculationPathActive(seeded, "/streamDataSources/field_u_7AkDrP", ui)).toBe(true);
+        expect(isCalculationPathActive(seeded, "/streamModelControl/field_G0AoYAl8", ui)).toBe(true);
+        // Обычная опциональная секция без типовых работ — по-прежнему skip.
+        expect(isCalculationPathActive(seeded, "/streamDigitalAgents/localParams", ui)).toBe(false);
     });
     it("finds trigger-gated activatable ancestor for typical work path", () => {
         const ui = {

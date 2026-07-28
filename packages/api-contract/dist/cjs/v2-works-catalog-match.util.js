@@ -27,6 +27,7 @@ exports.buildLaborCoefficientLookupSource = buildLaborCoefficientLookupSource;
 exports.laborValueMatches = laborValueMatches;
 exports.matchSingleTypicalWorkRuleForTriggerFormula = matchSingleTypicalWorkRuleForTriggerFormula;
 exports.typicalWorkRulesMatchSource = typicalWorkRulesMatchSource;
+exports.remapTriggerRulesToSchemaParams = remapTriggerRulesToSchemaParams;
 exports.hasTypicalWorkTriggersConfiguredSimple = hasTypicalWorkTriggersConfiguredSimple;
 exports.resolveLaborCoefficient = resolveLaborCoefficient;
 exports.resolveLaborAnyOfCoefficient = resolveLaborAnyOfCoefficient;
@@ -709,20 +710,44 @@ function typicalWorkRulesMatchSource(rules, source, formData, triggerArchCount, 
     /** Только arch-count (без ПТ) — как у модельного стрима «Модельный сервис >= 1». */
     if (rules.length === 0)
         return archMatch;
+    const resolvedRules = remapTriggerRulesToSchemaParams(rules, matchContext?.schemaParams);
     const lookupSource = (0, v2_typical_works_util_1.buildTypicalWorkTriggerLookupSource)(source, formData, matchContext?.referencePath, matchContext?.uiSchema);
     const paramCodes = [
-        ...new Set(rules.map((rule) => rule.paramCode.trim()).filter(Boolean)),
+        ...new Set(resolvedRules.map((rule) => rule.paramCode.trim()).filter(Boolean)),
     ];
     const enrichedLookup = formData && matchContext?.schemaParams?.length
         ? buildLaborCoefficientLookupSource(lookupSource, formData, matchContext.schemaParams, paramCodes)
         : lookupSource;
-    const paramMatch = matchTypicalWorkParamRules(rules, enrichedLookup);
+    const paramMatch = matchTypicalWorkParamRules(resolvedRules, enrichedLookup);
     if (!hasArch)
         return paramMatch;
     const combinator = triggerArchCount?.combinator ?? "and";
     if (combinator === "or")
         return paramMatch || archMatch;
     return paramMatch && archMatch;
+}
+/**
+ * Устаревший paramCode в триггере (после пересоздания поля в схеме):
+ * перепривязка по имени параметра через schemaParams.
+ */
+function remapTriggerRulesToSchemaParams(rules, schemaParams) {
+    if (!schemaParams?.length)
+        return rules;
+    const byCode = new Set(schemaParams.map((param) => param.code));
+    return rules.map((rule) => {
+        const code = rule.paramCode.trim();
+        if (!code || byCode.has(code))
+            return rule;
+        const ruleName = (0, v2_work_param_source_keys_util_1.stripParamNameSourceKeys)(rule.paramName)
+            .trim()
+            .toLowerCase();
+        if (!ruleName)
+            return rule;
+        const byName = schemaParams.find((param) => (0, v2_work_param_source_keys_util_1.stripParamNameSourceKeys)(param.name).trim().toLowerCase() === ruleName);
+        if (!byName)
+            return rule;
+        return { ...rule, paramCode: byName.code };
+    });
 }
 function hasTypicalWorkTriggersConfiguredSimple(rules, triggerArchCount) {
     return rules.length > 0 || hasTypicalWorkTriggerArchCount(triggerArchCount);

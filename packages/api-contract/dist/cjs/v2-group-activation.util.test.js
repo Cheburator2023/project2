@@ -41,8 +41,17 @@ const v2_group_activation_util_1 = require("./v2-group-activation.util");
         const ui = {
             streamDataSources: {
                 "ui:options": { groupActivatable: true, groupActive: false },
+                field_u_7AkDrP: {
+                    "ui:options": { archComponent: "typicalWork" },
+                },
             },
             streamModelControl: {
+                "ui:options": { groupActivatable: true, groupActive: false },
+                field_G0AoYAl8: {
+                    "ui:options": { archComponent: "typicalWork" },
+                },
+            },
+            streamDigitalAgents: {
                 "ui:options": { groupActivatable: true, groupActive: false },
             },
         };
@@ -50,9 +59,15 @@ const v2_group_activation_util_1 = require("./v2-group-activation.util");
         (0, vitest_1.expect)(seeded.groupActivation).toEqual({
             streamDataSources: false,
             streamModelControl: false,
+            streamDigitalAgents: false,
         });
-        (0, vitest_1.expect)((0, v2_group_activation_util_1.isCalculationPathActive)(seeded, "/streamDataSources/field_u-7AkDrP")).toBe(false);
-        (0, vitest_1.expect)((0, v2_group_activation_util_1.isCalculationPathActive)(seeded, "/streamModelControl/field_G0AoYAl8")).toBe(false);
+        // Без uiSchema — по-прежнему блокируем неактивное поддерево.
+        (0, vitest_1.expect)((0, v2_group_activation_util_1.isCalculationPathActive)(seeded, "/streamDataSources/field_u_7AkDrP")).toBe(false);
+        // Trigger-gated: каталог должен считаться при groupActive=false.
+        (0, vitest_1.expect)((0, v2_group_activation_util_1.isCalculationPathActive)(seeded, "/streamDataSources/field_u_7AkDrP", ui)).toBe(true);
+        (0, vitest_1.expect)((0, v2_group_activation_util_1.isCalculationPathActive)(seeded, "/streamModelControl/field_G0AoYAl8", ui)).toBe(true);
+        // Обычная опциональная секция без типовых работ — по-прежнему skip.
+        (0, vitest_1.expect)((0, v2_group_activation_util_1.isCalculationPathActive)(seeded, "/streamDigitalAgents/localParams", ui)).toBe(false);
     });
     (0, vitest_1.it)("finds trigger-gated activatable ancestor for typical work path", () => {
         const ui = {

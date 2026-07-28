@@ -15,5 +15,10 @@ export declare function findTriggerGatedGroupActivatableAncestor(uiSchema: unkno
  * блок типовых работ — включаются/выключаются по факту генерации строк.
  */
 export declare function syncTriggerGatedGroupActivationFromTypicalWorks(formData: Record<string, unknown>, uiSchema: unknown, liveFormData?: Record<string, unknown> | null): Record<string, unknown>;
+/**
+ * Группа с `groupActivatable` + `groupActive: false`, внутри которой есть
+ * блок типовых работ (включается по факту генерации строк).
+ */
+export declare function isTriggerGatedActivatableGroup(uiSchema: unknown, groupPath: string): boolean;
 /** Участвует ли путь в расчёте (не под неактивной группой). */
-export declare function isCalculationPathActive(formData: Record<string, unknown>, pointer: string): boolean;
+export declare function isCalculationPathActive(formData: Record<string, unknown>, pointer: string, uiSchema?: unknown): boolean;

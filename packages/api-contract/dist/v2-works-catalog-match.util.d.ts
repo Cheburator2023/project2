@@ -146,6 +146,14 @@ export declare function laborValueMatches(actual: unknown, valueCode: string | n
 export declare function matchSingleTypicalWorkRuleForTriggerFormula(rule: TypicalWorkRuleLike, source: Record<string, unknown>): boolean;
 /** Все параметры-триггеры (И) и опционально глобальное условие по количеству компонентов. */
 export declare function typicalWorkRulesMatchSource(rules: TypicalWorkRuleLike[], source: Record<string, unknown>, formData?: Record<string, unknown>, triggerArchCount?: TypicalWorkTriggerArchCountLike | null, matchContext?: TypicalWorkTriggerMatchContext): boolean;
+/**
+ * Устаревший paramCode в триггере (после пересоздания поля в схеме):
+ * перепривязка по имени параметра через schemaParams.
+ */
+export declare function remapTriggerRulesToSchemaParams(rules: TypicalWorkRuleLike[], schemaParams?: ReadonlyArray<{
+    code: string;
+    name?: string | null;
+}> | null): TypicalWorkRuleLike[];
 export declare function hasTypicalWorkTriggersConfiguredSimple(rules: TypicalWorkRuleLike[], triggerArchCount?: TypicalWorkTriggerArchCountLike | null): boolean;
 export declare function resolveLaborCoefficient(source: Record<string, unknown>, paramCode: string, valueCode: string | null, valueLabel: string | null, paramName?: string | null): boolean;
 export declare function resolveLaborAnyOfCoefficient(source: Record<string, unknown>, paramCode: string, anyOf: {

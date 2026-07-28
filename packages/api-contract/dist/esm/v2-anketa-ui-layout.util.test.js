@@ -24,7 +24,7 @@ describe("enrichAnketaLayoutUiSchema", () => {
         const enriched = enrichAnketaLayoutUiSchema(uiSchema, jsonSchema);
         const opts = enriched.field_aJEu5ziT?.["ui:options"];
         expect(opts?.workflowSectionId).toBeUndefined();
-        expect(opts?.streamExecutor).toBe("ПиРМ");
+        expect(opts?.streamExecutor).toBe("pirm");
         expect(opts?.groupActivatable).toBeUndefined();
     });
     it("soft-syncs activation toggle for Sources and Model Control streams", () => {

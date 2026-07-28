@@ -195,10 +195,27 @@ export function syncTriggerGatedGroupActivationFromTypicalWorks(
 	return changed ? writeGroupActivationMap(formData, next) : formData;
 }
 
+/**
+ * Группа с `groupActivatable` + `groupActive: false`, внутри которой есть
+ * блок типовых работ (включается по факту генерации строк).
+ */
+export function isTriggerGatedActivatableGroup(
+	uiSchema: unknown,
+	groupPath: string,
+): boolean {
+	if (!groupPath) return false;
+	return collectGeneratedTypicalWorkArrayPaths(uiSchema).some(
+		(typicalPath) =>
+			findTriggerGatedGroupActivatableAncestor(uiSchema, typicalPath) ===
+			groupPath,
+	);
+}
+
 /** Участвует ли путь в расчёте (не под неактивной группой). */
 export function isCalculationPathActive(
 	formData: Record<string, unknown>,
 	pointer: string,
+	uiSchema?: unknown,
 ): boolean {
 	const dotPath = pointer
 		.replace(/^\//, "")
@@ -211,6 +228,14 @@ export function isCalculationPathActive(
 	for (const [groupPath, active] of Object.entries(activation)) {
 		if (active !== false) continue;
 		if (dotPath === groupPath || dotPath.startsWith(`${groupPath}.`)) {
+			/**
+			 * Trigger-gated стримы (Источники данных и т.п.): каталог типовых работ
+			 * должен отработать даже при groupActive=false, иначе deadlock —
+			 * работы не появятся → sync не включит секцию.
+			 */
+			if (uiSchema && isTriggerGatedActivatableGroup(uiSchema, groupPath)) {
+				continue;
+			}
 			return false;
 		}
 	}

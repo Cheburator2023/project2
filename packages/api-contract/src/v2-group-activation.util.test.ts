@@ -69,8 +69,17 @@ describe("v2-group-activation.util", () => {
 		const ui = {
 			streamDataSources: {
 				"ui:options": { groupActivatable: true, groupActive: false },
+				field_u_7AkDrP: {
+					"ui:options": { archComponent: "typicalWork" },
+				},
 			},
 			streamModelControl: {
+				"ui:options": { groupActivatable: true, groupActive: false },
+				field_G0AoYAl8: {
+					"ui:options": { archComponent: "typicalWork" },
+				},
+			},
+			streamDigitalAgents: {
 				"ui:options": { groupActivatable: true, groupActive: false },
 			},
 		};
@@ -78,17 +87,36 @@ describe("v2-group-activation.util", () => {
 		expect(seeded.groupActivation).toEqual({
 			streamDataSources: false,
 			streamModelControl: false,
+			streamDigitalAgents: false,
 		});
+		// Без uiSchema — по-прежнему блокируем неактивное поддерево.
 		expect(
 			isCalculationPathActive(
 				seeded as Record<string, unknown>,
-				"/streamDataSources/field_u-7AkDrP",
+				"/streamDataSources/field_u_7AkDrP",
 			),
 		).toBe(false);
+		// Trigger-gated: каталог должен считаться при groupActive=false.
+		expect(
+			isCalculationPathActive(
+				seeded as Record<string, unknown>,
+				"/streamDataSources/field_u_7AkDrP",
+				ui,
+			),
+		).toBe(true);
 		expect(
 			isCalculationPathActive(
 				seeded as Record<string, unknown>,
 				"/streamModelControl/field_G0AoYAl8",
+				ui,
+			),
+		).toBe(true);
+		// Обычная опциональная секция без типовых работ — по-прежнему skip.
+		expect(
+			isCalculationPathActive(
+				seeded as Record<string, unknown>,
+				"/streamDigitalAgents/localParams",
+				ui,
 			),
 		).toBe(false);
 	});

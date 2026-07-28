@@ -1,37 +1,55 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, OnModuleInit } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
+import type { V2RoleCompatOptions } from "@smart-anketa/api-contract";
 import { Repository } from "typeorm";
+import { setV2RoleCompatRuntime } from "../../../shared/utils/v2-role-compat-runtime";
 import { V2RuntimeSettingsEntity } from "../entities/v2-runtime-settings.entity";
 
 export type V2StreamFilterSettingDto = {
-	/** Итоговый флаг для UI (env default ⊕ DB override). */
 	enabled: boolean;
-	/** Default из env: STREAM_FILTER_DISABLED=true → false. */
 	envDefaultEnabled: boolean;
-	/** Явный override из админки; null = только env. */
 	override: boolean | null;
-	/**
-	 * DE / DE lead / ModelOps / ModelOps lead видят все стримы.
-	 * Env `DE_MODELOPS_VIEW_ALL_STREAMS` (default ON; `=false` выключает).
-	 */
 	deModelopsViewAllStreams: boolean;
 };
 
+export type V2RoleCompatSettingDto = {
+	adminItAsAppadmin: boolean;
+	adminItAsAppadminEnvDefault: boolean;
+	adminItAsAppadminOverride: boolean | null;
+	allowNestedLeadGroups: boolean;
+	allowNestedLeadGroupsEnvDefault: boolean;
+	allowNestedLeadGroupsOverride: boolean | null;
+};
+
 @Injectable()
-export class V2RuntimeSettingsService {
+export class V2RuntimeSettingsService implements OnModuleInit {
 	constructor(
 		@InjectRepository(V2RuntimeSettingsEntity)
 		private readonly repo: Repository<V2RuntimeSettingsEntity>,
 	) {}
 
-	/** Env default: фильтр включён, пока не STREAM_FILTER_DISABLED=true. */
+	async onModuleInit(): Promise<void> {
+		try {
+			await this.getRoleCompatSetting();
+		} catch {
+			/** DB может быть ещё не смигрирована — остаёмся на env. */
+		}
+	}
+
 	getEnvDefaultEnabled(): boolean {
 		return process.env.STREAM_FILTER_DISABLED !== "true";
 	}
 
-	/** Env: DE/ModelOps family видит все стримы (default ON). */
 	getDeModelopsViewAllStreams(): boolean {
 		return process.env.DE_MODELOPS_VIEW_ALL_STREAMS !== "false";
+	}
+
+	getEnvAdminItAsAppadmin(): boolean {
+		return process.env.ADMIN_IT_AS_APPADMIN !== "false";
+	}
+
+	getEnvAllowNestedLeadGroups(): boolean {
+		return process.env.ALLOW_NESTED_LEAD_GROUPS !== "false";
 	}
 
 	async getStreamFilterSetting(): Promise<V2StreamFilterSettingDto> {
@@ -67,6 +85,66 @@ export class V2RuntimeSettingsService {
 		return this.getStreamFilterSetting();
 	}
 
+	async getRoleCompatSetting(): Promise<V2RoleCompatSettingDto> {
+		const row = await this.getOrCreate();
+		const adminEnv = this.getEnvAdminItAsAppadmin();
+		const nestedEnv = this.getEnvAllowNestedLeadGroups();
+		const adminOverride = row.adminItAsAppadmin;
+		const nestedOverride = row.allowNestedLeadGroups;
+		const dto: V2RoleCompatSettingDto = {
+			adminItAsAppadmin: adminOverride == null ? adminEnv : adminOverride,
+			adminItAsAppadminEnvDefault: adminEnv,
+			adminItAsAppadminOverride: adminOverride,
+			allowNestedLeadGroups:
+				nestedOverride == null ? nestedEnv : nestedOverride,
+			allowNestedLeadGroupsEnvDefault: nestedEnv,
+			allowNestedLeadGroupsOverride: nestedOverride,
+		};
+		setV2RoleCompatRuntime({
+			adminItAsAppadmin: dto.adminItAsAppadmin,
+			allowNestedLeadGroups: dto.allowNestedLeadGroups,
+		});
+		return dto;
+	}
+
+	async setRoleCompatSetting(
+		patch: {
+			adminItAsAppadmin?: boolean;
+			allowNestedLeadGroups?: boolean;
+		},
+		updatedBy?: string | null,
+	): Promise<V2RoleCompatSettingDto> {
+		const row = await this.getOrCreate();
+		if (patch.adminItAsAppadmin !== undefined) {
+			row.adminItAsAppadmin = patch.adminItAsAppadmin;
+		}
+		if (patch.allowNestedLeadGroups !== undefined) {
+			row.allowNestedLeadGroups = patch.allowNestedLeadGroups;
+		}
+		row.updatedBy = updatedBy ?? null;
+		await this.repo.save(row);
+		return this.getRoleCompatSetting();
+	}
+
+	async clearRoleCompatOverride(
+		updatedBy?: string | null,
+	): Promise<V2RoleCompatSettingDto> {
+		const row = await this.getOrCreate();
+		row.adminItAsAppadmin = null;
+		row.allowNestedLeadGroups = null;
+		row.updatedBy = updatedBy ?? null;
+		await this.repo.save(row);
+		return this.getRoleCompatSetting();
+	}
+
+	async getRoleCompatOptions(): Promise<V2RoleCompatOptions> {
+		const dto = await this.getRoleCompatSetting();
+		return {
+			adminItAsAppadmin: dto.adminItAsAppadmin,
+			allowNestedLeadGroups: dto.allowNestedLeadGroups,
+		};
+	}
+
 	async getKeycloakEtalonOverlay(): Promise<Record<string, unknown> | null> {
 		const row = await this.getOrCreate();
 		return row.keycloakEtalonOverlay ?? null;
@@ -89,6 +167,8 @@ export class V2RuntimeSettingsService {
 		row = this.repo.create({
 			id: 1,
 			streamFilterEnabled: null,
+			adminItAsAppadmin: null,
+			allowNestedLeadGroups: null,
 			updatedBy: null,
 		});
 		return this.repo.save(row);
