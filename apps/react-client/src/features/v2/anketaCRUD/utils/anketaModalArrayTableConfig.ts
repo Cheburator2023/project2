@@ -17,6 +17,8 @@ export type AnketaArrayTableColumn = {
 	header: string;
 	width?: string;
 	render?: (item: Record<string, unknown>) => string;
+	/** Нативный title на ячейке (подсказка). */
+	title?: (item: Record<string, unknown>) => string | undefined;
 	field?: string;
 	chip?: boolean;
 	link?: boolean;
@@ -61,6 +63,38 @@ export function formatTypicalWorkNumberValue(value: unknown): string {
 	return String(value);
 }
 
+/** Число экземпляров в per-instance разбивке формулы. */
+export function countTypicalWorkInstanceBreakdown(
+	item: Record<string, unknown>,
+): number {
+	const raw = item.formulaBreakdown;
+	if (!raw || typeof raw !== "object" || Array.isArray(raw)) return 0;
+	const list = (raw as Record<string, unknown>).instanceBreakdown;
+	if (!Array.isArray(list)) return 0;
+	return list.filter(
+		(row) => row != null && typeof row === "object" && !Array.isArray(row),
+	).length;
+}
+
+/** Колонка «Коэффициент»: при нескольких экземплярах — Σ по N. */
+export function formatTypicalWorkCoefficientColumn(
+	item: Record<string, unknown>,
+): string {
+	const n = countTypicalWorkInstanceBreakdown(item);
+	if (n > 1) return `Σ по ${n}`;
+	return formatTypicalWorkNumberValue(item.coefficient);
+}
+
+export function typicalWorkCoefficientColumnTitle(
+	item: Record<string, unknown>,
+): string | undefined {
+	const n = countTypicalWorkInstanceBreakdown(item);
+	if (n > 1) {
+		return "Сумма трудозатрат по экземплярам арх. компонента (формула на каждый экземпляр)";
+	}
+	return undefined;
+}
+
 function formatTypicalWorkNumber(
 	item: Record<string, unknown>,
 	field: string,
@@ -101,7 +135,8 @@ const FACTORY_TYPICAL_WORK_COLUMNS: AnketaArrayTableColumn[] = [
 		key: "coefficient",
 		header: "Коэффициент",
 		width: "0.85fr",
-		render: (item) => formatTypicalWorkNumber(item, "coefficient"),
+		render: (item) => formatTypicalWorkCoefficientColumn(item),
+		title: (item) => typicalWorkCoefficientColumnTitle(item),
 	},
 	{
 		key: "total",

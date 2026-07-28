@@ -150,6 +150,25 @@ describe("typical work table helpers", () => {
 		expect(coefficientCol?.render?.({ coefficient: 1.5 })).toBe("1.5");
 	});
 
+	it("shows Σ по N in coefficient column for multi-instance breakdown", () => {
+		const coefficientCol = getTypicalWorkFactoryTableColumns().find(
+			(col) => col.key === "coefficient",
+		);
+		const item = {
+			coefficient: 1.2,
+			formulaBreakdown: {
+				symbolic: "N",
+				expanded: "a + b = 10",
+				instanceBreakdown: [
+					{ sourceLabel: "Модель A", index: 0, expanded: "5", total: 5 },
+					{ sourceLabel: "Модель B", index: 1, expanded: "5", total: 5 },
+				],
+			},
+		};
+		expect(coefficientCol?.render?.(item)).toBe("Σ по 2");
+		expect(coefficientCol?.title?.(item)).toMatch(/экземпляр/i);
+	});
+
 	it("resolves typical work display name", () => {
 		expect(typicalWorkItemDisplayName({ name: "  Модель  " }, 0)).toBe("Модель");
 		expect(typicalWorkItemDisplayName({}, 2)).toBe("Работа 3");
