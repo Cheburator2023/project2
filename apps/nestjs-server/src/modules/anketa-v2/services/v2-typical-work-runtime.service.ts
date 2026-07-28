@@ -51,6 +51,19 @@ import { V2StreamCatalogService } from "./v2-stream-catalog.service";
 import { V2_FACTORY_TEMPLATE_TYPICAL_WORKS_REGISTRY } from "../constants/v2-factory-template-typical-works-registry";
 
 const runtimeLogger = new Logger("V2TypicalWorkRuntime");
+const RUNTIME_LOG_LIMIT = 8;
+
+function isRuntimeDiagnosticsEnabled(): boolean {
+	if (process.env.TYPICAL_WORK_RUNTIME_DIAGNOSTICS === "1") return true;
+	return process.env.NODE_ENV !== "production";
+}
+
+function compactItems(items: string[], limit = RUNTIME_LOG_LIMIT): string {
+	const unique = [...new Set(items)];
+	const visible = unique.slice(0, limit);
+	const extra = unique.length - visible.length;
+	return extra > 0 ? `${visible.join("; ")}; … +${extra}` : visible.join("; ");
+}
 
 export type CatalogGeneratedTask = {
 	taskCode: string;
@@ -228,15 +241,15 @@ function resolveParamCoefficients(ctx: RuntimeWorkContext): Record<string, numbe
 			coefficient: decimalToNumber(row.coefficient),
 		});
 	}
-	if (skippedUnavailable.length > 0) {
+	if (skippedUnavailable.length > 0 && isRuntimeDiagnosticsEnabled()) {
 		runtimeLogger.warn(
-			`[${ctx.work.name}] отсечены коэффициенты трудоёмкости (недоступны в справочнике / без привязки к схеме): ${skippedUnavailable
-				.map(
+			`[${ctx.work.name}] отсечены коэффициенты трудоёмкости (недоступны в справочнике / без привязки к схеме): ${compactItems(
+				skippedUnavailable.map(
 					(row) =>
 						`${row.paramCode}=«${row.valueLabel ?? row.valueCode ?? "—"}»` +
 						(row.schemaFieldUid ? "" : " [no schemaFieldUid]"),
-				)
-				.join("; ")}`,
+				),
+			)}`,
 		);
 	}
 	const remappedRows = remapLaborCoefficientRowsForSchema(
@@ -261,9 +274,11 @@ function resolveParamCoefficients(ctx: RuntimeWorkContext): Record<string, numbe
 	const unmatchedByValueParams = [
 		...new Set(byValueRows.map((row) => row.paramCode)),
 	].filter((paramCode) => !Object.hasOwn(paramCoefficients, paramCode));
-	if (unmatchedByValueParams.length > 0) {
+	if (unmatchedByValueParams.length > 0 && isRuntimeDiagnosticsEnabled()) {
 		runtimeLogger.warn(
-			`[${ctx.work.name}] ответы анкеты не совпали ни с одной строкой коэффициента (будет ×1): ${unmatchedByValueParams.join(", ")}. lookupKeys=${Object.keys(lookupSource).slice(0, 20).join(",")}`,
+			`[${ctx.work.name}] ответы анкеты не совпали ни с одной строкой коэффициента (будет ×1): ${compactItems(
+				unmatchedByValueParams,
+			)}. lookupKeys=${Object.keys(lookupSource).slice(0, 12).join(",")}`,
 		);
 	}
 
@@ -298,9 +313,11 @@ function resolveParamCoefficients(ctx: RuntimeWorkContext): Record<string, numbe
 			!Object.hasOwn(paramCoefficients, paramCode) &&
 			laborParamsByCode.get(paramCode)?.kind !== "any_of",
 	);
-	if (silentDefaultFactors.length > 0) {
+	if (silentDefaultFactors.length > 0 && isRuntimeDiagnosticsEnabled()) {
 		runtimeLogger.warn(
-			`[${ctx.work.name}] факторы формулы без коэффициента → ×1: ${silentDefaultFactors.join(", ")}`,
+			`[${ctx.work.name}] факторы формулы без коэффициента → ×1: ${compactItems(
+				silentDefaultFactors,
+			)}`,
 		);
 	}
 
