@@ -29,6 +29,7 @@ type KeycloakLike = {
 };
 
 let loginRedirectInFlight = false;
+let logoutInFlight = false;
 
 function asKeycloak(value: unknown): KeycloakLike | null {
 	if (!value || typeof value !== "object") return null;
@@ -264,10 +265,13 @@ export function ensureKeycloakSession(
 /** Только для изоляции unit-тестов auth-flow. */
 export function resetKeycloakLoginGuardForTests(): void {
 	loginRedirectInFlight = false;
+	logoutInFlight = false;
 }
 
 /** Полный logout: сначала оверлей, затем с задержкой чистим state и Keycloak. */
 export function performMfeLogout(props?: MfeAuthHostProps | null): void {
+	if (logoutInFlight) return;
+	logoutInFlight = true;
 	beginLogoutOverlay();
 
 	window.setTimeout(() => {
