@@ -1,8 +1,8 @@
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
 import MuiDrawer, { drawerClasses } from "@mui/material/Drawer";
+import IconButton from "@mui/material/IconButton";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { styled, useColorScheme } from "@mui/material/styles";
@@ -42,7 +42,7 @@ const DrawerWrapper = styled(Card)(() => ({
 	"& > div ": {
 		display: "flex",
 		flexDirection: "column",
-	}
+	},
 }));
 
 export function SideMenu({
@@ -84,7 +84,14 @@ export function SideMenu({
 					</svg>
 				</Flex>
 
-				<Box sx={{ overflow: "auto", flex: 1, display: "flex", flexDirection: "column" }}>
+				<Box
+					sx={{
+						overflow: "auto",
+						flex: 1,
+						display: "flex",
+						flexDirection: "column",
+					}}
+				>
 					<MenuContent />
 				</Box>
 
@@ -107,23 +114,30 @@ export function SideMenu({
 					<Box sx={{ mr: "auto", minWidth: 0 }}>
 						<Typography
 							variant="body2"
-							sx={{ fontWeight: 500, lineHeight: "16px", fontFamily: "inherit" }}
+							sx={{
+								fontWeight: 500,
+								lineHeight: "16px",
+								fontFamily: "inherit",
+							}}
 							noWrap
 						>
 							{displayName}
 						</Typography>
 						{user?.email && (
-							<Typography variant="caption" color="text.secondary" noWrap display="block">
+							<Typography
+								variant="caption"
+								color="text.secondary"
+								noWrap
+								display="block"
+							>
 								{user.email}
 							</Typography>
 						)}
 					</Box>
 					{noAccessiblePages ? (
-						<Button
+						<IconButton
 							size="small"
-							variant="contained"
 							color="primary"
-							startIcon={<LogoutRoundedIcon fontSize="small" />}
 							onClick={() => {
 								if (onLogout) {
 									onLogout();
@@ -131,11 +145,12 @@ export function SideMenu({
 								}
 								performMfeLogout();
 							}}
+							aria-label="Выйти из системы"
 							title="Выйти из системы"
 							data-test-id="side-menu--logout-no-access"
 						>
-							Выйти
-						</Button>
+							<LogoutRoundedIcon fontSize="small" />
+						</IconButton>
 					) : (
 						<OptionsMenu onLogout={onLogout} />
 					)}
