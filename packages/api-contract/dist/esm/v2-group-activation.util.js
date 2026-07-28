@@ -121,7 +121,10 @@ export function findTriggerGatedGroupActivatableAncestor(uiSchema, typicalWorkPa
 }
 /**
  * Секции с `groupActivatable` + `groupActive: false`, внутри которых есть
- * блок типовых работ — включаются/выключаются по факту генерации строк.
+ * блок типовых работ — **включаются** при появлении строк каталога.
+ *
+ * Выключение не форсируем: иначе ручной toggle и «Активна по умолчанию»
+ * тут же откатываются (activate → sync sees empty/transient works → deactivate).
  */
 export function syncTriggerGatedGroupActivationFromTypicalWorks(formData, uiSchema, liveFormData) {
     const typicalWorkPaths = collectGeneratedTypicalWorkArrayPaths(uiSchema);
@@ -142,9 +145,11 @@ export function syncTriggerGatedGroupActivationFromTypicalWorks(formData, uiSche
     let changed = false;
     const next = { ...prev };
     for (const [groupPath, paths] of groupToTypicalPaths) {
-        const shouldBeActive = paths.some((path) => hasGeneratedTypicalWorkRows(liveFormData, path));
-        if (next[groupPath] !== shouldBeActive) {
-            next[groupPath] = shouldBeActive;
+        const hasWorks = paths.some((path) => hasGeneratedTypicalWorkRows(liveFormData, path));
+        if (!hasWorks)
+            continue;
+        if (next[groupPath] !== true) {
+            next[groupPath] = true;
             changed = true;
         }
     }

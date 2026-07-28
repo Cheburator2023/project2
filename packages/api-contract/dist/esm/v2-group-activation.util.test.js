@@ -94,11 +94,25 @@ describe("v2-group-activation.util", () => {
             },
         });
         expect(activated.groupActivation).toEqual({ streamDataSources: true });
-        const deactivated = syncTriggerGatedGroupActivationFromTypicalWorks(activated, ui, {
+        // Без строк не форсируем выключение (ручной toggle / «активна по умолчанию»).
+        const kept = syncTriggerGatedGroupActivationFromTypicalWorks(activated, ui, {
             streamDataSources: {
                 field_typical: [],
             },
         });
-        expect(deactivated.groupActivation).toEqual({ streamDataSources: false });
+        expect(kept.groupActivation).toEqual({ streamDataSources: true });
+    });
+    it("does not deactivate manually enabled trigger-gated stream without works", () => {
+        const ui = {
+            streamDataSources: {
+                "ui:options": { groupActivatable: true, groupActive: false },
+                field_typical: {
+                    "ui:options": { archComponent: "typicalWork" },
+                },
+            },
+        };
+        const manualOn = setGroupActivationAtPath({}, "streamDataSources", true);
+        const next = syncTriggerGatedGroupActivationFromTypicalWorks(manualOn, ui, { streamDataSources: { field_typical: [] } });
+        expect(next.groupActivation).toEqual({ streamDataSources: true });
     });
 });

@@ -46,6 +46,7 @@ import {
 	readV2AnketaSectionUiOptions,
 	resolveStreamExecutorForTypicalWorkOutputPath,
 	resolveV2AnketaStreamBlockOptions,
+	setGroupActivationAtPath,
 	V2_ANKETA_MAIN_SECTION_IDS,
 	V2_ANKETA_MAIN_SECTION_TITLES,
 	V2_ANKETA_SECTION_ROLE_VALUES,
@@ -368,6 +369,7 @@ export function SchemaPropertiesPanel() {
 		recordDraftHistory,
 		updateField,
 		patchUiSchema,
+		setFormData,
 		handleToggleRequired,
 		handleDictionaryCodeChange,
 		openLogicTabWithRule,
@@ -1448,16 +1450,50 @@ export function SchemaPropertiesPanel() {
 									control={
 										<Checkbox
 											checked={sectionUiOptions.groupActivatable ?? false}
-											onChange={(e) =>
+											onChange={(e) => {
+												const enabled = e.target.checked;
 												patchSectionUi({
-													groupActivatable: e.target.checked || undefined,
-													...(e.target.checked
+													groupActivatable: enabled || undefined,
+													...(enabled
 														? {}
 														: {
 																groupActive: undefined,
 															}),
-												})
-											}
+												});
+												if (!selectedPointer) return;
+												const pathKey = selectedPointer
+													.replace(/^\//, "")
+													.split("/")
+													.filter(Boolean)
+													.join(".");
+												if (!pathKey) return;
+												if (!enabled) {
+													setFormData((prev) => {
+														const map = {
+															...(typeof prev.groupActivation === "object" &&
+															prev.groupActivation &&
+															!Array.isArray(prev.groupActivation)
+																? (prev.groupActivation as Record<
+																		string,
+																		unknown
+																	>)
+																: {}),
+														};
+														delete map[pathKey];
+														return { ...prev, groupActivation: map };
+													});
+													return;
+												}
+												const activeByDefault =
+													sectionUiOptions.groupActive !== false;
+												setFormData((prev) =>
+													setGroupActivationAtPath(
+														prev,
+														pathKey,
+														activeByDefault,
+													),
+												);
+											}}
 										/>
 									}
 									label="Можно активировать и деактивировать"
@@ -1467,11 +1503,26 @@ export function SchemaPropertiesPanel() {
 										control={
 											<Checkbox
 												checked={sectionUiOptions.groupActive !== false}
-												onChange={(e) =>
+												onChange={(e) => {
+													const nextActive = e.target.checked;
 													patchSectionUi({
-														groupActive: e.target.checked,
-													})
-												}
+														groupActive: nextActive,
+													});
+													if (!selectedPointer) return;
+													const pathKey = selectedPointer
+														.replace(/^\//, "")
+														.split("/")
+														.filter(Boolean)
+														.join(".");
+													if (!pathKey) return;
+													setFormData((prev) =>
+														setGroupActivationAtPath(
+															prev,
+															pathKey,
+															nextActive,
+														),
+													);
+												}}
 											/>
 										}
 										label="Активна по умолчанию"

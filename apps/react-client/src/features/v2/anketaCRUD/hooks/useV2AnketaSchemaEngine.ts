@@ -183,13 +183,14 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 
 	useEffect(() => {
 		if (!mappedCalculation?.liveFormData) return;
-		setFormData((prev) =>
-			syncTriggerGatedGroupActivationFromTypicalWorks(
+		setFormData((prev) => {
+			const next = syncTriggerGatedGroupActivationFromTypicalWorks(
 				prev,
 				uiSchema,
 				mappedCalculation.liveFormData,
-			),
-		);
+			);
+			return next === prev ? prev : next;
+		});
 	}, [mappedCalculation?.liveFormData, uiSchema]);
 
 	const logicPreviewPack = useMemo(

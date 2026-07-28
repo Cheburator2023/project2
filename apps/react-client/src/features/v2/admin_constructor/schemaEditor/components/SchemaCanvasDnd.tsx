@@ -43,6 +43,7 @@ import {
 	resolveStreamExecutorForTypicalWorkOutputPath,
 	resolveV2AnketaArchComponent,
 	resolveV2AnketaCanvasUiKind,
+	setGroupActivationAtPath,
 	type V2AnketaCanvasUiKind,
 	type V2ArchComponentType,
 } from "@smart-anketa/api-contract";
@@ -325,6 +326,7 @@ function SchemaCanvasFieldRow({
 		selectedPointer,
 		setSelectedPointer,
 		setUiSchema,
+		setFormData,
 		duplicateCanvasField,
 	} = useSchemaEditor();
 
@@ -675,14 +677,25 @@ function SchemaCanvasFieldRow({
 					tabIndex={selected ? 0 : -1}
 					onClick={(e) => {
 						e.stopPropagation();
+						const nextActive = groupInactive;
 						setUiSchema(
 							(prev) =>
 								patchUiOptionsAtPointer(
 									prev as Record<string, unknown>,
 									fieldPointer,
-									{ groupActive: groupInactive },
+									{ groupActive: nextActive },
 								) as typeof prev,
 						);
+						const pathKey = fieldPointer
+							.replace(/^\//, "")
+							.split("/")
+							.filter(Boolean)
+							.join(".");
+						if (pathKey) {
+							setFormData((prev) =>
+								setGroupActivationAtPath(prev, pathKey, nextActive),
+							);
+						}
 					}}
 					sx={{ flexShrink: 0 }}
 				>

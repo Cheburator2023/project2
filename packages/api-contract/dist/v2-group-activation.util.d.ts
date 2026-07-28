@@ -12,7 +12,10 @@ export declare function resolveGroupIsActive(pathKey: string, uiSchema: unknown,
 export declare function findTriggerGatedGroupActivatableAncestor(uiSchema: unknown, typicalWorkPath: string): string | null;
 /**
  * Секции с `groupActivatable` + `groupActive: false`, внутри которых есть
- * блок типовых работ — включаются/выключаются по факту генерации строк.
+ * блок типовых работ — **включаются** при появлении строк каталога.
+ *
+ * Выключение не форсируем: иначе ручной toggle и «Активна по умолчанию»
+ * тут же откатываются (activate → sync sees empty/transient works → deactivate).
  */
 export declare function syncTriggerGatedGroupActivationFromTypicalWorks(formData: Record<string, unknown>, uiSchema: unknown, liveFormData?: Record<string, unknown> | null): Record<string, unknown>;
 /**

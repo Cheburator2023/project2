@@ -96,11 +96,25 @@ const v2_group_activation_util_1 = require("./v2-group-activation.util");
             },
         });
         (0, vitest_1.expect)(activated.groupActivation).toEqual({ streamDataSources: true });
-        const deactivated = (0, v2_group_activation_util_1.syncTriggerGatedGroupActivationFromTypicalWorks)(activated, ui, {
+        // Без строк не форсируем выключение (ручной toggle / «активна по умолчанию»).
+        const kept = (0, v2_group_activation_util_1.syncTriggerGatedGroupActivationFromTypicalWorks)(activated, ui, {
             streamDataSources: {
                 field_typical: [],
             },
         });
-        (0, vitest_1.expect)(deactivated.groupActivation).toEqual({ streamDataSources: false });
+        (0, vitest_1.expect)(kept.groupActivation).toEqual({ streamDataSources: true });
+    });
+    (0, vitest_1.it)("does not deactivate manually enabled trigger-gated stream without works", () => {
+        const ui = {
+            streamDataSources: {
+                "ui:options": { groupActivatable: true, groupActive: false },
+                field_typical: {
+                    "ui:options": { archComponent: "typicalWork" },
+                },
+            },
+        };
+        const manualOn = (0, v2_group_activation_util_1.setGroupActivationAtPath)({}, "streamDataSources", true);
+        const next = (0, v2_group_activation_util_1.syncTriggerGatedGroupActivationFromTypicalWorks)(manualOn, ui, { streamDataSources: { field_typical: [] } });
+        (0, vitest_1.expect)(next.groupActivation).toEqual({ streamDataSources: true });
     });
 });
