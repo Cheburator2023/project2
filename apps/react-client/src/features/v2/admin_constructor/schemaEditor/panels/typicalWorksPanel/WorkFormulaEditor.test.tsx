@@ -314,7 +314,7 @@ describe("WorkFormulaEditor (ui)", () => {
 		expect(within(ribbon).getByTestId(TID.workFormulaCursor)).toBeInTheDocument();
 	});
 
-	it("changes operator inline in the ribbon via double-click", async () => {
+	it("changes operator inline in the ribbon via click", async () => {
 		const user = userEvent.setup();
 		renderEditor({
 			initialFormula: {
@@ -328,12 +328,12 @@ describe("WorkFormulaEditor (ui)", () => {
 		});
 
 		const ribbon = screen.getByTestId(TID.workFormulaRibbon);
-		await user.dblClick(screen.getByTestId(TID.workFormulaOperatorChip));
+		await user.click(screen.getByTestId(TID.workFormulaOperatorChip));
 		const picker = within(ribbon).getByTestId(TID.workFormulaOperatorSelect);
-		await user.click(within(picker).getByRole("button", { name: "+" }));
+		await user.click(within(picker).getByRole("button", { name: "÷" }));
 
 		expect(screen.getByTestId(TID.workFormulaGeneralSummary)).toHaveTextContent(
-			"N + 2",
+			"N ÷ 2",
 		);
 	});
 

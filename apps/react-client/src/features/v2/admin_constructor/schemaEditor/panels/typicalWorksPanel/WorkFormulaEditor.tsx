@@ -868,8 +868,22 @@ export function WorkFormulaEditor({
 											}
 											onClick={(event) => {
 												event.stopPropagation();
-												// Одинарный клик — только курсор после токена (не открываем
-												// инлайн-редактор: иначе blur TextField съедает клик по «×» в конце).
+												if (readOnly) {
+													setCursor(index + 1);
+													return;
+												}
+												// Оператор — открываем селект по одинарному клику.
+												// Число — только курсор (инлайн-редактор по dblclick:
+												// иначе blur TextField съедает клик по «×» в конце).
+												if (token.kind === "operator") {
+													setEditingNumberIndex(null);
+													setEditingOperatorIndex(index);
+													setCursorIndex(
+														Math.max(0, Math.min(index + 1, formula.tokens.length)),
+													);
+													focusRibbon();
+													return;
+												}
 												setEditingNumberIndex(null);
 												setEditingOperatorIndex(null);
 												setCursor(index + 1);
@@ -901,7 +915,7 @@ export function WorkFormulaEditor({
 														: isWarningParam
 														? "Any-of без выбранных значений — отметьте множество в карточке параметра"
 														: isOperator && !readOnly
-															? "Сменить оператор (двойной клик)"
+															? "Сменить оператор"
 															: token.kind === "number" && !readOnly
 																? "Изменить число (двойной клик)"
 															: (token.kind === "param_coeff" ||

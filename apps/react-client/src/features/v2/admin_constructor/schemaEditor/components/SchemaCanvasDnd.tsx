@@ -420,10 +420,11 @@ function SchemaCanvasFieldRow({
 			: undefined;
 	const isLayoutGroup = uiOptions?.layoutGroup === true;
 	const sectionUiOptions = readV2AnketaSectionUiOptions(uiBranch);
-	const groupInactive =
+	const groupInactive = Boolean(
 		isGroup &&
-		sectionUiOptions.groupActivatable &&
-		sectionUiOptions.groupActive === false;
+			sectionUiOptions.groupActivatable &&
+			sectionUiOptions.groupActive === false,
+	);
 	const canvasUiKind = resolveV2AnketaCanvasUiKind(uiBranch, { fieldPointer });
 	const isSystemField = canvasUiKind === "system";
 	const isStockField = isCanvasStockField(uiSchema, fieldPointer);
