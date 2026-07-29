@@ -5,6 +5,7 @@ module.exports = {
 	ignores: [
 		(commit) => pullRequestRegexp.test(commit),
 		(commit) => commit.startsWith("Merge: fix conflict"),
+		(commit) => commit.includes("Merge branches"),
 	],
 	rules: {
 		"body-max-line-length": [1, "always", 1000],
