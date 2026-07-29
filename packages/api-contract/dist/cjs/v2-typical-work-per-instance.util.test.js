@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const vitest_1 = require("vitest");
 const v2_typical_work_per_instance_util_1 = require("./v2-typical-work-per-instance.util");
+const v2_trigger_formula_util_1 = require("./v2-trigger-formula.util");
 const v2_work_arch_count_coeff_util_1 = require("./v2-work-arch-count-coeff.util");
 (0, vitest_1.describe)("v2-typical-work-per-instance", () => {
     (0, vitest_1.it)("maps arch component type labels to kinds", () => {
@@ -179,5 +180,116 @@ const v2_work_arch_count_coeff_util_1 = require("./v2-work-arch-count-coeff.util
     (0, vitest_1.it)("explains empty arch instances in breakdown", () => {
         (0, vitest_1.expect)((0, v2_typical_work_per_instance_util_1.formatEmptyArchInstanceBreakdown)("Процесс обработки данных")).toBe("нет заполненных «Процесс обработки данных» → 0");
         (0, vitest_1.expect)((0, v2_typical_work_per_instance_util_1.formatEmptyArchInstanceBreakdown)("Система-источник")).toBe("нет заполненных «Система-источник» → 0");
+        (0, vitest_1.expect)((0, v2_typical_work_per_instance_util_1.formatNoTriggerMatchingArchInstanceBreakdown)("Модель")).toBe("нет «Модели», удовлетворяющих триггеру появления → 0");
+    });
+    (0, vitest_1.it)("filters per-instance rows by appearance trigger (AutoML on model)", () => {
+        const formData = {
+            detailInfo: {
+                modelsList: [
+                    { name: "m1", autoML: true },
+                    { name: "m2", autoML: false },
+                    { name: "m3", autoML: false },
+                ],
+            },
+        };
+        const instances = (0, v2_typical_work_per_instance_util_1.listArchComponentInstances)(formData, "Модель");
+        (0, vitest_1.expect)(instances).toHaveLength(3);
+        const triggerInput = {
+            mode: "simple",
+            rules: [
+                {
+                    paramCode: "autoML",
+                    paramName: "Необходимость AutoML",
+                    operator: "=",
+                    valueCode: "true",
+                    valueLabel: "Да",
+                },
+            ],
+        };
+        const matched = instances.filter((instance) => {
+            const source = { ...instance.row };
+            const sliced = (0, v2_typical_work_per_instance_util_1.formDataWithSingleArchInstance)(formData, "model", instance);
+            return (0, v2_typical_work_per_instance_util_1.archInstanceMatchesWorkTrigger)({
+                triggerInput,
+                source,
+                formData: sliced,
+            });
+        });
+        (0, vitest_1.expect)(matched.map((row) => row.sourceLabel)).toEqual(["m1"]);
+    });
+    (0, vitest_1.it)("appearance gate: work appears when any model matches AutoML (not only if all do)", () => {
+        const formData = {
+            generalInfo: {
+                modelService: [{ workType: "Внедрение", field_jUm5syZf: "канал" }],
+            },
+            detailInfo: {
+                modelsList: [
+                    {
+                        "field_atxiq-UM": "ваыава",
+                        autoML: true,
+                        algorithmType: "Аудио-аналитика",
+                    },
+                    {
+                        "field_atxiq-UM": "01. Постановка задачи2",
+                        autoML: false,
+                        algorithmType: "Компьютерное зрение",
+                    },
+                    {
+                        "field_atxiq-UM": "66666677777",
+                        autoML: false,
+                    },
+                ],
+            },
+        };
+        const source = {
+            workType: "Внедрение",
+            field_jUm5syZf: "канал",
+        };
+        const triggerInput = {
+            mode: "formula",
+            rules: [],
+            triggerFormula: {
+                text: "workType ∈ {Внедрение} И AutoML = Да",
+                tokens: [
+                    {
+                        kind: "param",
+                        paramCode: "workType",
+                        paramName: "Тип работ",
+                        operator: "in",
+                        values: [
+                            { code: "Внедрение", label: "Внедрение" },
+                            {
+                                code: "Разработка и внедрение",
+                                label: "Разработка и внедрение",
+                            },
+                        ],
+                    },
+                    { kind: "logic", op: "and" },
+                    {
+                        kind: "param",
+                        paramCode: "autoML",
+                        paramName: "Необходимость AutoML",
+                        operator: "=",
+                        valueCode: "true",
+                        valueLabel: "Да",
+                    },
+                ],
+            },
+        };
+        // Flatten last-write would see autoML=false from the last model —
+        // form-level match must not be the gate for fan-out works.
+        (0, vitest_1.expect)((0, v2_trigger_formula_util_1.matchTypicalWorkTriggers)(triggerInput, source, formData)).toBe(false);
+        (0, vitest_1.expect)((0, v2_typical_work_per_instance_util_1.matchTypicalWorkAppearanceTriggers)({
+            triggerInput,
+            archComponentType: "Модель",
+            source,
+            formData,
+        })).toBe(true);
+        const matched = (0, v2_typical_work_per_instance_util_1.listArchComponentInstances)(formData, "Модель").filter((instance) => (0, v2_typical_work_per_instance_util_1.archInstanceMatchesWorkTrigger)({
+            triggerInput,
+            source: { ...source, ...instance.row },
+            formData: (0, v2_typical_work_per_instance_util_1.formDataWithSingleArchInstance)(formData, "model", instance),
+        }));
+        (0, vitest_1.expect)(matched.map((row) => row.sourceLabel)).toEqual(["ваыава"]);
     });
 });

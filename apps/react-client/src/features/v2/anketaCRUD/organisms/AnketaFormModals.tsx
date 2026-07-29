@@ -13,6 +13,7 @@ import {
 import { getObjectAtPath } from "../utils/anketaArchObjectTableConfig";
 import {
 	appendArchObjectListItem,
+	canAppendArchObjectListItem,
 	isAnketaArchObjectListPath,
 	readArchObjectListAtPath,
 	removeArchObjectListItem,
@@ -282,9 +283,16 @@ export function AnketaFormModals({
 		(path: string, editIndex?: number) => {
 			const kind = modalBindings.modalKindByPath[path];
 			if (!kind) return;
+			if (
+				editIndex == null &&
+				isAnketaArchObjectListPath(path) &&
+				!canAppendArchObjectListItem(formData, path)
+			) {
+				return;
+			}
 			setActiveModal({ kind, path, editIndex });
 		},
-		[modalBindings.modalKindByPath],
+		[formData, modalBindings.modalKindByPath],
 	);
 
 	const openUncertaintyModal = useCallback(() => {

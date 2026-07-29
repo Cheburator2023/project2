@@ -1,14 +1,18 @@
 import { describe, expect, it } from "vitest";
 import {
+	archInstanceMatchesWorkTrigger,
 	formDataWithSingleArchInstance,
 	formatEmptyArchInstanceBreakdown,
+	formatNoTriggerMatchingArchInstanceBreakdown,
 	formatPerInstanceBreakdownExpanded,
 	listArchComponentInstances,
+	matchTypicalWorkAppearanceTriggers,
 	readPerInstanceArchCountOverride,
 	resolveArchComponentKindFromType,
 	resolveArchInstanceNameFieldKeys,
 	withPerInstanceArchCountOverride,
 } from "./v2-typical-work-per-instance.util";
+import { matchTypicalWorkTriggers } from "./v2-trigger-formula.util";
 import { resolveWorkArchComponentCount } from "./v2-work-arch-count-coeff.util";
 
 describe("v2-typical-work-per-instance", () => {
@@ -241,5 +245,141 @@ describe("v2-typical-work-per-instance", () => {
 		expect(formatEmptyArchInstanceBreakdown("Система-источник")).toBe(
 			"нет заполненных «Система-источник» → 0",
 		);
+		expect(
+			formatNoTriggerMatchingArchInstanceBreakdown("Модель"),
+		).toBe("нет «Модели», удовлетворяющих триггеру появления → 0");
+	});
+
+	it("filters per-instance rows by appearance trigger (AutoML on model)", () => {
+		const formData = {
+			detailInfo: {
+				modelsList: [
+					{ name: "m1", autoML: true },
+					{ name: "m2", autoML: false },
+					{ name: "m3", autoML: false },
+				],
+			},
+		};
+		const instances = listArchComponentInstances(formData, "Модель");
+		expect(instances).toHaveLength(3);
+
+		const triggerInput = {
+			mode: "simple" as const,
+			rules: [
+				{
+					paramCode: "autoML",
+					paramName: "Необходимость AutoML",
+					operator: "=",
+					valueCode: "true",
+					valueLabel: "Да",
+				},
+			],
+		};
+
+		const matched = instances.filter((instance) => {
+			const source = { ...instance.row };
+			const sliced = formDataWithSingleArchInstance(
+				formData,
+				"model",
+				instance,
+			);
+			return archInstanceMatchesWorkTrigger({
+				triggerInput,
+				source,
+				formData: sliced,
+			});
+		});
+
+		expect(matched.map((row) => row.sourceLabel)).toEqual(["m1"]);
+	});
+
+	it("appearance gate: work appears when any model matches AutoML (not only if all do)", () => {
+		const formData = {
+			generalInfo: {
+				modelService: [{ workType: "Внедрение", field_jUm5syZf: "канал" }],
+			},
+			detailInfo: {
+				modelsList: [
+					{
+						"field_atxiq-UM": "ваыава",
+						autoML: true,
+						algorithmType: "Аудио-аналитика",
+					},
+					{
+						"field_atxiq-UM": "01. Постановка задачи2",
+						autoML: false,
+						algorithmType: "Компьютерное зрение",
+					},
+					{
+						"field_atxiq-UM": "66666677777",
+						autoML: false,
+					},
+				],
+			},
+		};
+		const source = {
+			workType: "Внедрение",
+			field_jUm5syZf: "канал",
+		};
+		const triggerInput = {
+			mode: "formula" as const,
+			rules: [],
+			triggerFormula: {
+				text: "workType ∈ {Внедрение} И AutoML = Да",
+				tokens: [
+					{
+						kind: "param" as const,
+						paramCode: "workType",
+						paramName: "Тип работ",
+						operator: "in" as const,
+						values: [
+							{ code: "Внедрение", label: "Внедрение" },
+							{
+								code: "Разработка и внедрение",
+								label: "Разработка и внедрение",
+							},
+						],
+					},
+					{ kind: "logic" as const, op: "and" as const },
+					{
+						kind: "param" as const,
+						paramCode: "autoML",
+						paramName: "Необходимость AutoML",
+						operator: "=" as const,
+						valueCode: "true",
+						valueLabel: "Да",
+					},
+				],
+			},
+		};
+
+		// Flatten last-write would see autoML=false from the last model —
+		// form-level match must not be the gate for fan-out works.
+		expect(
+			matchTypicalWorkTriggers(triggerInput, source, formData),
+		).toBe(false);
+
+		expect(
+			matchTypicalWorkAppearanceTriggers({
+				triggerInput,
+				archComponentType: "Модель",
+				source,
+				formData,
+			}),
+		).toBe(true);
+
+		const matched = listArchComponentInstances(formData, "Модель").filter(
+			(instance) =>
+				archInstanceMatchesWorkTrigger({
+					triggerInput,
+					source: { ...source, ...instance.row },
+					formData: formDataWithSingleArchInstance(
+						formData,
+						"model",
+						instance,
+					),
+				}),
+		);
+		expect(matched.map((row) => row.sourceLabel)).toEqual(["ваыава"]);
 	});
 });

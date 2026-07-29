@@ -12,6 +12,7 @@ import {
 	defaultWorkRounding,
 	formDataWithSingleArchInstance,
 	formatEmptyArchInstanceBreakdown,
+	formatNoTriggerMatchingArchInstanceBreakdown,
 	formatPerInstanceBreakdownExpanded,
 	formatTypicalWorkCoefficientDisplay,
 	isWorkCoefficientValueAvailable,
@@ -27,7 +28,10 @@ import {
 	resolveExecutorScopeDbStreams,
 	isModelStreamAlwaysActiveWork,
 	isModelStreamAlwaysShownWork,
+	archInstanceMatchesWorkTrigger,
+	matchTypicalWorkAppearanceTriggers,
 	matchTypicalWorkTriggers,
+	hasTypicalWorkTriggersConfigured,
 	normalizeTypicalWorkTriggerRuleForMatch,
 	remapFactoryAllowedWorkIdsToTemplateWorks,
 	type TypicalWorkTriggerMatchInput,
@@ -440,6 +444,7 @@ function evaluateWorkInstance(
 /**
  * Per-instance: формула на каждый экземпляр archComponentType работы → сумма.
  * arch_count того же kind принудительно 1 (через formData override / sliced list).
+ * В сумму попадают только экземпляры, на которых сработал триггер появления работы.
  */
 function evaluateWorkAcrossArchInstances(ctx: RuntimeWorkContext): {
 	total: number | null;
@@ -465,10 +470,24 @@ function evaluateWorkAcrossArchInstances(ctx: RuntimeWorkContext): {
 		};
 	}
 
+	const assignment = ctx.assignmentByWorkId.get(ctx.work.id);
+	const triggerInput: TypicalWorkTriggerMatchInput = {
+		mode:
+			(assignment?.triggerMode as TypicalWorkTriggerMatchInput["mode"]) ??
+			"simple",
+		rules: ctx.rules,
+		triggerArchCount: mapTriggerArchCountFromAssignment(assignment),
+		triggerFormula:
+			(assignment?.triggerFormula as TypicalWorkTriggerMatchInput["triggerFormula"]) ??
+			null,
+	};
+	const matchContext = { schemaParams: ctx.schemaParams };
+
 	const instanceBreakdown: TypicalWorkInstanceBreakdownLine[] = [];
 	let sum = 0;
 	let lastCoeffs: Record<string, number> = {};
 	let anyOk = false;
+	let skippedByTrigger = 0;
 
 	for (const instance of instances) {
 		const useBaseSource = kind == null || kind === "modelService";
@@ -480,6 +499,17 @@ function evaluateWorkAcrossArchInstances(ctx: RuntimeWorkContext): {
 			kind,
 			instance,
 		);
+		if (
+			!archInstanceMatchesWorkTrigger({
+				triggerInput,
+				source,
+				formData,
+				matchContext,
+			})
+		) {
+			skippedByTrigger += 1;
+			continue;
+		}
 		const evaluated = evaluateWorkInstance(ctx, source, formData);
 		if (evaluated.total == null) continue;
 		anyOk = true;
@@ -494,6 +524,20 @@ function evaluateWorkAcrossArchInstances(ctx: RuntimeWorkContext): {
 	}
 
 	if (!anyOk) {
+		if (
+			instances.length > 0 &&
+			skippedByTrigger === instances.length &&
+			hasTypicalWorkTriggersConfigured(triggerInput)
+		) {
+			return {
+				total: 0,
+				paramCoefficients: {},
+				instanceBreakdown: [],
+				expandedOverride: formatNoTriggerMatchingArchInstanceBreakdown(
+					ctx.work.archComponentType,
+				),
+			};
+		}
 		return {
 			total: null,
 			paramCoefficients: {},
@@ -723,12 +767,13 @@ export class V2TypicalWorkRuntimeService {
 					(assignmentByWorkId.get(work.id)?.triggerFormula as TypicalWorkTriggerMatchInput["triggerFormula"]) ??
 					null,
 			};
-			const triggersMatch = matchTypicalWorkTriggers(
+			const triggersMatch = matchTypicalWorkAppearanceTriggers({
 				triggerInput,
-				params.source,
-				params.formData ?? params.source,
-				{ schemaParams },
-			);
+				archComponentType: work.archComponentType,
+				source: params.source,
+				formData: params.formData ?? params.source,
+				matchContext: { schemaParams },
+			});
 			const alwaysActive = isModelStreamAlwaysActiveWork(work.id);
 			const alwaysShown =
 				isModelStreamAlwaysShownWork(work.id) || alwaysActive;

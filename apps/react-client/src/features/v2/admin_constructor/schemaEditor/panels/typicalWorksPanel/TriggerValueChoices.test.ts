@@ -11,6 +11,8 @@ const RULE_SEED = {
 	paramName: "Тип системы-источника",
 };
 
+const STREAM = "Источники данных";
+
 describe("resolveSelectedCatalogValueCodes", () => {
 	it("maps label-as-code rule to dictionary code (source type)", () => {
 		const selected = resolveSelectedCatalogValueCodes(
@@ -18,6 +20,7 @@ describe("resolveSelectedCatalogValueCodes", () => {
 			[
 				{
 					id: "r1",
+					streamExecutor: STREAM,
 					paramCode: "type",
 					paramName: "Тип системы-источника",
 					operator: "=",
@@ -36,6 +39,7 @@ describe("resolveSelectedCatalogValueCodes", () => {
 			[
 				{
 					id: "r1",
+					streamExecutor: STREAM,
 					paramCode: "type",
 					paramName: "Тип системы-источника",
 					operator: "=",
@@ -54,6 +58,7 @@ describe("resolveSelectedCatalogValueCodes", () => {
 			[
 				{
 					id: "r1",
+					streamExecutor: STREAM,
 					paramCode: "type",
 					paramName: "Тип системы-источника",
 					operator: "in",
@@ -76,6 +81,7 @@ describe("resolveSelectedCatalogValueCodes", () => {
 			[
 				{
 					id: "r1",
+					streamExecutor: STREAM,
 					paramCode: "type",
 					paramName: "Тип системы-источника",
 					operator: "=",

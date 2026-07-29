@@ -8,8 +8,12 @@ exports.readPerInstanceArchCountOverride = readPerInstanceArchCountOverride;
 exports.withPerInstanceArchCountOverride = withPerInstanceArchCountOverride;
 exports.formDataWithSingleArchInstance = formDataWithSingleArchInstance;
 exports.formatEmptyArchInstanceBreakdown = formatEmptyArchInstanceBreakdown;
+exports.formatNoTriggerMatchingArchInstanceBreakdown = formatNoTriggerMatchingArchInstanceBreakdown;
+exports.archInstanceMatchesWorkTrigger = archInstanceMatchesWorkTrigger;
+exports.matchTypicalWorkAppearanceTriggers = matchTypicalWorkAppearanceTriggers;
 exports.formatPerInstanceBreakdownExpanded = formatPerInstanceBreakdownExpanded;
 const v2_anketa_section_ui_util_1 = require("./v2-anketa-section-ui.util");
+const v2_trigger_formula_util_1 = require("./v2-trigger-formula.util");
 const v2_typical_works_util_1 = require("./v2-typical-works.util");
 const v2_typical_works_util_2 = require("./v2-typical-works.util");
 /** Маркер в formData: принудительный count для arch_count_coeff в per-instance режиме. */
@@ -386,6 +390,54 @@ function formatEmptyArchInstanceBreakdown(archComponentType) {
         archComponentType?.trim() ||
         "арх. компонент";
     return `нет заполненных «${label}» → 0`;
+}
+/**
+ * Экземпляры есть, но ни один не удовлетворяет триггеру появления работы
+ * (например AutoML=Да только у части моделей).
+ */
+function formatNoTriggerMatchingArchInstanceBreakdown(archComponentType) {
+    const kind = resolveArchComponentKindFromType(archComponentType);
+    const label = (kind ? v2_anketa_section_ui_util_1.V2_ARCH_COMPONENT_LABELS[kind] : null) ||
+        archComponentType?.trim() ||
+        "арх. компонент";
+    return `нет «${label}», удовлетворяющих триггеру появления → 0`;
+}
+/**
+ * Per-instance: включать экземпляр в сумму только если на нём сработал
+ * триггер появления работы (параметры строки + arch_count на срезе formData).
+ */
+function archInstanceMatchesWorkTrigger(params) {
+    if (!(0, v2_trigger_formula_util_1.hasTypicalWorkTriggersConfigured)(params.triggerInput))
+        return true;
+    return (0, v2_trigger_formula_util_1.matchTypicalWorkTriggers)(params.triggerInput, params.source, params.formData, params.matchContext);
+}
+/**
+ * Триггер появления работы на уровне каталога.
+ *
+ * Для fan-out арх-компонентов (Модель, СИ, …) достаточно совпадения
+ * **хотя бы на одном** экземпляре. Иначе flatten formData перезаписывает
+ * поля вроде autoML последней строкой и работа пропадает, даже если
+ * у одной модели AutoML=Да.
+ *
+ * В сумму по-прежнему попадают только совпавшие экземпляры
+ * (`evaluateWorkAcrossArchInstances` / `archInstanceMatchesWorkTrigger`).
+ */
+function matchTypicalWorkAppearanceTriggers(params) {
+    if (!(0, v2_trigger_formula_util_1.hasTypicalWorkTriggersConfigured)(params.triggerInput))
+        return false;
+    const kind = resolveArchComponentKindFromType(params.archComponentType);
+    if (kind != null && kind !== "modelService") {
+        const instances = listArchComponentInstances(params.formData, params.archComponentType);
+        if (instances.length > 0) {
+            return instances.some((instance) => archInstanceMatchesWorkTrigger({
+                triggerInput: params.triggerInput,
+                source: { ...params.source, ...instance.row },
+                formData: formDataWithSingleArchInstance(params.formData, kind, instance),
+                matchContext: params.matchContext,
+            }));
+        }
+    }
+    return (0, v2_trigger_formula_util_1.matchTypicalWorkTriggers)(params.triggerInput, params.source, params.formData, params.matchContext);
 }
 function formatPerInstanceBreakdownExpanded(instances, total) {
     if (instances.length === 0)
