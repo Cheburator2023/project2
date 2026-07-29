@@ -36,6 +36,12 @@ export type V2FactoryTypicalWork = {
 		steps: Array<{ count: number; coefficient: number }>;
 		combinator?: "and" | "or";
 	} | null;
+	/** simple (default) | formula — сложные AND/OR из CSV. */
+	triggerMode?: "simple" | "formula";
+	triggerFormula?: {
+		tokens: unknown[];
+		text: string;
+	} | null;
 	laborParams: string[];
 	laborCoefficients?: Array<{
 		paramName: string;

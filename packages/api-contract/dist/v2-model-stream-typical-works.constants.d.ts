@@ -1,5 +1,5 @@
-/** Эталонные id 10 типовых работ модельного стрима (factory registry). */
-export declare const V2_MODEL_STREAM_FACTORY_WORK_IDS: readonly ["f5667ca4-4de8-4e65-a305-0a34b8945268", "6ee9b8be-c732-4444-8f77-c19a38304a7e", "b31f0862-349d-44df-9cd7-2fbafdc88c40", "ea346f5c-c67f-430c-b56a-53b59b5bc18c", "91929b5d-3e46-4c1e-95c7-0df362a74773", "744fddb7-0705-4c89-a389-32d802dcb37c", "86bb45a8-47da-425e-99be-3ff76b633378", "ddfd88fb-e256-4e2b-ba41-f15642109db2", "80e02a43-c142-4b67-bbd7-39e01e3a6f62", "91538af2-084d-442a-a860-cd8b36f5c0ec"];
+/** Эталонные id 10 типовых работ модельного стрима (factory registry / anketa boundWorkIds). */
+export declare const V2_MODEL_STREAM_FACTORY_WORK_IDS: readonly ["fbfa5b48-abae-442a-a7a7-6b7ccebe88f7", "8004b30d-592f-4fb6-81f4-b4e052f56d90", "64e97c0a-8662-4530-9aac-57016cf4f32e", "9c71a3a2-d980-4d39-a603-ca1d35f9ea31", "4a349bdc-be66-4c86-b36c-b6733eec8455", "d888922b-f141-4e9c-84bc-2c9dbc5dfee3", "278cd153-4188-4dea-bba7-a45edaed7bbf", "5862d9a7-b2d5-4a99-90f8-a042532a62aa", "053b1fbc-25ef-4182-9b78-dc100ce19712", "22c7a066-51de-4b59-b5a1-770733276212"];
 export declare const V2_MODEL_STREAM_EXECUTOR = "\u041C\u043E\u0434\u0435\u043B\u044C\u043D\u044B\u0439 \u0441\u0442\u0440\u0438\u043C";
 /**
  * Код зонтичного стрима в реестре implementationStream (не выбирается в анкете
@@ -19,9 +19,15 @@ export declare function isV2ModelImplementationStreamCode(value: string): value 
 export declare function isV2ModelStreamUmbrellaLabel(value: string): boolean;
 /** DB-имена + коды + legacy-подпись для каталога типовых работ модельного блока. */
 export declare function resolveModelStreamCatalogScopeDbStreams(): readonly string[];
-/** Всегда показываются в блоке типовых работ и в «Подробном расчёте». */
+/**
+ * @deprecated Работы модельного стрима появляются только по триггеру (CSV).
+ * Оставлено пустым для обратной совместимости импортов.
+ */
 export declare const V2_MODEL_STREAM_ALWAYS_SHOWN_WORK_IDS: ReadonlySet<string>;
-/** Всегда активны (формула считается даже без явных триггеров). */
+/**
+ * @deprecated Работы модельного стрима считаются только по триггеру (CSV).
+ * Оставлено пустым для обратной совместимости импортов.
+ */
 export declare const V2_MODEL_STREAM_ALWAYS_ACTIVE_WORK_IDS: ReadonlySet<string>;
 export declare function isModelStreamAlwaysShownWork(workId: string): boolean;
 export declare function isModelStreamAlwaysActiveWork(workId: string): boolean;

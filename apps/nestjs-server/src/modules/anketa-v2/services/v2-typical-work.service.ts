@@ -1221,6 +1221,13 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 			string,
 			NonNullable<V2TypicalWorkCardDto["triggerArchCount"]>
 		>();
+		const pendingTriggerFormulas = new Map<
+			string,
+			{
+				triggerMode: "simple" | "formula";
+				triggerFormula: { tokens: unknown[]; text: string } | null;
+			}
+		>();
 
 		const existingAssignments = await this.assignmentRepository.find({
 			where: { workId },
@@ -1377,6 +1384,16 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 					});
 				}
 
+				if (row.triggerMode === "formula" && row.triggerFormula?.tokens?.length) {
+					pendingTriggerFormulas.set(stream, {
+						triggerMode: "formula",
+						triggerFormula: {
+							tokens: row.triggerFormula.tokens,
+							text: row.triggerFormula.text ?? "",
+						},
+					});
+				}
+
 				if (catalogLaborArch.length > 0) {
 					const merged = pendingLaborArchCounts.get(stream) ?? [];
 					for (const arch of catalogLaborArch) {
@@ -1510,6 +1527,15 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 			assignment.triggerArchCountSteps = triggerArchCount.steps;
 			assignment.triggerArchCountCombinator =
 				triggerArchCount.combinator ?? "and";
+			await this.assignmentRepository.save(assignment);
+		}
+		for (const [stream, triggerCfg] of pendingTriggerFormulas) {
+			const assignment = await this.assignmentRepository.findOne({
+				where: { workId, streamExecutor: stream },
+			});
+			if (!assignment) continue;
+			assignment.triggerMode = triggerCfg.triggerMode;
+			assignment.triggerFormula = triggerCfg.triggerFormula;
 			await this.assignmentRepository.save(assignment);
 		}
 
@@ -2061,6 +2087,39 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 							assignment.triggerArchCountKind = null;
 							assignment.triggerArchCountSteps = null;
 							assignment.triggerArchCountCombinator = "and";
+							await this.assignmentRepository.save(assignment);
+							synchronized++;
+						}
+					}
+
+					{
+						const assignment = assignments.find(
+							(row) =>
+								row.workId === work.id && row.streamExecutor === stream,
+						);
+						if (!assignment) {
+							// skip
+						} else if (
+							catalogRow.triggerMode === "formula" &&
+							catalogRow.triggerFormula?.tokens?.length
+						) {
+							const nextFormula = {
+								tokens: catalogRow.triggerFormula.tokens,
+								text: catalogRow.triggerFormula.text ?? "",
+							};
+							if (
+								assignment.triggerMode !== "formula" ||
+								JSON.stringify(assignment.triggerFormula) !==
+									JSON.stringify(nextFormula)
+							) {
+								assignment.triggerMode = "formula";
+								assignment.triggerFormula = nextFormula;
+								await this.assignmentRepository.save(assignment);
+								synchronized++;
+							}
+						} else if (assignment.triggerMode === "formula") {
+							assignment.triggerMode = "simple";
+							assignment.triggerFormula = null;
 							await this.assignmentRepository.save(assignment);
 							synchronized++;
 						}

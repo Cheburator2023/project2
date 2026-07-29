@@ -1,7 +1,7 @@
 import type { V2JsonLogicValue } from "./v2-template.types";
 import type { V2TriggerFormulaToken, V2TypicalWorkRuleValueDto, V2TypicalWorkTriggerFormulaDto, V2TypicalWorkTriggerMode, V2WorkRuleOperator } from "./v2-typical-work.types";
 import type { TypicalWorkRuleLike, TypicalWorkTriggerArchCountLike } from "./v2-works-catalog-match.util";
-import type { TypicalWorkTriggerMatchContext } from "./v2-typical-works.util";
+import { type TypicalWorkTriggerMatchContext } from "./v2-typical-works.util";
 export declare function triggerParamTokenToRule(token: Extract<V2TriggerFormulaToken, {
     kind: "param";
 }>): TypicalWorkRuleLike;

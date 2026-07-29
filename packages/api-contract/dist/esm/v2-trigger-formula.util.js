@@ -1,6 +1,7 @@
 import { archCountTriggerMatches, isTriggerArchCountConfigured, formatTriggerArchCountConditionLabel } from "./v2-work-arch-count-coeff.util";
 import { isAlwaysShownTriggerParam, matchSingleTypicalWorkRuleForTriggerFormula, normalizeTypicalWorkTriggerRuleForMatch, typicalWorkRulesMatchSource, V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME, } from "./v2-works-catalog-match.util";
 import { stripParamNameSourceKeys } from "./v2-work-param-source-keys.util";
+import { buildTypicalWorkTriggerLookupSource, } from "./v2-typical-works.util";
 const LOGIC_LABEL = {
     and: "И",
     or: "ИЛИ",
@@ -250,7 +251,8 @@ export function compileTriggerFormulaTokensToJsonLogic(tokens) {
     return values.length === 1 ? (values[0] ?? false) : false;
 }
 function evaluateTriggerParamToken(token, ctx) {
-    return matchSingleTypicalWorkRuleForTriggerFormula(triggerParamTokenToRule(token), ctx.source);
+    const lookup = buildTypicalWorkTriggerLookupSource(ctx.source, ctx.formData);
+    return matchSingleTypicalWorkRuleForTriggerFormula(triggerParamTokenToRule(token), lookup);
 }
 function evaluateTriggerOperand(token, ctx) {
     if (token.kind === "param")

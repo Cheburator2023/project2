@@ -13,7 +13,7 @@
 		{
 			"id": "fbfa5b48-abae-442a-a7a7-6b7ccebe88f7",
 			"name": "01. Постановка задачи",
-			"archComponentType": "Модельный сервис",
+			"archComponentType": "Модель",
 			"workType": null,
 			"streams": [
 				"Модельный стрим"

@@ -20,7 +20,10 @@ import {
 	V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME,
 } from "./v2-works-catalog-match.util";
 import { stripParamNameSourceKeys } from "./v2-work-param-source-keys.util";
-import type { TypicalWorkTriggerMatchContext } from "./v2-typical-works.util";
+import {
+	buildTypicalWorkTriggerLookupSource,
+	type TypicalWorkTriggerMatchContext,
+} from "./v2-typical-works.util";
 
 const LOGIC_LABEL: Record<V2TriggerFormulaLogicOp, string> = {
 	and: "И",
@@ -320,9 +323,13 @@ function evaluateTriggerParamToken(
 	token: Extract<V2TriggerFormulaToken, { kind: "param" }>,
 	ctx: TriggerFormulaEvalContext,
 ): boolean {
+	const lookup = buildTypicalWorkTriggerLookupSource(
+		ctx.source,
+		ctx.formData,
+	);
 	return matchSingleTypicalWorkRuleForTriggerFormula(
 		triggerParamTokenToRule(token),
-		ctx.source,
+		lookup,
 	);
 }
 

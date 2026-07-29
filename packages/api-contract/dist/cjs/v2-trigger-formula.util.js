@@ -15,6 +15,7 @@ exports.hasTypicalWorkTriggersConfigured = hasTypicalWorkTriggersConfigured;
 const v2_work_arch_count_coeff_util_1 = require("./v2-work-arch-count-coeff.util");
 const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
 const v2_work_param_source_keys_util_1 = require("./v2-work-param-source-keys.util");
+const v2_typical_works_util_1 = require("./v2-typical-works.util");
 const LOGIC_LABEL = {
     and: "И",
     or: "ИЛИ",
@@ -264,7 +265,8 @@ function compileTriggerFormulaTokensToJsonLogic(tokens) {
     return values.length === 1 ? (values[0] ?? false) : false;
 }
 function evaluateTriggerParamToken(token, ctx) {
-    return (0, v2_works_catalog_match_util_1.matchSingleTypicalWorkRuleForTriggerFormula)(triggerParamTokenToRule(token), ctx.source);
+    const lookup = (0, v2_typical_works_util_1.buildTypicalWorkTriggerLookupSource)(ctx.source, ctx.formData);
+    return (0, v2_works_catalog_match_util_1.matchSingleTypicalWorkRuleForTriggerFormula)(triggerParamTokenToRule(token), lookup);
 }
 function evaluateTriggerOperand(token, ctx) {
     if (token.kind === "param")
