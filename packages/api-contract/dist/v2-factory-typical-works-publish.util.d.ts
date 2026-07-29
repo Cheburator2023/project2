@@ -109,6 +109,13 @@ export type PublishFactoryTypicalWorksBundleResult = {
     catalogRows: V2FactoryCatalogWorkRow[];
     report: V2FactoryPublishReport;
 };
+/** Канонический стрим источников в catalog snapshot (вместо legacy ИД. Внутр/Внеш). */
+export declare const FACTORY_CATALOG_SOURCE_STREAM = "\u0418\u0441\u0442\u043E\u0447\u043D\u0438\u043A\u0438 \u0434\u0430\u043D\u043D\u044B\u0445";
+/**
+ * Нормализует стрим для ключа upsert catalog.
+ * Legacy `ИД. Внутренний` / `ИД. Внешний` → `Источники данных`, иначе не плодим дубли.
+ */
+export declare function normalizePublishCatalogStream(stream: string): string;
 export declare function extractPublishWorkStage(name: string): string | null;
 export declare function normalizePublishArchComponent(raw: string): string;
 export declare function buildFactoryCatalogRowKey(row: Pick<V2FactoryCatalogWorkRow, "component" | "stage" | "name" | "stream">): string;

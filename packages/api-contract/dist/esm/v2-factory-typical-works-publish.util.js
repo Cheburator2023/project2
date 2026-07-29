@@ -1,12 +1,24 @@
-/**
- * Конвертация полных карточек типовых работ (админка / editor dump)
- * → registry + catalog snapshot rows + отчёт о потерях.
- */
-import { stripWorkStagePrefix } from "./v2-csv-formula-import.util";
 import { tokensToText } from "./v2-work-formula.util";
 import { resolveActiveNormOnDate, } from "./v2-typical-work.types";
 const CATALOG_TRIGGER_OPS = new Set(["=", "!=", "in"]);
 const LEGACY_SOURCE_STREAMS = new Set(["ИД. Внутренний", "ИД. Внешний"]);
+/** Канонический стрим источников в catalog snapshot (вместо legacy ИД. Внутр/Внеш). */
+export const FACTORY_CATALOG_SOURCE_STREAM = "Источники данных";
+/**
+ * Нормализует стрим для ключа upsert catalog.
+ * Legacy `ИД. Внутренний` / `ИД. Внешний` → `Источники данных`, иначе не плодим дубли.
+ */
+export function normalizePublishCatalogStream(stream) {
+    const value = stream.trim();
+    if (!value)
+        return value;
+    if (LEGACY_SOURCE_STREAMS.has(value))
+        return FACTORY_CATALOG_SOURCE_STREAM;
+    if (value.toLowerCase() === FACTORY_CATALOG_SOURCE_STREAM.toLowerCase()) {
+        return FACTORY_CATALOG_SOURCE_STREAM;
+    }
+    return value;
+}
 export function extractPublishWorkStage(name) {
     const trimmed = name.trim();
     const legacy = trimmed.match(/^Этап[\s_]+(\d+)(?:\.|\s|$)/iu);
@@ -15,7 +27,8 @@ export function extractPublishWorkStage(name) {
     const e2e = trimmed.match(/^(\d+[ABab])\.\s+/u);
     if (e2e?.[1])
         return e2e[1].toUpperCase();
-    const e2eNumeric = trimmed.match(/^(\d+)\.\s+/u);
+    // Только двузначные e2e-префиксы (01/02/05…), не «1. Качество модельных данных».
+    const e2eNumeric = trimmed.match(/^(\d{2})\.\s+/u);
     if (e2eNumeric?.[1])
         return e2eNumeric[1];
     if (/^AutoML:\s*/iu.test(trimmed))
@@ -46,7 +59,7 @@ export function buildFactoryCatalogRowKey(row) {
         normalizePublishArchComponent(row.component),
         row.stage.trim(),
         row.name.trim(),
-        row.stream.trim(),
+        normalizePublishCatalogStream(row.stream),
     ].join("|");
 }
 function catalogRowFingerprint(row) {
@@ -104,12 +117,28 @@ function ruleToCatalogTrigger(rule) {
             : {}),
     };
 }
+function stripPublishWorkStagePrefix(name) {
+    const trimmed = name.trim();
+    const stage = extractPublishWorkStage(trimmed);
+    if (!stage)
+        return trimmed;
+    if (stage === "AutoML") {
+        return trimmed.replace(/^AutoML:\s*/iu, "").trim();
+    }
+    if (stage.startsWith("Этап ")) {
+        return trimmed.replace(/^Этап[\s_]+\d+\.\s*/u, "").trim() || trimmed;
+    }
+    const escaped = stage.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return (trimmed.replace(new RegExp(`^${escaped}\\.\\s*`, "iu"), "").trim() ||
+        trimmed);
+}
 function cardToCatalogRow(card, coverageDate, dropped) {
     const stage = extractPublishWorkStage(card.name) ?? "";
-    const name = stripWorkStagePrefix(card.name).trim() || card.name.trim();
+    const name = stripPublishWorkStagePrefix(card.name).trim() || card.name.trim();
     const component = normalizePublishArchComponent(card.archComponentType);
-    const stream = card.streamExecutor.trim();
-    const norm = resolveActiveNormOnDate(card.norms, stream, coverageDate);
+    const stream = normalizePublishCatalogStream(card.streamExecutor);
+    const norm = resolveActiveNormOnDate(card.norms, stream, coverageDate) ??
+        resolveActiveNormOnDate(card.norms, card.streamExecutor.trim(), coverageDate);
     if (card.triggerMode === "formula") {
         dropped.push({
             workId: card.id,
@@ -121,7 +150,8 @@ function cardToCatalogRow(card, coverageDate, dropped) {
     }
     const triggerRules = [];
     for (const rule of card.rules) {
-        if (rule.streamExecutor.trim() && rule.streamExecutor.trim() !== stream) {
+        if (rule.streamExecutor.trim() &&
+            normalizePublishCatalogStream(rule.streamExecutor) !== stream) {
             continue;
         }
         const mapped = ruleToCatalogTrigger(rule);
@@ -292,18 +322,25 @@ export function publishFactoryTypicalWorksBundle(input) {
     let catalogUpdated = 0;
     let catalogUnchanged = 0;
     const usedExistingKeys = new Set();
+    const emittedKeys = new Set();
     const nextCatalog = [];
     for (const existing of input.existingCatalog) {
         const key = buildFactoryCatalogRowKey(existing);
+        // Legacy ИД.Внутр + ИД.Внеш схлопываются в один ключ — не дублируем.
+        if (emittedKeys.has(key))
+            continue;
         const published = publishedByKey.get(key);
         if (!published) {
+            emittedKeys.add(key);
             nextCatalog.push(existing);
             continue;
         }
         usedExistingKeys.add(key);
+        emittedKeys.add(key);
         if (catalogRowFingerprint(existing) === catalogRowFingerprint(published)) {
             catalogUnchanged += 1;
-            nextCatalog.push(existing);
+            // Берём published даже при равном fingerprint — нормализует stream.
+            nextCatalog.push(published);
         }
         else {
             catalogUpdated += 1;
@@ -314,9 +351,13 @@ export function publishFactoryTypicalWorksBundle(input) {
         if (usedExistingKeys.has(key))
             continue;
         catalogAdded += 1;
+        emittedKeys.add(key);
         nextCatalog.push(row);
     }
-    const catalogPreserved = input.existingCatalog.filter((row) => !publishedByKey.has(buildFactoryCatalogRowKey(row))).length;
+    const preservedKeys = new Set(input.existingCatalog
+        .map((row) => buildFactoryCatalogRowKey(row))
+        .filter((key) => !publishedByKey.has(key)));
+    const catalogPreserved = preservedKeys.size;
     const legacyStreamCatalogRows = nextCatalog.filter((row) => LEGACY_SOURCE_STREAMS.has(row.stream.trim())).length;
     return {
         registry: {

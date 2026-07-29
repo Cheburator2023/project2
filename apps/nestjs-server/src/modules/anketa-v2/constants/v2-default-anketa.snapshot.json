@@ -18,10 +18,7 @@
 						"title": "Наименование анкеты"
 					},
 					"status": {
-						"enum": [
-							"Активная",
-							"Архив"
-						],
+						"enum": ["Активная", "Архив"],
 						"type": "string",
 						"title": "Статус",
 						"default": "Активная"
@@ -135,48 +132,29 @@
 						"readOnly": true,
 						"properties": {
 							"detailInfo": {
-								"enum": [
-									"Создано",
-									"В работе",
-									"Заполнено"
-								],
+								"enum": ["Создано", "В работе", "Заполнено"],
 								"type": "string",
 								"default": "Создано"
 							},
 							"generalInfo": {
-								"enum": [
-									"Создано",
-									"В работе",
-									"Заполнено"
-								],
+								"enum": ["Создано", "В работе", "Заполнено"],
 								"type": "string",
 								"default": "Создано"
 							},
 							"streamDataSources": {
-								"enum": [
-									"Создано",
-									"В работе",
-									"Заполнено"
-								],
+								"enum": ["Создано", "В работе", "Заполнено"],
 								"type": "string",
 								"default": "Создано"
 							},
 							"streamModelControl": {
-								"enum": [
-									"Создано",
-									"В работе",
-									"Заполнено"
-								],
+								"enum": ["Создано", "В работе", "Заполнено"],
 								"type": "string",
 								"default": "Создано"
 							}
 						}
 					},
 					"globalStatus": {
-						"enum": [
-							"Черновик",
-							"Заполнено"
-						],
+						"enum": ["Черновик", "Заполнено"],
 						"type": "string",
 						"title": "Глобальный статус",
 						"default": "Черновик",
@@ -191,16 +169,10 @@
 					"dataMart": {
 						"type": "object",
 						"title": "Объект / Витрина данных",
-						"required": [
-							"field_zApubb5V"
-						],
+						"required": ["field_zApubb5V"],
 						"properties": {
 							"workType": {
-								"enum": [
-									"Разработка",
-									"Доработка",
-									"Настройка"
-								],
+								"enum": ["Разработка", "Доработка", "Настройка"],
 								"type": "string",
 								"title": "Тип работ"
 							},
@@ -209,11 +181,7 @@
 								"title": "Количество признаков"
 							},
 							"field_0uV7wafS": {
-								"enum": [
-									"Да",
-									"Нет",
-									"Неизвестно"
-								],
+								"enum": ["Да", "Нет", "Неизвестно"],
 								"type": "string",
 								"title": "Требуется хэширование/ шифрование"
 							},
@@ -222,30 +190,17 @@
 								"title": "Количество метрик"
 							},
 							"field_46LCnfWo": {
-								"enum": [
-									"Высокая",
-									"Средняя",
-									"Низкая",
-									"Неизвестно"
-								],
+								"enum": ["Высокая", "Средняя", "Низкая", "Неизвестно"],
 								"type": "string",
 								"title": "Сложность реализации"
 							},
 							"field_L-WWLDWY": {
-								"enum": [
-									"Да",
-									"Нет",
-									"Неизвестно"
-								],
+								"enum": ["Да", "Нет", "Неизвестно"],
 								"type": "string",
 								"title": "Наличие конфиденциальных данных"
 							},
 							"field_N9LFD6Hu": {
-								"enum": [
-									"Да",
-									"Нет",
-									"Неизвестно"
-								],
+								"enum": ["Да", "Нет", "Неизвестно"],
 								"type": "string",
 								"title": "Двусторонний обмен данными"
 							},
@@ -254,11 +209,7 @@
 								"title": "Количество контролей качества признаков"
 							},
 							"field_fRuMuWtn": {
-								"enum": [
-									"Непосредственно",
-									"Опосредованно",
-									"Неизвестно"
-								],
+								"enum": ["Непосредственно", "Опосредованно", "Неизвестно"],
 								"type": "string",
 								"title": "Способ предоставления данных заказчику"
 							},
@@ -267,12 +218,7 @@
 								"title": "Содержит сырые данные"
 							},
 							"field_le47srI7": {
-								"enum": [
-									"Холодный",
-									"Теплый",
-									"Горячий",
-									"Потоковый"
-								],
+								"enum": ["Холодный", "Теплый", "Горячий", "Потоковый"],
 								"type": "string",
 								"title": "Слой хранения"
 							},
@@ -311,20 +257,14 @@
 						"items": {
 							"type": "object",
 							"title": "Модель",
-							"required": [
-								"field_atxiq-UM"
-							],
+							"required": ["field_atxiq-UM"],
 							"properties": {
 								"autoML": {
 									"type": "boolean",
 									"title": "Необходимость AutoML"
 								},
 								"workType": {
-									"enum": [
-										"Обучение",
-										"Дообучение",
-										"Калибровка"
-									],
+									"enum": ["Обучение", "Дообучение", "Калибровка"],
 									"type": "string",
 									"title": "Тип работ"
 								},
@@ -359,10 +299,7 @@
 									"title": "AutoML: требуется новая библиотека"
 								},
 								"field_VbI-0aiT": {
-									"enum": [
-										"Обычная",
-										"Оркестратор"
-									],
+									"enum": ["Обычная", "Оркестратор"],
 									"type": "string",
 									"title": "Роль модели"
 								},
@@ -396,33 +333,20 @@
 					"dataProcess": {
 						"type": "object",
 						"title": "Процессы обработки данных",
-						"required": [
-							"field_It-B8PfV"
-						],
+						"required": ["field_It-B8PfV"],
 						"properties": {
 							"deliveryMode": {
-								"enum": [
-									"Напрямую",
-									"Опосредованно",
-									"Неизвестно"
-								],
+								"enum": ["Напрямую", "Опосредованно", "Неизвестно"],
 								"type": "string",
 								"title": "Способ предоставления данных заказчику"
 							},
 							"field_C6oqyTPh": {
-								"enum": [
-									"Да",
-									"Нет",
-									"Неизвестно"
-								],
+								"enum": ["Да", "Нет", "Неизвестно"],
 								"type": "string",
 								"title": "Требуется хэширование/ шифрование"
 							},
 							"field_HgUCNn6E": {
-								"enum": [
-									"Пакетный",
-									"Потоковый"
-								],
+								"enum": ["Пакетный", "Потоковый"],
 								"type": "string",
 								"title": "Тип процесса обработки данных"
 							},
@@ -431,21 +355,12 @@
 								"title": "Название процесса"
 							},
 							"field_R3Lx-csF": {
-								"enum": [
-									"Да",
-									"Нет",
-									"Неизвестно"
-								],
+								"enum": ["Да", "Нет", "Неизвестно"],
 								"type": "string",
 								"title": "Двусторонний обмен данными"
 							},
 							"field_UEzs5Q87": {
-								"enum": [
-									"Низкая",
-									"Средняя",
-									"Высокая",
-									"Неизвестно"
-								],
+								"enum": ["Низкая", "Средняя", "Высокая", "Неизвестно"],
 								"type": "string",
 								"title": "Сложность реализации"
 							},
@@ -454,20 +369,12 @@
 								"title": "Требуется интеграция с промежуточной системой (СХК, СФП и др.)"
 							},
 							"field_yJ51GkCR": {
-								"enum": [
-									"Разработка",
-									"Доработка",
-									"Настройка"
-								],
+								"enum": ["Разработка", "Доработка", "Настройка"],
 								"type": "string",
 								"title": "Тип работ"
 							},
 							"confidentialData": {
-								"enum": [
-									"Да",
-									"Нет",
-									"Неизвестно"
-								],
+								"enum": ["Да", "Нет", "Неизвестно"],
 								"type": "string",
 								"title": "Наличие конфиденциальных данных"
 							}
@@ -478,19 +385,14 @@
 						"items": {
 							"type": "object",
 							"title": "Система источник",
-							"required": [
-								"name"
-							],
+							"required": ["name"],
 							"properties": {
 								"name": {
 									"type": "string",
 									"title": "Название источника"
 								},
 								"type": {
-									"enum": [
-										"Внутренний",
-										"Внешний"
-									],
+									"enum": ["Внутренний", "Внешний"],
 									"type": "string",
 									"title": "Тип системы-источника"
 								},
@@ -499,19 +401,12 @@
 									"title": "Необходим новый тракт данных от источника"
 								},
 								"field_-t8JSf3p": {
-									"enum": [
-										"Неизвестно",
-										"Стандартная",
-										"Нестандартная"
-									],
+									"enum": ["Неизвестно", "Стандартная", "Нестандартная"],
 									"type": "string",
 									"title": "Форма договора"
 								},
 								"field_1ANadh7U": {
-									"enum": [
-										"Однократный",
-										"Регламентный"
-									],
+									"enum": ["Однократный", "Регламентный"],
 									"type": "string",
 									"title": "Тип загрузки данных"
 								},
@@ -520,11 +415,7 @@
 									"title": "Требуется новая модель для автоматической разметки данных"
 								},
 								"field_3a0vme2u": {
-									"enum": [
-										"Да",
-										"Нет",
-										"Неизвестно"
-									],
+									"enum": ["Да", "Нет", "Неизвестно"],
 									"type": "string",
 									"title": "Предусмотрено проведение конкурса"
 								},
@@ -533,10 +424,7 @@
 									"title": "Требуется подготовка сырых данных для загрузки в ИС 1860"
 								},
 								"field_4jxR0E0m": {
-									"enum": [
-										"Первичный",
-										"Повторный"
-									],
+									"enum": ["Первичный", "Повторный"],
 									"type": "string",
 									"title": "Пилот"
 								},
@@ -549,29 +437,17 @@
 									"title": "Наличие реплики в DAPP"
 								},
 								"field_9BXQE8SI": {
-									"enum": [
-										"Односторонний",
-										"Двусторонний",
-										"Неизвестно"
-									],
+									"enum": ["Односторонний", "Двусторонний", "Неизвестно"],
 									"type": "string",
 									"title": "Режим обмена данными"
 								},
 								"field_AKLVuyFy": {
-									"enum": [
-										"Да",
-										"Нет",
-										"Неизвестно"
-									],
+									"enum": ["Да", "Нет", "Неизвестно"],
 									"type": "string",
 									"title": "Наличие конфиденциальных данных"
 								},
 								"field_DBFG7kIN": {
-									"enum": [
-										"Да",
-										"Нет",
-										"Неизвестно"
-									],
+									"enum": ["Да", "Нет", "Неизвестно"],
 									"type": "string",
 									"title": "Наличие юридического основания для пилота"
 								},
@@ -591,12 +467,7 @@
 									"title": "Размер модели разметки данных"
 								},
 								"field_L1lRlgf1": {
-									"enum": [
-										"Высокая",
-										"Средняя",
-										"Низкая",
-										"Неизвестно"
-									],
+									"enum": ["Высокая", "Средняя", "Низкая", "Неизвестно"],
 									"type": "string",
 									"title": "Сложность реализации"
 								},
@@ -605,12 +476,7 @@
 									"title": "Требуется донастройка ИС 1860 под выбранную модель разметки данных"
 								},
 								"field_VX7y3PsB": {
-									"enum": [
-										"Высокая",
-										"Средняя",
-										"Низкая",
-										"Неизвестно"
-									],
+									"enum": ["Высокая", "Средняя", "Низкая", "Неизвестно"],
 									"type": "string",
 									"title": "Сложность конфигурации модели разметки данных"
 								},
@@ -632,12 +498,7 @@
 									"title": "Количество сущностей (исходных таблиц)"
 								},
 								"field_d3OCFyaC": {
-									"enum": [
-										"Низкая",
-										"Средняя",
-										"Высокая",
-										"Неизвестно"
-									],
+									"enum": ["Низкая", "Средняя", "Высокая", "Неизвестно"],
 									"type": "string",
 									"title": "Сложность предметной области"
 								},
@@ -650,30 +511,17 @@
 									"title": "Требуются специальные условия хранения и обработки конфиденциальных данных, не поддерживаемые коммунальным сервисом"
 								},
 								"field_nE73kPQl": {
-									"enum": [
-										"Высокая",
-										"Средняя",
-										"Низкая",
-										"Неизвестно"
-									],
+									"enum": ["Высокая", "Средняя", "Низкая", "Неизвестно"],
 									"type": "string",
 									"title": "Детализация и ясность запроса постановки задачи"
 								},
 								"field_tpROQBf5": {
-									"enum": [
-										"Стандартное",
-										"Нестандартное",
-										"Неизвестно"
-									],
+									"enum": ["Стандартное", "Нестандартное", "Неизвестно"],
 									"type": "string",
 									"title": "NDA"
 								},
 								"field_vqqlHbU6": {
-									"enum": [
-										"Да",
-										"Нет",
-										"Неизвестно"
-									],
+									"enum": ["Да", "Нет", "Неизвестно"],
 									"type": "string",
 									"title": "Требуется хэширование/ шифрование"
 								},
@@ -682,12 +530,7 @@
 									"title": "Риск появления дополнительных систем-источников"
 								},
 								"field_wuYlhnu0": {
-									"enum": [
-										"Высокая",
-										"Средняя",
-										"Низкая",
-										"Неизвестно"
-									],
+									"enum": ["Высокая", "Средняя", "Низкая", "Неизвестно"],
 									"type": "string",
 									"title": "Сложность настройки шаблона разметки данных"
 								}
@@ -700,9 +543,7 @@
 						"items": {
 							"type": "object",
 							"title": "Нетиповая задача",
-							"required": [
-								"name"
-							],
+							"required": ["name"],
 							"properties": {
 								"name": {
 									"type": "string",
@@ -807,9 +648,7 @@
 					"modelService": {
 						"type": "object",
 						"title": "Модельный сервис",
-						"required": [
-							"field_dEVFQVQn"
-						],
+						"required": ["field_dEVFQVQn"],
 						"properties": {
 							"workType": {
 								"enum": [
@@ -846,10 +685,7 @@
 								"title": "ПВР/Регуляторная"
 							},
 							"field_4IL7OStC": {
-								"enum": [
-									"Ручной",
-									"Автоматизированный"
-								],
+								"enum": ["Ручной", "Автоматизированный"],
 								"type": "string",
 								"title": "Способ загрузки данных в BI-систему"
 							},
@@ -1203,9 +1039,7 @@
 						"items": {
 							"type": "object",
 							"title": "Нетиповая задача",
-							"required": [
-								"name"
-							],
+							"required": ["name"],
 							"properties": {
 								"name": {
 									"type": "string",
@@ -1297,9 +1131,7 @@
 						"items": {
 							"type": "object",
 							"title": "Нетиповая задача",
-							"required": [
-								"name"
-							],
+							"required": ["name"],
 							"properties": {
 								"name": {
 									"type": "string",
@@ -1370,29 +1202,17 @@
 								"title": "Объем изменений в ТИС"
 							},
 							"field_P1nnb5h5": {
-								"enum": [
-									"Да",
-									"Нет",
-									"Неизвестно"
-								],
+								"enum": ["Да", "Нет", "Неизвестно"],
 								"type": "string",
 								"title": "Необходимость изучения регламентов Банка"
 							},
 							"field_fWcU13WA": {
-								"enum": [
-									"Да",
-									"Нет",
-									"Неизвестно"
-								],
+								"enum": ["Да", "Нет", "Неизвестно"],
 								"type": "string",
 								"title": "Необходимо пересогласование артефакта"
 							},
 							"field_oHrG3Q3A": {
-								"enum": [
-									"Да",
-									"Нет",
-									"Неизвестно"
-								],
+								"enum": ["Да", "Нет", "Неизвестно"],
 								"type": "string",
 								"title": "Стейкхолдеры известны (владелец сервиса, разработчик модели / витрин, РП и тд.)?"
 							}
@@ -1460,10 +1280,7 @@
 								"title": "Новый вид контроля"
 							},
 							"field_Vc8LdrIe": {
-								"enum": [
-									"Да",
-									"Нет"
-								],
+								"enum": ["Да", "Нет"],
 								"type": "string",
 								"title": "Тип источника"
 							},
@@ -1522,9 +1339,7 @@
 						"items": {
 							"type": "object",
 							"title": "Нетиповая задача",
-							"required": [
-								"name"
-							],
+							"required": ["name"],
 							"properties": {
 								"name": {
 									"type": "string",
@@ -1583,9 +1398,7 @@
 						"items": {
 							"type": "object",
 							"title": "Нетиповая задача",
-							"required": [
-								"name"
-							],
+							"required": ["name"],
 							"properties": {
 								"name": {
 									"type": "string",
@@ -1644,9 +1457,7 @@
 						"items": {
 							"type": "object",
 							"title": "Нетиповая задача",
-							"required": [
-								"name"
-							],
+							"required": ["name"],
 							"properties": {
 								"name": {
 									"type": "string",
@@ -2080,12 +1891,7 @@
 				},
 				"ui:readonly": true
 			},
-			"ui:order": [
-				"id",
-				"name",
-				"version",
-				"status"
-			],
+			"ui:order": ["id", "name", "version", "status"],
 			"ui:options": {
 				"hidden": true,
 				"schemaFieldUid": "field_3a9e594d-f19e-4cbd-975e-19dfd615b74c"
@@ -2508,10 +2314,7 @@
 				}
 			},
 			"parameters": {
-				"ui:order": [
-					"streamsOutsideDADM",
-					"streamNames"
-				],
+				"ui:order": ["streamsOutsideDADM", "streamNames"],
 				"ui:options": {
 					"sectionRole": "subsection",
 					"schemaFieldUid": "field_799212d3-0ea8-449f-a392-a0ba12223f74",
@@ -2535,13 +2338,7 @@
 				"streamBlock": true,
 				"titleVariant": "h5",
 				"schemaFieldUid": "field_bece32d7-0463-49e8-8591-4827109e563b",
-				"streamExecutor": [
-					"kmbkcb",
-					"rb",
-					"ptitpc",
-					"finmdl",
-					"rnd"
-				],
+				"streamExecutor": ["kmbkcb", "rb", "ptitpc", "finmdl", "rnd"],
 				"defaultExpanded": false,
 				"workflowSectionId": "detailInfo"
 			},
@@ -2949,16 +2746,16 @@
 					"orderable": false,
 					"removable": false,
 					"boundWorkIds": [
-						"f5667ca4-4de8-4e65-a305-0a34b8945268",
-						"6ee9b8be-c732-4444-8f77-c19a38304a7e",
-						"b31f0862-349d-44df-9cd7-2fbafdc88c40",
-						"ea346f5c-c67f-430c-b56a-53b59b5bc18c",
-						"91929b5d-3e46-4c1e-95c7-0df362a74773",
-						"744fddb7-0705-4c89-a389-32d802dcb37c",
-						"86bb45a8-47da-425e-99be-3ff76b633378",
-						"ddfd88fb-e256-4e2b-ba41-f15642109db2",
-						"80e02a43-c142-4b67-bbd7-39e01e3a6f62",
-						"91538af2-084d-442a-a860-cd8b36f5c0ec"
+						"fbfa5b48-abae-442a-a7a7-6b7ccebe88f7",
+						"8004b30d-592f-4fb6-81f4-b4e052f56d90",
+						"64e97c0a-8662-4530-9aac-57016cf4f32e",
+						"9c71a3a2-d980-4d39-a603-ca1d35f9ea31",
+						"4a349bdc-be66-4c86-b36c-b6733eec8455",
+						"d888922b-f141-4e9c-84bc-2c9dbc5dfee3",
+						"278cd153-4188-4dea-bba7-a45edaed7bbf",
+						"5862d9a7-b2d5-4a99-90f8-a042532a62aa",
+						"053b1fbc-25ef-4182-9b78-dc100ce19712",
+						"22c7a066-51de-4b59-b5a1-770733276212"
 					],
 					"archComponent": "typicalWork",
 					"schemaFieldUid": "field_ec166924-3deb-4574-8fbc-1f88c316a64a",
@@ -3212,11 +3009,7 @@
 			}
 		},
 		"field_aJEu5ziT": {
-			"ui:order": [
-				"field_DWMBYTaF",
-				"sourceTypicalTasks",
-				"field_eCyDEFw3"
-			],
+			"ui:order": ["field_DWMBYTaF", "sourceTypicalTasks", "field_eCyDEFw3"],
 			"ui:options": {
 				"sectionRole": "main",
 				"streamBlock": true,
@@ -3355,36 +3148,36 @@
 					"orderable": false,
 					"removable": false,
 					"boundWorkIds": [
-						"d9b54258-1288-40ca-9730-366cfdf4a693",
-						"d0fa8689-f66c-4bc1-abe9-7c1741810dd1",
-						"566e144f-7e29-4025-a21f-4e4ade3470a1",
-						"fe62135a-30f9-4cd1-8e2f-b6a614e256d1",
-						"2f2830e4-ef57-4928-a30f-6d10c2fa4ed6",
-						"0ac674d2-9e46-4d9e-a951-0542eca2965b",
-						"02a12f76-2cb6-4d99-bdfb-03d0f07fd79a",
-						"7b704989-4c4a-4f1b-a9d6-b61c84e7789d",
-						"acfa302c-f9ed-408e-b643-6163e3d4fe9d",
-						"ed4892c1-af4e-4f5f-a883-e69504bc957b",
-						"63146893-6e9d-4671-8f10-68a97c232746",
-						"51e1f033-a403-478d-ad6c-018f2c5cf56a",
-						"3f2edee5-3ef3-4e55-bcf1-161856a66c31",
-						"8def553d-5eee-4f7a-8f58-20ded7c65be4",
-						"07a32cbd-8ad8-4e85-90cd-b87f7fc22ae2",
-						"6349b069-6537-46a7-b648-5da649afde88",
-						"74a998b8-7570-40ec-a8b8-ade81e7a03bb",
-						"a0538f39-2190-48c2-897a-ba7090de5a43",
-						"1314c9e2-447d-40e7-a879-fac30977dfa1",
-						"4494c068-0417-4b77-b712-d6ccef4c21bd",
-						"3df8d500-101d-4d43-839f-ec2d3ae2a262",
-						"ecbfebb8-a461-4ba8-b497-3e72a2e578c9",
-						"0045ad74-1b34-4477-8dcb-ab88b8447060",
-						"60468113-ee1b-490a-8589-c4cf569d9591",
-						"d552f68a-5fe4-4f13-8504-fc38383ad4fe",
-						"20df3141-1f8b-450c-827f-d05002b47cf1",
-						"00af5ad9-a29a-408f-837a-e5cf2206b466",
-						"b66d7684-c2ae-4354-92ea-774c808c25a4",
-						"36ca1196-c0db-4638-8513-47355b016736",
-						"1254d66c-4219-45b5-a497-659b75df537b"
+						"47677456-1b9f-438c-a2e5-e9791b613284",
+						"e4f6d13c-4bd5-4598-813e-5600e7f9a602",
+						"9e59e524-19c3-45b3-855c-cf7516d64dbe",
+						"edfd98a4-edbc-4692-861f-0c30fded05ab",
+						"f37a3640-f9df-46a9-8d34-66450f987296",
+						"0d79094d-ea6d-4434-a8fc-5b418fa157d4",
+						"14072945-99ef-458c-a999-c4380a6555c6",
+						"9516a8d1-08ce-4751-8f1e-976a5d0b5cf4",
+						"30cda680-2e77-448c-91af-90dec89da7d4",
+						"bf62b7ee-555d-4071-a4cc-1e91c3514b0e",
+						"fc947d2a-35a4-4248-b8e0-b9792cd5a00b",
+						"850be3c4-f6d5-49f4-b04b-70997ef6727a",
+						"51b042f2-cf8b-4c2d-97ed-45d8572af6ca",
+						"7e96f1f7-5f28-42e3-a2b9-2a5beeb09700",
+						"2337f8f8-af92-41f6-be17-fcbad93db834",
+						"e903feea-b18f-4ae5-b117-488ce8be9af6",
+						"47ae25cc-bdd0-47dd-945f-31cd4f2e68b1",
+						"693dbad0-b478-424d-8428-3e465a0abc76",
+						"7df0a5fa-8df3-44ba-a5b2-bcbad564b770",
+						"c3cd34b0-9487-4393-af9c-50d2f4f7547d",
+						"dca027fc-2640-432b-bd9c-5cfc88697690",
+						"8f376072-a563-4922-9287-f2018649d680",
+						"370c9261-e018-424a-bddd-f493ebf055ad",
+						"dda1a510-41ff-43c6-9c47-69e0a17fc1d5",
+						"f4b87ee4-b6d7-466e-8592-41113e1adc12",
+						"928d5a15-3be5-4e79-98f6-93aabf0402c8",
+						"eeea39dc-f40c-4d39-8243-06026dcef124",
+						"12b4d99f-98b0-42af-aaac-34bc448ae9a2",
+						"24776d59-096d-44b3-8ade-989638ee6520",
+						"03c0c089-1bfd-469d-89db-2ba77c3c658e"
 					],
 					"archComponent": "typicalWork",
 					"schemaFieldUid": "field_c66b1077-3931-4e05-a1bb-9727393bb7ba",
@@ -3395,9 +3188,7 @@
 			}
 		},
 		"field_i8dL7QZa": {
-			"ui:order": [
-				"field_eCyDEFw3"
-			],
+			"ui:order": ["field_eCyDEFw3"],
 			"ui:options": {
 				"sectionRole": "main",
 				"streamBlock": true,
@@ -3469,10 +3260,7 @@
 			}
 		},
 		"streamDataSources": {
-			"ui:order": [
-				"localParams",
-				"field_u-7AkDrP"
-			],
+			"ui:order": ["localParams", "field_u-7AkDrP"],
 			"ui:options": {
 				"groupActive": false,
 				"sectionRole": "main",
@@ -3541,12 +3329,7 @@
 						},
 						"ui:readonly": true
 					},
-					"ui:order": [
-						"name",
-						"estimateHoursPerDay",
-						"coefficient",
-						"total"
-					],
+					"ui:order": ["name", "estimateHoursPerDay", "coefficient", "total"],
 					"coefficient": {
 						"ui:widget": "text",
 						"ui:options": {
@@ -3569,79 +3352,79 @@
 					"orderable": false,
 					"removable": false,
 					"boundWorkIds": [
-						"ea079f20-a4aa-4391-9732-b6cb92b33778",
-						"d3976b5a-c7b3-489d-8719-5cc0621a4dc7",
-						"e0526e6d-7497-4c53-8419-637194050270",
-						"b17c7e3f-30fe-4579-b473-c5accf4a3cf9",
-						"7e9466a0-7b0c-4596-9bd1-e2b06c85b896",
-						"6d8c27f6-d8e3-4e5f-9298-c3b9408aebd7",
-						"c6115e9c-3e41-49e0-9369-9a25476ec52c",
-						"9bf18cbb-862d-40ac-ab2d-d1561297fe07",
-						"f3932f62-2464-4a4b-ab2d-427f6d24c869",
-						"dff7c303-74ea-42bf-8525-7e920ad33d22",
-						"e39bc4e3-4109-424c-b33f-93285ef9969a",
-						"0acf0849-6a79-4cac-8616-0d9af2ea6b10",
-						"f7254c96-ea60-4a00-b50b-6b830c1b8c5f",
-						"6089a33b-4d6b-47b4-ba3d-f05a50281597",
-						"54273ad1-341e-457c-848b-334828b3ec87",
-						"12b751da-109f-4f16-8068-b6523f3c99f7",
-						"18388720-be03-4c4f-8bc7-d683585bf722",
-						"a1e6cefe-c445-42f5-a2b8-45ef582480cf",
-						"d354e946-873e-4241-9b04-7f903ef3327c",
-						"7d957fe2-f3e4-40ad-9892-63e63f3e8a5d",
-						"7c3523ad-3dcf-4e5a-b17f-cf0f4bda9e6d",
-						"7fa9f315-6807-4829-9149-e519c08550a9",
-						"f7ed9cda-510f-4d81-bf8a-da992759c673",
-						"9747e328-6130-4c75-8fc0-6cab1365bab8",
-						"19d7ee81-7e08-4d81-b64e-b7e34b958afd",
-						"7c8c7c45-c9ab-4dbe-a6e2-9164aa6cc8cd",
-						"1e0a6fc1-eff9-4924-b0f4-4cb89bf6eff3",
-						"981ac771-9a78-4c0a-9510-36357e890185",
-						"ee9e055d-8f91-4408-9653-860fb09faaf6",
-						"2882caa9-07f0-4225-8ae2-95074abe111b",
-						"b8cbe56c-08dc-46c6-a633-6f2492665955",
-						"63a36c5c-3cbc-4da3-821a-e6db03b26fe6",
-						"95b13b09-f28a-4ab1-a27e-9148ed9da40b",
-						"be04352d-fe1c-4b0a-981e-32e8164a2485",
-						"ce26e307-1d21-4b83-93d0-e6577c8a017e",
-						"01f46532-021f-454a-b012-c1a8a1aeb891",
-						"3eb69af7-a9cc-4d92-8723-98ce0b90258e",
-						"f82f970f-7f31-4887-a513-6ad6124f0fa1",
-						"b539d61d-e8cc-4e8a-b382-5a7e26ab8720",
-						"a63e27ec-5f0e-4003-b955-93671edd41f2",
-						"890d8204-1345-4727-a0d4-f888c602dcc8",
-						"9e4419b9-299d-4dc8-a379-185a51e7bd1e",
-						"d0a263d9-091e-4c9d-9b86-730b749c120f",
-						"f7ec75ac-f209-4f4c-a644-a9e44d6d702f",
-						"5602bc65-3085-418a-920e-2aa649798eff",
-						"c2d039c4-aea9-4b6a-a496-93e6b2d8cee0",
-						"f76d134c-80f2-4ae8-aa60-215319578fc1",
-						"1e3fdb9d-caa4-441e-bfe3-3118e2198ebd",
-						"eb0a5cdb-cf32-48fc-9748-0c9405dea6ce",
-						"139c4b81-ccc5-4ce9-bbe2-da469560a241",
-						"962bd4d5-2d81-466a-93b1-67cda878abbf",
-						"c61c095f-3935-4402-be2c-ef1c778f1da4",
-						"1bbedaa6-5c23-44ae-b064-044aff7bd182",
-						"3bb36de2-d250-4258-ab14-6df805320513",
-						"c9cab0f8-0350-4d8f-9f49-c631ce838978",
-						"8efa02c7-ce4c-4732-8f60-ffb6b9344e0f",
-						"faeb53d6-1697-48ea-96ba-8c433a7bb0f4",
-						"233ea864-9d04-4572-b3da-9167c951e8e4",
-						"06369524-ac71-43c5-91f9-1dba1b1dfa2f",
-						"fd39a771-21d3-47cb-8531-ff61ee81dcf2",
-						"e7f02645-68d8-42dd-914f-a28e0c63be44",
-						"9c0c7326-5876-4b0f-85f6-ffc1b1c22e38",
-						"3f52213c-c18d-43de-98a9-99c992c75457",
-						"0467bc89-be4d-4238-8c0a-971eec93cfb1",
-						"3669890c-3479-4dcb-9fbc-6a592b5f5a34",
-						"02cb6b04-6d87-461e-9fd0-f0e3386232f9",
-						"1f858de7-3a19-4060-90d7-6b5829ce1dc0",
-						"69df6a43-bd54-4975-802a-a0885a6a15e3",
-						"b67a9c0b-2d47-4e63-824d-89d571d963da",
-						"e7760e3f-3808-43e8-b235-7cb215e1f138",
-						"ae290e40-c29b-4e7f-93be-a1a3640413ac",
-						"1a7fcb1e-13cb-4851-ac06-05d36f6d4ef4",
-						"b778c8d3-9450-4d82-85c8-cc27f4915885"
+						"61096f43-075f-4060-8ac4-eab56345480f",
+						"b868cc1f-63f3-4fc5-af14-db517c082887",
+						"31977b99-ed19-4e82-a463-cd332aa64ec5",
+						"2a8a4902-fd1f-4ce9-b7c4-2bc54d72ab47",
+						"91f5e4e3-e90c-4f12-be54-3c5fcd9e6c50",
+						"980a1876-2b58-461c-a85c-53c8ecf0c236",
+						"248c11ea-1f2d-4a95-8845-a768815530e0",
+						"673147a9-8066-436a-aaf7-19a1912fce83",
+						"1334f0a7-5805-45e8-bd6a-47b2e442880c",
+						"411266f4-4e89-4900-9a6c-2e7425810cba",
+						"f0b0aca7-a897-4c9d-94b3-dbd559a864fa",
+						"8ee4eb3f-0aad-4f12-a441-4e91317bb701",
+						"ba0b2514-b561-4150-8710-fb224d3f7a34",
+						"27aceb0f-edf0-4374-b8be-131aff270c97",
+						"607a898f-9ffb-4a8a-b8b7-8de0cdc77696",
+						"3c91aacb-cadb-4ca5-8162-1a25fab6a4bd",
+						"f3b1f5b1-4500-4158-8cbb-fa1762473d0a",
+						"3a94c30b-4fdb-45b1-8940-5a8a4ece8f0c",
+						"31801a6b-dbdb-4c41-b108-7cd9c33bba9d",
+						"baeb5c59-1b65-427e-be2f-59c40c33b030",
+						"600fc50f-d816-4b5e-8b4c-d3ce0ba2313a",
+						"81014010-dc2b-4713-8f06-e8e326043522",
+						"95437a55-f2a8-4290-995d-0404b64b3a58",
+						"2a39d768-2ba4-4f45-afbc-d5cea0208aba",
+						"4bb5bafb-7bf1-46f7-9d83-c6cb248df8d0",
+						"529e51fa-d239-4565-a7e0-b1d831e1c30a",
+						"bb022144-9690-4561-a265-74622bbf5a05",
+						"1a2a3332-c94a-4031-92a0-a8e0e0c346eb",
+						"03c00a3d-9bed-401a-a97c-cd6a9455425e",
+						"6e5df588-49ae-46db-a477-d9df76990ddd",
+						"cdfb3a87-fed4-49bf-8808-f0e96eee8253",
+						"39adc03e-23cc-4431-9399-a1740239f867",
+						"2041fcc4-678e-4f40-a5a3-a27c2251fa02",
+						"dedd283a-427c-462b-aec7-477d6ef218f8",
+						"84afbe5d-19f9-4dfb-b6f6-8c48419c7e94",
+						"39620753-d917-46f9-99f8-746e83747cfd",
+						"911789bb-70fa-4671-af2c-3a82717960ad",
+						"585c3503-0109-4a03-9566-5f1529b5c442",
+						"26182400-ad0e-4fd2-bb14-d0642bda3545",
+						"f8ecac02-f3b5-4b98-a60b-a4326e30ba69",
+						"98c78792-caa7-4426-9481-688c54fa9ddb",
+						"e3dab923-b505-42ba-8fbc-66ea4d3e4f12",
+						"6a92cd7c-f9e2-4c32-9f71-58da8fffff09",
+						"4259bf82-bf3c-4986-99d9-75e398636511",
+						"7f9d13fc-beda-4003-8836-d266ac46e0bf",
+						"b3e01f90-1a8d-4e23-be85-4ca76f7dc108",
+						"a962e7b2-4f9b-4467-82bd-8aeed9abdc89",
+						"f6a59ea2-30fd-4883-81ba-e8137deddb54",
+						"7f964feb-4484-4e8d-912d-096641b11a6b",
+						"fcfb0808-7e56-4a90-a1fb-5dc72fee988c",
+						"751cf6eb-479a-46ef-a7f2-9599140b58a8",
+						"c4bdbcb8-d292-4055-a048-272d872c91e7",
+						"8cd1d805-e2b6-4b4b-ae27-3af411785e32",
+						"948999f7-1426-463e-9b58-ea992e858f99",
+						"defccfb6-bed8-4869-a053-a505513f1c85",
+						"5ffe0724-826c-4885-8ae5-af71fc62850e",
+						"074061e0-51e6-4817-9503-f33c48557055",
+						"1b4fd987-db91-4557-adea-08156e3197c5",
+						"fe2649af-6e75-4c9e-80e1-249fa5faca20",
+						"9d1d5e6d-882a-4f59-af61-1c5cb137e7cd",
+						"864b0d0c-b496-4ca6-9104-0f6469408995",
+						"2131dc8e-984f-4577-84a2-8e22e57738b7",
+						"fd849b8d-4596-42d0-ac56-96cf64887940",
+						"8a84bc3d-36e6-4ada-9910-c7681b566ead",
+						"2e1aba36-81a1-4ea6-80e7-b97e5353453a",
+						"9adb8ee1-34d8-4110-ab28-e8c2a857374d",
+						"7705f345-5b3e-4e7d-aac9-7fba80b89095",
+						"4d763167-84e2-4c19-82df-2cfb84465530",
+						"fb85c8f5-5b1d-4c77-b2f0-fd93e6cb1401",
+						"b4a16d4d-dc86-45a0-815f-6e55063cfb4c",
+						"f51efa81-aafd-4a2f-b71c-e9ad7310697f",
+						"b7b6ccda-afd6-45ff-8bae-ca1ac9a207e7",
+						"b5554dbd-2692-4e65-b26a-aee39a17c90e"
 					],
 					"archComponent": "typicalWork",
 					"schemaFieldUid": "field_5f30f5f1-60e2-4e1e-8651-17ae5979e530",
@@ -3651,11 +3434,7 @@
 			}
 		},
 		"streamModelControl": {
-			"ui:order": [
-				"localParams",
-				"field_G0AoYAl8",
-				"field_hQeUoQl4"
-			],
+			"ui:order": ["localParams", "field_G0AoYAl8", "field_hQeUoQl4"],
 			"ui:options": {
 				"groupActive": false,
 				"sectionRole": "main",
@@ -3745,12 +3524,7 @@
 						},
 						"ui:readonly": true
 					},
-					"ui:order": [
-						"name",
-						"estimateHoursPerDay",
-						"coefficient",
-						"total"
-					],
+					"ui:order": ["name", "estimateHoursPerDay", "coefficient", "total"],
 					"coefficient": {
 						"ui:widget": "text",
 						"ui:options": {
@@ -3772,8 +3546,6 @@
 					"addable": false,
 					"orderable": false,
 					"removable": false,
-					"archComponent": "typicalWork",
-					"schemaFieldUid": "field_3e1d8681-5311-43fa-9710-5b3c3ee5e301",
 					"boundWorkIds": [
 						"6fb0b803-5466-4b9a-9961-ed3a617d88c1",
 						"b5033791-054f-4ab4-89d1-1102d10c3085",
@@ -3783,7 +3555,9 @@
 						"f03437a1-cc7a-46df-9418-1df92467daaf",
 						"019240ea-de39-471a-bd5e-0c190fef339e",
 						"642d88fe-bbfc-4901-9558-7ab80892ec81"
-					]
+					],
+					"archComponent": "typicalWork",
+					"schemaFieldUid": "field_3e1d8681-5311-43fa-9710-5b3c3ee5e301"
 				},
 				"ui:description": "Список заполняется автоматически при срабатывании триггеров типовых работ.\n\nПоля: Название типовой работы · Базовая оценка · Коэффициент · Итог\nСуммарный итог — при нескольких работах"
 			},
@@ -3846,10 +3620,7 @@
 			}
 		},
 		"streamDigitalAgents": {
-			"ui:order": [
-				"field_8R2HHTY4",
-				"field_AuPTJbZa"
-			],
+			"ui:order": ["field_8R2HHTY4", "field_AuPTJbZa"],
 			"ui:options": {
 				"groupActive": false,
 				"sectionRole": "panel",
@@ -3932,10 +3703,7 @@
 			}
 		},
 		"streamStreamingData": {
-			"ui:order": [
-				"field_8uYGWAZ9",
-				"field_xzzoJBAc"
-			],
+			"ui:order": ["field_8uYGWAZ9", "field_xzzoJBAc"],
 			"ui:options": {
 				"groupActive": false,
 				"sectionRole": "panel",
@@ -4045,10 +3813,7 @@
 							"schemaFieldUid": "field_d4a57f56-4127-474c-9115-bec24e7db610"
 						}
 					},
-					"ui:order": [
-						"probability",
-						"goals"
-					],
+					"ui:order": ["probability", "goals"],
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Запрет/задержка разрешения от внешних регуляторов на работы\n\\n* Отсутствие приемлемого контрагента (вендор/поставщик)",
@@ -4072,10 +3837,7 @@
 							"schemaFieldUid": "field_ac409196-e123-47ee-9747-ec3378c0f7ad"
 						}
 					},
-					"ui:order": [
-						"probability",
-						"goals"
-					],
+					"ui:order": ["probability", "goals"],
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Недостаток / отсутствие ресурсов на работы по реализации проекта разработки и внедрению доработок проекта (в т.ч. у подрядчика)\n\\n* Недостаточные компетенции персонала\n\\n* Недостаточный уровень набора дополнительного персонала",
@@ -4096,10 +3858,7 @@
 							"schemaFieldUid": "field_8c12cec4-56f5-441d-8e0d-eadca46e9a77"
 						}
 					},
-					"ui:order": [
-						"probability",
-						"goals"
-					],
+					"ui:order": ["probability", "goals"],
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Сбои в работе инфраструктуры и сервисного обслуживания\n\\n* Сбои в работе ПО\n\\n* Сбои продукта на этапе интеграции\n\\n* Ошибки в системном ПО, интегрируемых системах",
@@ -4120,10 +3879,7 @@
 							"schemaFieldUid": "field_593d6f1e-4d27-4d27-aaf2-62e30fa661f6"
 						}
 					},
-					"ui:order": [
-						"probability",
-						"goals"
-					],
+					"ui:order": ["probability", "goals"],
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Недостаточная проработка требований на этапах детального анализа\n\\n* Недостатки планирования и обеспечения непрерывности деятельности\n\\n* Расширение границ задач проекта или изменение трудозатрат по задачам",
@@ -4144,10 +3900,7 @@
 							"schemaFieldUid": "field_43131069-d1ad-45d4-95d3-ecb011101ac4"
 						}
 					},
-					"ui:order": [
-						"probability",
-						"goals"
-					],
+					"ui:order": ["probability", "goals"],
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Изменение требований внешних регуляторов и прочие несовершенства правовой системы",
@@ -4168,10 +3921,7 @@
 							"schemaFieldUid": "field_0d7189b0-f075-4b1d-a55c-c2bf0f2ea693"
 						}
 					},
-					"ui:order": [
-						"probability",
-						"goals"
-					],
+					"ui:order": ["probability", "goals"],
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Изменение бизнес-процессов Банка\n\\n* Недостатки коммуникаций / взаимодействия\n\\n* Неполные и нечеткие обязанности\n\\n* Отсутствие выделения ставок на наем персонала необходимого для реализации проекта\n\\n* Задержка заключения договоров с подрядчиками\n\\n* Длительное согласование проектных документов в Банке\n\\n* Отсутствие утвержденных нормативных документов",
@@ -4192,10 +3942,7 @@
 							"schemaFieldUid": "field_ee27dd8e-24d6-4f9a-86c8-84f97e047dde"
 						}
 					},
-					"ui:order": [
-						"probability",
-						"goals"
-					],
+					"ui:order": ["probability", "goals"],
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Задержка в закупке, поставке и развертывании оборудования\n\\n* Ненадлежащее качество исполнения услуг со стороны привлеченных контрагентов/подрядчиков\n\\n* Нарушение подрядчиками сроков выполнения работ\n\\n* Экономические события, влиящие на состояние третьих лиц, в том числе банкротство",
@@ -4216,10 +3963,7 @@
 							"schemaFieldUid": "field_e4eb17ab-1b85-43da-ab2c-10a63479eb7d"
 						}
 					},
-					"ui:order": [
-						"probability",
-						"goals"
-					],
+					"ui:order": ["probability", "goals"],
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Недостаточное вовлечение руководства\n\\n* Недостатки контрольных механизмов",
@@ -4240,10 +3984,7 @@
 							"schemaFieldUid": "field_85cd7a69-e7cd-41c3-9bad-443f712654bf"
 						}
 					},
-					"ui:order": [
-						"probability",
-						"goals"
-					],
+					"ui:order": ["probability", "goals"],
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Создание ИС (с ID в РИС), не введенной в эксплуатацию про итогам завершения проекта",
@@ -4264,10 +4005,7 @@
 							"schemaFieldUid": "field_27425e38-0e84-4642-a739-4d6eb99b9cac"
 						}
 					},
-					"ui:order": [
-						"probability",
-						"goals"
-					],
+					"ui:order": ["probability", "goals"],
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Изменения принципов реализации целевой архитектуры Банка",
@@ -4288,10 +4026,7 @@
 							"schemaFieldUid": "field_00f1f778-297c-47c6-9cc4-7937f53cc1cc"
 						}
 					},
-					"ui:order": [
-						"probability",
-						"goals"
-					],
+					"ui:order": ["probability", "goals"],
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Пересечение с большим количеством проектов и увеличение сроков по смежным проектам\n\\n* Задержки из за изменения сроков реализации смежных ИТ систем и проектов",
@@ -4358,10 +4093,7 @@
 				},
 				"targetPath": "/summary/total",
 				"description": "ФТ-026: совокупная итоговая калькуляция анкеты.",
-				"dependencies": [
-					"/summary/typicalTotal",
-					"/summary/atypicalTotal"
-				]
+				"dependencies": ["/summary/typicalTotal", "/summary/atypicalTotal"]
 			},
 			{
 				"id": "j9AJHYMlHF7o6lSuzoREu",
@@ -4386,9 +4118,7 @@
 					]
 				},
 				"targetPath": "/",
-				"dependencies": [
-					"/generalInfo/modelService/prePromEval"
-				]
+				"dependencies": ["/generalInfo/modelService/prePromEval"]
 			},
 			{
 				"id": "TJNtbRBNc9qBOhqvd2nk9",
@@ -4406,9 +4136,7 @@
 					]
 				},
 				"targetPath": "/",
-				"dependencies": [
-					"/generalInfo/modelService/prePromEval"
-				]
+				"dependencies": ["/generalInfo/modelService/prePromEval"]
 			},
 			{
 				"id": "unified-atypical-row-total:detailInfo_field_npwqpBHt",
@@ -4800,16 +4528,16 @@
 					"calcModel": "unified",
 					"worksCatalog": true,
 					"allowedWorkIds": [
-						"f5667ca4-4de8-4e65-a305-0a34b8945268",
-						"6ee9b8be-c732-4444-8f77-c19a38304a7e",
-						"b31f0862-349d-44df-9cd7-2fbafdc88c40",
-						"ea346f5c-c67f-430c-b56a-53b59b5bc18c",
-						"91929b5d-3e46-4c1e-95c7-0df362a74773",
-						"744fddb7-0705-4c89-a389-32d802dcb37c",
-						"86bb45a8-47da-425e-99be-3ff76b633378",
-						"ddfd88fb-e256-4e2b-ba41-f15642109db2",
-						"80e02a43-c142-4b67-bbd7-39e01e3a6f62",
-						"91538af2-084d-442a-a860-cd8b36f5c0ec"
+						"fbfa5b48-abae-442a-a7a7-6b7ccebe88f7",
+						"8004b30d-592f-4fb6-81f4-b4e052f56d90",
+						"64e97c0a-8662-4530-9aac-57016cf4f32e",
+						"9c71a3a2-d980-4d39-a603-ca1d35f9ea31",
+						"4a349bdc-be66-4c86-b36c-b6733eec8455",
+						"d888922b-f141-4e9c-84bc-2c9dbc5dfee3",
+						"278cd153-4188-4dea-bba7-a45edaed7bbf",
+						"5862d9a7-b2d5-4a99-90f8-a042532a62aa",
+						"053b1fbc-25ef-4182-9b78-dc100ce19712",
+						"22c7a066-51de-4b59-b5a1-770733276212"
 					],
 					"outputArrayPath": "detailInfo.detailTypicalTasks",
 					"sourceArrayPath": "generalInfo.modelService",
@@ -4837,36 +4565,36 @@
 					"calcModel": "unified",
 					"worksCatalog": true,
 					"allowedWorkIds": [
-						"d9b54258-1288-40ca-9730-366cfdf4a693",
-						"d0fa8689-f66c-4bc1-abe9-7c1741810dd1",
-						"566e144f-7e29-4025-a21f-4e4ade3470a1",
-						"fe62135a-30f9-4cd1-8e2f-b6a614e256d1",
-						"2f2830e4-ef57-4928-a30f-6d10c2fa4ed6",
-						"0ac674d2-9e46-4d9e-a951-0542eca2965b",
-						"02a12f76-2cb6-4d99-bdfb-03d0f07fd79a",
-						"7b704989-4c4a-4f1b-a9d6-b61c84e7789d",
-						"acfa302c-f9ed-408e-b643-6163e3d4fe9d",
-						"ed4892c1-af4e-4f5f-a883-e69504bc957b",
-						"63146893-6e9d-4671-8f10-68a97c232746",
-						"51e1f033-a403-478d-ad6c-018f2c5cf56a",
-						"3f2edee5-3ef3-4e55-bcf1-161856a66c31",
-						"8def553d-5eee-4f7a-8f58-20ded7c65be4",
-						"07a32cbd-8ad8-4e85-90cd-b87f7fc22ae2",
-						"6349b069-6537-46a7-b648-5da649afde88",
-						"74a998b8-7570-40ec-a8b8-ade81e7a03bb",
-						"a0538f39-2190-48c2-897a-ba7090de5a43",
-						"1314c9e2-447d-40e7-a879-fac30977dfa1",
-						"4494c068-0417-4b77-b712-d6ccef4c21bd",
-						"3df8d500-101d-4d43-839f-ec2d3ae2a262",
-						"ecbfebb8-a461-4ba8-b497-3e72a2e578c9",
-						"0045ad74-1b34-4477-8dcb-ab88b8447060",
-						"60468113-ee1b-490a-8589-c4cf569d9591",
-						"d552f68a-5fe4-4f13-8504-fc38383ad4fe",
-						"20df3141-1f8b-450c-827f-d05002b47cf1",
-						"00af5ad9-a29a-408f-837a-e5cf2206b466",
-						"b66d7684-c2ae-4354-92ea-774c808c25a4",
-						"36ca1196-c0db-4638-8513-47355b016736",
-						"1254d66c-4219-45b5-a497-659b75df537b"
+						"47677456-1b9f-438c-a2e5-e9791b613284",
+						"e4f6d13c-4bd5-4598-813e-5600e7f9a602",
+						"9e59e524-19c3-45b3-855c-cf7516d64dbe",
+						"edfd98a4-edbc-4692-861f-0c30fded05ab",
+						"f37a3640-f9df-46a9-8d34-66450f987296",
+						"0d79094d-ea6d-4434-a8fc-5b418fa157d4",
+						"14072945-99ef-458c-a999-c4380a6555c6",
+						"9516a8d1-08ce-4751-8f1e-976a5d0b5cf4",
+						"30cda680-2e77-448c-91af-90dec89da7d4",
+						"bf62b7ee-555d-4071-a4cc-1e91c3514b0e",
+						"fc947d2a-35a4-4248-b8e0-b9792cd5a00b",
+						"850be3c4-f6d5-49f4-b04b-70997ef6727a",
+						"51b042f2-cf8b-4c2d-97ed-45d8572af6ca",
+						"7e96f1f7-5f28-42e3-a2b9-2a5beeb09700",
+						"2337f8f8-af92-41f6-be17-fcbad93db834",
+						"e903feea-b18f-4ae5-b117-488ce8be9af6",
+						"47ae25cc-bdd0-47dd-945f-31cd4f2e68b1",
+						"693dbad0-b478-424d-8428-3e465a0abc76",
+						"7df0a5fa-8df3-44ba-a5b2-bcbad564b770",
+						"c3cd34b0-9487-4393-af9c-50d2f4f7547d",
+						"dca027fc-2640-432b-bd9c-5cfc88697690",
+						"8f376072-a563-4922-9287-f2018649d680",
+						"370c9261-e018-424a-bddd-f493ebf055ad",
+						"dda1a510-41ff-43c6-9c47-69e0a17fc1d5",
+						"f4b87ee4-b6d7-466e-8592-41113e1adc12",
+						"928d5a15-3be5-4e79-98f6-93aabf0402c8",
+						"eeea39dc-f40c-4d39-8243-06026dcef124",
+						"12b4d99f-98b0-42af-aaac-34bc448ae9a2",
+						"24776d59-096d-44b3-8ade-989638ee6520",
+						"03c0c089-1bfd-469d-89db-2ba77c3c658e"
 					],
 					"outputArrayPath": "field_aJEu5ziT.sourceTypicalTasks",
 					"sourceContextPaths": [
@@ -4894,79 +4622,79 @@
 					"calcModel": "unified",
 					"worksCatalog": true,
 					"allowedWorkIds": [
-						"ea079f20-a4aa-4391-9732-b6cb92b33778",
-						"d3976b5a-c7b3-489d-8719-5cc0621a4dc7",
-						"e0526e6d-7497-4c53-8419-637194050270",
-						"b17c7e3f-30fe-4579-b473-c5accf4a3cf9",
-						"7e9466a0-7b0c-4596-9bd1-e2b06c85b896",
-						"6d8c27f6-d8e3-4e5f-9298-c3b9408aebd7",
-						"c6115e9c-3e41-49e0-9369-9a25476ec52c",
-						"9bf18cbb-862d-40ac-ab2d-d1561297fe07",
-						"f3932f62-2464-4a4b-ab2d-427f6d24c869",
-						"dff7c303-74ea-42bf-8525-7e920ad33d22",
-						"e39bc4e3-4109-424c-b33f-93285ef9969a",
-						"0acf0849-6a79-4cac-8616-0d9af2ea6b10",
-						"f7254c96-ea60-4a00-b50b-6b830c1b8c5f",
-						"6089a33b-4d6b-47b4-ba3d-f05a50281597",
-						"54273ad1-341e-457c-848b-334828b3ec87",
-						"12b751da-109f-4f16-8068-b6523f3c99f7",
-						"18388720-be03-4c4f-8bc7-d683585bf722",
-						"a1e6cefe-c445-42f5-a2b8-45ef582480cf",
-						"d354e946-873e-4241-9b04-7f903ef3327c",
-						"7d957fe2-f3e4-40ad-9892-63e63f3e8a5d",
-						"7c3523ad-3dcf-4e5a-b17f-cf0f4bda9e6d",
-						"7fa9f315-6807-4829-9149-e519c08550a9",
-						"f7ed9cda-510f-4d81-bf8a-da992759c673",
-						"9747e328-6130-4c75-8fc0-6cab1365bab8",
-						"19d7ee81-7e08-4d81-b64e-b7e34b958afd",
-						"7c8c7c45-c9ab-4dbe-a6e2-9164aa6cc8cd",
-						"1e0a6fc1-eff9-4924-b0f4-4cb89bf6eff3",
-						"981ac771-9a78-4c0a-9510-36357e890185",
-						"ee9e055d-8f91-4408-9653-860fb09faaf6",
-						"2882caa9-07f0-4225-8ae2-95074abe111b",
-						"b8cbe56c-08dc-46c6-a633-6f2492665955",
-						"63a36c5c-3cbc-4da3-821a-e6db03b26fe6",
-						"95b13b09-f28a-4ab1-a27e-9148ed9da40b",
-						"be04352d-fe1c-4b0a-981e-32e8164a2485",
-						"ce26e307-1d21-4b83-93d0-e6577c8a017e",
-						"01f46532-021f-454a-b012-c1a8a1aeb891",
-						"3eb69af7-a9cc-4d92-8723-98ce0b90258e",
-						"f82f970f-7f31-4887-a513-6ad6124f0fa1",
-						"b539d61d-e8cc-4e8a-b382-5a7e26ab8720",
-						"a63e27ec-5f0e-4003-b955-93671edd41f2",
-						"890d8204-1345-4727-a0d4-f888c602dcc8",
-						"9e4419b9-299d-4dc8-a379-185a51e7bd1e",
-						"d0a263d9-091e-4c9d-9b86-730b749c120f",
-						"f7ec75ac-f209-4f4c-a644-a9e44d6d702f",
-						"5602bc65-3085-418a-920e-2aa649798eff",
-						"c2d039c4-aea9-4b6a-a496-93e6b2d8cee0",
-						"f76d134c-80f2-4ae8-aa60-215319578fc1",
-						"1e3fdb9d-caa4-441e-bfe3-3118e2198ebd",
-						"eb0a5cdb-cf32-48fc-9748-0c9405dea6ce",
-						"139c4b81-ccc5-4ce9-bbe2-da469560a241",
-						"962bd4d5-2d81-466a-93b1-67cda878abbf",
-						"c61c095f-3935-4402-be2c-ef1c778f1da4",
-						"1bbedaa6-5c23-44ae-b064-044aff7bd182",
-						"3bb36de2-d250-4258-ab14-6df805320513",
-						"c9cab0f8-0350-4d8f-9f49-c631ce838978",
-						"8efa02c7-ce4c-4732-8f60-ffb6b9344e0f",
-						"faeb53d6-1697-48ea-96ba-8c433a7bb0f4",
-						"233ea864-9d04-4572-b3da-9167c951e8e4",
-						"06369524-ac71-43c5-91f9-1dba1b1dfa2f",
-						"fd39a771-21d3-47cb-8531-ff61ee81dcf2",
-						"e7f02645-68d8-42dd-914f-a28e0c63be44",
-						"9c0c7326-5876-4b0f-85f6-ffc1b1c22e38",
-						"3f52213c-c18d-43de-98a9-99c992c75457",
-						"0467bc89-be4d-4238-8c0a-971eec93cfb1",
-						"3669890c-3479-4dcb-9fbc-6a592b5f5a34",
-						"02cb6b04-6d87-461e-9fd0-f0e3386232f9",
-						"1f858de7-3a19-4060-90d7-6b5829ce1dc0",
-						"69df6a43-bd54-4975-802a-a0885a6a15e3",
-						"b67a9c0b-2d47-4e63-824d-89d571d963da",
-						"e7760e3f-3808-43e8-b235-7cb215e1f138",
-						"ae290e40-c29b-4e7f-93be-a1a3640413ac",
-						"1a7fcb1e-13cb-4851-ac06-05d36f6d4ef4",
-						"b778c8d3-9450-4d82-85c8-cc27f4915885"
+						"61096f43-075f-4060-8ac4-eab56345480f",
+						"b868cc1f-63f3-4fc5-af14-db517c082887",
+						"31977b99-ed19-4e82-a463-cd332aa64ec5",
+						"2a8a4902-fd1f-4ce9-b7c4-2bc54d72ab47",
+						"91f5e4e3-e90c-4f12-be54-3c5fcd9e6c50",
+						"980a1876-2b58-461c-a85c-53c8ecf0c236",
+						"248c11ea-1f2d-4a95-8845-a768815530e0",
+						"673147a9-8066-436a-aaf7-19a1912fce83",
+						"1334f0a7-5805-45e8-bd6a-47b2e442880c",
+						"411266f4-4e89-4900-9a6c-2e7425810cba",
+						"f0b0aca7-a897-4c9d-94b3-dbd559a864fa",
+						"8ee4eb3f-0aad-4f12-a441-4e91317bb701",
+						"ba0b2514-b561-4150-8710-fb224d3f7a34",
+						"27aceb0f-edf0-4374-b8be-131aff270c97",
+						"607a898f-9ffb-4a8a-b8b7-8de0cdc77696",
+						"3c91aacb-cadb-4ca5-8162-1a25fab6a4bd",
+						"f3b1f5b1-4500-4158-8cbb-fa1762473d0a",
+						"3a94c30b-4fdb-45b1-8940-5a8a4ece8f0c",
+						"31801a6b-dbdb-4c41-b108-7cd9c33bba9d",
+						"baeb5c59-1b65-427e-be2f-59c40c33b030",
+						"600fc50f-d816-4b5e-8b4c-d3ce0ba2313a",
+						"81014010-dc2b-4713-8f06-e8e326043522",
+						"95437a55-f2a8-4290-995d-0404b64b3a58",
+						"2a39d768-2ba4-4f45-afbc-d5cea0208aba",
+						"4bb5bafb-7bf1-46f7-9d83-c6cb248df8d0",
+						"529e51fa-d239-4565-a7e0-b1d831e1c30a",
+						"bb022144-9690-4561-a265-74622bbf5a05",
+						"1a2a3332-c94a-4031-92a0-a8e0e0c346eb",
+						"03c00a3d-9bed-401a-a97c-cd6a9455425e",
+						"6e5df588-49ae-46db-a477-d9df76990ddd",
+						"cdfb3a87-fed4-49bf-8808-f0e96eee8253",
+						"39adc03e-23cc-4431-9399-a1740239f867",
+						"2041fcc4-678e-4f40-a5a3-a27c2251fa02",
+						"dedd283a-427c-462b-aec7-477d6ef218f8",
+						"84afbe5d-19f9-4dfb-b6f6-8c48419c7e94",
+						"39620753-d917-46f9-99f8-746e83747cfd",
+						"911789bb-70fa-4671-af2c-3a82717960ad",
+						"585c3503-0109-4a03-9566-5f1529b5c442",
+						"26182400-ad0e-4fd2-bb14-d0642bda3545",
+						"f8ecac02-f3b5-4b98-a60b-a4326e30ba69",
+						"98c78792-caa7-4426-9481-688c54fa9ddb",
+						"e3dab923-b505-42ba-8fbc-66ea4d3e4f12",
+						"6a92cd7c-f9e2-4c32-9f71-58da8fffff09",
+						"4259bf82-bf3c-4986-99d9-75e398636511",
+						"7f9d13fc-beda-4003-8836-d266ac46e0bf",
+						"b3e01f90-1a8d-4e23-be85-4ca76f7dc108",
+						"a962e7b2-4f9b-4467-82bd-8aeed9abdc89",
+						"f6a59ea2-30fd-4883-81ba-e8137deddb54",
+						"7f964feb-4484-4e8d-912d-096641b11a6b",
+						"fcfb0808-7e56-4a90-a1fb-5dc72fee988c",
+						"751cf6eb-479a-46ef-a7f2-9599140b58a8",
+						"c4bdbcb8-d292-4055-a048-272d872c91e7",
+						"8cd1d805-e2b6-4b4b-ae27-3af411785e32",
+						"948999f7-1426-463e-9b58-ea992e858f99",
+						"defccfb6-bed8-4869-a053-a505513f1c85",
+						"5ffe0724-826c-4885-8ae5-af71fc62850e",
+						"074061e0-51e6-4817-9503-f33c48557055",
+						"1b4fd987-db91-4557-adea-08156e3197c5",
+						"fe2649af-6e75-4c9e-80e1-249fa5faca20",
+						"9d1d5e6d-882a-4f59-af61-1c5cb137e7cd",
+						"864b0d0c-b496-4ca6-9104-0f6469408995",
+						"2131dc8e-984f-4577-84a2-8e22e57738b7",
+						"fd849b8d-4596-42d0-ac56-96cf64887940",
+						"8a84bc3d-36e6-4ada-9910-c7681b566ead",
+						"2e1aba36-81a1-4ea6-80e7-b97e5353453a",
+						"9adb8ee1-34d8-4110-ab28-e8c2a857374d",
+						"7705f345-5b3e-4e7d-aac9-7fba80b89095",
+						"4d763167-84e2-4c19-82df-2cfb84465530",
+						"fb85c8f5-5b1d-4c77-b2f0-fd93e6cb1401",
+						"b4a16d4d-dc86-45a0-815f-6e55063cfb4c",
+						"f51efa81-aafd-4a2f-b71c-e9ad7310697f",
+						"b7b6ccda-afd6-45ff-8bae-ca1ac9a207e7",
+						"b5554dbd-2692-4e65-b26a-aee39a17c90e"
 					],
 					"outputArrayPath": "streamDataSources.field_u-7AkDrP",
 					"sourceArrayPath": "detailInfo.sourceSystems",
@@ -4980,9 +4708,7 @@
 				"condition": true,
 				"targetPath": "/streamDataSources/field_u-7AkDrP",
 				"description": "ФТ-024: типовые работы «Система-источник» из справочника работ (назначения + триггеры).",
-				"dependencies": [
-					"/detailInfo/sourceSystems"
-				]
+				"dependencies": ["/detailInfo/sourceSystems"]
 			},
 			{
 				"id": "typical-works-catalog-streamModelControl-field_G0AoYAl8",
@@ -4994,15 +4720,6 @@
 					"taskCode": "CATALOG_EXECUTOR_STREAM_TASKS",
 					"calcModel": "unified",
 					"worksCatalog": true,
-					"outputArrayPath": "streamModelControl.field_G0AoYAl8",
-					"sourceContextPaths": [
-						"detailInfo",
-						"generalInfo",
-						"uncertaintyCalculation",
-						"streamModelControl"
-					],
-					"worksCatalogStream": "Контроль моделей",
-					"worksCatalogAllArchComponents": true,
 					"allowedWorkIds": [
 						"6fb0b803-5466-4b9a-9961-ed3a617d88c1",
 						"b5033791-054f-4ab4-89d1-1102d10c3085",
@@ -5012,7 +4729,16 @@
 						"f03437a1-cc7a-46df-9418-1df92467daaf",
 						"019240ea-de39-471a-bd5e-0c190fef339e",
 						"642d88fe-bbfc-4901-9558-7ab80892ec81"
-					]
+					],
+					"outputArrayPath": "streamModelControl.field_G0AoYAl8",
+					"sourceContextPaths": [
+						"detailInfo",
+						"generalInfo",
+						"uncertaintyCalculation",
+						"streamModelControl"
+					],
+					"worksCatalogStream": "Контроль моделей",
+					"worksCatalogAllArchComponents": true
 				},
 				"condition": true,
 				"targetPath": "/streamModelControl/field_G0AoYAl8",
@@ -5405,20 +5131,8 @@
 							}
 						],
 						"matrix": [
-							[
-								"grp_low",
-								"grp_low",
-								"grp_low",
-								"grp_medium",
-								"grp_medium"
-							],
-							[
-								"grp_low",
-								"grp_low",
-								"grp_medium",
-								"grp_high",
-								"grp_high"
-							],
+							["grp_low", "grp_low", "grp_low", "grp_medium", "grp_medium"],
+							["grp_low", "grp_low", "grp_medium", "grp_high", "grp_high"],
 							[
 								"grp_low",
 								"grp_medium",
@@ -5599,13 +5313,12 @@
 	},
 	"dictionariesSnapshot": {
 		"referencedDictionaryCodes": [
-			"Способ загрузки данных в BI-систему",
 			"v2.detailInfo.dataMart.deliveryMode",
 			"v2.detailInfo.dataMart.field_0uV7wafS",
 			"v2.detailInfo.dataMart.field_46LCnfWo",
 			"v2.detailInfo.dataMart.field_L-WWLDWY",
-			"v2.detailInfo.dataMart.field_le47srI7",
 			"v2.detailInfo.dataMart.field_N9LFD6Hu",
+			"v2.detailInfo.dataMart.field_le47srI7",
 			"v2.detailInfo.dataMart.workType",
 			"v2.detailInfo.dataProcess.confidentialData",
 			"v2.detailInfo.dataProcess.deliveryMode",
@@ -5624,8 +5337,8 @@
 			"v2.detailInfo.sourceSystems.items.field_HMnqITVb",
 			"v2.detailInfo.sourceSystems.items.field_K2ioHD8d",
 			"v2.detailInfo.sourceSystems.items.field_L1lRlgf1",
-			"v2.detailInfo.sourceSystems.items.field_p4zxdNZG",
 			"v2.detailInfo.sourceSystems.items.field_VX7y3PsB",
+			"v2.detailInfo.sourceSystems.items.field_p4zxdNZG",
 			"v2.detailInfo.sourceSystems.items.field_wuYlhnu0",
 			"v2.detailInfo.sourceSystems.items.nda",
 			"v2.detailInfo.sourceSystems.items.type",
@@ -5665,7 +5378,8 @@
 			"v2.workflow.sections.detailInfo",
 			"v2.workflow.sections.generalInfo",
 			"v2.workflow.sections.streamDataSources",
-			"v2.workflow.sections.streamModelControl"
+			"v2.workflow.sections.streamModelControl",
+			"Способ загрузки данных в BI-систему"
 		]
 	}
 }

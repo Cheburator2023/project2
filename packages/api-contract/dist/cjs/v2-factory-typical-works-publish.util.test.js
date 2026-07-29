@@ -28,6 +28,7 @@ function baseCard(overrides) {
         (0, vitest_1.expect)((0, v2_factory_typical_works_publish_util_1.extractPublishWorkStage)("02. Поиск данных")).toBe("02");
         (0, vitest_1.expect)((0, v2_factory_typical_works_publish_util_1.extractPublishWorkStage)("Этап 210. Foo")).toBe("Этап 210");
         (0, vitest_1.expect)((0, v2_factory_typical_works_publish_util_1.extractPublishWorkStage)("AutoML: bar")).toBe("AutoML");
+        (0, vitest_1.expect)((0, v2_factory_typical_works_publish_util_1.extractPublishWorkStage)("1. Качество модельных данных [КД]")).toBeNull();
     });
     (0, vitest_1.it)("builds registry and upserts catalog with formula and any_of", () => {
         const existing = [
@@ -180,5 +181,96 @@ function baseCard(overrides) {
         (0, vitest_1.expect)(result.catalogRows[0]?.stage).toBe("04");
         (0, vitest_1.expect)(result.catalogRows[0]?.name).toBe("Витрина");
         (0, vitest_1.expect)(result.catalogRows[0]?.formulaText).toBe("N * 2");
+    });
+    (0, vitest_1.it)("merges legacy ИД streams into Источники данных without duplicates", () => {
+        const existing = [
+            {
+                stream: "ИД. Внутренний",
+                component: "Процесс обработки данных",
+                stage: "Этап 212",
+                name: "Реализация процесса загрузки внутренних данных в Платформу данных для целей моделирования",
+                originalName: "legacy",
+                workType: "Обязательная",
+                norm: 22,
+                normRaw: "22",
+                triggerParam: "Тип системы-источника",
+                triggerParams: ["Тип системы-источника"],
+                triggerRules: [
+                    {
+                        paramName: "Тип системы-источника",
+                        paramCode: "type",
+                        operator: "=",
+                        values: ["Внутренний"],
+                    },
+                ],
+                laborParams: ["Тип работ"],
+                formulaText: "N * old",
+            },
+            {
+                stream: "ИД. Внешний",
+                component: "Процесс обработки данных",
+                stage: "Этап 212",
+                name: "Реализация процесса загрузки внутренних данных в Платформу данных для целей моделирования",
+                originalName: "legacy-ext",
+                workType: "Обязательная",
+                norm: 22,
+                normRaw: "22",
+                triggerParam: "",
+                triggerParams: [],
+                laborParams: [],
+                formulaText: "N * old-ext",
+            },
+            {
+                stream: "ПиРМ",
+                component: "Модель",
+                stage: "",
+                name: "ПиРМ only",
+                originalName: "ПиРМ only",
+                workType: "Опциональная",
+                norm: 1,
+                normRaw: "1",
+                triggerParam: "",
+                triggerParams: [],
+                laborParams: [],
+            },
+        ];
+        const result = (0, v2_factory_typical_works_publish_util_1.publishFactoryTypicalWorksBundle)({
+            cards: [
+                baseCard({
+                    id: "w212",
+                    name: "Этап 212. Реализация процесса загрузки внутренних данных в Платформу данных для целей моделирования",
+                    streamExecutor: "Источники данных",
+                    archComponentType: "Процесс обработки данных",
+                    formula: {
+                        tokens: [{ kind: "norm" }],
+                        text: "N × (коэф(field_yJ51GkCR) + коэф(field_qMxSfHk1))",
+                    },
+                    rules: [
+                        {
+                            id: "r1",
+                            streamExecutor: "Источники данных",
+                            paramCode: "type",
+                            paramName: "Тип системы-источника",
+                            operator: "=",
+                            valueCode: "внутренний",
+                            valueLabel: "Внутренний",
+                        },
+                    ],
+                }),
+            ],
+            existingCatalog: existing,
+            templateId: "tpl-1",
+            coverageDate: "2026-07-29",
+        });
+        (0, vitest_1.expect)(result.report.catalogUpdated).toBe(1);
+        (0, vitest_1.expect)(result.report.catalogAdded).toBe(0);
+        (0, vitest_1.expect)(result.report.catalogPreserved).toBe(1);
+        (0, vitest_1.expect)(result.report.legacyStreamCatalogRows).toBe(0);
+        (0, vitest_1.expect)(result.catalogRows).toHaveLength(2);
+        const updated = result.catalogRows.find((row) => row.name.includes("процесса загрузки"));
+        (0, vitest_1.expect)(updated?.stream).toBe("Источники данных");
+        (0, vitest_1.expect)(updated?.formulaText).toContain("field_yJ51GkCR");
+        (0, vitest_1.expect)(updated?.triggerRules?.[0]?.valueCode).toBe("внутренний");
+        (0, vitest_1.expect)(result.catalogRows.some((row) => row.name === "ПиРМ only")).toBe(true);
     });
 });

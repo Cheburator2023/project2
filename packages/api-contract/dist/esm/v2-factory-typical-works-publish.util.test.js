@@ -26,6 +26,7 @@ describe("v2-factory-typical-works-publish.util", () => {
         expect(extractPublishWorkStage("02. Поиск данных")).toBe("02");
         expect(extractPublishWorkStage("Этап 210. Foo")).toBe("Этап 210");
         expect(extractPublishWorkStage("AutoML: bar")).toBe("AutoML");
+        expect(extractPublishWorkStage("1. Качество модельных данных [КД]")).toBeNull();
     });
     it("builds registry and upserts catalog with formula and any_of", () => {
         const existing = [
@@ -178,5 +179,96 @@ describe("v2-factory-typical-works-publish.util", () => {
         expect(result.catalogRows[0]?.stage).toBe("04");
         expect(result.catalogRows[0]?.name).toBe("Витрина");
         expect(result.catalogRows[0]?.formulaText).toBe("N * 2");
+    });
+    it("merges legacy ИД streams into Источники данных without duplicates", () => {
+        const existing = [
+            {
+                stream: "ИД. Внутренний",
+                component: "Процесс обработки данных",
+                stage: "Этап 212",
+                name: "Реализация процесса загрузки внутренних данных в Платформу данных для целей моделирования",
+                originalName: "legacy",
+                workType: "Обязательная",
+                norm: 22,
+                normRaw: "22",
+                triggerParam: "Тип системы-источника",
+                triggerParams: ["Тип системы-источника"],
+                triggerRules: [
+                    {
+                        paramName: "Тип системы-источника",
+                        paramCode: "type",
+                        operator: "=",
+                        values: ["Внутренний"],
+                    },
+                ],
+                laborParams: ["Тип работ"],
+                formulaText: "N * old",
+            },
+            {
+                stream: "ИД. Внешний",
+                component: "Процесс обработки данных",
+                stage: "Этап 212",
+                name: "Реализация процесса загрузки внутренних данных в Платформу данных для целей моделирования",
+                originalName: "legacy-ext",
+                workType: "Обязательная",
+                norm: 22,
+                normRaw: "22",
+                triggerParam: "",
+                triggerParams: [],
+                laborParams: [],
+                formulaText: "N * old-ext",
+            },
+            {
+                stream: "ПиРМ",
+                component: "Модель",
+                stage: "",
+                name: "ПиРМ only",
+                originalName: "ПиРМ only",
+                workType: "Опциональная",
+                norm: 1,
+                normRaw: "1",
+                triggerParam: "",
+                triggerParams: [],
+                laborParams: [],
+            },
+        ];
+        const result = publishFactoryTypicalWorksBundle({
+            cards: [
+                baseCard({
+                    id: "w212",
+                    name: "Этап 212. Реализация процесса загрузки внутренних данных в Платформу данных для целей моделирования",
+                    streamExecutor: "Источники данных",
+                    archComponentType: "Процесс обработки данных",
+                    formula: {
+                        tokens: [{ kind: "norm" }],
+                        text: "N × (коэф(field_yJ51GkCR) + коэф(field_qMxSfHk1))",
+                    },
+                    rules: [
+                        {
+                            id: "r1",
+                            streamExecutor: "Источники данных",
+                            paramCode: "type",
+                            paramName: "Тип системы-источника",
+                            operator: "=",
+                            valueCode: "внутренний",
+                            valueLabel: "Внутренний",
+                        },
+                    ],
+                }),
+            ],
+            existingCatalog: existing,
+            templateId: "tpl-1",
+            coverageDate: "2026-07-29",
+        });
+        expect(result.report.catalogUpdated).toBe(1);
+        expect(result.report.catalogAdded).toBe(0);
+        expect(result.report.catalogPreserved).toBe(1);
+        expect(result.report.legacyStreamCatalogRows).toBe(0);
+        expect(result.catalogRows).toHaveLength(2);
+        const updated = result.catalogRows.find((row) => row.name.includes("процесса загрузки"));
+        expect(updated?.stream).toBe("Источники данных");
+        expect(updated?.formulaText).toContain("field_yJ51GkCR");
+        expect(updated?.triggerRules?.[0]?.valueCode).toBe("внутренний");
+        expect(result.catalogRows.some((row) => row.name === "ПиРМ only")).toBe(true);
     });
 });
