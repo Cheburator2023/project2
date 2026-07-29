@@ -1,0 +1,16 @@
+{
+	"source": "/tmp/tw-publish-smoke.json",
+	"templateId": "424b8ab7-1be4-4d0a-a0a9-05edadd77ff5",
+	"templateName": "smoke",
+	"write": false,
+	"report": {
+		"registryWorks": 1,
+		"catalogAdded": 0,
+		"catalogUpdated": 1,
+		"catalogUnchanged": 0,
+		"catalogPreserved": 148,
+		"dropped": [],
+		"legacyStreamCatalogRows": 100
+	},
+	"droppedSample": []
+}

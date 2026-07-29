@@ -366,6 +366,16 @@ export function formDataWithSingleArchInstance(formData, kind, instance) {
         streamDataSources,
     }, kind, 1);
 }
+/**
+ * Подпись для пустого per-instance расчёта (нет заполненных экземпляров арх. компонента).
+ */
+export function formatEmptyArchInstanceBreakdown(archComponentType) {
+    const kind = resolveArchComponentKindFromType(archComponentType);
+    const label = (kind ? V2_ARCH_COMPONENT_LABELS[kind] : null) ||
+        archComponentType?.trim() ||
+        "арх. компонент";
+    return `нет заполненных «${label}» → 0`;
+}
 export function formatPerInstanceBreakdownExpanded(instances, total) {
     if (instances.length === 0)
         return `0 = ${formatNum(total)}`;

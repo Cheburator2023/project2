@@ -301,6 +301,22 @@ const v2_work_schema_params_match_util_1 = require("./v2-work-schema-params-matc
             valueLabel: "КД",
         })).toBe(true);
     });
+    (0, vitest_1.it)("matches source type by label when stored code is the label", () => {
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.catalogValueMatchesTriggerRule)({ code: "внутренний", label: "Внутренний" }, {
+            paramCode: "type",
+            paramName: "Тип системы-источника",
+            valueCode: "Внутренний",
+            valueLabel: "Внутренний",
+        })).toBe(true);
+    });
+    (0, vitest_1.it)("matches catalog codes case-insensitively", () => {
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.catalogValueMatchesTriggerRule)({ code: "внутренний", label: "Внутренний" }, {
+            paramCode: "type",
+            paramName: "Тип системы-источника",
+            valueCode: "ВНУТРЕННИЙ",
+            valueLabel: null,
+        })).toBe(true);
+    });
     (0, vitest_1.it)("detects broken and methodology-only presence triggers", () => {
         (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.isBrokenTypicalWorkTriggerRef)({ paramCode: "", paramName: "?" })).toBe(true);
         (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.isMethodologyPresenceTriggerRule)({

@@ -452,6 +452,20 @@ export type TypicalWorkInstanceEvalResult = {
 	paramCoefficients?: Record<string, number>;
 };
 
+/**
+ * Подпись для пустого per-instance расчёта (нет заполненных экземпляров арх. компонента).
+ */
+export function formatEmptyArchInstanceBreakdown(
+	archComponentType: string | null | undefined,
+): string {
+	const kind = resolveArchComponentKindFromType(archComponentType);
+	const label =
+		(kind ? V2_ARCH_COMPONENT_LABELS[kind] : null) ||
+		archComponentType?.trim() ||
+		"арх. компонент";
+	return `нет заполненных «${label}» → 0`;
+}
+
 export function formatPerInstanceBreakdownExpanded(
 	instances: ReadonlyArray<{
 		sourceLabel: string;

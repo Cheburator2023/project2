@@ -42,10 +42,20 @@ export type V2FactoryTypicalWork = {
 		/** Явная статическая связь с полем factory-схемы без runtime-сопоставления. */
 		paramCode?: string;
 		schemaFieldUid?: string;
+		/** by_value (default) — values[]; any_of — on/off по множеству. */
+		kind?: "by_value" | "any_of";
 		values: Array<{
 			label: string;
+			/** Код справочника/схемы; если нет — при сиде берётся slug(label). */
+			code?: string;
 			coefficient: number;
 		}>;
+		anyOf?: {
+			valueCodes: string[];
+			valueLabels: string[];
+			coeffOn: number;
+			coeffOff: number;
+		};
 	}>;
 	/** Коэффициенты по количеству арх. компонентов (без поля схемы). */
 	laborArchCounts?: Array<{

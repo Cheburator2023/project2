@@ -389,6 +389,111 @@ function card() {
         });
         (0, vitest_1.expect)(result.card.laborParams[0]?.coefficients).toHaveLength(2);
     });
+    (0, vitest_1.it)("preserves admin coefficient rows that are not in the new schema values", () => {
+        const legacy = card();
+        legacy.laborParams = [
+            {
+                schemaFieldUid: "field-1",
+                paramCode: "workType",
+                paramName: "Тип работ",
+                kind: "by_value",
+                coefficients: [
+                    {
+                        id: "keep-custom",
+                        streamExecutor: "Источники данных",
+                        paramCode: "workType",
+                        paramName: "Тип работ",
+                        valueCode: "Разработка",
+                        valueLabel: "Разработка",
+                        coefficient: 2.5,
+                    },
+                    {
+                        id: "remap-me",
+                        streamExecutor: "Источники данных",
+                        paramCode: "workType",
+                        paramName: "Тип работ",
+                        valueCode: "Обучение",
+                        valueLabel: "Обучение",
+                        coefficient: 1.7,
+                    },
+                ],
+            },
+        ];
+        const result = (0, v2_typical_work_schema_sync_util_1.reconcileTypicalWorkCardWithSchemaField)(legacy, {
+            templateVersionId: "version-1",
+            mode: "apply",
+            operation: "upsert",
+            field: {
+                schemaFieldUid: "field-1",
+                previousCode: "workType",
+                code: "workType",
+                name: "Тип работ",
+                values: [
+                    { code: "обучение", label: "Обучение" },
+                    { code: "калибровка", label: "Калибровка" },
+                ],
+            },
+        });
+        const coeffs = result.card.laborParams[0]?.coefficients ?? [];
+        (0, vitest_1.expect)(coeffs).toEqual(vitest_1.expect.arrayContaining([
+            vitest_1.expect.objectContaining({
+                valueCode: "обучение",
+                valueLabel: "Обучение",
+                coefficient: 1.7,
+            }),
+            vitest_1.expect.objectContaining({
+                valueCode: "калибровка",
+                valueLabel: "Калибровка",
+                coefficient: 1,
+            }),
+            vitest_1.expect.objectContaining({
+                valueCode: "Разработка",
+                valueLabel: "Разработка",
+                coefficient: 2.5,
+            }),
+        ]));
+    });
+    (0, vitest_1.it)("does not rebuild coefficients when field.values is omitted (bulk binding sync)", () => {
+        const legacy = card();
+        legacy.laborParams = [
+            {
+                schemaFieldUid: "field-1",
+                paramCode: "workType",
+                paramName: "Тип работ",
+                kind: "by_value",
+                coefficients: [
+                    {
+                        id: "admin-edit",
+                        streamExecutor: "Источники данных",
+                        paramCode: "workType",
+                        paramName: "Тип работ",
+                        valueCode: "custom",
+                        valueLabel: "Custom",
+                        coefficient: 9,
+                    },
+                ],
+            },
+        ];
+        const result = (0, v2_typical_work_schema_sync_util_1.reconcileTypicalWorkCardWithSchemaField)(legacy, {
+            templateVersionId: "version-1",
+            mode: "apply",
+            operation: "upsert",
+            field: {
+                schemaFieldUid: "field-1",
+                previousCode: "workType",
+                code: "field_workType",
+                name: "Тип работ",
+            },
+        });
+        (0, vitest_1.expect)(result.card.laborParams[0]?.coefficients).toEqual([
+            vitest_1.expect.objectContaining({
+                valueCode: "custom",
+                valueLabel: "Custom",
+                coefficient: 9,
+            }),
+        ]);
+        (0, vitest_1.expect)(result.card.laborParams[0]?.paramCode).toBe("field_workType");
+    });
     (0, vitest_1.it)("dedupes labor coefficients that normalize to the same stored value_code", () => {
         const rows = (0, v2_typical_work_schema_sync_util_1.dedupeLaborCoefficientsByStoredValue)([
             {

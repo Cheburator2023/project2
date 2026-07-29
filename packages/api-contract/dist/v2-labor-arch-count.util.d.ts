@@ -23,5 +23,13 @@ export declare function splitCatalogLaborArchCounts<TLaborCoeff extends {
     laborArchCounts: V2TypicalWorkLaborArchCountDto[];
 };
 export declare function extractLaborArchCountsFromFormula(formula: V2TypicalWorkFormulaDto): V2TypicalWorkLaborArchCountDto[];
+/**
+ * Синхронизирует `arch_count_coeff` в формуле с блоком laborArchCounts.
+ *
+ * Важно: не пересобирает формулу с нуля — иначе ломаются операторы
+ * (в т.ч. деление на этапах 02/04) и порядок операндов.
+ * Существующие архкоэф обновляются на месте; недостающие вставляются как `× арх…` сразу после N.
+ * В конце — repair (два операнда подряд / `× ÷` от старого reconcile).
+ */
 export declare function reconcileFormulaWithLaborArchCounts(formula: V2TypicalWorkFormulaDto, laborArchCounts: readonly V2TypicalWorkLaborArchCountDto[]): V2TypicalWorkFormulaDto;
 export declare function defaultLaborArchCounts(): V2TypicalWorkLaborArchCountDto[];

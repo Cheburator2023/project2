@@ -11,6 +11,7 @@ import {
 	computeTypicalWorkFormulaTotal,
 	defaultWorkRounding,
 	formDataWithSingleArchInstance,
+	formatEmptyArchInstanceBreakdown,
 	formatPerInstanceBreakdownExpanded,
 	formatTypicalWorkCoefficientDisplay,
 	isWorkCoefficientValueAvailable,
@@ -458,7 +459,9 @@ function evaluateWorkAcrossArchInstances(ctx: RuntimeWorkContext): {
 			total: 0,
 			paramCoefficients: {},
 			instanceBreakdown: [],
-			expandedOverride: "0 = 0",
+			expandedOverride: formatEmptyArchInstanceBreakdown(
+				ctx.work.archComponentType,
+			),
 		};
 	}
 

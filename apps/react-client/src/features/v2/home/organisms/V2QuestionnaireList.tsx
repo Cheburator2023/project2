@@ -722,6 +722,7 @@ export function V2QuestionnaireList() {
 							variant="contained"
 							size="small"
 							startIcon={<AddIcon />}
+							data-test-id="anketa-registry-create"
 							onClick={() =>
 								navigate(`/v2/${v2Routes.calculationCreate.rootPath}`)
 							}

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	formDataWithSingleArchInstance,
+	formatEmptyArchInstanceBreakdown,
 	formatPerInstanceBreakdownExpanded,
 	listArchComponentInstances,
 	readPerInstanceArchCountOverride,
@@ -231,5 +232,14 @@ describe("v2-typical-work-per-instance", () => {
 				49.5,
 			),
 		).toBe("16.5 (вава) + 33 (выавыавы) = 49.5");
+	});
+
+	it("explains empty arch instances in breakdown", () => {
+		expect(formatEmptyArchInstanceBreakdown("Процесс обработки данных")).toBe(
+			"нет заполненных «Процесс обработки данных» → 0",
+		);
+		expect(formatEmptyArchInstanceBreakdown("Система-источник")).toBe(
+			"нет заполненных «Система-источник» → 0",
+		);
 	});
 });

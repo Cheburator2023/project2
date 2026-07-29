@@ -334,6 +334,48 @@ const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
             }),
         ]);
     });
+    (0, vitest_1.it)("reports unavailable values after dictionary enums replace stale jsonSchema.enum", () => {
+        const fromSchema = [
+            {
+                code: "workType",
+                name: "Тип работ",
+                schemaFieldUid: "uid-work-type",
+                dictionaryCode: "v2.detailInfo.dataMart.workType",
+                values: [
+                    { code: "Обучение", label: "Обучение" },
+                    { code: "Дообучение", label: "Дообучение" },
+                    { code: "Калибровка", label: "Калибровка" },
+                ],
+            },
+        ];
+        const withDictionary = (0, v2_template_work_schema_params_util_1.applyDictionaryEnumsToWorkSchemaParams)(fromSchema, {
+            "v2.detailInfo.dataMart.workType": {
+                enums: ["Калибровка"],
+                enumNames: ["Калибровка"],
+            },
+        });
+        const issues = (0, v2_template_work_schema_params_util_1.collectTypicalWorkSchemaConsistencyIssues)({
+            schemaParams: withDictionary,
+            rules: [],
+            laborParamCodes: [
+                {
+                    paramCode: "workType",
+                    paramName: "Тип работ",
+                    schemaFieldUid: "uid-work-type",
+                    coefficients: [
+                        { valueCode: "Обучение", valueLabel: "Обучение" },
+                        { valueCode: "Дообучение", valueLabel: "Дообучение" },
+                        { valueCode: "Калибровка", valueLabel: "Калибровка" },
+                    ],
+                },
+            ],
+        });
+        (0, vitest_1.expect)(issues.filter((issue) => issue.kind === "labor_value").map((i) => i.message)).toEqual(vitest_1.expect.arrayContaining([
+            vitest_1.expect.stringContaining("Обучение"),
+            vitest_1.expect.stringContaining("Дообучение"),
+        ]));
+        (0, vitest_1.expect)(issues.some((issue) => issue.message.includes("Калибровка") && issue.kind === "labor_value" && issue.message.includes("недоступно"))).toBe(false);
+    });
     (0, vitest_1.it)("keeps Настройка available when duplicate workType codes merge catalog values", () => {
         const issues = (0, v2_template_work_schema_params_util_1.collectTypicalWorkSchemaConsistencyIssues)({
             schemaParams: [

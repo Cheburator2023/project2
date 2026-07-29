@@ -8,18 +8,24 @@ import { AnketaCreateMetaDialog } from "@react-client/features/v2/anketaCRUD/org
 import { stripQuestionnaireCalcNameFromFormData } from "@react-client/features/v2/anketaCRUD/utils/anketaQuestionnaireMeta.util";
 import { v2Routes } from "@react-client/routing/version/v2/routes";
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 
 export const AnketaCreatePageV2 = () => {
 	const navigate = useNavigate();
+	const [searchParams] = useSearchParams();
+	const requestedTemplateId = searchParams.get("templateId")?.trim() || null;
 	const { data: templates, isLoading: templatesLoading } = useV2Templates();
 	const createMutation = useCreateV2Questionnaire();
 	const [calcName, setCalcName] = useState<string | null>(null);
 
-	const activeTemplate = useMemo(
-		() => templates?.find((t) => t.currentVersionId) ?? templates?.[0],
-		[templates],
-	);
+	const activeTemplate = useMemo(() => {
+		if (!templates?.length) return undefined;
+		if (requestedTemplateId) {
+			const byId = templates.find((t) => t.id === requestedTemplateId);
+			if (byId) return byId;
+		}
+		return templates.find((t) => t.currentVersionId) ?? templates[0];
+	}, [requestedTemplateId, templates]);
 
 	const source = useMemo(
 		() =>

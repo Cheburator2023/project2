@@ -193,6 +193,43 @@ describe("numeric labor coefficient ranges", () => {
             "Высокая",
         ]);
     });
+    it("maps legacy workType labor code to dataProcess field_yJ51GkCR on instance", () => {
+        const source = {
+            "field_It-B8PfV": "ETL-1",
+            field_yJ51GkCR: "Разработка",
+            field_qMxSfHk1: true,
+        };
+        const lookup = buildLaborCoefficientLookupSource(source, { detailInfo: { dataProcess: [source] } }, [
+            {
+                code: "field_yJ51GkCR",
+                name: "Тип работ",
+                schemaPointer: "/detailInfo/dataProcess/items/field_yJ51GkCR",
+            },
+            {
+                code: "field_qMxSfHk1",
+                name: "Требуется интеграция",
+                schemaPointer: "/detailInfo/dataProcess/items/field_qMxSfHk1",
+            },
+        ], ["workType", "field_qMxSfHk1"]);
+        expect(lookup.workType).toBe("Разработка");
+        expect(lookup.field_qMxSfHk1).toBe(true);
+        expect(resolveByValueLaborParamCoefficients(lookup, [
+            {
+                paramCode: "workType",
+                paramName: "Тип работ",
+                valueCode: "Разработка",
+                valueLabel: "Разработка",
+                coefficient: 1,
+            },
+            {
+                paramCode: "workType",
+                paramName: "Тип работ",
+                valueCode: "Внедрение",
+                valueLabel: "Внедрение",
+                coefficient: 11,
+            },
+        ])).toEqual({ workType: 1 });
+    });
     it("uses first matching coefficient for array answers (per-instance uses scalars)", () => {
         const coeffs = resolveByValueLaborParamCoefficients({
             complexity: ["Низкая", "Высокая"],

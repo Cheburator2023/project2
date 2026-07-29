@@ -29,7 +29,9 @@ import type {
 } from "@smart-anketa/api-contract";
 import {
 	applyComputedOverallUncertaintyToTypicalWorkParamCoefficients,
+	applyDictionaryEnumsToWorkSchemaParams,
 	buildWorkSchemaParamsFromTemplate,
+	collectDictionaryCodesFromWorkSchemaParams,
 	collectTypicalWorkSchemaConsistencyIssues,
 	enrichWorkSchemaParamsWithCatalogAliases,
 	findCatalogPreviousCodeForSchemaParam,
@@ -85,6 +87,7 @@ import { V2TypicalWorkEntity } from "../entities/v2-typical-work.entity";
 import { normalizeArchComponentType, slugParamCode } from "../utils/v2-typical-work-catalog.util";
 import { V2_FACTORY_TYPICAL_WORKS_SNAPSHOT } from "../constants/v2-factory-typical-works-catalog";
 import { V2TypicalWorkParamCatalogService } from "./v2-typical-work-param-catalog.service";
+import { V2DictionaryService } from "./v2-dictionary.service";
 import {
 	V2TypicalWorkSeedService,
 	V2TypicalWorkService,
@@ -117,6 +120,7 @@ export class V2TypicalWorkWriteService {
 		private readonly typicalWorkService: V2TypicalWorkService,
 		private readonly typicalWorkSeedService: V2TypicalWorkSeedService,
 		private readonly paramCatalogService: V2TypicalWorkParamCatalogService,
+		private readonly dictionaryService: V2DictionaryService,
 	) {}
 
 	private withReconcileLock<T>(
@@ -1400,6 +1404,30 @@ export class V2TypicalWorkWriteService {
 			}),
 			catalog.items,
 		);
+		const dictionaryCodes = collectDictionaryCodesFromWorkSchemaParams(
+			schemaParams,
+		);
+		const dictionaryJson =
+			dictionaryCodes.length > 0
+				? await this.dictionaryService.getDictionariesAsJsonBulk(
+						dictionaryCodes,
+					)
+				: {};
+		const enumMapByCode: Record<
+			string,
+			{ enums: string[]; enumNames: string[] }
+		> = {};
+		for (const [code, snapshot] of Object.entries(dictionaryJson)) {
+			enumMapByCode[code] = {
+				enums: snapshot.items.map((item) => item.code),
+				enumNames: snapshot.items.map((item) => item.label),
+			};
+		}
+		/** Только для панели проблем: values = живой справочник, не jsonSchema.enum. */
+		const schemaParamsForConsistency = applyDictionaryEnumsToWorkSchemaParams(
+			schemaParams,
+			enumMapByCode,
+		);
 		const aggregate: V2TypicalWorkSchemaBulkSyncResponseDto = {
 			worksMatched: 0,
 			worksUpdated: 0,
@@ -1443,10 +1471,12 @@ export class V2TypicalWorkWriteService {
 						aliasCodes: schemaParam.sourceKeys,
 						code: schemaParam.code,
 						name: schemaParam.name,
-						values:
-							schemaParam.values && schemaParam.values.length > 0
-								? schemaParam.values
-								: undefined,
+						/**
+						 * Не передаём values в bulk: иначе apply пересобирает
+						 * коэффициенты из jsonSchema.enum и затирает правки админа
+						 * при каждом заходе в редактор. Values синконятся точечно
+						 * при изменении поля схемы (client per-field sync).
+						 */
 					},
 				},
 				duplicateNameCount > 1 ? schemaParam.archComponent : null,
@@ -1501,10 +1531,7 @@ export class V2TypicalWorkWriteService {
 							aliasCodes: resolved.sourceKeys,
 							code: resolved.code,
 							name: resolved.name,
-							values:
-								resolved.values && resolved.values.length > 0
-									? resolved.values
-									: undefined,
+							// См. bulk upsert выше: bindings only, без пересборки coeff.
 						},
 					},
 					null,
@@ -1600,7 +1627,7 @@ export class V2TypicalWorkWriteService {
 				}
 				aggregate.consistencyIssues.push(
 					...collectTypicalWorkSchemaConsistencyIssues({
-						schemaParams,
+						schemaParams: schemaParamsForConsistency,
 						rules: card.rules,
 						laborParamCodes: card.laborParams.map((group) => ({
 							paramCode: group.paramCode,

@@ -136,7 +136,13 @@ export function CreateTypicalWorkDialog({
 		isValidImplementationStreamCodeFormat(streamExecutor);
 
 	return (
-		<Dialog open={open} onClose={pending ? undefined : onClose} maxWidth="sm" fullWidth>
+		<Dialog
+			open={open}
+			onClose={pending ? undefined : onClose}
+			maxWidth="sm"
+			fullWidth
+			data-test-id="typical-work-create-dialog"
+		>
 			<DialogTitle>
 				{isCreate ? "Новая типовая работа" : "Изменить типовую работу"}
 			</DialogTitle>
@@ -147,6 +153,7 @@ export function CreateTypicalWorkDialog({
 					value={name}
 					onChange={(e) => setName(e.target.value)}
 					helperText="1–255 символов"
+					inputProps={{ "data-test-id": "typical-work-create-name" }}
 				/>
 				<FormControl fullWidth>
 					<SelectWithPlaceholder
@@ -223,6 +230,7 @@ export function CreateTypicalWorkDialog({
 							value={starterNorm}
 							onChange={(e) => setStarterNorm(e.target.value)}
 							helperText="По умолчанию 1.00"
+							inputProps={{ "data-test-id": "typical-work-create-norm" }}
 						/>
 					</>
 				) : (
@@ -281,6 +289,7 @@ function BoxActions({
 				variant="contained"
 				onClick={onSubmit}
 				disabled={pending || !canSubmit}
+				data-test-id="typical-work-create-submit"
 			>
 				{isCreate ? "Создать работу" : "Сохранить"}
 			</Button>

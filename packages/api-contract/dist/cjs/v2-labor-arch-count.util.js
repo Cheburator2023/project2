@@ -128,38 +128,64 @@ function extractLaborArchCountsFromFormula(formula) {
     }
     return result;
 }
+/**
+ * Синхронизирует `arch_count_coeff` в формуле с блоком laborArchCounts.
+ *
+ * Важно: не пересобирает формулу с нуля — иначе ломаются операторы
+ * (в т.ч. деление на этапах 02/04) и порядок операндов.
+ * Существующие архкоэф обновляются на месте; недостающие вставляются как `× арх…` сразу после N.
+ * В конце — repair (два операнда подряд / `× ÷` от старого reconcile).
+ */
 function reconcileFormulaWithLaborArchCounts(formula, laborArchCounts) {
-    const archKinds = new Set(laborArchCounts.map((row) => row.kind));
-    const baseTokens = formula.tokens.filter((token) => token.kind !== "arch_count_coeff" ||
-        !archKinds.has(token.archComponentKind));
-    const archTokens = laborArchCounts.map((row) => ({
-        kind: "arch_count_coeff",
-        archComponentKind: row.kind,
-        steps: [...row.steps],
-    }));
-    if (archTokens.length === 0) {
+    const stepsByKind = new Map(laborArchCounts.map((row) => [row.kind, row.steps]));
+    const presentKinds = new Set();
+    const tokens = formula.tokens.map((token) => {
+        if (token.kind !== "arch_count_coeff")
+            return token;
+        const steps = stepsByKind.get(token.archComponentKind);
+        if (!steps)
+            return token;
+        presentKinds.add(token.archComponentKind);
         return {
-            tokens: baseTokens,
-            text: (0, v2_work_formula_util_1.tokensToText)(baseTokens),
+            ...token,
+            steps: steps.map((step) => ({ ...step })),
         };
+    });
+    const missing = laborArchCounts.filter((row) => !presentKinds.has(row.kind));
+    let nextTokens = tokens;
+    if (missing.length > 0) {
+        const insertChain = [];
+        for (const row of missing) {
+            insertChain.push({ kind: "operator", op: "*" }, {
+                kind: "arch_count_coeff",
+                archComponentKind: row.kind,
+                steps: row.steps.map((step) => ({ ...step })),
+            });
+        }
+        nextTokens = [...tokens];
+        const normIndex = nextTokens.findIndex((token) => token.kind === "norm");
+        if (normIndex >= 0) {
+            nextTokens.splice(normIndex + 1, 0, ...insertChain);
+        }
+        else if (nextTokens.length === 0) {
+            for (const [index, row] of missing.entries()) {
+                if (index > 0)
+                    nextTokens.push({ kind: "operator", op: "*" });
+                nextTokens.push({
+                    kind: "arch_count_coeff",
+                    archComponentKind: row.kind,
+                    steps: row.steps.map((step) => ({ ...step })),
+                });
+            }
+        }
+        else {
+            nextTokens.splice(0, 0, ...insertChain);
+        }
     }
-    const normIndex = baseTokens.findIndex((token) => token.kind === "norm");
-    const insertAt = normIndex >= 0 ? normIndex + 1 : 0;
-    const nextTokens = [...baseTokens];
-    if (insertAt < nextTokens.length &&
-        nextTokens[insertAt]?.kind === "operator" &&
-        nextTokens[insertAt]?.op === "*") {
-        nextTokens.splice(insertAt + 1, 0, ...archTokens);
-    }
-    else if (insertAt === 0 || nextTokens.length === 0) {
-        nextTokens.push(...archTokens);
-    }
-    else {
-        nextTokens.splice(insertAt, 0, { kind: "operator", op: "*" }, ...archTokens);
-    }
+    const repaired = (0, v2_work_formula_util_1.repairWorkFormulaTokenOperators)(nextTokens);
     return {
-        tokens: nextTokens,
-        text: (0, v2_work_formula_util_1.tokensToText)(nextTokens),
+        tokens: repaired,
+        text: (0, v2_work_formula_util_1.tokensToText)(repaired),
     };
 }
 function defaultLaborArchCounts() {

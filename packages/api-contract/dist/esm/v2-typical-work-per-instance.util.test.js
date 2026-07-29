@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formDataWithSingleArchInstance, formatPerInstanceBreakdownExpanded, listArchComponentInstances, readPerInstanceArchCountOverride, resolveArchComponentKindFromType, resolveArchInstanceNameFieldKeys, withPerInstanceArchCountOverride, } from "./v2-typical-work-per-instance.util";
+import { formDataWithSingleArchInstance, formatEmptyArchInstanceBreakdown, formatPerInstanceBreakdownExpanded, listArchComponentInstances, readPerInstanceArchCountOverride, resolveArchComponentKindFromType, resolveArchInstanceNameFieldKeys, withPerInstanceArchCountOverride, } from "./v2-typical-work-per-instance.util";
 import { resolveWorkArchComponentCount } from "./v2-work-arch-count-coeff.util";
 describe("v2-typical-work-per-instance", () => {
     it("maps arch component type labels to kinds", () => {
@@ -173,5 +173,9 @@ describe("v2-typical-work-per-instance", () => {
                 total: 33,
             },
         ], 49.5)).toBe("16.5 (вава) + 33 (выавыавы) = 49.5");
+    });
+    it("explains empty arch instances in breakdown", () => {
+        expect(formatEmptyArchInstanceBreakdown("Процесс обработки данных")).toBe("нет заполненных «Процесс обработки данных» → 0");
+        expect(formatEmptyArchInstanceBreakdown("Система-источник")).toBe("нет заполненных «Система-источник» → 0");
     });
 });

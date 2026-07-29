@@ -172,6 +172,7 @@ function todayIsoDate(): string {
 function resolveSeedVersionConfigFormula(
 	catalogRows: V2FactoryTypicalWork[],
 	streamExecutor: string,
+	registryStreams?: readonly string[],
 ): {
 	formula: ReturnType<typeof defaultWorkFormula>;
 	rounding: ReturnType<typeof defaultWorkRounding>;
@@ -179,6 +180,7 @@ function resolveSeedVersionConfigFormula(
 	const catalogFormula = findCatalogFormulaForStream(
 		catalogRows,
 		streamExecutor,
+		registryStreams,
 	);
 	if (!catalogFormula) {
 		return {
@@ -534,6 +536,7 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 					stream,
 					catalogRows,
 					versionConfigKeys,
+					entry.streams,
 				);
 			}
 
@@ -1063,6 +1066,7 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 		streamExecutor: string,
 		catalogRows: V2FactoryTypicalWork[] = [],
 		existingConfigKeys?: Set<string>,
+		registryStreams?: readonly string[],
 	): Promise<void> {
 		const stream = streamExecutor.trim();
 		const configKey = `${workId}|${stream}`;
@@ -1079,11 +1083,13 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 				const catalogFormula = findCatalogFormulaForStream(
 					catalogRows,
 					stream,
+					registryStreams,
 				);
 				if (isPlaceholderFormula && catalogFormula?.formulaText?.trim()) {
 					const { formula, rounding } = resolveSeedVersionConfigFormula(
 						catalogRows,
 						stream,
+						registryStreams,
 					);
 					const compiled = compileStoredTypicalWorkResultLogic(
 						formula,
@@ -1107,6 +1113,7 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 		const { formula, rounding } = resolveSeedVersionConfigFormula(
 			catalogRows,
 			stream,
+			registryStreams,
 		);
 		const compiled = compileStoredTypicalWorkResultLogic(formula, rounding);
 
@@ -1192,10 +1199,10 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 			paramCode: string;
 			paramName: string;
 			kind: string;
-			anyOfValueCodes: null;
-			anyOfValueLabels: null;
-			coeffOn: null;
-			coeffOff: null;
+			anyOfValueCodes: string[] | null;
+			anyOfValueLabels: string[] | null;
+			coeffOn: string | null;
+			coeffOff: string | null;
 		}> = [];
 		const pendingLaborRows: Array<{
 			workId: string;
@@ -1386,11 +1393,9 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 					const coefficientGroup = findCatalogLaborParamGroup(row, trimmed);
 					const paramCode =
 						coefficientGroup?.paramCode?.trim() || slugParamCode(trimmed);
-					const rowValues = coefficientGroup?.values ?? [];
-					const dictValues =
-						rowValues.length > 0
-							? rowValues
-							: (paramsByName.get(trimmed)?.values ?? []);
+					const isAnyOf =
+						coefficientGroup?.kind === "any_of" &&
+						coefficientGroup.anyOf != null;
 					const laborParamKey = `${stream}|${paramCode}`;
 					if (!seenLaborParamKeys.has(laborParamKey)) {
 						seenLaborParamKeys.add(laborParamKey);
@@ -1400,13 +1405,31 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 							schemaFieldUid: coefficientGroup?.schemaFieldUid?.trim() || null,
 							paramCode,
 							paramName: trimmed,
-							kind: "by_value",
-							anyOfValueCodes: null,
-							anyOfValueLabels: null,
-							coeffOn: null,
-							coeffOff: null,
+							kind: isAnyOf ? "any_of" : "by_value",
+							anyOfValueCodes: isAnyOf
+								? [...(coefficientGroup?.anyOf?.valueCodes ?? [])]
+								: null,
+							anyOfValueLabels: isAnyOf
+								? [...(coefficientGroup?.anyOf?.valueLabels ?? [])]
+								: null,
+							coeffOn: isAnyOf
+								? String(coefficientGroup?.anyOf?.coeffOn ?? 1)
+								: null,
+							coeffOff: isAnyOf
+								? String(coefficientGroup?.anyOf?.coeffOff ?? 1)
+								: null,
 						});
 					}
+
+					if (isAnyOf) {
+						continue;
+					}
+
+					const rowValues = coefficientGroup?.values ?? [];
+					const dictValues =
+						rowValues.length > 0
+							? rowValues
+							: (paramsByName.get(trimmed)?.values ?? []);
 
 					if (dictValues.length === 0) {
 						const laborKey = `${stream}|${paramCode}|`;
@@ -1428,12 +1451,17 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 						const laborKey = `${stream}|${paramCode}|${value.label}`;
 						if (seenLaborKeys.has(laborKey)) continue;
 						seenLaborKeys.add(laborKey);
+						const valueCode =
+							("code" in value &&
+							typeof value.code === "string" &&
+							value.code.trim()) ||
+							slugParamCode(value.label);
 						pendingLaborRows.push({
 							workId,
 							streamExecutor: stream,
 							paramCode,
 							paramName: trimmed,
-							valueCode: slugParamCode(value.label),
+							valueCode,
 							valueLabel: value.label,
 							coefficient: String(value.coefficient ?? 1),
 						});
@@ -1561,7 +1589,9 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 
 						for (const value of group.values) {
 							const normalizedValue = normalizeFactoryLaborLabel(value.label);
-							const valueCode = slugParamCode(value.label);
+							const valueCode =
+								(typeof value.code === "string" && value.code.trim()) ||
+								slugParamCode(value.label);
 							const matches = sameParamRows.filter(
 								(row) =>
 									row.paramCode === paramCode &&
@@ -2527,7 +2557,7 @@ export class V2TypicalWorkService {
 
 	/**
 	 * Карточки эталона для диффа при source=builtin (работ в БД нет).
-	 * Условия/триггеры — как при сиде из registry + CSV-каталога.
+	 * Триггеры / labor / формулы — из registry + catalog snapshot.
 	 */
 	listFactoryBundleTypicalWorksForDiff(): V2TypicalWorkCardDto[] {
 		const catalogGroups = groupCatalogWorks();
@@ -2546,6 +2576,13 @@ export class V2TypicalWorkService {
 					stream,
 					registryStreams,
 				);
+				const { laborParams, laborArchCounts, formula, rounding, norms } =
+					buildFactoryDiffLaborAndFormulaForStream(
+						catalogRows,
+						stream,
+						registryStreams,
+						entry.normsByStream,
+					);
 				cards.push({
 					id: entry.id.trim(),
 					name: entry.name.trim(),
@@ -2555,14 +2592,15 @@ export class V2TypicalWorkService {
 					workType: entry.workType?.trim() || null,
 					streamExecutor: stream,
 					triggerStatus: "appears",
-					norms: [],
+					norms,
 					rules,
 					triggerArchCount,
 					triggerMode: "simple",
 					triggerFormula: defaultTriggerFormula(),
-					laborParams: [],
-					formula: defaultWorkFormula(),
-					rounding: defaultWorkRounding(),
+					laborArchCounts,
+					laborParams,
+					formula,
+					rounding,
 				});
 			}
 		}
@@ -3585,6 +3623,126 @@ function buildFactoryDiffTriggersForStream(
 	}
 
 	return { rules, triggerArchCount };
+}
+
+function buildFactoryDiffLaborAndFormulaForStream(
+	catalogRows: V2FactoryTypicalWork[],
+	stream: string,
+	registryStreams: readonly string[],
+	normsByStream: Record<string, number | null>,
+): {
+	laborParams: V2TypicalWorkCardDto["laborParams"];
+	laborArchCounts: NonNullable<V2TypicalWorkCardDto["laborArchCounts"]>;
+	formula: ReturnType<typeof defaultWorkFormula>;
+	rounding: ReturnType<typeof defaultWorkRounding>;
+	norms: V2TypicalWorkNormDto[];
+} {
+	const laborByCode = new Map<
+		string,
+		V2TypicalWorkCardDto["laborParams"][number]
+	>();
+	const laborArchCounts: NonNullable<V2TypicalWorkCardDto["laborArchCounts"]> =
+		[];
+
+	for (const row of catalogRows) {
+		const applyStreams = resolveCatalogApplyStreams(row.stream, registryStreams);
+		if (!applyStreams.includes(stream)) continue;
+
+		const laborSplit = splitCatalogLaborArchCounts({
+			laborParams: row.laborParams,
+			laborCoefficients: row.laborCoefficients,
+		});
+		const catalogLaborArch =
+			row.laborArchCounts?.map((arch) => ({
+				kind: arch.kind as NonNullable<
+					V2TypicalWorkCardDto["laborArchCounts"]
+				>[number]["kind"],
+				steps: arch.steps,
+				paramName: arch.paramName ?? null,
+			})) ?? laborSplit.laborArchCounts;
+
+		for (const arch of catalogLaborArch) {
+			if (laborArchCounts.some((item) => item.kind === arch.kind)) continue;
+			laborArchCounts.push(arch);
+		}
+
+		for (const paramName of laborSplit.laborParams) {
+			const trimmed = paramName.trim();
+			if (!trimmed || isArchCountLaborParamName(trimmed)) continue;
+			const coefficientGroup = findCatalogLaborParamGroup(row, trimmed);
+			const paramCode =
+				coefficientGroup?.paramCode?.trim() || slugParamCode(trimmed);
+			if (laborByCode.has(paramCode)) continue;
+
+			const isAnyOf =
+				coefficientGroup?.kind === "any_of" &&
+				coefficientGroup.anyOf != null;
+			if (isAnyOf && coefficientGroup?.anyOf) {
+				laborByCode.set(paramCode, {
+					schemaFieldUid: coefficientGroup.schemaFieldUid?.trim() || null,
+					paramCode,
+					paramName: trimmed,
+					kind: "any_of",
+					coefficients: [],
+					anyOf: {
+						valueCodes: [...coefficientGroup.anyOf.valueCodes],
+						valueLabels: [...coefficientGroup.anyOf.valueLabels],
+						coeffOn: coefficientGroup.anyOf.coeffOn,
+						coeffOff: coefficientGroup.anyOf.coeffOff,
+					},
+				});
+				continue;
+			}
+
+			const values = coefficientGroup?.values ?? [];
+			laborByCode.set(paramCode, {
+				schemaFieldUid: coefficientGroup?.schemaFieldUid?.trim() || null,
+				paramCode,
+				paramName: trimmed,
+				kind: "by_value",
+				coefficients: values.map((value, index) => ({
+					id: `${paramCode}-${index}`,
+					streamExecutor: stream,
+					paramCode,
+					paramName: trimmed,
+					valueCode: slugParamCode(value.label),
+					valueLabel: value.label,
+					coefficient: value.coefficient ?? 1,
+				})),
+			});
+		}
+	}
+
+	const { formula, rounding } = resolveSeedVersionConfigFormula(
+		catalogRows,
+		stream,
+		registryStreams,
+	);
+
+	const registryNorm =
+		normsByStream[stream] ??
+		Object.values(normsByStream).find((value) => value != null) ??
+		null;
+	const norms: V2TypicalWorkNormDto[] =
+		registryNorm != null
+			? [
+					{
+						id: `norm-${stream}`,
+						streamExecutor: stream,
+						normValue: registryNorm,
+						validFrom: DEFAULT_NORM_VALID_FROM,
+						validTo: null,
+					},
+				]
+			: [];
+
+	return {
+		laborParams: [...laborByCode.values()],
+		laborArchCounts,
+		formula,
+		rounding,
+		norms,
+	};
 }
 
 function buildLaborRefsFromGroupedParams(

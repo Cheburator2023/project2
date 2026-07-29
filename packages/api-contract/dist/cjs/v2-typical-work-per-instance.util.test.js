@@ -176,4 +176,8 @@ const v2_work_arch_count_coeff_util_1 = require("./v2-work-arch-count-coeff.util
             },
         ], 49.5)).toBe("16.5 (вава) + 33 (выавыавы) = 49.5");
     });
+    (0, vitest_1.it)("explains empty arch instances in breakdown", () => {
+        (0, vitest_1.expect)((0, v2_typical_work_per_instance_util_1.formatEmptyArchInstanceBreakdown)("Процесс обработки данных")).toBe("нет заполненных «Процесс обработки данных» → 0");
+        (0, vitest_1.expect)((0, v2_typical_work_per_instance_util_1.formatEmptyArchInstanceBreakdown)("Система-источник")).toBe("нет заполненных «Система-источник» → 0");
+    });
 });

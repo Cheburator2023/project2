@@ -49,6 +49,10 @@ export type TypicalWorkInstanceEvalResult = {
     total: number;
     paramCoefficients?: Record<string, number>;
 };
+/**
+ * Подпись для пустого per-instance расчёта (нет заполненных экземпляров арх. компонента).
+ */
+export declare function formatEmptyArchInstanceBreakdown(archComponentType: string | null | undefined): string;
 export declare function formatPerInstanceBreakdownExpanded(instances: ReadonlyArray<{
     sourceLabel: string;
     total: number;

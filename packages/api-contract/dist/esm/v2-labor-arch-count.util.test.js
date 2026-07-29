@@ -36,6 +36,126 @@ describe("v2-labor-arch-count.util", () => {
             ],
             text: "N * коэф(complexity)",
         }, [{ kind: "model", steps: [{ count: 1, coefficient: 1 }], paramName: null }]);
-        expect(result.tokens.some((token) => token.kind === "arch_count_coeff")).toBe(true);
+        expect(result.tokens).toEqual([
+            { kind: "norm" },
+            { kind: "operator", op: "*" },
+            {
+                kind: "arch_count_coeff",
+                archComponentKind: "model",
+                steps: [{ count: 1, coefficient: 1 }],
+            },
+            { kind: "operator", op: "*" },
+            { kind: "param_coeff", paramCode: "complexity" },
+        ]);
+    });
+    it("preserves division and operand order when syncing arch steps", () => {
+        const result = reconcileFormulaWithLaborArchCounts({
+            tokens: [
+                { kind: "norm" },
+                { kind: "operator", op: "*" },
+                { kind: "param_coeff", paramCode: "overallUncertainty" },
+                { kind: "operator", op: "*" },
+                {
+                    kind: "arch_count_coeff",
+                    archComponentKind: "sourceSystem",
+                    steps: [{ count: 1, coefficient: 1 }],
+                },
+                { kind: "operator", op: "/" },
+                { kind: "param_coeff", paramCode: "assessedInitiativesCount" },
+            ],
+            text: "N * коэф(overallUncertainty) * архкоэф(Система-источник; 1=1) ÷ коэф(assessedInitiativesCount)",
+        }, [
+            {
+                kind: "sourceSystem",
+                steps: [
+                    { count: 1, coefficient: 1 },
+                    { count: 2, coefficient: 1.2 },
+                ],
+                paramName: null,
+            },
+        ]);
+        expect(result.tokens.map((token) => token.kind)).toEqual([
+            "norm",
+            "operator",
+            "param_coeff",
+            "operator",
+            "arch_count_coeff",
+            "operator",
+            "param_coeff",
+        ]);
+        expect(result.tokens[5]).toEqual({ kind: "operator", op: "/" });
+        expect(result.tokens[4]).toMatchObject({
+            kind: "arch_count_coeff",
+            archComponentKind: "sourceSystem",
+            steps: [
+                { count: 1, coefficient: 1 },
+                { count: 2, coefficient: 1.2 },
+            ],
+        });
+        expect(result.text).toContain("÷");
+    });
+    it("repairs legacy arch-insert corruption (adjacent operands + * /)", () => {
+        const result = reconcileFormulaWithLaborArchCounts({
+            tokens: [
+                { kind: "norm" },
+                { kind: "operator", op: "*" },
+                {
+                    kind: "arch_count_coeff",
+                    archComponentKind: "sourceSystem",
+                    steps: [{ count: 1, coefficient: 1 }],
+                },
+                { kind: "param_coeff", paramCode: "overallUncertainty" },
+                { kind: "operator", op: "*" },
+                { kind: "operator", op: "/" },
+                { kind: "param_coeff", paramCode: "assessedInitiativesCount" },
+            ],
+            text: "broken",
+        }, [
+            {
+                kind: "sourceSystem",
+                steps: [{ count: 1, coefficient: 1 }],
+                paramName: null,
+            },
+        ]);
+        expect(result.tokens.map((token) => token.kind)).toEqual([
+            "norm",
+            "operator",
+            "arch_count_coeff",
+            "operator",
+            "param_coeff",
+            "operator",
+            "param_coeff",
+        ]);
+        expect(result.tokens[3]).toEqual({ kind: "operator", op: "*" });
+        expect(result.tokens[5]).toEqual({ kind: "operator", op: "/" });
+        expect(result.text).toContain("÷");
+    });
+    it("inserts missing arch without creating adjacent operands", () => {
+        const result = reconcileFormulaWithLaborArchCounts({
+            tokens: [
+                { kind: "norm" },
+                { kind: "operator", op: "*" },
+                { kind: "param_coeff", paramCode: "overallUncertainty" },
+                { kind: "operator", op: "/" },
+                { kind: "param_coeff", paramCode: "assessedInitiativesCount" },
+            ],
+            text: "N * коэф(overallUncertainty) ÷ коэф(assessedInitiativesCount)",
+        }, [
+            {
+                kind: "sourceSystem",
+                steps: [{ count: 1, coefficient: 1 }],
+                paramName: null,
+            },
+        ]);
+        expect(result.tokens.map((token) => token.kind)).toEqual([
+            "norm",
+            "operator",
+            "arch_count_coeff",
+            "operator",
+            "param_coeff",
+            "operator",
+            "param_coeff",
+        ]);
+        expect(result.tokens[5]).toEqual({ kind: "operator", op: "/" });
     });
 });

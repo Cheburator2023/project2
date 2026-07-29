@@ -31,6 +31,7 @@ import type {
 import {
 	isParamUsedInFormula,
 	removeIncompatibleLaborKindFormulaTokens,
+	repairWorkFormulaTokenOperators,
 	syncTermsFromTokenFormula,
 	tokensToText,
 	computeFormulaBadgeFromTokens,
@@ -90,6 +91,7 @@ import {
 	WORK_ARCH_COMPONENT_TYPES,
 } from "./typicalWorkPatchErrors";
 import {
+	buildWorkCoefficientCatalog,
 	isWorkCoefficientValueAvailable,
 	resolveWorkCoefficientCatalogParam,
 } from "@smart-anketa/api-contract";
@@ -271,11 +273,12 @@ export function TypicalWorkEditableCard({
 
 	const buildDraftFromCard = useCallback(
 		(nextCard: V2TypicalWorkCardDto): V2TypicalWorkCardDto => {
+			const repairedTokens = repairWorkFormulaTokenOperators(
+				nextCard.formula.tokens,
+			);
 			const formula = {
-				tokens: nextCard.formula.tokens,
-				text:
-					nextCard.formula.text?.trim() ||
-					tokensToText(nextCard.formula.tokens),
+				tokens: repairedTokens,
+				text: tokensToText(repairedTokens),
 			};
 			return {
 				...structuredClone(nextCard),
@@ -460,58 +463,38 @@ export function TypicalWorkEditableCard({
 		unusedLaborParamsCount,
 	);
 
-	const coefficientCatalog = useMemo(() => {
-		const byCode = new Map<
-			string,
-			{
-				code: string;
-				sourceKeys?: string[];
-				values: Array<{ code: string; label: string }>;
-			}
-		>();
-
-		const addParam = (
-			param: V2TypicalWorkParameterDto,
-			legacyCode?: string,
-		) => {
-			byCode.set(param.code, {
-				code: param.code,
-				sourceKeys: [
-					...(param.sourceKeys ?? [param.code]),
-					...(legacyCode && legacyCode !== param.code ? [legacyCode] : []),
-				],
-				values: param.values.map((value) => ({
-					code: value.code,
-					label: value.label,
+	const coefficientCatalog = useMemo(
+		() =>
+			buildWorkCoefficientCatalog({
+				schemaParams: laborParamOptions.map((param) => ({
+					code: param.code,
+					name: param.name,
+					sourceKeys: param.sourceKeys,
+					schemaFieldUid: param.schemaFieldUid ?? null,
+					dictionaryCode: param.dictionaryCode,
+					numeric: param.numeric === true,
+					values: param.values.map((value) => ({
+						code: value.code,
+						label: value.label,
+					})),
 				})),
-			});
-		};
-
-		for (const param of laborParamOptions) {
-			addParam(param);
-		}
-
-		for (const group of draft?.laborParams ?? []) {
-			const alreadyKnown = [...byCode.values()].some(
-				(entry) =>
-					entry.code === group.paramCode ||
-					entry.sourceKeys?.includes(group.paramCode),
-			);
-			if (alreadyKnown) continue;
-
-			const resolved = resolveWorkParameterOption(
-				group.paramCode,
-				group.paramName,
-				paramOptions,
-				methodologyCatalog,
-			);
-			if (resolved) {
-				addParam(resolved, group.paramCode);
-			}
-		}
-
-		return [...byCode.values()];
-	}, [draft?.laborParams, laborParamOptions, methodologyCatalog, paramOptions]);
+				laborParams: (draft?.laborParams ?? []).map((group) => ({
+					paramCode: group.paramCode,
+					paramName: group.paramName,
+					schemaFieldUid: group.schemaFieldUid,
+				})),
+				methodologyCatalog: methodologyCatalog.map((param) => ({
+					code: param.code,
+					name: param.name,
+					sourceKeys: param.sourceKeys,
+					values: param.values.map((value) => ({
+						code: value.code,
+						label: value.label,
+					})),
+				})),
+			}),
+		[draft?.laborParams, laborParamOptions, methodologyCatalog],
+	);
 
 	const resolveLaborParamOption = useCallback(
 		(paramCode: string, paramName?: string | null) =>
@@ -531,13 +514,15 @@ export function TypicalWorkEditableCard({
 	);
 
 	const commitDraft = (next: V2TypicalWorkCardDto) => {
-		const prunedTokens = removeIncompatibleLaborKindFormulaTokens(
-			next.formula.tokens,
-			next.laborParams.map((g) => ({
-				paramCode: g.paramCode,
-				paramName: g.paramName,
-				kind: g.kind ?? "by_value",
-			})),
+		const prunedTokens = repairWorkFormulaTokenOperators(
+			removeIncompatibleLaborKindFormulaTokens(
+				next.formula.tokens,
+				next.laborParams.map((g) => ({
+					paramCode: g.paramCode,
+					paramName: g.paramName,
+					kind: g.kind ?? "by_value",
+				})),
+			),
 		);
 		const formula = {
 			tokens: prunedTokens,
@@ -1500,7 +1485,9 @@ export function TypicalWorkEditableCard({
 											? "Параметр без привязки к полю схемы (schemaFieldUid). Если справочник методики не совпадёт со схемой, коэффициенты могут дать ×1 в расчёте."
 											: "Параметр не привязан к полю схемы и не найден в справочнике — в расчёте анкеты будет ×1. Привяжите поле схемы."
 										: unavailableCoeffCount > 0
-											? `${unavailableCoeffCount} знач. недоступны в справочнике и исключены из расчёта.`
+											? group.schemaFieldUid?.trim()
+												? `${unavailableCoeffCount} знач. не совпадают со справочником привязанного поля схемы.`
+												: `${unavailableCoeffCount} знач. недоступны в справочнике и исключены из расчёта.`
 											: null;
 									return (
 										<Box

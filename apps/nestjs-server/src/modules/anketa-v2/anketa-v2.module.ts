@@ -11,6 +11,7 @@ import { V2DictionaryItemEntity } from "./entities/v2-dictionary-item.entity";
 import { V2QuestionnaireEntity } from "./entities/v2-questionnaire.entity";
 import { V2QuestionnaireCommentEntity } from "./entities/v2-questionnaire-comment.entity";
 import { V2FactorySnapshotService } from "./services/v2-factory-snapshot.service";
+import { V2FactoryTypicalWorksPublishService } from "./services/v2-factory-typical-works-publish.service";
 import { V2TemplateService } from "./services/v2-template.service";
 import { V2TemplateVersionService } from "./services/v2-template-version.service";
 import { V2DictionaryService } from "./services/v2-dictionary.service";
@@ -96,6 +97,7 @@ import { V2StreamCatalogService } from "./services/v2-stream-catalog.service";
 		StreamFilterInterceptor,
 		V2TemplateService,
 		V2FactorySnapshotService,
+		V2FactoryTypicalWorksPublishService,
 		V2TemplateVersionService,
 		V2DictionaryService,
 		V2DictionarySeedService,

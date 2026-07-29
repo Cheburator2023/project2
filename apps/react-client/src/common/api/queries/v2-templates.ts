@@ -31,6 +31,8 @@ import type {
 	V2TemplateVersionDto,
 	UpdateV2FactorySnapshotSettingDto,
 	V2EffectiveFactoryEditorSnapshotDto,
+	V2FactoryPublishTypicalWorksRequestDto,
+	V2FactoryPublishTypicalWorksResponseDto,
 	V2FactorySnapshotSettingDto,
 	V2TemplateVersionEditorSnapshotDto,
 } from "@smart-anketa/api-contract";
@@ -949,6 +951,21 @@ export const useUpdateV2FactorySnapshotSetting = () => {
 				queryKey: ["v2-factory-snapshot", "effective-editor-snapshot"],
 			});
 		},
+	});
+};
+
+export const usePublishV2FactoryTypicalWorks = () => {
+	return useMutation<
+		V2FactoryPublishTypicalWorksResponseDto,
+		Error,
+		V2FactoryPublishTypicalWorksRequestDto
+	>({
+		mutationFn: (dto) =>
+			apiClient<V2FactoryPublishTypicalWorksResponseDto>({
+				url: "/v2/factory-snapshot/publish-typical-works",
+				method: "POST",
+				data: dto,
+			}),
 	});
 };
 

@@ -420,6 +420,119 @@ describe("reconcileTypicalWorkCardWithSchemaField", () => {
 		expect(result.card.laborParams[0]?.coefficients).toHaveLength(2);
 	});
 
+	it("preserves admin coefficient rows that are not in the new schema values", () => {
+		const legacy = card();
+		legacy.laborParams = [
+			{
+				schemaFieldUid: "field-1",
+				paramCode: "workType",
+				paramName: "Тип работ",
+				kind: "by_value",
+				coefficients: [
+					{
+						id: "keep-custom",
+						streamExecutor: "Источники данных",
+						paramCode: "workType",
+						paramName: "Тип работ",
+						valueCode: "Разработка",
+						valueLabel: "Разработка",
+						coefficient: 2.5,
+					},
+					{
+						id: "remap-me",
+						streamExecutor: "Источники данных",
+						paramCode: "workType",
+						paramName: "Тип работ",
+						valueCode: "Обучение",
+						valueLabel: "Обучение",
+						coefficient: 1.7,
+					},
+				],
+			},
+		];
+
+		const result = reconcileTypicalWorkCardWithSchemaField(legacy, {
+			templateVersionId: "version-1",
+			mode: "apply",
+			operation: "upsert",
+			field: {
+				schemaFieldUid: "field-1",
+				previousCode: "workType",
+				code: "workType",
+				name: "Тип работ",
+				values: [
+					{ code: "обучение", label: "Обучение" },
+					{ code: "калибровка", label: "Калибровка" },
+				],
+			},
+		});
+
+		const coeffs = result.card.laborParams[0]?.coefficients ?? [];
+		expect(coeffs).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					valueCode: "обучение",
+					valueLabel: "Обучение",
+					coefficient: 1.7,
+				}),
+				expect.objectContaining({
+					valueCode: "калибровка",
+					valueLabel: "Калибровка",
+					coefficient: 1,
+				}),
+				expect.objectContaining({
+					valueCode: "Разработка",
+					valueLabel: "Разработка",
+					coefficient: 2.5,
+				}),
+			]),
+		);
+	});
+
+	it("does not rebuild coefficients when field.values is omitted (bulk binding sync)", () => {
+		const legacy = card();
+		legacy.laborParams = [
+			{
+				schemaFieldUid: "field-1",
+				paramCode: "workType",
+				paramName: "Тип работ",
+				kind: "by_value",
+				coefficients: [
+					{
+						id: "admin-edit",
+						streamExecutor: "Источники данных",
+						paramCode: "workType",
+						paramName: "Тип работ",
+						valueCode: "custom",
+						valueLabel: "Custom",
+						coefficient: 9,
+					},
+				],
+			},
+		];
+
+		const result = reconcileTypicalWorkCardWithSchemaField(legacy, {
+			templateVersionId: "version-1",
+			mode: "apply",
+			operation: "upsert",
+			field: {
+				schemaFieldUid: "field-1",
+				previousCode: "workType",
+				code: "field_workType",
+				name: "Тип работ",
+			},
+		});
+
+		expect(result.card.laborParams[0]?.coefficients).toEqual([
+			expect.objectContaining({
+				valueCode: "custom",
+				valueLabel: "Custom",
+				coefficient: 9,
+			}),
+		]);
+		expect(result.card.laborParams[0]?.paramCode).toBe("field_workType");
+	});
+
 	it("dedupes labor coefficients that normalize to the same stored value_code", () => {
 		const rows = dedupeLaborCoefficientsByStoredValue([
 			{

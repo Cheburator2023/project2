@@ -415,7 +415,19 @@ export function catalogValueMatchesTriggerRule(
 	},
 ): boolean {
 	if (rule.valueCode && catalogValue.code === rule.valueCode) return true;
+	if (
+		rule.valueCode &&
+		catalogValue.code.toLowerCase() === rule.valueCode.toLowerCase()
+	) {
+		return true;
+	}
 	if (rule.valueLabel && catalogValue.label === rule.valueLabel) return true;
+	if (
+		rule.valueLabel &&
+		catalogValue.label.toLowerCase() === rule.valueLabel.toLowerCase()
+	) {
+		return true;
+	}
 	if (rule.valueLabel) {
 		const labelUpper = catalogValue.label.toUpperCase();
 		const ruleUpper = rule.valueLabel.toUpperCase();
@@ -709,9 +721,67 @@ export function buildLaborCoefficientLookupSource(
 
 	// Fallback: поле лежит в массиве арх. блока, а schemaPointer/schemaParams недоступны.
 	for (const code of codes) {
+		if (isPresent(merged[code]) || typeof merged[code] === "boolean") {
+			continue;
+		}
 		const fromDeep = findFieldValueInFormData(formData, code);
 		if (isPresent(fromDeep) || typeof fromDeep === "boolean") {
 			merged[code] = mergeLaborLookupValue(merged[code], fromDeep);
+		}
+	}
+
+	// Legacy labor code (`workType`) vs factory field (`field_yJ51GkCR`) с тем же
+	// названием «Тип работ»: подтянуть значение с текущей строки экземпляра.
+	for (const code of codes) {
+		if (isPresent(merged[code]) || typeof merged[code] === "boolean") {
+			continue;
+		}
+		const targetName = stripParamNameSourceKeys(
+			schemaParams.find((param) => param.code === code)?.name ?? "",
+		)
+			.trim()
+			.toLowerCase();
+		if (targetName) {
+			for (const alias of schemaParams) {
+				if (alias.code === code) continue;
+				if (
+					stripParamNameSourceKeys(alias.name).trim().toLowerCase() !==
+					targetName
+				) {
+					continue;
+				}
+				const aliasValue = merged[alias.code] ?? source[alias.code];
+				if (isPresent(aliasValue) || typeof aliasValue === "boolean") {
+					merged[code] = mergeLaborLookupValue(merged[code], aliasValue);
+					break;
+				}
+			}
+		}
+		if (isPresent(merged[code]) || typeof merged[code] === "boolean") {
+			continue;
+		}
+		// labor code отсутствует в schemaParams: сопоставить по имени ключа в source.
+		for (const [key, raw] of Object.entries(source)) {
+			if (key === code) continue;
+			const sp = schemaParams.find((param) => param.code === key);
+			if (!sp) continue;
+			const spName = stripParamNameSourceKeys(sp.name).trim().toLowerCase();
+			if (!spName) continue;
+			const codeAsName = code.replace(/_/g, " ").toLowerCase();
+			const slugName = slugParamCode(sp.name ?? "");
+			const isWorkTypeAlias =
+				spName === "тип работ" &&
+				(code === "workType" || code === "work_type");
+			if (
+				slugName === code ||
+				spName === codeAsName ||
+				isWorkTypeAlias
+			) {
+				if (isPresent(raw) || typeof raw === "boolean") {
+					merged[code] = mergeLaborLookupValue(merged[code], raw);
+					break;
+				}
+			}
 		}
 	}
 

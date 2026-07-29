@@ -181,7 +181,13 @@ export function V2SchemaCreateDialog({ open, onClose }: Props) {
 	};
 
 	return (
-		<Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+		<Dialog
+			open={open}
+			onClose={handleClose}
+			maxWidth="sm"
+			fullWidth
+			data-test-id="schema-create-dialog"
+		>
 			<DialogTitle>Новая схема</DialogTitle>
 			<DialogContent sx={{ position: "relative" }}>
 				{pending ? (
@@ -213,6 +219,7 @@ export function V2SchemaCreateDialog({ open, onClose }: Props) {
 						disabled={pending}
 						value={name}
 						onChange={(e) => setName(e.target.value)}
+						inputProps={{ "data-test-id": "schema-create-name" }}
 					/>
 					<Spacer />
 					<TextField
@@ -294,6 +301,7 @@ export function V2SchemaCreateDialog({ open, onClose }: Props) {
 					variant="contained"
 					disabled={pending || !name.trim()}
 					onClick={() => void handleSubmit()}
+					data-test-id="schema-create-submit"
 				>
 					{pending ? (
 						<CircularProgress size={16} color="inherit" sx={{ mr: 1 }} />

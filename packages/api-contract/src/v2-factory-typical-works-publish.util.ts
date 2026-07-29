@@ -1,0 +1,565 @@
+/**
+ * Конвертация полных карточек типовых работ (админка / editor dump)
+ * → registry + catalog snapshot rows + отчёт о потерях.
+ */
+import { stripWorkStagePrefix } from "./v2-csv-formula-import.util";
+import { tokensToText } from "./v2-work-formula.util";
+import {
+	resolveActiveNormOnDate,
+	type V2TypicalWorkCardDto,
+	type V2TypicalWorkRuleDto,
+	type V2WorkRuleOperator,
+} from "./v2-typical-work.types";
+
+/** Строка catalog snapshot (зеркало V2FactoryTypicalWork + any_of). */
+export type V2FactoryCatalogWorkRow = {
+	stream: string;
+	component: string;
+	stage: string;
+	name: string;
+	originalName: string;
+	workType: string;
+	norm: number | null;
+	normRaw: string;
+	triggerParam: string;
+	triggerParams: string[];
+	triggerRules?: Array<{
+		paramName: string;
+		paramCode?: string;
+		schemaFieldUid?: string;
+		operator: "=" | "!=" | "in" | "exists" | "unresolved";
+		values: string[];
+		valueCode?: string;
+		valueLabel?: string;
+	}>;
+	triggerArchCount?: {
+		kind: string;
+		steps: Array<{ count: number; coefficient: number }>;
+		combinator?: "and" | "or";
+	} | null;
+	laborParams: string[];
+	laborCoefficients?: Array<{
+		paramName: string;
+		paramCode?: string;
+		schemaFieldUid?: string;
+		kind?: "by_value" | "any_of";
+		values: Array<{ label: string; code?: string; coefficient: number }>;
+		anyOf?: {
+			valueCodes: string[];
+			valueLabels: string[];
+			coeffOn: number;
+			coeffOff: number;
+		};
+	}>;
+	laborArchCounts?: Array<{
+		kind: string;
+		paramName?: string | null;
+		steps: Array<{
+			count: number;
+			coefficient: number;
+			operator?: ">=" | "<=" | "=" | ">" | "<";
+			coefficientFormula?: string | null;
+		}>;
+	}>;
+	formulaText?: string;
+	roundingMode?: "CEIL" | "FLOOR" | "ROUND" | "NONE";
+	roundingStep?: number | null;
+};
+
+export type V2FactoryRegistryWorkItem = {
+	id: string;
+	name: string;
+	archComponentType: string;
+	workType: string | null;
+	streams: string[];
+	normsByStream: Record<string, number | null>;
+};
+
+export type V2FactoryPublishDroppedField = {
+	workId: string;
+	workName: string;
+	streamExecutor: string;
+	field: string;
+	reason: string;
+};
+
+export type V2FactoryPublishReport = {
+	registryWorks: number;
+	catalogAdded: number;
+	catalogUpdated: number;
+	catalogUnchanged: number;
+	catalogPreserved: number;
+	dropped: V2FactoryPublishDroppedField[];
+	legacyStreamCatalogRows: number;
+};
+
+export type PublishFactoryTypicalWorksBundleInput = {
+	cards: V2TypicalWorkCardDto[];
+	existingCatalog: V2FactoryCatalogWorkRow[];
+	templateId: string;
+	templateName?: string;
+	/** Дата для выбора активной нормы (YYYY-MM-DD). */
+	coverageDate?: string;
+};
+
+export type PublishFactoryTypicalWorksBundleResult = {
+	registry: {
+		meta: {
+			snapshotVersion: number;
+			factoryBundle: boolean;
+			description: string;
+			sourceTemplateId: string;
+			sourceTemplateName?: string;
+			counts: { works: number };
+		};
+		works: V2FactoryRegistryWorkItem[];
+	};
+	catalogRows: V2FactoryCatalogWorkRow[];
+	report: V2FactoryPublishReport;
+};
+
+const CATALOG_TRIGGER_OPS = new Set(["=", "!=", "in"]);
+const LEGACY_SOURCE_STREAMS = new Set(["ИД. Внутренний", "ИД. Внешний"]);
+
+export function extractPublishWorkStage(name: string): string | null {
+	const trimmed = name.trim();
+	const legacy = trimmed.match(/^Этап[\s_]+(\d+)(?:\.|\s|$)/iu);
+	if (legacy?.[1]) return `Этап ${legacy[1]}`;
+
+	const e2e = trimmed.match(/^(\d+[ABab])\.\s+/u);
+	if (e2e?.[1]) return e2e[1].toUpperCase();
+
+	const e2eNumeric = trimmed.match(/^(\d+)\.\s+/u);
+	if (e2eNumeric?.[1]) return e2eNumeric[1];
+
+	if (/^AutoML:\s*/iu.test(trimmed)) return "AutoML";
+
+	return null;
+}
+
+export function normalizePublishArchComponent(raw: string): string {
+	const value = raw.trim();
+	if (value.includes("Витрина") || value.includes("Объект")) {
+		return "Объект / Витрина данных";
+	}
+	if (value.includes("Процесс")) {
+		return "Процесс обработки данных";
+	}
+	if (value.includes("Система")) {
+		return "Система-источник";
+	}
+	if (value.includes("Модельный")) {
+		return "Модельный сервис";
+	}
+	if (value === "Модель") {
+		return "Модель";
+	}
+	return value;
+}
+
+export function buildFactoryCatalogRowKey(
+	row: Pick<V2FactoryCatalogWorkRow, "component" | "stage" | "name" | "stream">,
+): string {
+	return [
+		normalizePublishArchComponent(row.component),
+		row.stage.trim(),
+		row.name.trim(),
+		row.stream.trim(),
+	].join("|");
+}
+
+function catalogRowFingerprint(row: V2FactoryCatalogWorkRow): string {
+	return JSON.stringify({
+		stream: row.stream,
+		component: row.component,
+		stage: row.stage,
+		name: row.name,
+		originalName: row.originalName,
+		workType: row.workType,
+		norm: row.norm,
+		triggerRules: row.triggerRules ?? [],
+		triggerArchCount: row.triggerArchCount ?? null,
+		laborParams: row.laborParams,
+		laborCoefficients: row.laborCoefficients ?? [],
+		laborArchCounts: row.laborArchCounts ?? [],
+		formulaText: row.formulaText ?? "",
+		roundingMode: row.roundingMode ?? "CEIL",
+		roundingStep: row.roundingStep ?? null,
+	});
+}
+
+function mapTriggerOperator(
+	op: V2WorkRuleOperator,
+): "=" | "!=" | "in" | null {
+	if (op === "=" || op === "!=" || op === "in") return op;
+	return null;
+}
+
+function ruleToCatalogTrigger(
+	rule: V2TypicalWorkRuleDto,
+): NonNullable<V2FactoryCatalogWorkRow["triggerRules"]>[number] | null {
+	const operator = mapTriggerOperator(rule.operator);
+	if (!operator) return null;
+	const paramName = (rule.paramName ?? rule.paramCode).trim();
+	if (!paramName) return null;
+
+	const multi =
+		rule.values
+			?.map((v) => v.label?.trim() || v.code?.trim() || "")
+			.filter(Boolean) ?? [];
+	const values =
+		multi.length > 0
+			? multi
+			: rule.valueLabel?.trim()
+				? [rule.valueLabel.trim()]
+				: rule.valueCode?.trim()
+					? [rule.valueCode.trim()]
+					: [];
+
+	return {
+		paramName,
+		paramCode: rule.paramCode?.trim() || undefined,
+		schemaFieldUid: rule.schemaFieldUid?.trim() || undefined,
+		operator,
+		values,
+		...(rule.valueCode?.trim()
+			? { valueCode: rule.valueCode.trim() }
+			: {}),
+		...(rule.valueLabel?.trim()
+			? { valueLabel: rule.valueLabel.trim() }
+			: {}),
+	};
+}
+
+function cardToCatalogRow(
+	card: V2TypicalWorkCardDto,
+	coverageDate: string,
+	dropped: V2FactoryPublishDroppedField[],
+): V2FactoryCatalogWorkRow {
+	const stage = extractPublishWorkStage(card.name) ?? "";
+	const name =
+		stripWorkStagePrefix(card.name).trim() || card.name.trim();
+	const component = normalizePublishArchComponent(card.archComponentType);
+	const stream = card.streamExecutor.trim();
+	const norm = resolveActiveNormOnDate(card.norms, stream, coverageDate);
+
+	if (card.triggerMode === "formula") {
+		dropped.push({
+			workId: card.id,
+			workName: card.name,
+			streamExecutor: stream,
+			field: "triggerMode/triggerFormula",
+			reason:
+				"Каталог поддерживает только simple triggerRules; formula-режим не переносится",
+		});
+	}
+
+	const triggerRules: NonNullable<V2FactoryCatalogWorkRow["triggerRules"]> =
+		[];
+	for (const rule of card.rules) {
+		if (rule.streamExecutor.trim() && rule.streamExecutor.trim() !== stream) {
+			continue;
+		}
+		const mapped = ruleToCatalogTrigger(rule);
+		if (!mapped) {
+			if (!CATALOG_TRIGGER_OPS.has(rule.operator)) {
+				dropped.push({
+					workId: card.id,
+					workName: card.name,
+					streamExecutor: stream,
+					field: `rules[${rule.paramCode}].operator`,
+					reason: `Оператор «${rule.operator}» не поддерживается catalog snapshot`,
+				});
+			}
+			continue;
+		}
+		triggerRules.push(mapped);
+	}
+
+	const laborParams: string[] = [];
+	const laborCoefficients: NonNullable<
+		V2FactoryCatalogWorkRow["laborCoefficients"]
+	> = [];
+
+	for (const group of card.laborParams) {
+		const paramName =
+			group.paramName?.trim() || group.paramCode.trim() || "";
+		if (!paramName) continue;
+		laborParams.push(paramName);
+		const kind = group.kind === "any_of" ? "any_of" : "by_value";
+		if (kind === "any_of" && group.anyOf) {
+			laborCoefficients.push({
+				paramName,
+				paramCode: group.paramCode,
+				schemaFieldUid: group.schemaFieldUid?.trim() || undefined,
+				kind: "any_of",
+				values: [],
+				anyOf: {
+					valueCodes: [...group.anyOf.valueCodes],
+					valueLabels: [...group.anyOf.valueLabels],
+					coeffOn: group.anyOf.coeffOn,
+					coeffOff: group.anyOf.coeffOff,
+				},
+			});
+			continue;
+		}
+		laborCoefficients.push({
+			paramName,
+			paramCode: group.paramCode,
+			schemaFieldUid: group.schemaFieldUid?.trim() || undefined,
+			kind: "by_value",
+			values: group.coefficients
+				.filter((row) => !row.streamExecutor || row.streamExecutor === stream)
+				.map((row) => {
+					const label =
+						row.valueLabel?.trim() || row.valueCode?.trim() || "";
+					const code = row.valueCode?.trim();
+					return {
+						label,
+						...(code ? { code } : {}),
+						coefficient: row.coefficient,
+					};
+				})
+				.filter((row) => row.label.length > 0),
+		});
+	}
+
+	const formulaText =
+		card.formula.text?.trim() ||
+		tokensToText(card.formula.tokens) ||
+		"N";
+
+	const triggerParams = triggerRules.map((r) => r.paramName);
+	const triggerParam = triggerParams[0] ?? "";
+
+	return {
+		stream,
+		component,
+		stage,
+		name,
+		originalName: name,
+		workType: card.workType?.trim() || "Опциональная",
+		norm,
+		normRaw: norm != null ? String(norm) : "",
+		triggerParam,
+		triggerParams,
+		...(triggerRules.length > 0 ? { triggerRules } : {}),
+		...(card.triggerArchCount?.kind
+			? {
+					triggerArchCount: {
+						kind: card.triggerArchCount.kind,
+						steps: card.triggerArchCount.steps.map((s) => ({
+							count: s.count,
+							coefficient: s.coefficient,
+						})),
+						combinator: card.triggerArchCount.combinator ?? "and",
+					},
+				}
+			: {}),
+		laborParams,
+		...(laborCoefficients.length > 0 ? { laborCoefficients } : {}),
+		...(card.laborArchCounts?.length
+			? {
+					laborArchCounts: card.laborArchCounts.map((arch) => ({
+						kind: arch.kind,
+						paramName: arch.paramName ?? null,
+						steps: arch.steps.map((step) => ({
+							count: step.count,
+							coefficient: step.coefficient,
+							...(step.operator ? { operator: step.operator } : {}),
+							...(step.coefficientFormula
+								? { coefficientFormula: step.coefficientFormula }
+								: {}),
+						})),
+					})),
+				}
+			: {}),
+		formulaText,
+		roundingMode: card.rounding.mode,
+		roundingStep: card.rounding.mode === "NONE" ? null : card.rounding.step,
+	};
+}
+
+function buildRegistryFromCards(
+	cards: V2TypicalWorkCardDto[],
+	coverageDate: string,
+): V2FactoryRegistryWorkItem[] {
+	const byId = new Map<
+		string,
+		{
+			id: string;
+			name: string;
+			archComponentType: string;
+			workType: string | null;
+			streams: Set<string>;
+			normsByStream: Record<string, number | null>;
+		}
+	>();
+
+	for (const card of cards) {
+		const stream = card.streamExecutor.trim();
+		if (!stream) continue;
+		const existing = byId.get(card.id);
+		const norm = resolveActiveNormOnDate(card.norms, stream, coverageDate);
+		if (!existing) {
+			byId.set(card.id, {
+				id: card.id,
+				name: card.name.trim(),
+				archComponentType: normalizePublishArchComponent(
+					card.archComponentType,
+				),
+				workType: card.workType?.trim() || null,
+				streams: new Set([stream]),
+				normsByStream: { [stream]: norm },
+			});
+			continue;
+		}
+		existing.streams.add(stream);
+		existing.normsByStream[stream] = norm;
+		if (card.name.trim()) existing.name = card.name.trim();
+		if (card.workType?.trim()) existing.workType = card.workType.trim();
+	}
+
+	return [...byId.values()]
+		.map((row) => ({
+			id: row.id,
+			name: row.name,
+			archComponentType: row.archComponentType,
+			workType: row.workType,
+			streams: [...row.streams].sort((a, b) => a.localeCompare(b, "ru")),
+			normsByStream: row.normsByStream,
+		}))
+		.sort((a, b) => a.name.localeCompare(b.name, "ru"));
+}
+
+/**
+ * Собирает registry + catalog rows из полных карточек и существующего каталога.
+ * Catalog: upsert по (component, stage, name, stream); чужие строки сохраняются.
+ * Registry: полная замена списком из dump.
+ */
+export function publishFactoryTypicalWorksBundle(
+	input: PublishFactoryTypicalWorksBundleInput,
+): PublishFactoryTypicalWorksBundleResult {
+	const coverageDate =
+		input.coverageDate?.slice(0, 10) ??
+		new Date().toISOString().slice(0, 10);
+	const dropped: V2FactoryPublishDroppedField[] = [];
+	const registryWorks = buildRegistryFromCards(input.cards, coverageDate);
+
+	const publishedByKey = new Map<string, V2FactoryCatalogWorkRow>();
+	for (const card of input.cards) {
+		if (!card.streamExecutor?.trim()) continue;
+		const row = cardToCatalogRow(card, coverageDate, dropped);
+		publishedByKey.set(buildFactoryCatalogRowKey(row), row);
+	}
+
+	let catalogAdded = 0;
+	let catalogUpdated = 0;
+	let catalogUnchanged = 0;
+	const usedExistingKeys = new Set<string>();
+	const nextCatalog: V2FactoryCatalogWorkRow[] = [];
+
+	for (const existing of input.existingCatalog) {
+		const key = buildFactoryCatalogRowKey(existing);
+		const published = publishedByKey.get(key);
+		if (!published) {
+			nextCatalog.push(existing);
+			continue;
+		}
+		usedExistingKeys.add(key);
+		if (catalogRowFingerprint(existing) === catalogRowFingerprint(published)) {
+			catalogUnchanged += 1;
+			nextCatalog.push(existing);
+		} else {
+			catalogUpdated += 1;
+			nextCatalog.push(published);
+		}
+	}
+
+	for (const [key, row] of publishedByKey) {
+		if (usedExistingKeys.has(key)) continue;
+		catalogAdded += 1;
+		nextCatalog.push(row);
+	}
+
+	const catalogPreserved = input.existingCatalog.filter(
+		(row) => !publishedByKey.has(buildFactoryCatalogRowKey(row)),
+	).length;
+	const legacyStreamCatalogRows = nextCatalog.filter((row) =>
+		LEGACY_SOURCE_STREAMS.has(row.stream.trim()),
+	).length;
+
+	return {
+		registry: {
+			meta: {
+				snapshotVersion: 1,
+				factoryBundle: true,
+				description: `Типовые работы эталонной схемы (templateId=${input.templateId})`,
+				sourceTemplateId: input.templateId,
+				...(input.templateName?.trim()
+					? { sourceTemplateName: input.templateName.trim() }
+					: {}),
+				counts: { works: registryWorks.length },
+			},
+			works: registryWorks,
+		},
+		catalogRows: nextCatalog,
+		report: {
+			registryWorks: registryWorks.length,
+			catalogAdded,
+			catalogUpdated,
+			catalogUnchanged,
+			catalogPreserved,
+			dropped,
+			legacyStreamCatalogRows,
+		},
+	};
+}
+
+/** Пересчёт meta.counts / streams / components / stages для catalog snapshot. */
+export function rebuildFactoryCatalogSnapshotMeta(
+	typicalWorks: V2FactoryCatalogWorkRow[],
+	previous?: {
+		snapshotVersion?: number;
+		description?: string;
+	},
+): {
+	snapshotVersion: number;
+	factoryBundle: boolean;
+	description: string;
+	counts: Record<string, number>;
+	streams: string[];
+	components: string[];
+	stages: string[];
+} {
+	const streams = [
+		...new Set(typicalWorks.map((w) => w.stream.trim()).filter(Boolean)),
+	].sort((a, b) => a.localeCompare(b, "ru"));
+	const components = [
+		...new Set(typicalWorks.map((w) => w.component.trim()).filter(Boolean)),
+	].sort((a, b) => a.localeCompare(b, "ru"));
+	const stages = [
+		...new Set(typicalWorks.map((w) => w.stage.trim()).filter(Boolean)),
+	].sort((a, b) => a.localeCompare(b, "ru"));
+
+	return {
+		snapshotVersion: previous?.snapshotVersion ?? 2,
+		factoryBundle: true,
+		description:
+			previous?.description ??
+			"Заводской снимок каталога типовых работ и методологических параметров. Редактируется в репозитории; не генерируется из внешних CSV.",
+		counts: {
+			typicalWorks: typicalWorks.length,
+			typicalWorksWithNorm: typicalWorks.filter((w) => w.norm != null).length,
+			streams: streams.length,
+			components: components.length,
+			stages: stages.length,
+			typicalWorksWithFormula: typicalWorks.filter(
+				(w) => Boolean(w.formulaText?.trim()) && w.formulaText?.trim() !== "N",
+			).length,
+		},
+		streams,
+		components,
+		stages,
+	};
+}

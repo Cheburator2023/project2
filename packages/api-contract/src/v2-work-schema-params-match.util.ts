@@ -19,6 +19,8 @@ export type WorkSchemaParamDef = {
 	schemaPointer?: string | null;
 	sourceKeys?: string[];
 	values?: Array<{ code: string; label: string }>;
+	/** ui:options.dictionaryCode — для сверки значений с живым справочником. */
+	dictionaryCode?: string | null;
 };
 
 export type TypicalWorkRuleRefLike = {

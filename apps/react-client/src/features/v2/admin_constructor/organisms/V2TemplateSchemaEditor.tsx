@@ -6,6 +6,7 @@ import {
 	useV2Dictionaries,
 	useV2Template,
 	useV2TemplateVersion,
+	useV2TemplateVersionEditorSnapshot,
 	useV2TemplateVersions,
 } from "@react-client/common/api/queries/v2-templates";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
@@ -91,6 +92,7 @@ import {
 	coerceUiSchema,
 } from "../utils/coerceV2TemplateSnapshot";
 import {
+	downloadSchemaEditorSnapshotJson,
 	formatSchemaEditorSnapshotJson,
 	parseSchemaEditorSnapshotJson,
 } from "../schemaEditor/schemaEditorSnapshotJson";
@@ -193,6 +195,9 @@ export type V2EditorHeaderActions = {
 	hasUnsavedChanges: boolean;
 	getExternalPreviewPath: () => string | null;
 	onOpenLogic: () => void;
+	/** Полный dump: schema + dictionaries + typicalWorks (для factory publish). */
+	onFullExport: () => void;
+	fullExportReady: boolean;
 };
 
 type DraftHistorySnapshot = {
@@ -295,6 +300,13 @@ export const V2TemplateSchemaEditor = ({
 		isError: activeVersionLoadError,
 		error: activeVersionError,
 	} = useV2TemplateVersion(templateId, activeVersionId);
+
+	const { data: editorSnapshot, isLoading: editorSnapshotLoading } =
+		useV2TemplateVersionEditorSnapshot(
+			templateId,
+			activeVersion?.id,
+			isAdminEditor && Boolean(activeVersion?.id),
+		);
 
 	const isEditorBootstrapping =
 		(templatePending && !template) ||
@@ -2320,6 +2332,60 @@ export const V2TemplateSchemaEditor = ({
 			return;
 		}
 
+		const onFullExport = () => {
+			let schemaPart: {
+				jsonSchema: unknown;
+				uiSchema: unknown;
+				logic: unknown;
+			} = {
+				jsonSchema,
+				uiSchema,
+				logic,
+			};
+			try {
+				const parsed = JSON.parse(snapshotMonacoText) as Record<
+					string,
+					unknown
+				>;
+				if (
+					parsed &&
+					typeof parsed === "object" &&
+					parsed.jsonSchema &&
+					parsed.uiSchema &&
+					parsed.logic
+				) {
+					schemaPart = {
+						jsonSchema: parsed.jsonSchema,
+						uiSchema: parsed.uiSchema,
+						logic: parsed.logic,
+					};
+				}
+			} catch {
+				/* keep constructor state */
+			}
+			const stamp = new Date()
+				.toISOString()
+				.slice(0, 19)
+				.replace(/[:T]/g, "-");
+			const idPart = templateId.slice(0, 8) || "draft";
+			downloadSchemaEditorSnapshotJson(
+				JSON.stringify(
+					{
+						templateId,
+						templateVersionId: activeVersion.id,
+						templateName: template?.name ?? null,
+						...schemaPart,
+						dictionariesSnapshot:
+							editorSnapshot?.dictionariesSnapshot ?? null,
+						typicalWorks: editorSnapshot?.typicalWorks ?? [],
+					},
+					null,
+					"\t",
+				),
+				`anketa-full-export-${idPart}-${stamp}.json`,
+			);
+		};
+
 		onHeaderActionsChange?.({
 			onSave: () => {
 				if (typicalWorkSaveBlocked) {
@@ -2337,17 +2403,28 @@ export const V2TemplateSchemaEditor = ({
 			hasUnsavedChanges,
 			getExternalPreviewPath,
 			onOpenLogic: openLogicWorkspace,
+			onFullExport,
+			fullExportReady:
+				Boolean(editorSnapshot) && !editorSnapshotLoading,
 		});
 	}, [
 		activeVersion,
 		activateVersion.isPending,
+		editorSnapshot,
+		editorSnapshotLoading,
 		getExternalPreviewPath,
 		hasUnsavedChanges,
 		isAdminEditor,
 		isSystemCurrent,
+		jsonSchema,
+		logic,
 		onHeaderActionsChange,
 		openLogicWorkspace,
 		savePending,
+		snapshotMonacoText,
+		template?.name,
+		templateId,
+		uiSchema,
 		updateVersion.isPending,
 		typicalWorkSaveBlocked,
 		typicalWorkSaveBlockedMessage,

@@ -7,7 +7,10 @@ import type {
 	V2WorkFormulaArchCountKind,
 	V2WorkFormulaToken,
 } from "./v2-typical-work.types";
-import { tokensToText } from "./v2-work-formula.util";
+import {
+	repairWorkFormulaTokenOperators,
+	tokensToText,
+} from "./v2-work-formula.util";
 
 function buildLinearArchCountSteps(
 	maxCount: number,
@@ -181,6 +184,7 @@ export function extractLaborArchCountsFromFormula(
  * Важно: не пересобирает формулу с нуля — иначе ломаются операторы
  * (в т.ч. деление на этапах 02/04) и порядок операндов.
  * Существующие архкоэф обновляются на месте; недостающие вставляются как `× арх…` сразу после N.
+ * В конце — repair (два операнда подряд / `× ÷` от старого reconcile).
  */
 export function reconcileFormulaWithLaborArchCounts(
 	formula: V2TypicalWorkFormulaDto,
@@ -203,45 +207,43 @@ export function reconcileFormulaWithLaborArchCounts(
 	});
 
 	const missing = laborArchCounts.filter((row) => !presentKinds.has(row.kind));
-	if (missing.length === 0) {
-		return {
-			tokens,
-			text: tokensToText(tokens),
-		};
-	}
+	let nextTokens = tokens;
 
-	const insertChain: V2WorkFormulaToken[] = [];
-	for (const row of missing) {
-		insertChain.push(
-			{ kind: "operator", op: "*" },
-			{
-				kind: "arch_count_coeff",
-				archComponentKind: row.kind,
-				steps: row.steps.map((step) => ({ ...step })),
-			},
-		);
-	}
-
-	const nextTokens = [...tokens];
-	const normIndex = nextTokens.findIndex((token) => token.kind === "norm");
-	if (normIndex >= 0) {
-		nextTokens.splice(normIndex + 1, 0, ...insertChain);
-	} else if (nextTokens.length === 0) {
-		for (const [index, row] of missing.entries()) {
-			if (index > 0) nextTokens.push({ kind: "operator", op: "*" });
-			nextTokens.push({
-				kind: "arch_count_coeff",
-				archComponentKind: row.kind,
-				steps: row.steps.map((step) => ({ ...step })),
-			});
+	if (missing.length > 0) {
+		const insertChain: V2WorkFormulaToken[] = [];
+		for (const row of missing) {
+			insertChain.push(
+				{ kind: "operator", op: "*" },
+				{
+					kind: "arch_count_coeff",
+					archComponentKind: row.kind,
+					steps: row.steps.map((step) => ({ ...step })),
+				},
+			);
 		}
-	} else {
-		nextTokens.splice(0, 0, ...insertChain);
+
+		nextTokens = [...tokens];
+		const normIndex = nextTokens.findIndex((token) => token.kind === "norm");
+		if (normIndex >= 0) {
+			nextTokens.splice(normIndex + 1, 0, ...insertChain);
+		} else if (nextTokens.length === 0) {
+			for (const [index, row] of missing.entries()) {
+				if (index > 0) nextTokens.push({ kind: "operator", op: "*" });
+				nextTokens.push({
+					kind: "arch_count_coeff",
+					archComponentKind: row.kind,
+					steps: row.steps.map((step) => ({ ...step })),
+				});
+			}
+		} else {
+			nextTokens.splice(0, 0, ...insertChain);
+		}
 	}
 
+	const repaired = repairWorkFormulaTokenOperators(nextTokens);
 	return {
-		tokens: nextTokens,
-		text: tokensToText(nextTokens),
+		tokens: repaired,
+		text: tokensToText(repaired),
 	};
 }
 

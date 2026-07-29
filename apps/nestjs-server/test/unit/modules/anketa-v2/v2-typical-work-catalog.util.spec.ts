@@ -1,6 +1,7 @@
 import { V2_MODEL_STREAM_REGISTRY_STREAM_NAMES } from "@smart-anketa/api-contract";
 import {
 	extractWorkStage,
+	findCatalogFormulaForStream,
 	findCatalogRowsForRegistryWork,
 	groupCatalogWorks,
 	resolveCatalogApplyStreams,
@@ -50,6 +51,37 @@ describe("v2-typical-work-catalog util", () => {
 		expect(
 			resolveCatalogApplyStreams("ИД. Внутренний", ["Источники данных"]),
 		).toEqual(["Источники данных"]);
+	});
+
+	it("finds catalog formula for child stream via registry fan-out", () => {
+		const rows = [
+			{
+				stream: "Модельный стрим",
+				component: "Модель",
+				stage: "09",
+				name: "Адаптация",
+				originalName: "Адаптация",
+				workType: "Опциональная",
+				norm: 1,
+				normRaw: "1",
+				triggerParam: "",
+				triggerParams: [] as string[],
+				laborParams: [] as string[],
+				formulaText: "N * 2",
+				roundingMode: "CEIL" as const,
+				roundingStep: 0.1,
+			},
+		];
+		const child = V2_MODEL_STREAM_REGISTRY_STREAM_NAMES[1];
+		expect(child).toBeTruthy();
+		expect(findCatalogFormulaForStream(rows, child!)).toBeNull();
+		expect(
+			findCatalogFormulaForStream(
+				rows,
+				child!,
+				V2_MODEL_STREAM_REGISTRY_STREAM_NAMES,
+			)?.formulaText,
+		).toBe("N * 2");
 	});
 
 	it("model works without triggerRules still have triggerArchCount in catalog", () => {

@@ -7,6 +7,7 @@ interface V2AdminButtonProps {
 	color?: "primary" | "secondary" | "error" | "success";
 	disabled?: boolean;
 	type?: "button" | "submit" | "reset";
+	"data-test-id"?: string;
 }
 
 export const V2AdminButton = ({
@@ -16,6 +17,7 @@ export const V2AdminButton = ({
 	color = "primary",
 	disabled = false,
 	type = "button",
+	"data-test-id": dataTestId,
 }: V2AdminButtonProps) => {
 	return (
 		<Button
@@ -24,6 +26,7 @@ export const V2AdminButton = ({
 			disabled={disabled}
 			variant={variant}
 			color={color}
+			data-test-id={dataTestId}
 		>
 			{children}
 		</Button>

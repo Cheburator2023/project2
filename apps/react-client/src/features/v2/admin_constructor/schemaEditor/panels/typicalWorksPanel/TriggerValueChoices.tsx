@@ -39,36 +39,66 @@ export function resolveSelectedCatalogValueCodes(
 	ruleSeed: { paramCode: string; paramName: string | null },
 ): Set<string> {
 	const selected = new Set<string>();
-	const multi = paramRules[0]?.values;
-	if (multi && multi.length > 0) {
-		for (const item of multi) {
-			if (item.code) selected.add(item.code);
+	if (paramRules.length === 0) return selected;
+
+	const addRaw = (code: string | null | undefined) => {
+		const trimmed = code?.trim();
+		if (trimmed) selected.add(trimmed);
+	};
+
+	if (values.length === 0) {
+		const multi = paramRules[0]?.values;
+		if (multi && multi.length > 0) {
+			for (const item of multi) addRaw(item.code);
+		} else {
+			for (const rule of paramRules) addRaw(rule.valueCode);
 		}
-	} else {
-		for (const rule of paramRules) {
-			if (rule.valueCode) selected.add(rule.valueCode);
-		}
+		return selected;
 	}
 
-	if (values.length === 0 || paramRules.length === 0) return selected;
-
 	const byCode = new Map(values.map((value) => [value.code, value]));
-	for (const rule of paramRules) {
-		const code = rule.valueCode?.trim();
+	const byCodeLower = new Map(
+		values.map((value) => [value.code.toLowerCase(), value]),
+	);
+
+	const resolveOne = (
+		valueCode: string | null | undefined,
+		valueLabel: string | null | undefined,
+	) => {
+		const code = valueCode?.trim();
 		if (code && byCode.has(code)) {
 			selected.add(code);
-			continue;
+			return;
 		}
-		if (!rule.valueCode && !rule.valueLabel) continue;
-		if (code && selected.has(code)) continue;
+		if (code) {
+			const caseInsensitive = byCodeLower.get(code.toLowerCase());
+			if (caseInsensitive) {
+				selected.add(caseInsensitive.code);
+				return;
+			}
+		}
+		if (!valueCode && !valueLabel) return;
 		const match = values.find((value) =>
 			catalogValueMatchesTriggerRule(value, {
 				...ruleSeed,
-				valueCode: rule.valueCode,
-				valueLabel: rule.valueLabel,
+				valueCode: valueCode ?? null,
+				valueLabel: valueLabel ?? null,
 			}),
 		);
 		if (match) selected.add(match.code);
+		else addRaw(code);
+	};
+
+	const multi = paramRules[0]?.values;
+	if (multi && multi.length > 0) {
+		for (const item of multi) {
+			resolveOne(item.code, item.label);
+		}
+		return selected;
+	}
+
+	for (const rule of paramRules) {
+		resolveOne(rule.valueCode, rule.valueLabel);
 	}
 	return selected;
 }

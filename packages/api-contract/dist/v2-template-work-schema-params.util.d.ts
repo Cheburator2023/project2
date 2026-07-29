@@ -50,6 +50,17 @@ export declare function enrichWorkSchemaParamsWithCatalogAliases<T extends WorkS
     code: string;
     name: string;
 }>): T[];
+/**
+ * Как в UI админки (`buildSchemaWorkParameters`): если у поля есть
+ * `dictionaryCode` и справочник загружен — values берутся из него, а не из
+ * устаревшего `jsonSchema.enum`. Иначе «Значение недоступно» не попадает
+ * в панель проблем.
+ */
+export declare function applyDictionaryEnumsToWorkSchemaParams<T extends WorkSchemaParamDef>(schemaParams: T[], enumMapByCode: Record<string, {
+    enums: string[];
+    enumNames?: string[];
+} | undefined>): T[];
+export declare function collectDictionaryCodesFromWorkSchemaParams(schemaParams: ReadonlyArray<WorkSchemaParamDef>): string[];
 export declare function schemaEnumValueMatchesRule(enumValue: {
     code: string;
     label: string;

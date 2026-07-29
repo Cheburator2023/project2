@@ -169,6 +169,36 @@ export function enrichWorkSchemaParamsWithCatalogAliases(schemaParams, catalog) 
         return { ...schemaParam, sourceKeys: [...sourceKeys] };
     });
 }
+/**
+ * Как в UI админки (`buildSchemaWorkParameters`): если у поля есть
+ * `dictionaryCode` и справочник загружен — values берутся из него, а не из
+ * устаревшего `jsonSchema.enum`. Иначе «Значение недоступно» не попадает
+ * в панель проблем.
+ */
+export function applyDictionaryEnumsToWorkSchemaParams(schemaParams, enumMapByCode) {
+    return schemaParams.map((param) => {
+        const dictionaryCode = param.dictionaryCode?.trim();
+        if (!dictionaryCode)
+            return param;
+        const entry = enumMapByCode[dictionaryCode];
+        if (!entry?.enums?.length)
+            return param;
+        return {
+            ...param,
+            values: entry.enums.map((code, index) => ({
+                code,
+                label: entry.enumNames?.[index] ?? code,
+            })),
+        };
+    });
+}
+export function collectDictionaryCodesFromWorkSchemaParams(schemaParams) {
+    return [
+        ...new Set(schemaParams
+            .map((param) => param.dictionaryCode?.trim())
+            .filter((code) => Boolean(code))),
+    ];
+}
 export function schemaEnumValueMatchesRule(enumValue, rule) {
     if (catalogValueMatchesTriggerRule(enumValue, {
         paramCode: "",

@@ -24,6 +24,7 @@ import {
  * - `v2-factory-template-typical-works.registry.json` — 73 типовые работы эталонной схемы (prod)
  *
  * Обновление схемы: `npm run sync:factory-snapshot -- /path/to/export.json` (из apps/nestjs-server).
+ * Обновление типовых работ: `npm run publish:factory-typical-works -- dump.json [--write]`.
  */
 const SNAPSHOT_FILENAME = "v2-default-anketa.snapshot.json";
 

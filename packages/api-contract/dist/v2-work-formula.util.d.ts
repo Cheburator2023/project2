@@ -71,6 +71,11 @@ export type WorkFormulaLaborParamKindRef = WorkFormulaLaborParamRef & {
  */
 export declare function cleanupWorkFormulaTokensAfterOperandRemoval(tokens: V2WorkFormulaToken[]): V2WorkFormulaToken[];
 /**
+ * Чинит типичные поломки ленты: два операнда подряд → вставить `×`;
+ * затем прогнать cleanup осиротевших операторов (`× ÷` → `÷`).
+ */
+export declare function repairWorkFormulaTokenOperators(tokens: V2WorkFormulaToken[]): V2WorkFormulaToken[];
+/**
  * Удаляет из формулы param-токены, которых нет в трудоёмкости
  * или чей kind (param_coeff / param_anyof) не совпадает с типом параметра.
  */

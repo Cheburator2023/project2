@@ -61,3 +61,36 @@ export type V2EffectiveFactoryEditorSnapshotDto = {
 	typicalWorks: V2TypicalWorkCardDto[] | null;
 	workRefIndex: V2WorkRefIndexItemDto[];
 };
+
+/** Запрос publish типовых работ в factory bundle (registry + catalog). */
+export type V2FactoryPublishTypicalWorksRequestDto = {
+	templateId: string;
+	versionId: string;
+	/** Записать JSON на диск сервера (только если V2_FACTORY_PUBLISH_WRITE=1). */
+	write?: boolean;
+};
+
+export type V2FactoryPublishTypicalWorksReportDto = {
+	registryWorks: number;
+	catalogAdded: number;
+	catalogUpdated: number;
+	catalogUnchanged: number;
+	catalogPreserved: number;
+	dropped: Array<{
+		workId: string;
+		workName: string;
+		streamExecutor: string;
+		field: string;
+		reason: string;
+	}>;
+	legacyStreamCatalogRows: number;
+};
+
+export type V2FactoryPublishTypicalWorksResponseDto = {
+	report: V2FactoryPublishTypicalWorksReportDto;
+	registry: unknown;
+	catalog: unknown;
+	wrote: boolean;
+	writeAllowed: boolean;
+	writeDisabledReason: string | null;
+};

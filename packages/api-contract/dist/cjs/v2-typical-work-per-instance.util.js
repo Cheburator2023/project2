@@ -7,6 +7,7 @@ exports.listArchComponentInstances = listArchComponentInstances;
 exports.readPerInstanceArchCountOverride = readPerInstanceArchCountOverride;
 exports.withPerInstanceArchCountOverride = withPerInstanceArchCountOverride;
 exports.formDataWithSingleArchInstance = formDataWithSingleArchInstance;
+exports.formatEmptyArchInstanceBreakdown = formatEmptyArchInstanceBreakdown;
 exports.formatPerInstanceBreakdownExpanded = formatPerInstanceBreakdownExpanded;
 const v2_anketa_section_ui_util_1 = require("./v2-anketa-section-ui.util");
 const v2_typical_works_util_1 = require("./v2-typical-works.util");
@@ -375,6 +376,16 @@ function formDataWithSingleArchInstance(formData, kind, instance) {
         streamModelControl,
         streamDataSources,
     }, kind, 1);
+}
+/**
+ * Подпись для пустого per-instance расчёта (нет заполненных экземпляров арх. компонента).
+ */
+function formatEmptyArchInstanceBreakdown(archComponentType) {
+    const kind = resolveArchComponentKindFromType(archComponentType);
+    const label = (kind ? v2_anketa_section_ui_util_1.V2_ARCH_COMPONENT_LABELS[kind] : null) ||
+        archComponentType?.trim() ||
+        "арх. компонент";
+    return `нет заполненных «${label}» → 0`;
 }
 function formatPerInstanceBreakdownExpanded(instances, total) {
     if (instances.length === 0)

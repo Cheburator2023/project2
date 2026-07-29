@@ -85,6 +85,7 @@ export function TypicalWorksEmptyState({
 					<Button
 						variant="contained"
 						onClick={onCreateWork}
+						data-test-id="typical-works-create-new"
 						sx={{
 							textTransform: "none",
 							height: 40,

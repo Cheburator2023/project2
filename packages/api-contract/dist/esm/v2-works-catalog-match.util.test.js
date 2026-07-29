@@ -299,6 +299,22 @@ describe("v2-works-catalog-match.util", () => {
             valueLabel: "КД",
         })).toBe(true);
     });
+    it("matches source type by label when stored code is the label", () => {
+        expect(catalogValueMatchesTriggerRule({ code: "внутренний", label: "Внутренний" }, {
+            paramCode: "type",
+            paramName: "Тип системы-источника",
+            valueCode: "Внутренний",
+            valueLabel: "Внутренний",
+        })).toBe(true);
+    });
+    it("matches catalog codes case-insensitively", () => {
+        expect(catalogValueMatchesTriggerRule({ code: "внутренний", label: "Внутренний" }, {
+            paramCode: "type",
+            paramName: "Тип системы-источника",
+            valueCode: "ВНУТРЕННИЙ",
+            valueLabel: null,
+        })).toBe(true);
+    });
     it("detects broken and methodology-only presence triggers", () => {
         expect(isBrokenTypicalWorkTriggerRef({ paramCode: "", paramName: "?" })).toBe(true);
         expect(isMethodologyPresenceTriggerRule({

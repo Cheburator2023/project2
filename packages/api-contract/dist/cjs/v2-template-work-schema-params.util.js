@@ -2,6 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.buildWorkSchemaParamsFromTemplate = buildWorkSchemaParamsFromTemplate;
 exports.enrichWorkSchemaParamsWithCatalogAliases = enrichWorkSchemaParamsWithCatalogAliases;
+exports.applyDictionaryEnumsToWorkSchemaParams = applyDictionaryEnumsToWorkSchemaParams;
+exports.collectDictionaryCodesFromWorkSchemaParams = collectDictionaryCodesFromWorkSchemaParams;
 exports.schemaEnumValueMatchesRule = schemaEnumValueMatchesRule;
 exports.collectTypicalWorkSchemaConsistencyIssues = collectTypicalWorkSchemaConsistencyIssues;
 exports.findCatalogPreviousCodeForSchemaParam = findCatalogPreviousCodeForSchemaParam;
@@ -175,6 +177,36 @@ function enrichWorkSchemaParamsWithCatalogAliases(schemaParams, catalog) {
             sourceKeys.add(nameSlug);
         return { ...schemaParam, sourceKeys: [...sourceKeys] };
     });
+}
+/**
+ * Как в UI админки (`buildSchemaWorkParameters`): если у поля есть
+ * `dictionaryCode` и справочник загружен — values берутся из него, а не из
+ * устаревшего `jsonSchema.enum`. Иначе «Значение недоступно» не попадает
+ * в панель проблем.
+ */
+function applyDictionaryEnumsToWorkSchemaParams(schemaParams, enumMapByCode) {
+    return schemaParams.map((param) => {
+        const dictionaryCode = param.dictionaryCode?.trim();
+        if (!dictionaryCode)
+            return param;
+        const entry = enumMapByCode[dictionaryCode];
+        if (!entry?.enums?.length)
+            return param;
+        return {
+            ...param,
+            values: entry.enums.map((code, index) => ({
+                code,
+                label: entry.enumNames?.[index] ?? code,
+            })),
+        };
+    });
+}
+function collectDictionaryCodesFromWorkSchemaParams(schemaParams) {
+    return [
+        ...new Set(schemaParams
+            .map((param) => param.dictionaryCode?.trim())
+            .filter((code) => Boolean(code))),
+    ];
 }
 function schemaEnumValueMatchesRule(enumValue, rule) {
     if ((0, v2_works_catalog_match_util_1.catalogValueMatchesTriggerRule)(enumValue, {

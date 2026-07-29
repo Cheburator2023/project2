@@ -10,6 +10,7 @@
 		"build:doc-catalog": "echo 'DEPRECATED: edit v2-factory-typical-works.snapshot.json directly' && exit 1",
 		"sync:factory-snapshot": "node scripts/sync-factory-snapshot.mjs",
 		"sync:factory-template-works-registry": "node scripts/sync-factory-template-works-registry.mjs",
+		"publish:factory-typical-works": "tsx scripts/publish-factory-typical-works-bundle.ts",
 		"import:csv-formulas": "tsx scripts/import-csv-formulas-to-factory.ts",
 		"import:model-stream": "tsx scripts/import-model-stream-to-factory.ts",
 		"import:pirm": "tsx scripts/import-pirm-to-factory.ts",

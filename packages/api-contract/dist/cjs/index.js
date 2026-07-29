@@ -31,6 +31,7 @@ __exportStar(require("./v2-questionnaire-registry-columns.util"), exports);
 __exportStar(require("./v2-questionnaire-registry-export.util"), exports);
 __exportStar(require("./v2-factory-snapshot.types"), exports);
 __exportStar(require("./v2-factory-snapshot-without-typical-works.util"), exports);
+__exportStar(require("./v2-factory-typical-works-publish.util"), exports);
 __exportStar(require("./v2-typical-work-catalog-id.util"), exports);
 __exportStar(require("./v2-typical-work-output-paths.util"), exports);
 __exportStar(require("./v2-data-transfer.types"), exports);

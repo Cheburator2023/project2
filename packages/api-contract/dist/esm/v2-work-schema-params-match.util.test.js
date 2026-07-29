@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildWorkSchemaParamsFromTemplate, collectTypicalWorkSchemaConsistencyIssues, findCatalogPreviousCodeForSchemaParam, schemaEnumValueMatchesRule, } from "./v2-template-work-schema-params.util";
+import { applyDictionaryEnumsToWorkSchemaParams, buildWorkSchemaParamsFromTemplate, collectTypicalWorkSchemaConsistencyIssues, findCatalogPreviousCodeForSchemaParam, schemaEnumValueMatchesRule, } from "./v2-template-work-schema-params.util";
 import { resolveTypicalWorkRulesForSourceMatch, typicalWorkRulesMatchSourceWithSchema, } from "./v2-work-schema-params-match.util";
 import { typicalWorkRulesMatchSource } from "./v2-works-catalog-match.util";
 describe("typicalWorkRulesMatchSourceWithSchema", () => {
@@ -331,6 +331,48 @@ describe("collectTypicalWorkSchemaConsistencyIssues", () => {
                 message: expect.stringContaining("Настройка"),
             }),
         ]);
+    });
+    it("reports unavailable values after dictionary enums replace stale jsonSchema.enum", () => {
+        const fromSchema = [
+            {
+                code: "workType",
+                name: "Тип работ",
+                schemaFieldUid: "uid-work-type",
+                dictionaryCode: "v2.detailInfo.dataMart.workType",
+                values: [
+                    { code: "Обучение", label: "Обучение" },
+                    { code: "Дообучение", label: "Дообучение" },
+                    { code: "Калибровка", label: "Калибровка" },
+                ],
+            },
+        ];
+        const withDictionary = applyDictionaryEnumsToWorkSchemaParams(fromSchema, {
+            "v2.detailInfo.dataMart.workType": {
+                enums: ["Калибровка"],
+                enumNames: ["Калибровка"],
+            },
+        });
+        const issues = collectTypicalWorkSchemaConsistencyIssues({
+            schemaParams: withDictionary,
+            rules: [],
+            laborParamCodes: [
+                {
+                    paramCode: "workType",
+                    paramName: "Тип работ",
+                    schemaFieldUid: "uid-work-type",
+                    coefficients: [
+                        { valueCode: "Обучение", valueLabel: "Обучение" },
+                        { valueCode: "Дообучение", valueLabel: "Дообучение" },
+                        { valueCode: "Калибровка", valueLabel: "Калибровка" },
+                    ],
+                },
+            ],
+        });
+        expect(issues.filter((issue) => issue.kind === "labor_value").map((i) => i.message)).toEqual(expect.arrayContaining([
+            expect.stringContaining("Обучение"),
+            expect.stringContaining("Дообучение"),
+        ]));
+        expect(issues.some((issue) => issue.message.includes("Калибровка") && issue.kind === "labor_value" && issue.message.includes("недоступно"))).toBe(false);
     });
     it("keeps Настройка available when duplicate workType codes merge catalog values", () => {
         const issues = collectTypicalWorkSchemaConsistencyIssues({

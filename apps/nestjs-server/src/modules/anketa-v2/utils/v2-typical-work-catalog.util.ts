@@ -257,17 +257,34 @@ export type CatalogFormulaSeedConfig = {
 export function findCatalogFormulaForStream(
 	catalogRows: V2FactoryTypicalWork[],
 	streamExecutor: string,
+	registryStreams?: readonly string[],
 ): CatalogFormulaSeedConfig | null {
-	const stream = streamExecutor.trim();
-	for (const row of catalogRows) {
-		if (canonicalizeWorkStream(row.stream) !== stream) continue;
+	const stream = canonicalizeWorkStream(streamExecutor.trim());
+	const pick = (
+		row: V2FactoryTypicalWork,
+	): CatalogFormulaSeedConfig | null => {
 		const formulaText = row.formulaText?.trim();
-		if (!formulaText) continue;
+		if (!formulaText) return null;
 		return {
 			formulaText,
 			roundingMode: row.roundingMode ?? "CEIL",
 			roundingStep: normalizeWorkRoundingStep(row.roundingStep ?? 0.1),
 		};
+	};
+
+	for (const row of catalogRows) {
+		if (canonicalizeWorkStream(row.stream) !== stream) continue;
+		const found = pick(row);
+		if (found) return found;
+	}
+
+	/** Fan-out: mother catalog stream → all registry assignments (как triggers/labor). */
+	if (!registryStreams?.length) return null;
+	for (const row of catalogRows) {
+		const apply = resolveCatalogApplyStreams(row.stream, registryStreams);
+		if (!apply.includes(stream)) continue;
+		const found = pick(row);
+		if (found) return found;
 	}
 	return null;
 }

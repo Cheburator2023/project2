@@ -107,6 +107,11 @@ function matchesField(
 		return true;
 	}
 
+	/** Уже привязан к другому полю — не перехватывать по коду/имени. */
+	if (ref.schemaFieldUid?.trim()) {
+		return false;
+	}
+
 	const aliases = collectFieldAliasCodes(request);
 	if (aliases.has(ref.paramCode)) return true;
 
@@ -360,23 +365,51 @@ function reconcileLaborParam(
 		};
 	}
 
+	const matchedExisting = new Set<string>();
+	const synced = values.map((value, index) => {
+		const existing = findMatchingLaborCoefficient(group, value);
+		if (existing) {
+			matchedExisting.add(
+				existing.id ??
+					`${normalizeLaborValueIdentity(existing.valueCode)}\0${normalizeLaborValueIdentity(existing.valueLabel)}`,
+			);
+		}
+		return {
+			id: existing?.id ?? `sync-${index}-${value.code}`,
+			streamExecutor:
+				existing?.streamExecutor ??
+				group.coefficients[0]?.streamExecutor ??
+				"",
+			paramCode: request.field.code ?? group.paramCode,
+			paramName: request.field.name ?? group.paramName,
+			valueCode: normalizeStoredValueCode(value.code, value.label),
+			valueLabel: normalizeStoredValueLabel(value.label),
+			coefficient: existing?.coefficient ?? 1,
+		};
+	});
+	/** Не дропать строки, которых нет в values — иначе bulk/словарь затирает правки админа. */
+	const orphans = group.coefficients.filter((row) => {
+		if (!row.valueCode && !row.valueLabel) return false;
+		const key =
+			row.id ??
+			`${normalizeLaborValueIdentity(row.valueCode)}\0${normalizeLaborValueIdentity(row.valueLabel)}`;
+		if (matchedExisting.has(key)) return false;
+		return !values.some(
+			(value) =>
+				schemaEnumValueMatchesRule(value, {
+					valueCode: row.valueCode,
+					valueLabel: row.valueLabel,
+				}) ||
+				normalizeLaborValueIdentity(row.valueCode) ===
+					normalizeLaborValueIdentity(value.code) ||
+				normalizeLaborValueIdentity(row.valueLabel) ===
+					normalizeLaborValueIdentity(value.label),
+		);
+	});
+
 	return {
 		...nextBase,
-		coefficients: values.map((value, index) => {
-			const existing = findMatchingLaborCoefficient(group, value);
-			return {
-				id: existing?.id ?? `sync-${index}-${value.code}`,
-				streamExecutor:
-					existing?.streamExecutor ??
-					group.coefficients[0]?.streamExecutor ??
-					"",
-				paramCode: request.field.code ?? group.paramCode,
-				paramName: request.field.name ?? group.paramName,
-				valueCode: normalizeStoredValueCode(value.code, value.label),
-				valueLabel: normalizeStoredValueLabel(value.label),
-				coefficient: existing?.coefficient ?? 1,
-			};
-		}),
+		coefficients: dedupeLaborCoefficientsByStoredValue([...synced, ...orphans]),
 	};
 }
 

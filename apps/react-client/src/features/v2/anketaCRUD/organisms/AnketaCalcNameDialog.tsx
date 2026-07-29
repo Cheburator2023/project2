@@ -86,7 +86,7 @@ export function AnketaCalcNameDialog({
 							? "Укажите название (от 1 до 255 символов)"
 							: helperText
 					}
-					inputProps={{ maxLength: 255 }}
+					inputProps={{ maxLength: 255, "data-test-id": "anketa-calc-name-input" }}
 					onKeyDown={(event) => {
 						if (event.key === "Enter") {
 							event.preventDefault();

@@ -750,7 +750,18 @@ export function cleanupWorkFormulaTokensAfterOperandRemoval(tokens) {
         }
         for (let i = 0; i < next.length - 1; i++) {
             if (next[i]?.kind === "operator" && next[i + 1]?.kind === "operator") {
-                next.splice(i + 1, 1);
+                const first = next[i];
+                const second = next[i + 1];
+                // `× ÷` / `× −` после вырезания архкоэф: оставляем ÷/−.
+                if (first?.kind === "operator" &&
+                    second?.kind === "operator" &&
+                    first.op === "*" &&
+                    (second.op === "/" || second.op === "-")) {
+                    next.splice(i, 1);
+                }
+                else {
+                    next.splice(i + 1, 1);
+                }
                 changed = true;
                 break;
             }
@@ -775,6 +786,44 @@ export function cleanupWorkFormulaTokensAfterOperandRemoval(tokens) {
         }
     }
     return next;
+}
+function isWorkFormulaValueOperand(token) {
+    if (!token)
+        return false;
+    return (token.kind === "norm" ||
+        token.kind === "number" ||
+        token.kind === "param_coeff" ||
+        token.kind === "param_anyof" ||
+        token.kind === "arch_count_coeff" ||
+        token.kind === "work_ref" ||
+        token.kind === "paren_close");
+}
+function isWorkFormulaValueStart(token) {
+    if (!token)
+        return false;
+    return (token.kind === "norm" ||
+        token.kind === "number" ||
+        token.kind === "param_coeff" ||
+        token.kind === "param_anyof" ||
+        token.kind === "arch_count_coeff" ||
+        token.kind === "work_ref" ||
+        token.kind === "paren_open");
+}
+/**
+ * Чинит типичные поломки ленты: два операнда подряд → вставить `×`;
+ * затем прогнать cleanup осиротевших операторов (`× ÷` → `÷`).
+ */
+export function repairWorkFormulaTokenOperators(tokens) {
+    const withImplicitMultiply = [];
+    for (const token of tokens) {
+        const prev = withImplicitMultiply[withImplicitMultiply.length - 1];
+        if (isWorkFormulaValueOperand(prev) &&
+            isWorkFormulaValueStart(token)) {
+            withImplicitMultiply.push({ kind: "operator", op: "*" });
+        }
+        withImplicitMultiply.push(token);
+    }
+    return cleanupWorkFormulaTokensAfterOperandRemoval(withImplicitMultiply);
 }
 /**
  * Удаляет из формулы param-токены, которых нет в трудоёмкости
