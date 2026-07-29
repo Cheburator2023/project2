@@ -1,5 +1,19 @@
 # Semantic Versioning Changelog
 
+# [1.49.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.48.0...v1.49.0) (2026-07-29)
+
+
+### Bug Fixes
+
+* commitlint ([8f5873b](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/8f5873be4842b72edd149648a89fa5a501fb1004))
+* update operator interaction and formula handling in WorkFormulaEditor ([8351d87](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/8351d878412f82f854903fd803cc9d4f57c5291b))
+
+
+### Features
+
+* add new JSON outputs for publishing typical works and enhance schema definitions ([efea929](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/efea9293d894918774f81b2a7b2913cee03ed373))
+* add publishing functionality for typical works in factory bundle ([6784650](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/67846505d8254cddf59631b5b59c6118e11b2e3e))
+
 # [1.48.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.47.1...v1.48.0) (2026-07-28)
 
 
