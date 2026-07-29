@@ -17,6 +17,51 @@ import {
 	type V2OverallUncertaintyPreviewState,
 } from "@smart-anketa/api-contract";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+const SCALES_PANEL_DEFAULT_WIDTH = 420;
+const SCALES_PANEL_MIN_WIDTH = 320;
+const SCALES_PANEL_MAX_WIDTH = 760;
+
+/** Ширина левой колонки «Шкалы и веса»: ресайз за правый край (как в SchemaPropertiesPanel). */
+function useScalesPanelWidth() {
+	const [width, setWidth] = useState(SCALES_PANEL_DEFAULT_WIDTH);
+	const [isResizing, setIsResizing] = useState(false);
+	const widthRef = useRef(width);
+	widthRef.current = width;
+
+	const onResizeStart = useCallback((event: React.MouseEvent) => {
+		event.preventDefault();
+		const startX = event.clientX;
+		const startWidth = widthRef.current;
+
+		setIsResizing(true);
+		document.body.style.cursor = "col-resize";
+		document.body.style.userSelect = "none";
+
+		const onMouseMove = (moveEvent: MouseEvent) => {
+			const next = startWidth + (moveEvent.clientX - startX);
+			setWidth(
+				Math.min(
+					SCALES_PANEL_MAX_WIDTH,
+					Math.max(SCALES_PANEL_MIN_WIDTH, next),
+				),
+			);
+		};
+
+		const onMouseUp = () => {
+			setIsResizing(false);
+			document.body.style.cursor = "";
+			document.body.style.userSelect = "";
+			document.removeEventListener("mousemove", onMouseMove);
+			document.removeEventListener("mouseup", onMouseUp);
+		};
+
+		document.addEventListener("mousemove", onMouseMove);
+		document.addEventListener("mouseup", onMouseUp);
+	}, []);
+
+	return { width, isResizing, onResizeStart };
+}
 import { useSchemaEditor } from "../../SchemaEditorContext";
 import { useSchemaEditorUiStore } from "../../schemaEditorUiStore";
 import {
@@ -326,6 +371,12 @@ export function OverallUncertaintyPanel() {
 		[config, preview],
 	);
 
+	const {
+		width: scalesPanelWidth,
+		isResizing: scalesPanelResizing,
+		onResizeStart: onScalesPanelResizeStart,
+	} = useScalesPanelWidth();
+
 	return (
 		<Flex
 			flexDirection="column"
@@ -418,19 +469,64 @@ export function OverallUncertaintyPanel() {
 			>
 				<Box
 					sx={{
-						width: { xs: "100%", md: 420 },
+						position: "relative",
+						width: { xs: "100%", md: scalesPanelWidth },
 						flexShrink: 0,
 						borderRight: 1,
 						borderColor: "divider",
-						p: 1.5,
-						overflowY: "auto",
-						overflowX: "hidden",
 						bgcolor: "background.default",
+						display: "flex",
+						minHeight: 0,
 					}}
 				>
-					<OverallUncertaintyScalesPanel
-						config={config}
-						onChange={handleConfigChange}
+					<Box
+						sx={{
+							flex: 1,
+							minWidth: 0,
+							p: 1.5,
+							overflowY: "auto",
+							overflowX: "hidden",
+						}}
+					>
+						<OverallUncertaintyScalesPanel
+							config={config}
+							onChange={handleConfigChange}
+						/>
+					</Box>
+					<Box
+						role="separator"
+						aria-orientation="vertical"
+						aria-label="Изменить ширину панели шкал"
+						title="Потяните, чтобы изменить ширину"
+						onMouseDown={onScalesPanelResizeStart}
+						sx={{
+							position: "absolute",
+							right: 0,
+							top: 0,
+							bottom: 0,
+							width: 10,
+							transform: "translateX(50%)",
+							cursor: "col-resize",
+							zIndex: 2,
+							"&:hover": {
+								"&::after": {
+									opacity: 0.35,
+								},
+							},
+							"&::after": {
+								content: '""',
+								position: "absolute",
+								left: "50%",
+								top: 0,
+								bottom: 0,
+								width: 2,
+								transform: "translateX(-50%)",
+								borderRadius: 1,
+								bgcolor: "primary.main",
+								opacity: scalesPanelResizing ? 0.45 : 0,
+								transition: "opacity 0.15s",
+							},
+						}}
 					/>
 				</Box>
 				<Box
