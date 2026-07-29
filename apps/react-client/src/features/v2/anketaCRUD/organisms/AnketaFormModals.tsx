@@ -22,7 +22,9 @@ import { getArrayAtPath } from "../utils/anketaModalArrayTableConfig";
 import { getObjectUiSlice } from "../utils/anketaSchemaAtPath";
 import type { AnketaModalKind } from "../utils/anketaFormModalPaths";
 import {
+	calculateOverallUncertaintyPreview,
 	createDefaultOverallUncertaintyConfig,
+	mapFormDataToOverallUncertaintyPreview,
 	parseOverallUncertaintyConfigFromLogic,
 	parseUncertaintyRiskFormEntry,
 	resolveV2AnketaArchComponent,
@@ -112,7 +114,7 @@ function buildOverallUncertaintyLabel(
 	const { calculated, coefficient } =
 		resolveV2QuestionnaireUncertaintyCoefficient(formData, { config });
 	if (!calculated) return undefined;
-	return `Средняя ×${coefficient.toFixed(2)}`;
+	return `×${coefficient.toFixed(2)}`;
 }
 
 export function uncertaintyModalDefaults(
@@ -188,7 +190,7 @@ export function uncertaintySummaryText(
 	const { calculated, coefficient } =
 		resolveV2QuestionnaireUncertaintyCoefficient(formData, { config });
 	if (!calculated) return "не рассчитана";
-	return `Средняя ×${coefficient.toFixed(2)}`;
+	return `×${coefficient.toFixed(2)}`;
 }
 
 type ActiveModal =
@@ -290,6 +292,35 @@ export function AnketaFormModals({
 	const openUncertaintyModal = useCallback(() => {
 		setActiveModal({ kind: "uncertainty" });
 	}, []);
+
+	/** Живой предпросмотр итога в модалке — та же методика, что и в расчёте. */
+	const computeUncertaintyBreakdown = useCallback(
+		(values: TotalUncertaintyFormValues) => {
+			const riskGroup: Record<string, unknown> = {};
+			for (const [modalKey, selection] of Object.entries(values.risks)) {
+				const schemaKey =
+					UNCERTAINTY_MODAL_RISK_ID_TO_SCHEMA_KEY[modalKey] ?? modalKey;
+				const probability = selection?.probability?.trim() ?? "";
+				const goals = selection?.goals?.trim() ?? "";
+				riskGroup[schemaKey] =
+					!probability && !goals ? "" : { probability, goals };
+			}
+			const draft = {
+				uncertaintyCalculation: {
+					initiativeTimeline: values.initiativeTimeline || undefined,
+					initiativeCost: values.initiativeCost || undefined,
+					uncertaintyAdjustment:
+						values.totalUncertaintyAdjustment === ""
+							? undefined
+							: Number(values.totalUncertaintyAdjustment.replace(",", ".")),
+					riskGroup,
+				},
+			};
+			const preview = mapFormDataToOverallUncertaintyPreview(draft, config);
+			return calculateOverallUncertaintyPreview(config, preview);
+		},
+		[config],
+	);
 
 	const deleteArrayItem = useCallback(
 		(path: string, index: number) => {
@@ -552,6 +583,8 @@ export function AnketaFormModals({
 				probabilityOptions={scaleOptions.probability}
 				goalsOptions={scaleOptions.goals}
 				riskGroups={riskGroups}
+				adjustment={config.adjustment}
+				computeBreakdown={computeUncertaintyBreakdown}
 			/>
 			{rjsfModalSlice ? (
 				<AnketaRjsfObjectModal

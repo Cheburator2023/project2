@@ -21,11 +21,19 @@ import {
 import { useV2DictionaryEnumsMaps } from "@react-client/common/api/queries/v2-templates";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { buildUncertaintyModalRiskGroups } from "@react-client/features/v2/anketaCRUD/utils/v2UncertaintyModalConfig";
+import type { V2OverallUncertaintyCalcBreakdown } from "@smart-anketa/api-contract";
 import { useEffect, useMemo, useState } from "react";
 
 const INITIATIVE_TIMELINE_DICTIONARY = "v2.method.21.сроки_инициативы";
 const INITIATIVE_COST_DICTIONARY = "v2.method.22.стоимость_инициативы";
 const UNCERTAINTY_ADJUSTMENT_MAX = 30;
+
+type UncertaintyAdjustmentProps = {
+	minPct: number;
+	maxPct: number;
+	defaultPct: number;
+	hint: string;
+};
 
 export type UncertaintyRiskSelection = {
 	probability: string;
@@ -70,12 +78,20 @@ function toSelectOptions(values: string[] | undefined): DictionarySelectOption[]
 	];
 }
 
-function clampAdjustmentInput(raw: string): string {
+function clampAdjustmentInput(
+	raw: string,
+	minPct: number,
+	maxPct: number,
+): string {
 	const normalized = raw.replace(",", ".").replace(/%/g, "").trim();
 	if (!normalized) return "";
 	const parsed = Number(normalized);
 	if (!Number.isFinite(parsed)) return raw;
-	return String(Math.min(UNCERTAINTY_ADJUSTMENT_MAX, Math.max(0, parsed)));
+	return String(Math.min(maxPct, Math.max(minPct, parsed)));
+}
+
+function isRiskFilled(selection: UncertaintyRiskSelection): boolean {
+	return Boolean(selection.probability.trim() && selection.goals.trim());
 }
 
 function emptyRiskSelection(): UncertaintyRiskSelection {
@@ -94,6 +110,12 @@ type TotalUncertaintyModalProps = {
 	probabilityOptions?: string[];
 	goalsOptions?: string[];
 	riskGroups?: Array<{ id: string; label: string; tooltip?: string }>;
+	/** Границы/дефолт/подсказка поля «Поправка» из конфигуратора. */
+	adjustment?: UncertaintyAdjustmentProps;
+	/** Живой предпросмотр итога по методике конфигуратора. */
+	computeBreakdown?: (
+		values: TotalUncertaintyFormValues,
+	) => V2OverallUncertaintyCalcBreakdown;
 };
 
 export const TotalUncertaintyModal = ({
@@ -107,11 +129,18 @@ export const TotalUncertaintyModal = ({
 	probabilityOptions: probabilityOptionsProp,
 	goalsOptions: goalsOptionsProp,
 	riskGroups: riskGroupsProp,
+	adjustment,
+	computeBreakdown,
 }: TotalUncertaintyModalProps) => {
 	const riskGroups = useMemo(
 		() => riskGroupsProp ?? buildUncertaintyModalRiskGroups(),
 		[riskGroupsProp],
 	);
+	const adjMin = adjustment?.minPct ?? 0;
+	const adjMax = adjustment?.maxPct ?? UNCERTAINTY_ADJUSTMENT_MAX;
+	const adjHint =
+		adjustment?.hint ??
+		"Экспертная надбавка, добавляется к агрегату по рискам";
 
 	const { enumMapByCode } = useV2DictionaryEnumsMaps(
 		timelineOptionsProp && costOptionsProp
@@ -188,6 +217,14 @@ export const TotalUncertaintyModal = ({
 		}));
 	};
 
+	// Пока сроки и стоимость не выбраны, базовый уровень не определён — риски заблокированы.
+	const risksLocked = !values.initiativeTimeline || !values.initiativeCost;
+	const filledRiskCount = Object.values(values.risks).filter(isRiskFilled).length;
+	const breakdown = useMemo(
+		() => (computeBreakdown ? computeBreakdown(values) : null),
+		[computeBreakdown, values],
+	);
+
 	return (
 		<Dialog
 			open={open}
@@ -258,17 +295,20 @@ export const TotalUncertaintyModal = ({
 						type="number"
 						label="Поправка на общую неопределенность"
 						value={values.totalUncertaintyAdjustment}
+						placeholder={String(adjustment?.defaultPct ?? 0)}
 						onChange={(event) =>
 							setValues((prev) => ({
 								...prev,
 								totalUncertaintyAdjustment: clampAdjustmentInput(
 									event.target.value,
+									adjMin,
+									adjMax,
 								),
 							}))
 						}
 						inputProps={{
-							min: 0,
-							max: UNCERTAINTY_ADJUSTMENT_MAX,
+							min: adjMin,
+							max: adjMax,
 							step: 1,
 						}}
 						InputProps={{
@@ -276,22 +316,29 @@ export const TotalUncertaintyModal = ({
 								<InputAdornment position="end">%</InputAdornment>
 							),
 						}}
-						helperText="Опционально, 0–30%. Если задана — полностью перекрывает автосчёт по рискам"
+						helperText={`Опционально, ${adjMin}–${adjMax}%. ${adjHint}`}
 					/>
 
 					<Divider sx={{ my: 0.5 }} />
 
-					<Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-						Группа рисков
-					</Typography>
+					<Flex gap={1} alignItems="baseline" justifyContent="space-between">
+						<Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+							Группа рисков
+						</Typography>
+						<Typography variant="caption" color="text.secondary">
+							заполнено {filledRiskCount} из {riskGroups.length}
+						</Typography>
+					</Flex>
 					<Typography variant="caption" color="text.secondary">
-						Отметьте применимые риски: вероятность и влияние на Цели
+						{risksLocked
+							? "Сначала выберите сроки и стоимость инициативы — риски заблокированы"
+							: "Отметьте применимые риски: вероятность и влияние на Цели. Вероятность «Не применимо» оставляет риск в списке, но вносит ноль"}
 					</Typography>
 
 					{riskGroups.map((risk) => {
 						const selection = values.risks[risk.id] ?? emptyRiskSelection();
 						return (
-							<Box key={risk.id}>
+							<Box key={risk.id} sx={{ opacity: risksLocked ? 0.55 : 1 }}>
 								<Flex gap={0.5} alignItems="center" sx={{ mb: 0.5 }}>
 									<Typography variant="body2" color="text.secondary">
 										{risk.label}
@@ -318,6 +365,7 @@ export const TotalUncertaintyModal = ({
 									<FormControl sx={{ flex: 1, minWidth: 200 }}>
 										<Select
 											displayEmpty
+											disabled={risksLocked}
 											value={selection.probability}
 											onChange={(event: SelectChangeEvent<string>) =>
 												patchRisk(risk.id, "probability", event.target.value)
@@ -338,6 +386,7 @@ export const TotalUncertaintyModal = ({
 									<FormControl sx={{ flex: 1, minWidth: 200 }}>
 										<Select
 											displayEmpty
+											disabled={risksLocked}
 											value={selection.goals}
 											onChange={(event: SelectChangeEvent<string>) =>
 												patchRisk(risk.id, "goals", event.target.value)
@@ -359,6 +408,50 @@ export const TotalUncertaintyModal = ({
 							</Box>
 						);
 					})}
+					{breakdown ? (
+						<Box
+							sx={{
+								borderRadius: 1.5,
+								bgcolor: "#1c2333",
+								color: "#fff",
+								px: 2,
+								py: 1.5,
+							}}
+						>
+							<Typography
+								variant="caption"
+								sx={{
+									textTransform: "uppercase",
+									letterSpacing: 0.6,
+									opacity: 0.7,
+								}}
+							>
+								Предпросмотр формулы
+							</Typography>
+							{breakdown.formulaLines.map((line) => (
+								<Typography
+									key={line}
+									variant="body2"
+									sx={{
+										opacity: 0.92,
+										fontFamily: "ui-monospace, monospace",
+										fontSize: 12,
+										mt: 0.5,
+									}}
+								>
+									{line}
+								</Typography>
+							))}
+							<Flex alignItems="baseline" justifyContent="space-between" sx={{ mt: 1 }}>
+								<Typography variant="caption" sx={{ opacity: 0.7 }}>
+									Общая неопределённость
+								</Typography>
+								<Typography variant="h5" sx={{ fontWeight: 700 }}>
+									{breakdown.coefficient.toFixed(2).replace(".", ",")}
+								</Typography>
+							</Flex>
+						</Box>
+					) : null}
 				</Stack>
 			</DialogContent>
 

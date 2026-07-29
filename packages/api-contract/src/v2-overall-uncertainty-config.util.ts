@@ -37,7 +37,33 @@ export type V2UncertaintyRiskGroup = {
 	id: string;
 	name: string;
 	coef: number;
+	/** Цвет-метка группы в матрице и легенде (hex). */
+	color?: string;
 };
+
+/** Свёртка коэффициентов отмеченных рисков: сумма (базовый вариант) или среднее. */
+export type V2UncertaintyAggregationMode = "sum" | "avg";
+
+/** Настройки поля «Поправка, %»: границы, дефолт и подсказка пользователю. */
+export type V2UncertaintyAdjustmentSettings = {
+	minPct: number;
+	maxPct: number;
+	defaultPct: number;
+	hint: string;
+};
+
+export const V2_UNCERTAINTY_ADJUSTMENT_DEFAULTS: V2UncertaintyAdjustmentSettings =
+	{
+		minPct: 0,
+		maxPct: 30,
+		defaultPct: 0,
+		hint: "Экспертная надбавка, добавляется к агрегату по рискам",
+	};
+
+/** Вероятность «Не применимо»: риск отмечен, но в расчёт вносит ноль. */
+export function isUncertaintyNotApplicableLabel(label: string): boolean {
+	return label.trim().toLowerCase().replace(/ё/g, "е") === "не применимо";
+}
 
 /** Диапазон «за количество отмеченных рисков». */
 export type V2UncertaintyRiskCountRange = {
@@ -61,7 +87,12 @@ export type V2OverallUncertaintyConfig = {
 	severityLevels: V2UncertaintySeverityLevel[];
 	probabilityLevels: V2UncertaintyProbabilityLevel[];
 	groups: V2UncertaintyRiskGroup[];
+	/** @deprecated не участвует в методике; хранится для обратной совместимости. */
 	riskCountRanges: V2UncertaintyRiskCountRange[];
+	/** Свёртка коэффициентов рисков: сумма (базовый вариант) или среднее. */
+	aggregation: V2UncertaintyAggregationMode;
+	/** Границы/дефолт/подсказка поля «Поправка, %». */
+	adjustment: V2UncertaintyAdjustmentSettings;
 	/** Строки = серьёзность (низ→выс), столбцы = вероятность (низ→выс). */
 	matrix: string[][];
 	risks: V2UncertaintyRiskCatalogItem[];
@@ -107,15 +138,17 @@ export type V2OverallUncertaintyCalcBreakdown = {
 	costLabel: string;
 	baseSeverityIdx: number;
 	baseSeverityLabel: string;
+	/** Введённая пользователем поправка (%), null = не задана (берётся дефолт). */
 	manualAdjPct: number | null;
-	manualOverridesRisks: boolean;
 	enabledRiskCount: number;
 	riskContributions: V2OverallUncertaintyRiskContribution[];
-	riskAvgCoef: number;
-	riskCountCoef: number;
-	autoAdj: number;
-	effectiveAdj: number;
-	/** Итоговый коэффициент = 1 + поправка. */
+	/** Режим свёртки, применённый к рискам. */
+	aggregation: V2UncertaintyAggregationMode;
+	/** Агрегат по рискам: сумма или среднее коэффициентов. */
+	riskAggregate: number;
+	/** Доля поправки = поправка% / 100. */
+	adjustmentShare: number;
+	/** Итоговый коэффициент = 1 + агрегат + поправка/100. */
 	coefficient: number;
 	/** Построчный предпросмотр формулы. */
 	formulaLines: string[];
@@ -126,11 +159,20 @@ function newId(prefix: string): string {
 }
 
 const DEFAULT_GROUP_IDS = {
+	notApplicable: "grp_not_applicable",
 	low: "grp_low",
 	medium: "grp_medium",
 	high: "grp_high",
 	veryHigh: "grp_very_high",
 } as const;
+
+export const V2_UNCERTAINTY_GROUP_DEFAULT_COLORS: Record<string, string> = {
+	[DEFAULT_GROUP_IDS.veryHigh]: "#d95757",
+	[DEFAULT_GROUP_IDS.high]: "#ef8a3c",
+	[DEFAULT_GROUP_IDS.medium]: "#e3ba33",
+	[DEFAULT_GROUP_IDS.low]: "#57a662",
+	[DEFAULT_GROUP_IDS.notApplicable]: "#9aa4b2",
+};
 
 /**
  * Матрица методики СА (как в v1 generalUncertaintyCoefficient):
@@ -157,61 +199,104 @@ function buildSaMethodologyMatrix(ids: {
 	];
 }
 
-/** Дефолтная матрица при произвольном размере шкал (после add/remove). */
+/** Группа-«ноль» для столбца «Не применимо»: coef 0, иначе минимальный coef. */
+function pickZeroGroupId(groups: readonly V2UncertaintyRiskGroup[]): string {
+	const zero = groups.find((g) => g.coef === 0);
+	if (zero) return zero.id;
+	const sorted = [...groups].sort((a, b) => a.coef - b.coef);
+	return sorted[0]?.id ?? "";
+}
+
+/**
+ * Дефолтная матрица при произвольном размере шкал (после add/remove).
+ * Столбцы «Не применимо» всегда получают группу с коэффициентом 0.
+ */
 function buildDefaultMatrix(
 	severityCount: number,
-	probabilityCount: number,
-	groupIds: string[],
+	probabilityLevels: readonly V2UncertaintyProbabilityLevel[],
+	groups: readonly V2UncertaintyRiskGroup[],
 ): string[][] {
-	const fallback = groupIds[0] ?? DEFAULT_GROUP_IDS.low;
+	const zeroId = pickZeroGroupId(groups);
+	const ranked = [...groups]
+		.filter((g) => g.coef > 0)
+		.sort((a, b) => a.coef - b.coef);
+	const fallback = ranked[0]?.id ?? groups[0]?.id ?? "";
 	const byRank = [
-		groupIds.find((id) => id === DEFAULT_GROUP_IDS.low) ??
-			groupIds[0] ??
-			fallback,
-		groupIds.find((id) => id === DEFAULT_GROUP_IDS.medium) ??
-			groupIds[1] ??
-			groupIds[0] ??
-			fallback,
-		groupIds.find((id) => id === DEFAULT_GROUP_IDS.high) ??
-			groupIds[2] ??
-			groupIds[1] ??
-			fallback,
-		groupIds.find((id) => id === DEFAULT_GROUP_IDS.veryHigh) ??
-			groupIds[3] ??
-			groupIds[groupIds.length - 1] ??
-			fallback,
+		ranked[0]?.id ?? fallback,
+		ranked[1]?.id ?? ranked[0]?.id ?? fallback,
+		ranked[2]?.id ?? ranked[ranked.length - 1]?.id ?? fallback,
+		ranked[3]?.id ?? ranked[ranked.length - 1]?.id ?? fallback,
 	];
 
-	if (severityCount === 5 && probabilityCount === 5) {
-		return buildSaMethodologyMatrix({
-			low: byRank[0]!,
-			medium: byRank[1]!,
-			high: byRank[2]!,
-			veryHigh: byRank[3]!,
-		});
-	}
+	const naFlags = probabilityLevels.map((p) =>
+		isUncertaintyNotApplicableLabel(p.label),
+	);
+	const effectiveCols = naFlags.filter((na) => !na).length;
 
-	const pick = (sev: number, prob: number): string => {
+	const saRows =
+		severityCount === 5 && effectiveCols === 5
+			? buildSaMethodologyMatrix({
+					low: byRank[0]!,
+					medium: byRank[1]!,
+					high: byRank[2]!,
+					veryHigh: byRank[3]!,
+				})
+			: null;
+
+	const pick = (sev: number, effProb: number): string => {
+		if (saRows) return saRows[sev]?.[effProb] ?? fallback;
 		const score =
-			severityCount <= 1 || probabilityCount <= 1
+			severityCount <= 1 || effectiveCols <= 1
 				? 0
-				: sev / (severityCount - 1) + prob / (probabilityCount - 1);
+				: sev / (severityCount - 1) + effProb / (effectiveCols - 1);
 		if (score < 0.5) return byRank[0]!;
 		if (score < 1.0) return byRank[1]!;
 		if (score < 1.5) return byRank[2]!;
 		return byRank[3]!;
 	};
-	return Array.from({ length: severityCount }, (_, sev) =>
-		Array.from({ length: probabilityCount }, (_, prob) => pick(sev, prob)),
-	);
+
+	return Array.from({ length: severityCount }, (_, sev) => {
+		let effProb = 0;
+		return probabilityLevels.map((_, probIdx) => {
+			if (naFlags[probIdx]) return zeroId;
+			return pick(sev, effProb++);
+		});
+	});
 }
 
 export function createDefaultOverallUncertaintyConfig(): V2OverallUncertaintyConfig {
 	const groups: V2UncertaintyRiskGroup[] = [
-		{ id: DEFAULT_GROUP_IDS.veryHigh, name: "Очень высокий", coef: 0.1 },
-		{ id: DEFAULT_GROUP_IDS.high, name: "Высокий", coef: 0.07 },
-		{ id: DEFAULT_GROUP_IDS.medium, name: "Средний", coef: 0.05 },
-		{ id: DEFAULT_GROUP_IDS.low, name: "Низкий", coef: 0.03 },
+		{
+			id: DEFAULT_GROUP_IDS.veryHigh,
+			name: "Очень высокий",
+			coef: 0.1,
+			color: V2_UNCERTAINTY_GROUP_DEFAULT_COLORS[DEFAULT_GROUP_IDS.veryHigh],
+		},
+		{
+			id: DEFAULT_GROUP_IDS.high,
+			name: "Высокий",
+			coef: 0.07,
+			color: V2_UNCERTAINTY_GROUP_DEFAULT_COLORS[DEFAULT_GROUP_IDS.high],
+		},
+		{
+			id: DEFAULT_GROUP_IDS.medium,
+			name: "Средний",
+			coef: 0.05,
+			color: V2_UNCERTAINTY_GROUP_DEFAULT_COLORS[DEFAULT_GROUP_IDS.medium],
+		},
+		{
+			id: DEFAULT_GROUP_IDS.low,
+			name: "Низкий",
+			coef: 0.03,
+			color: V2_UNCERTAINTY_GROUP_DEFAULT_COLORS[DEFAULT_GROUP_IDS.low],
+		},
+		{
+			id: DEFAULT_GROUP_IDS.notApplicable,
+			name: "Не применимо",
+			coef: 0,
+			color:
+				V2_UNCERTAINTY_GROUP_DEFAULT_COLORS[DEFAULT_GROUP_IDS.notApplicable],
+		},
 	];
 
 	const severityLevels: V2UncertaintySeverityLevel[] =
@@ -222,32 +307,24 @@ export function createDefaultOverallUncertaintyConfig(): V2OverallUncertaintyCon
 			goalsLabel: INFLUENCE_VALUES[i] ?? timelineLabel,
 		}));
 
-	const probabilityLevels: V2UncertaintyProbabilityLevel[] =
-		PROBABILITY_VALUES.map((label, i) => ({
+	// Уровень 0 — «Не применимо»: риск отмечен, но в расчёт вносит ноль.
+	const probabilityLevels: V2UncertaintyProbabilityLevel[] = [
+		{ id: "prob_0", label: "Не применимо" },
+		...PROBABILITY_VALUES.map((label, i) => ({
 			id: `prob_${i + 1}`,
 			label,
-		}));
+		})),
+	];
 
 	const base: V2OverallUncertaintyConfig = {
 		version: 2,
 		severityLevels,
 		probabilityLevels,
 		groups,
-		riskCountRanges: [
-			{ minCount: 1, maxCount: 1, coef: 1 },
-			{ minCount: 2, maxCount: 3, coef: 1.1 },
-			{ minCount: 4, maxCount: null, coef: 1.25 },
-		],
-		matrix: buildDefaultMatrix(
-			severityLevels.length,
-			probabilityLevels.length,
-			[
-				DEFAULT_GROUP_IDS.low,
-				DEFAULT_GROUP_IDS.medium,
-				DEFAULT_GROUP_IDS.high,
-				DEFAULT_GROUP_IDS.veryHigh,
-			],
-		),
+		riskCountRanges: [],
+		aggregation: "sum",
+		adjustment: { ...V2_UNCERTAINTY_ADJUSTMENT_DEFAULTS },
+		matrix: buildDefaultMatrix(severityLevels.length, probabilityLevels, groups),
 		risks: V2_UNCERTAINTY_RISK_GROUP_ORDER.map((key) => ({
 			id: key,
 			name: V2_UNCERTAINTY_RISK_GROUP_LABELS[key] ?? key,
@@ -299,7 +376,7 @@ export function normalizeOverallUncertaintyCalculatorState(
 	const adjRaw = calculator.adjPct;
 	const adjNum = adjRaw == null ? Number.NaN : Number(adjRaw);
 	const adjPct = Number.isFinite(adjNum)
-		? Math.min(30, Math.max(0, adjNum))
+		? clampUncertaintyAdjustmentPct(adjNum, config.adjustment)
 		: null;
 
 	return {
@@ -350,6 +427,20 @@ function round2(n: number): number {
 	return Math.round(n * 100) / 100;
 }
 
+/** Обрезает поправку (%) до границ, заданных конфигуратором. */
+export function clampUncertaintyAdjustmentPct(
+	pct: number,
+	settings: V2UncertaintyAdjustmentSettings,
+): number {
+	const min = Number.isFinite(settings.minPct) ? settings.minPct : 0;
+	const max = Number.isFinite(settings.maxPct) ? settings.maxPct : 30;
+	return Math.min(max, Math.max(min, pct));
+}
+
+function formatCoef(n: number): string {
+	return String(round4(n)).replace(".", ",");
+}
+
 export function resolveUncertaintyRiskCountCoef(
 	count: number,
 	ranges: readonly V2UncertaintyRiskCountRange[],
@@ -384,13 +475,13 @@ function lookupMatrixGroupId(
 }
 
 /**
- * Предпросмотр коэффициента п.3 по методике настройщика:
- * - выкл. → 1;
- * - база = max(индекс Сроков, индекс Стоимости);
- * - риск: severity = max(база, влияние на Цели) → матрица → коэфф. группы;
- * - автопоправка = avg(коэфф.) × множитель за количество;
- * - ручная поправка 0–30% полностью перекрывает авто;
- * - итог = 1 + поправка.
+ * Коэффициент общей неопределённости по методике конфигуратора:
+ * 1. база = худший из двух — Сроки и Стоимость (max индексов);
+ * 2. уровень риска = худший из трёх — база и «влияние на Цели» (max);
+ * 3. уровень × вероятность → ячейка матрицы → группа → коэффициент
+ *    (вероятность «Не применимо» всегда даёт 0);
+ * 4. агрегат = сумма (базовый вариант) или среднее коэффициентов;
+ * 5. итог = 1 + агрегат + поправка/100 (поправка добавляется, не перекрывает).
  */
 export function calculateOverallUncertaintyPreview(
 	config: V2OverallUncertaintyConfig,
@@ -406,13 +497,11 @@ export function calculateOverallUncertaintyPreview(
 			baseSeverityIdx: 0,
 			baseSeverityLabel: "Не применимо",
 			manualAdjPct: null,
-			manualOverridesRisks: false,
 			enabledRiskCount: 0,
 			riskContributions: [],
-			riskAvgCoef: 0,
-			riskCountCoef: 1,
-			autoAdj: 0,
-			effectiveAdj: 0,
+			aggregation: config.aggregation,
+			riskAggregate: 0,
+			adjustmentShare: 0,
 			coefficient: 1,
 			formulaLines: ["Раздел выключен («Не применимо») → коэффициент 1"],
 		};
@@ -447,6 +536,7 @@ export function calculateOverallUncertaintyPreview(
 				`уровень ${severityIdx + 1}`;
 			const probLabel =
 				config.probabilityLevels[probIdx]?.label ?? `вер. ${probIdx + 1}`;
+			const probNotApplicable = isUncertaintyNotApplicableLabel(probLabel);
 			const groupId = lookupMatrixGroupId(config, severityIdx, probIdx);
 			const group = groupById(config, groupId);
 			return {
@@ -457,59 +547,63 @@ export function calculateOverallUncertaintyPreview(
 				probIdx,
 				probLabel,
 				groupId,
-				groupName: group?.name ?? groupId,
-				coef: group?.coef ?? 0,
+				groupName: probNotApplicable
+					? "Не применимо"
+					: (group?.name ?? groupId),
+				// «Не применимо» всегда вносит ноль, независимо от матрицы.
+				coef: probNotApplicable ? 0 : (group?.coef ?? 0),
 			};
 		},
 	);
 
 	for (const c of riskContributions) {
 		formulaLines.push(
-			`Риск «${c.name}»: max(база, влияние) → «${c.severityLabel}» × вер. «${c.probLabel}» → группа «${c.groupName}» = ${c.coef}`,
+			`Риск «${c.name}»: max(база, влияние) → «${c.severityLabel}» × вер. «${c.probLabel}» → «${c.groupName}» = ${formatCoef(c.coef)}`,
 		);
 	}
 
-	const riskAvgCoef =
-		riskContributions.length > 0
-			? round4(
-					riskContributions.reduce((sum, c) => sum + c.coef, 0) /
-						riskContributions.length,
-				)
-			: 0;
-	const riskCountCoef = resolveUncertaintyRiskCountCoef(
-		enabled.length,
-		config.riskCountRanges,
+	const riskSum = round4(
+		riskContributions.reduce((sum, c) => sum + c.coef, 0),
 	);
-	const autoAdj = round4(riskAvgCoef * riskCountCoef);
+	const riskAggregate =
+		config.aggregation === "avg" && riskContributions.length > 0
+			? round4(riskSum / riskContributions.length)
+			: riskSum;
 
 	if (riskContributions.length > 0) {
+		const parts = riskContributions.map((c) => formatCoef(c.coef)).join(" + ");
 		formulaLines.push(
-			`Среднее по рискам = ${riskAvgCoef} × множитель за количество (${enabled.length} шт. → ×${riskCountCoef}) = ${autoAdj}`,
+			config.aggregation === "avg"
+				? `Среднее по ${riskContributions.length} рискам = (${parts}) ÷ ${riskContributions.length} = ${formatCoef(riskAggregate)}`
+				: `Сумма по ${riskContributions.length} рискам = ${parts} = ${formatCoef(riskAggregate)}`,
 		);
 	} else {
-		formulaLines.push("Отмеченных рисков нет → автопоправка 0");
+		formulaLines.push("Отмеченных рисков нет → агрегат по рискам 0");
 	}
 
 	const manualRaw = preview.adjPct;
 	const manualAdjPct =
 		manualRaw == null || !Number.isFinite(manualRaw)
 			? null
-			: Math.min(30, Math.max(0, manualRaw));
-	const manualOverridesRisks = manualAdjPct != null;
-	const effectiveAdj = manualOverridesRisks
-		? round4(manualAdjPct! / 100)
-		: autoAdj;
-
-	if (manualOverridesRisks) {
-		formulaLines.push(
-			`Ручная поправка ${manualAdjPct}% перекрывает авторасчёт → поправка ${effectiveAdj}`,
+			: clampUncertaintyAdjustmentPct(manualRaw, config.adjustment);
+	const effectivePct =
+		manualAdjPct ??
+		clampUncertaintyAdjustmentPct(
+			Number.isFinite(config.adjustment.defaultPct)
+				? config.adjustment.defaultPct
+				: 0,
+			config.adjustment,
 		);
-	} else {
-		formulaLines.push(`Эффективная поправка = ${effectiveAdj}`);
-	}
+	const adjustmentShare = round4(effectivePct / 100);
 
-	const coefficient = round2(1 + effectiveAdj);
-	formulaLines.push(`Итоговый коэффициент = 1 + ${effectiveAdj} = ${coefficient}`);
+	formulaLines.push(
+		`Поправка = ${String(effectivePct).replace(".", ",")}% → ${formatCoef(adjustmentShare)}`,
+	);
+
+	const coefficient = round2(1 + riskAggregate + adjustmentShare);
+	formulaLines.push(
+		`Общая неопределённость = 1 + ${formatCoef(riskAggregate)} + ${formatCoef(adjustmentShare)} = ${String(coefficient).replace(".", ",")}`,
+	);
 
 	return {
 		applicable: true,
@@ -518,13 +612,11 @@ export function calculateOverallUncertaintyPreview(
 		baseSeverityIdx,
 		baseSeverityLabel,
 		manualAdjPct,
-		manualOverridesRisks,
 		enabledRiskCount: enabled.length,
 		riskContributions,
-		riskAvgCoef,
-		riskCountCoef,
-		autoAdj,
-		effectiveAdj,
+		aggregation: config.aggregation,
+		riskAggregate,
+		adjustmentShare,
 		coefficient,
 		formulaLines,
 	};
@@ -547,11 +639,9 @@ export function resizeUncertaintyMatrix(
 				return existing;
 			}
 			return (
-				buildDefaultMatrix(
-					rows,
-					cols,
-					config.groups.map((g) => g.id),
-				)[sev]?.[prob] ?? fallback
+				buildDefaultMatrix(rows, config.probabilityLevels, config.groups)[
+					sev
+				]?.[prob] ?? fallback
 			);
 		}),
 	);
@@ -609,13 +699,39 @@ function asGroups(value: unknown): V2UncertaintyRiskGroup[] | null {
 		const name = String(item.name ?? "").trim();
 		const coef = Number(item.coef);
 		if (!name || !Number.isFinite(coef)) continue;
+		const id = String(item.id ?? "").trim() || newId("grp");
+		const color = String(item.color ?? "").trim();
 		out.push({
-			id: String(item.id ?? "").trim() || newId("grp"),
+			id,
 			name,
 			coef,
+			color: color || V2_UNCERTAINTY_GROUP_DEFAULT_COLORS[id],
 		});
 	}
 	return out.length > 0 ? out : null;
+}
+
+function asAggregation(value: unknown): V2UncertaintyAggregationMode {
+	return value === "avg" ? "avg" : "sum";
+}
+
+function asAdjustmentSettings(value: unknown): V2UncertaintyAdjustmentSettings {
+	const defaults = { ...V2_UNCERTAINTY_ADJUSTMENT_DEFAULTS };
+	if (!isPlainRecord(value)) return defaults;
+	const minPct = Number(value.minPct);
+	const maxPct = Number(value.maxPct);
+	const defaultPct = Number(value.defaultPct);
+	const hint = typeof value.hint === "string" ? value.hint : defaults.hint;
+	const min = Number.isFinite(minPct) ? Math.max(0, minPct) : defaults.minPct;
+	const max = Number.isFinite(maxPct) ? Math.max(min, maxPct) : defaults.maxPct;
+	return {
+		minPct: min,
+		maxPct: max,
+		defaultPct: Number.isFinite(defaultPct)
+			? Math.min(max, Math.max(min, defaultPct))
+			: defaults.defaultPct,
+		hint,
+	};
 }
 
 function asCountRanges(value: unknown): V2UncertaintyRiskCountRange[] | null {
@@ -762,6 +878,8 @@ function migrateV1Config(src: Record<string, unknown>): V2OverallUncertaintyConf
 				? probabilityLevels
 				: defaults.probabilityLevels,
 		riskCountRanges: asCountRanges(src.riskCountRanges) ?? defaults.riskCountRanges,
+		aggregation: asAggregation(src.aggregation),
+		adjustment: asAdjustmentSettings(src.adjustment),
 		risks: risks.length > 0 ? risks : defaults.risks,
 	};
 	return resizeUncertaintyMatrix(base);
@@ -805,12 +923,7 @@ export function parseOverallUncertaintyConfigFromLogic(
 			severityLevels.length,
 			probabilityLevels.length,
 			fallbackGroupId,
-		) ??
-		buildDefaultMatrix(
-			severityLevels.length,
-			probabilityLevels.length,
-			groups.map((g) => g.id),
-		);
+		) ?? buildDefaultMatrix(severityLevels.length, probabilityLevels, groups);
 
 	return resizeUncertaintyMatrix({
 		version: 2,
@@ -819,6 +932,8 @@ export function parseOverallUncertaintyConfigFromLogic(
 		groups,
 		riskCountRanges:
 			asCountRanges(src.riskCountRanges) ?? defaults.riskCountRanges,
+		aggregation: asAggregation(src.aggregation),
+		adjustment: asAdjustmentSettings(src.adjustment),
 		matrix,
 		risks: asRisks(src.risks) ?? defaults.risks,
 		calculator: asCalculator(src.calculator) ?? undefined,

@@ -1,17 +1,17 @@
-import { createDefaultOverallUncertaintyConfig, parseOverallUncertaintyConfigFromLogic, } from "./v2-overall-uncertainty-config.util";
+import { clampUncertaintyAdjustmentPct, createDefaultOverallUncertaintyConfig, parseOverallUncertaintyConfigFromLogic, V2_UNCERTAINTY_ADJUSTMENT_DEFAULTS, } from "./v2-overall-uncertainty-config.util";
 function isPlainRecord(value) {
     return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 function readRecord(value) {
     return isPlainRecord(value) ? value : undefined;
 }
-function parseAdjPct(value) {
+function parseAdjPct(value, settings = V2_UNCERTAINTY_ADJUSTMENT_DEFAULTS) {
     if (value == null || value === "")
         return null;
     const parsed = Number(String(value).replace(",", ".").replace("%", "").trim());
     if (!Number.isFinite(parsed))
         return null;
-    return Math.min(30, Math.max(0, parsed));
+    return clampUncertaintyAdjustmentPct(parsed, settings);
 }
 function indexOfLabel(labels, value) {
     const trimmed = value.trim();
@@ -60,7 +60,7 @@ export function mapFormDataToOverallUncertaintyPreview(formData, config) {
     const costLabel = typeof uncertainty?.initiativeCost === "string"
         ? uncertainty.initiativeCost.trim()
         : "";
-    const adjPct = parseAdjPct(uncertainty?.uncertaintyAdjustment ?? uncertainty?.field_QCwwo5c5);
+    const adjPct = parseAdjPct(uncertainty?.uncertaintyAdjustment ?? uncertainty?.field_QCwwo5c5, config.adjustment);
     const timelineIdx = Math.max(0, indexOfLabel(config.severityLevels.map((level) => level.timelineLabel), timelineLabel));
     const costIdx = Math.max(0, indexOfLabel(config.severityLevels.map((level) => level.costLabel), costLabel));
     const goalsLabels = config.severityLevels.map((level) => level.goalsLabel);
@@ -186,7 +186,7 @@ export function resolveLegacyUncertaintyCoefficientFromRiskGroupNames(formData, 
     if (!entries.every((value) => isLegacyUncertaintyGroupName(value, config))) {
         return null;
     }
-    const adjPct = parseAdjPct(uncertainty?.uncertaintyAdjustment ?? uncertainty?.field_QCwwo5c5);
+    const adjPct = parseAdjPct(uncertainty?.uncertaintyAdjustment ?? uncertainty?.field_QCwwo5c5, config.adjustment);
     const groupByName = new Map(config.groups.map((group) => [group.name, group.coef]));
     const riskSum = entries.reduce((sum, name) => sum + (groupByName.get(name) ?? 0), 0);
     const coefficient = Math.round((1 + riskSum + (adjPct ?? 0) / 100) * 100) / 100;

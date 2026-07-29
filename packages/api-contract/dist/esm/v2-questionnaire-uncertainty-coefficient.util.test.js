@@ -35,7 +35,7 @@ describe("resolveV2QuestionnaireUncertaintyCoefficient", () => {
         expect(result.calculated).toBe(true);
         expect(result.coefficient).toBe(1.05);
     });
-    it("manual adjustment fully overrides auto for structured risks", () => {
+    it("manual adjustment is added on top of risk aggregate", () => {
         const config = createDefaultOverallUncertaintyConfig();
         expect(resolveV2QuestionnaireUncertaintyCoefficient({
             uncertaintyCalculation: {
@@ -49,7 +49,7 @@ describe("resolveV2QuestionnaireUncertaintyCoefficient", () => {
                     },
                 },
             },
-        }, { config })).toEqual({ calculated: true, coefficient: 1.1 });
+        }, { config })).toEqual({ calculated: true, coefficient: 1.2 });
     });
     it("treats adjustment-only input as calculated", () => {
         expect(resolveV2QuestionnaireUncertaintyCoefficient({

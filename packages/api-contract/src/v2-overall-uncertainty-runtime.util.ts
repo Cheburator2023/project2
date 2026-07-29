@@ -1,8 +1,11 @@
 import {
+	clampUncertaintyAdjustmentPct,
 	createDefaultOverallUncertaintyConfig,
 	parseOverallUncertaintyConfigFromLogic,
+	V2_UNCERTAINTY_ADJUSTMENT_DEFAULTS,
 	type V2OverallUncertaintyConfig,
 	type V2OverallUncertaintyPreviewState,
+	type V2UncertaintyAdjustmentSettings,
 } from "./v2-overall-uncertainty-config.util";
 import type { V2LogicRuleDto } from "./v2-template.types";
 
@@ -14,11 +17,14 @@ function readRecord(value: unknown): Record<string, unknown> | undefined {
 	return isPlainRecord(value) ? value : undefined;
 }
 
-function parseAdjPct(value: unknown): number | null {
+function parseAdjPct(
+	value: unknown,
+	settings: V2UncertaintyAdjustmentSettings = V2_UNCERTAINTY_ADJUSTMENT_DEFAULTS,
+): number | null {
 	if (value == null || value === "") return null;
 	const parsed = Number(String(value).replace(",", ".").replace("%", "").trim());
 	if (!Number.isFinite(parsed)) return null;
-	return Math.min(30, Math.max(0, parsed));
+	return clampUncertaintyAdjustmentPct(parsed, settings);
 }
 
 function indexOfLabel(labels: readonly string[], value: string): number {
@@ -93,6 +99,7 @@ export function mapFormDataToOverallUncertaintyPreview(
 			: "";
 	const adjPct = parseAdjPct(
 		uncertainty?.uncertaintyAdjustment ?? uncertainty?.field_QCwwo5c5,
+		config.adjustment,
 	);
 
 	const timelineIdx = Math.max(
@@ -256,6 +263,7 @@ export function resolveLegacyUncertaintyCoefficientFromRiskGroupNames(
 
 	const adjPct = parseAdjPct(
 		uncertainty?.uncertaintyAdjustment ?? uncertainty?.field_QCwwo5c5,
+		config.adjustment,
 	);
 	const groupByName = new Map(config.groups.map((group) => [group.name, group.coef]));
 	const riskSum = entries.reduce(

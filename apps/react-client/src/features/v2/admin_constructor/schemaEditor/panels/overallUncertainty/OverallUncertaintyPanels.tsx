@@ -15,9 +15,11 @@ import type {
 	V2OverallUncertaintyCalcBreakdown,
 	V2OverallUncertaintyConfig,
 	V2OverallUncertaintyPreviewState,
-	V2UncertaintyRiskCountRange,
 } from "@smart-anketa/api-contract";
-import { resizeUncertaintyMatrix } from "@smart-anketa/api-contract";
+import {
+	clampUncertaintyAdjustmentPct,
+	resizeUncertaintyMatrix,
+} from "@smart-anketa/api-contract";
 
 /** Card по умолчанию ставит maxHeight:100% — ломает скролл колонок. */
 const PANEL_CARD_PROPS = {
@@ -243,10 +245,15 @@ export function OverallUncertaintyScalesPanel({ config, onChange }: ScalesProps)
 
 			<Card {...PANEL_CARD_PROPS}>
 				<Typography variant="subtitle2" fontWeight={700}>
-					Группы и поправочный коэффициент
+					Группы риска и коэффициенты
+				</Typography>
+				<Spacer space={4} />
+				<Typography variant="caption" color="text.secondary">
+					Цвет — метка группы в матрице и легенде.
 				</Typography>
 				<Spacer space={10} />
 				<Flex gap={6} style={{ padding: "0 2px 4px" }}>
+					<span style={{ width: 32 }} />
 					<Typography variant="caption" sx={{ ...COL_HDR_SX, flex: 1 }}>
 						Группа
 					</Typography>
@@ -254,7 +261,7 @@ export function OverallUncertaintyScalesPanel({ config, onChange }: ScalesProps)
 						variant="caption"
 						sx={{ ...COL_HDR_SX, width: 88, flexShrink: 0 }}
 					>
-						Поправка
+						Коэфф.
 					</Typography>
 					<span style={{ width: 28 }} />
 				</Flex>
@@ -265,6 +272,28 @@ export function OverallUncertaintyScalesPanel({ config, onChange }: ScalesProps)
 						alignItems="center"
 						style={{ marginBottom: 6 }}
 					>
+						<input
+							type="color"
+							title="Цвет группы"
+							aria-label={`Цвет группы «${group.name}»`}
+							value={group.color ?? "#9aa4b2"}
+							onChange={(e) => {
+								const groups = config.groups.map((g, i) =>
+									i === index ? { ...g, color: e.target.value } : g,
+								);
+								patch({ ...config, groups });
+							}}
+							style={{
+								width: 32,
+								height: 32,
+								padding: 2,
+								border: "1px solid #e0e3e9",
+								borderRadius: 6,
+								background: "#fff",
+								cursor: "pointer",
+								flexShrink: 0,
+							}}
+						/>
 						<TextField
 							size="small"
 							fullWidth
@@ -318,7 +347,12 @@ export function OverallUncertaintyScalesPanel({ config, onChange }: ScalesProps)
 							...config,
 							groups: [
 								...config.groups,
-								{ id: newLocalId("grp"), name: "Новая группа", coef: 0.05 },
+								{
+									id: newLocalId("grp"),
+									name: "Новая группа",
+									coef: 0.05,
+									color: "#9aa4b2",
+								},
 							],
 						})
 					}
@@ -329,111 +363,100 @@ export function OverallUncertaintyScalesPanel({ config, onChange }: ScalesProps)
 
 			<Card {...PANEL_CARD_PROPS}>
 				<Typography variant="subtitle2" fontWeight={700}>
-					Коэффициент за количество рисков
+					Формула агрегации и поправка
+				</Typography>
+				<Spacer space={4} />
+				<Typography variant="caption" color="text.secondary">
+					Итог = 1 + агрегат по рискам + поправка ÷ 100.
 				</Typography>
 				<Spacer space={10} />
-				<Flex gap={6} style={{ padding: "0 2px 4px" }}>
-					<Typography variant="caption" sx={{ ...COL_HDR_SX, flex: 1 }}>
-						от
-					</Typography>
-					<Typography variant="caption" sx={{ ...COL_HDR_SX, flex: 1 }}>
-						до
-					</Typography>
-					<Typography variant="caption" sx={{ ...COL_HDR_SX, flex: 1.2 }}>
-						× коэфф.
-					</Typography>
-					<span style={{ width: 28 }} />
-				</Flex>
-				{config.riskCountRanges.map((range, index) => (
-					<Flex
-						key={`range-${index}`}
-						gap={6}
-						alignItems="center"
-						style={{ marginBottom: 6 }}
-					>
-						<TextField
-							size="small"
-							value={range.minCount}
-							onChange={(e) => {
-								const n = parseNum(e.target.value);
-								if (n == null) return;
-								const riskCountRanges = config.riskCountRanges.map((r, i) =>
-									i === index
-										? { ...r, minCount: Math.max(0, Math.trunc(n)) }
-										: r,
-								);
-								patch({ ...config, riskCountRanges });
-							}}
-							sx={{ flex: 1, minWidth: 0 }}
-						/>
-						<TextField
-							size="small"
-							placeholder="∞"
-							value={range.maxCount == null ? "" : range.maxCount}
-							onChange={(e) => {
-								const raw = e.target.value.trim();
-								const riskCountRanges = config.riskCountRanges.map(
-									(r, i): V2UncertaintyRiskCountRange => {
-										if (i !== index) return r;
-										if (!raw) return { ...r, maxCount: null };
-										const n = parseNum(raw);
-										if (n == null) return r;
-										return { ...r, maxCount: Math.max(0, Math.trunc(n)) };
-									},
-								);
-								patch({ ...config, riskCountRanges });
-							}}
-							sx={{ flex: 1, minWidth: 0 }}
-						/>
-						<TextField
-							size="small"
-							value={String(range.coef).replace(".", ",")}
-							onChange={(e) => {
-								const n = parseNum(e.target.value);
-								if (n == null) return;
-								const riskCountRanges = config.riskCountRanges.map((r, i) =>
-									i === index ? { ...r, coef: n } : r,
-								);
-								patch({ ...config, riskCountRanges });
-							}}
-							sx={{ flex: 1.2, minWidth: 0 }}
-						/>
-						<IconButton
-							size="small"
-							title="Удалить диапазон"
-							aria-label="Удалить диапазон"
-							onClick={() =>
-								patch({
-									...config,
-									riskCountRanges: config.riskCountRanges.filter(
-										(_, i) => i !== index,
-									),
-								})
-							}
-							sx={{ color: "error.main", flexShrink: 0 }}
-						>
-							<CloseIcon fontSize="small" />
-						</IconButton>
-					</Flex>
-				))}
-				<Button
+				<TextField
+					select
 					size="small"
-					startIcon={<AddIcon />}
 					fullWidth
-					variant="outlined"
-					sx={ADD_BTN_SX}
-					onClick={() =>
+					label="Свёртка коэффициентов рисков"
+					value={config.aggregation}
+					onChange={(e) =>
 						patch({
 							...config,
-							riskCountRanges: [
-								...config.riskCountRanges,
-								{ minCount: 1, maxCount: 1, coef: 1 },
-							],
+							aggregation: e.target.value === "avg" ? "avg" : "sum",
 						})
 					}
 				>
-					Диапазон
-				</Button>
+					<MenuItem value="sum">Сумма (базовый вариант)</MenuItem>
+					<MenuItem value="avg">Среднее</MenuItem>
+				</TextField>
+				<Spacer space={12} />
+				<Typography variant="caption" sx={COL_HDR_SX}>
+					Поправка, % (поле 5 анкеты)
+				</Typography>
+				<Spacer space={6} />
+				<Flex gap={6}>
+					<TextField
+						size="small"
+						label="Мин."
+						value={String(config.adjustment.minPct).replace(".", ",")}
+						onChange={(e) => {
+							const n = parseNum(e.target.value);
+							if (n == null) return;
+							patch({
+								...config,
+								adjustment: { ...config.adjustment, minPct: Math.max(0, n) },
+							});
+						}}
+						sx={{ flex: 1, minWidth: 0 }}
+						inputProps={{ inputMode: "decimal" }}
+					/>
+					<TextField
+						size="small"
+						label="Макс."
+						value={String(config.adjustment.maxPct).replace(".", ",")}
+						onChange={(e) => {
+							const n = parseNum(e.target.value);
+							if (n == null) return;
+							patch({
+								...config,
+								adjustment: { ...config.adjustment, maxPct: Math.max(0, n) },
+							});
+						}}
+						sx={{ flex: 1, minWidth: 0 }}
+						inputProps={{ inputMode: "decimal" }}
+					/>
+					<TextField
+						size="small"
+						label="По умолч."
+						value={String(config.adjustment.defaultPct).replace(".", ",")}
+						onChange={(e) => {
+							const n = parseNum(e.target.value);
+							if (n == null) return;
+							patch({
+								...config,
+								adjustment: {
+									...config.adjustment,
+									defaultPct: clampUncertaintyAdjustmentPct(
+										n,
+										config.adjustment,
+									),
+								},
+							});
+						}}
+						sx={{ flex: 1, minWidth: 0 }}
+						inputProps={{ inputMode: "decimal" }}
+					/>
+				</Flex>
+				<Spacer space={8} />
+				<TextField
+					size="small"
+					fullWidth
+					label="Подсказка пользователю"
+					value={config.adjustment.hint}
+					onChange={(e) =>
+						patch({
+							...config,
+							adjustment: { ...config.adjustment, hint: e.target.value },
+						})
+					}
+				/>
 			</Card>
 
 			<Card {...PANEL_CARD_PROPS}>
@@ -509,66 +532,111 @@ export function OverallUncertaintyScalesPanel({ config, onChange }: ScalesProps)
 									>
 										{truncateLabel(sev.timelineLabel, 18)}
 									</td>
-									{config.probabilityLevels.map((prob, probIdx) => (
-										<td
-											key={`${sev.id}-${prob.id}`}
-											style={{
-												padding: 2,
-												borderBottom: "1px solid #f0f2f5",
-												minWidth: 108,
-												maxWidth: 120,
-											}}
-										>
-											<TextField
-												select
-												size="small"
-												fullWidth
-												value={
-													config.matrix[sevIdx]?.[probIdx] ??
-													config.groups[0]?.id ??
-													""
-												}
-												onChange={(e) => {
-													const matrix = config.matrix.map((row) => [...row]);
-													if (!matrix[sevIdx]) {
-														matrix[sevIdx] = config.probabilityLevels.map(
-															() => config.groups[0]?.id ?? "",
-														);
-													}
-													matrix[sevIdx]![probIdx] = e.target.value;
-													patch({ ...config, matrix });
-												}}
-												SelectProps={{
-													renderValue: (selected) => {
-														const g = config.groups.find(
-															(x) => x.id === selected,
-														);
-														return g?.name ?? "";
-													},
-												}}
-												sx={{
-													"& .MuiSelect-select": {
-														overflow: "hidden",
-														textOverflow: "ellipsis",
-														whiteSpace: "nowrap",
-														pr: "28px !important",
-														fontSize: 12,
-													},
+									{config.probabilityLevels.map((prob, probIdx) => {
+										const cellGroupId =
+											config.matrix[sevIdx]?.[probIdx] ??
+											config.groups[0]?.id ??
+											"";
+										const cellGroup = config.groups.find(
+											(x) => x.id === cellGroupId,
+										);
+										const cellColor = cellGroup?.color;
+										return (
+											<td
+												key={`${sev.id}-${prob.id}`}
+												style={{
+													padding: 2,
+													borderBottom: "1px solid #f0f2f5",
+													minWidth: 108,
+													maxWidth: 120,
 												}}
 											>
-												{config.groups.map((g) => (
-													<MenuItem key={g.id} value={g.id}>
-														{g.name} ({String(g.coef).replace(".", ",")})
-													</MenuItem>
-												))}
-											</TextField>
-										</td>
-									))}
+												<TextField
+													select
+													size="small"
+													fullWidth
+													value={cellGroupId}
+													onChange={(e) => {
+														const matrix = config.matrix.map((row) => [
+															...row,
+														]);
+														if (!matrix[sevIdx]) {
+															matrix[sevIdx] = config.probabilityLevels.map(
+																() => config.groups[0]?.id ?? "",
+															);
+														}
+														matrix[sevIdx]![probIdx] = e.target.value;
+														patch({ ...config, matrix });
+													}}
+													SelectProps={{
+														renderValue: (selected) => {
+															const g = config.groups.find(
+																(x) => x.id === selected,
+															);
+															return g
+																? `${String(g.coef).replace(".", ",")} · ${g.name}`
+																: "";
+														},
+													}}
+													sx={{
+														"& .MuiInputBase-root": {
+															backgroundColor: cellColor
+																? `${cellColor}2e`
+																: undefined,
+														},
+														"& .MuiSelect-select": {
+															overflow: "hidden",
+															textOverflow: "ellipsis",
+															whiteSpace: "nowrap",
+															pr: "28px !important",
+															fontSize: 12,
+														},
+													}}
+												>
+													{config.groups.map((g) => (
+														<MenuItem key={g.id} value={g.id}>
+															<Flex gap={6} alignItems="center">
+																<span
+																	style={{
+																		width: 10,
+																		height: 10,
+																		borderRadius: 3,
+																		background: g.color ?? "#d2d7e0",
+																		flexShrink: 0,
+																	}}
+																/>
+																{g.name} ({String(g.coef).replace(".", ",")})
+															</Flex>
+														</MenuItem>
+													))}
+												</TextField>
+											</td>
+										);
+									})}
 								</tr>
 							))}
 						</tbody>
 					</table>
 				</div>
+				<Spacer space={10} />
+				<Flex gap={12} wrap="wrap" alignItems="center">
+					{config.groups.map((g) => (
+						<Flex key={g.id} gap={6} alignItems="center">
+							<span
+								style={{
+									width: 10,
+									height: 10,
+									borderRadius: 3,
+									background: g.color ?? "#d2d7e0",
+									flexShrink: 0,
+								}}
+							/>
+							<Typography variant="caption" color="text.secondary">
+								{g.name} · {String(g.coef).replace(".", ",")}
+							</Typography>
+						</Flex>
+					))}
+				</Flex>
 			</Card>
 		</Flex>
 	);
@@ -702,9 +770,19 @@ export function OverallUncertaintyCalculatorPanel({
 							3.3 Поправка на общую неопределённость
 						</Typography>
 						<Typography variant="caption" color="text.secondary">
-							(опц., 0–30%, перекрывает автосчёт)
+							(опц., {String(config.adjustment.minPct).replace(".", ",")}–
+							{String(config.adjustment.maxPct).replace(".", ",")}%, добавляется
+							к агрегату по рискам)
 						</Typography>
 					</Flex>
+					{config.adjustment.hint ? (
+						<>
+							<Spacer space={4} />
+							<Typography variant="caption" color="text.secondary">
+								{config.adjustment.hint}
+							</Typography>
+						</>
+					) : null}
 					<Spacer space={10} />
 					<TextField
 						size="small"
@@ -713,14 +791,11 @@ export function OverallUncertaintyCalculatorPanel({
 								? ""
 								: String(preview.adjPct).replace(".", ",")
 						}
-						placeholder={String(
-							Math.round(breakdown.autoAdj * 10000) / 100,
-						).replace(".", ",")}
-						title={
-							preview.adjPct == null
-								? `Сейчас авто: ${String(Math.round(breakdown.autoAdj * 10000) / 100).replace(".", ",")}%. Введите число, чтобы перекрыть.`
-								: "Очистите поле, чтобы вернуться к авторасчёту"
-						}
+						placeholder={String(config.adjustment.defaultPct).replace(
+							".",
+							",",
+						)}
+						title={`Пусто = значение по умолчанию (${String(config.adjustment.defaultPct).replace(".", ",")}%)`}
 						onChange={(e) => {
 							const raw = e.target.value.trim();
 							if (!raw) {
@@ -729,7 +804,9 @@ export function OverallUncertaintyCalculatorPanel({
 							}
 							const n = parseNum(raw);
 							if (n == null) return;
-							patchPreview({ adjPct: Math.min(30, Math.max(0, n)) });
+							patchPreview({
+								adjPct: clampUncertaintyAdjustmentPct(n, config.adjustment),
+							});
 						}}
 						InputProps={{
 							endAdornment: (

@@ -20,7 +20,21 @@ export type V2UncertaintyRiskGroup = {
     id: string;
     name: string;
     coef: number;
+    /** Цвет-метка группы в матрице и легенде (hex). */
+    color?: string;
 };
+/** Свёртка коэффициентов отмеченных рисков: сумма (базовый вариант) или среднее. */
+export type V2UncertaintyAggregationMode = "sum" | "avg";
+/** Настройки поля «Поправка, %»: границы, дефолт и подсказка пользователю. */
+export type V2UncertaintyAdjustmentSettings = {
+    minPct: number;
+    maxPct: number;
+    defaultPct: number;
+    hint: string;
+};
+export declare const V2_UNCERTAINTY_ADJUSTMENT_DEFAULTS: V2UncertaintyAdjustmentSettings;
+/** Вероятность «Не применимо»: риск отмечен, но в расчёт вносит ноль. */
+export declare function isUncertaintyNotApplicableLabel(label: string): boolean;
 /** Диапазон «за количество отмеченных рисков». */
 export type V2UncertaintyRiskCountRange = {
     minCount: number;
@@ -41,7 +55,12 @@ export type V2OverallUncertaintyConfig = {
     severityLevels: V2UncertaintySeverityLevel[];
     probabilityLevels: V2UncertaintyProbabilityLevel[];
     groups: V2UncertaintyRiskGroup[];
+    /** @deprecated не участвует в методике; хранится для обратной совместимости. */
     riskCountRanges: V2UncertaintyRiskCountRange[];
+    /** Свёртка коэффициентов рисков: сумма (базовый вариант) или среднее. */
+    aggregation: V2UncertaintyAggregationMode;
+    /** Границы/дефолт/подсказка поля «Поправка, %». */
+    adjustment: V2UncertaintyAdjustmentSettings;
     /** Строки = серьёзность (низ→выс), столбцы = вероятность (низ→выс). */
     matrix: string[][];
     risks: V2UncertaintyRiskCatalogItem[];
@@ -84,19 +103,22 @@ export type V2OverallUncertaintyCalcBreakdown = {
     costLabel: string;
     baseSeverityIdx: number;
     baseSeverityLabel: string;
+    /** Введённая пользователем поправка (%), null = не задана (берётся дефолт). */
     manualAdjPct: number | null;
-    manualOverridesRisks: boolean;
     enabledRiskCount: number;
     riskContributions: V2OverallUncertaintyRiskContribution[];
-    riskAvgCoef: number;
-    riskCountCoef: number;
-    autoAdj: number;
-    effectiveAdj: number;
-    /** Итоговый коэффициент = 1 + поправка. */
+    /** Режим свёртки, применённый к рискам. */
+    aggregation: V2UncertaintyAggregationMode;
+    /** Агрегат по рискам: сумма или среднее коэффициентов. */
+    riskAggregate: number;
+    /** Доля поправки = поправка% / 100. */
+    adjustmentShare: number;
+    /** Итоговый коэффициент = 1 + агрегат + поправка/100. */
     coefficient: number;
     /** Построчный предпросмотр формулы. */
     formulaLines: string[];
 };
+export declare const V2_UNCERTAINTY_GROUP_DEFAULT_COLORS: Record<string, string>;
 export declare function createDefaultOverallUncertaintyConfig(): V2OverallUncertaintyConfig;
 export declare function createDefaultOverallUncertaintyPreviewState(config: V2OverallUncertaintyConfig): V2OverallUncertaintyPreviewState;
 /**
@@ -106,15 +128,17 @@ export declare function createDefaultOverallUncertaintyPreviewState(config: V2Ov
 export declare function normalizeOverallUncertaintyCalculatorState(config: V2OverallUncertaintyConfig, calculator?: V2OverallUncertaintyPreviewState | null): V2OverallUncertaintyPreviewState;
 /** Вшивает нормализованный calculator в конфиг (после parse / resize / правок шкал). */
 export declare function withNormalizedOverallUncertaintyCalculator(config: V2OverallUncertaintyConfig, calculator?: V2OverallUncertaintyPreviewState | null): V2OverallUncertaintyConfig;
+/** Обрезает поправку (%) до границ, заданных конфигуратором. */
+export declare function clampUncertaintyAdjustmentPct(pct: number, settings: V2UncertaintyAdjustmentSettings): number;
 export declare function resolveUncertaintyRiskCountCoef(count: number, ranges: readonly V2UncertaintyRiskCountRange[]): number;
 /**
- * Предпросмотр коэффициента п.3 по методике настройщика:
- * - выкл. → 1;
- * - база = max(индекс Сроков, индекс Стоимости);
- * - риск: severity = max(база, влияние на Цели) → матрица → коэфф. группы;
- * - автопоправка = avg(коэфф.) × множитель за количество;
- * - ручная поправка 0–30% полностью перекрывает авто;
- * - итог = 1 + поправка.
+ * Коэффициент общей неопределённости по методике конфигуратора:
+ * 1. база = худший из двух — Сроки и Стоимость (max индексов);
+ * 2. уровень риска = худший из трёх — база и «влияние на Цели» (max);
+ * 3. уровень × вероятность → ячейка матрицы → группа → коэффициент
+ *    (вероятность «Не применимо» всегда даёт 0);
+ * 4. агрегат = сумма (базовый вариант) или среднее коэффициентов;
+ * 5. итог = 1 + агрегат + поправка/100 (поправка добавляется, не перекрывает).
  */
 export declare function calculateOverallUncertaintyPreview(config: V2OverallUncertaintyConfig, preview: V2OverallUncertaintyPreviewState): V2OverallUncertaintyCalcBreakdown;
 /** Подгоняет матрицу под размеры шкал при add/remove. */

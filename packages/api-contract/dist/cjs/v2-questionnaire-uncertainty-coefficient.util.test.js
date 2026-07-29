@@ -37,7 +37,7 @@ const calculation_constants_1 = require("./calculation.constants");
         (0, vitest_1.expect)(result.calculated).toBe(true);
         (0, vitest_1.expect)(result.coefficient).toBe(1.05);
     });
-    (0, vitest_1.it)("manual adjustment fully overrides auto for structured risks", () => {
+    (0, vitest_1.it)("manual adjustment is added on top of risk aggregate", () => {
         const config = (0, v2_overall_uncertainty_config_util_1.createDefaultOverallUncertaintyConfig)();
         (0, vitest_1.expect)((0, v2_questionnaire_uncertainty_coefficient_util_1.resolveV2QuestionnaireUncertaintyCoefficient)({
             uncertaintyCalculation: {
@@ -51,7 +51,7 @@ const calculation_constants_1 = require("./calculation.constants");
                     },
                 },
             },
-        }, { config })).toEqual({ calculated: true, coefficient: 1.1 });
+        }, { config })).toEqual({ calculated: true, coefficient: 1.2 });
     });
     (0, vitest_1.it)("treats adjustment-only input as calculated", () => {
         (0, vitest_1.expect)((0, v2_questionnaire_uncertainty_coefficient_util_1.resolveV2QuestionnaireUncertaintyCoefficient)({
