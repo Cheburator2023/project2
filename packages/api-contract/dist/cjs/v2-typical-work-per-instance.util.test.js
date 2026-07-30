@@ -217,6 +217,226 @@ const v2_work_arch_count_coeff_util_1 = require("./v2-work-arch-count-coeff.util
         });
         (0, vitest_1.expect)(matched.map((row) => row.sourceLabel)).toEqual(["m1"]);
     });
+    (0, vitest_1.it)("appearance gate: MVP+modelService matches without any models (fan-out empty)", () => {
+        const formData = {
+            generalInfo: {
+                modelService: [
+                    {
+                        field_dEVFQVQn: "мс1",
+                        field_o_HRj6VO: true,
+                        workType: "Внедрение",
+                    },
+                ],
+            },
+            detailInfo: { modelsList: [] },
+        };
+        const source = formData.generalInfo.modelService[0];
+        const triggerInput = {
+            mode: "simple",
+            rules: [
+                {
+                    paramCode: "field_o_HRj6VO",
+                    paramName: "Необходимость пилота (MVP)",
+                    operator: "=",
+                    valueCode: "true",
+                    valueLabel: "Да",
+                },
+            ],
+            triggerArchCount: {
+                kind: "modelService",
+                steps: [{ count: 1, coefficient: 1 }],
+                combinator: "and",
+            },
+        };
+        (0, vitest_1.expect)((0, v2_typical_work_per_instance_util_1.listArchComponentInstances)(formData, "Модель")).toHaveLength(0);
+        (0, vitest_1.expect)((0, v2_typical_work_per_instance_util_1.matchTypicalWorkAppearanceTriggers)({
+            triggerInput,
+            archComponentType: "Модель",
+            source,
+            formData,
+        })).toBe(true);
+    });
+    (0, vitest_1.it)("sourceSystem fan-out: readyPromReports=Нет on any model keeps work visible", () => {
+        const formData = {
+            generalInfo: { modelService: [{ workType: "Разработка" }] },
+            detailInfo: {
+                modelsList: [
+                    { "field_atxiq-UM": "m-no", readyPromReports: false },
+                    { "field_atxiq-UM": "m-yes", readyPromReports: true },
+                ],
+                sourceSystems: [{ name: "src1", type: "Внутренний" }],
+            },
+        };
+        const source = formData.detailInfo.sourceSystems[0];
+        const triggerInput = {
+            mode: "simple",
+            rules: [
+                {
+                    paramCode: "readyPromReports",
+                    paramName: "Наличие готовых промышленных витрин",
+                    operator: "=",
+                    valueCode: "false",
+                    valueLabel: "Нет",
+                },
+            ],
+            triggerArchCount: {
+                kind: "sourceSystem",
+                steps: [{ count: 1, coefficient: 1 }],
+                combinator: "and",
+            },
+        };
+        (0, vitest_1.expect)((0, v2_typical_work_per_instance_util_1.matchTypicalWorkAppearanceTriggers)({
+            triggerInput,
+            archComponentType: "Система-источник",
+            source,
+            formData,
+        })).toBe(true);
+        (0, vitest_1.expect)((0, v2_typical_work_per_instance_util_1.matchTypicalWorkAppearanceTriggers)({
+            triggerInput,
+            archComponentType: "Система-источник",
+            source,
+            formData: {
+                ...formData,
+                detailInfo: {
+                    ...formData.detailInfo,
+                    modelsList: [
+                        { "field_atxiq-UM": "m-yes", readyPromReports: true },
+                    ],
+                },
+            },
+        })).toBe(false);
+    });
+    (0, vitest_1.it)("model fan-out keeps modelService workType when model workType is empty", () => {
+        const formData = {
+            generalInfo: {
+                modelService: [{ workType: "Разработка", field_dEVFQVQn: "мс1" }],
+            },
+            detailInfo: {
+                modelsList: [
+                    {
+                        "field_atxiq-UM": "only-automl",
+                        autoML: true,
+                        workType: "",
+                    },
+                ],
+            },
+        };
+        const source = formData.generalInfo.modelService[0];
+        const triggerInput = {
+            mode: "simple",
+            rules: [
+                {
+                    paramCode: "autoML",
+                    paramName: "Необходимость AutoML",
+                    operator: "=",
+                    valueCode: "true",
+                    valueLabel: "Да",
+                },
+                {
+                    paramCode: "workType",
+                    paramName: "Тип работ модельного сервиса",
+                    operator: "in",
+                    valueCode: null,
+                    valueLabel: null,
+                    values: [
+                        { code: "Разработка", label: "Разработка" },
+                        {
+                            code: "Разработка и внедрение",
+                            label: "Разработка и внедрение",
+                        },
+                    ],
+                },
+            ],
+            triggerArchCount: {
+                kind: "modelService",
+                steps: [{ count: 1, coefficient: 1 }],
+                combinator: "and",
+            },
+        };
+        const instance = (0, v2_typical_work_per_instance_util_1.listArchComponentInstances)(formData, "Модель")[0];
+        const merged = (0, v2_typical_work_per_instance_util_1.mergeArchInstanceTriggerSource)("model", source, instance.row);
+        (0, vitest_1.expect)(merged.workType).toBe("Разработка");
+        (0, vitest_1.expect)(merged.autoML).toBe(true);
+        (0, vitest_1.expect)((0, v2_typical_work_per_instance_util_1.matchTypicalWorkAppearanceTriggers)({
+            triggerInput,
+            archComponentType: "Модель",
+            source,
+            formData,
+        })).toBe(true);
+    });
+    (0, vitest_1.it)("model fan-out: one AutoML=false does not hide work if another model has AutoML=true", () => {
+        const formData = {
+            generalInfo: {
+                modelService: [{ workType: "Разработка", field_dEVFQVQn: "мс1" }],
+            },
+            detailInfo: {
+                modelsList: [
+                    {
+                        "field_atxiq-UM": "with-automl",
+                        autoML: true,
+                        workType: "",
+                    },
+                    {
+                        "field_atxiq-UM": "without-automl",
+                        autoML: false,
+                        workType: "",
+                    },
+                ],
+            },
+        };
+        // Имитация «грязного» source: flatten последней модели протащил autoML=false.
+        const dirtySource = {
+            ...formData.generalInfo.modelService[0],
+            autoML: false,
+        };
+        const triggerInput = {
+            mode: "simple",
+            rules: [
+                {
+                    paramCode: "autoML",
+                    paramName: "Необходимость AutoML",
+                    operator: "=",
+                    valueCode: "true",
+                    valueLabel: "Да",
+                },
+                {
+                    paramCode: "workType",
+                    paramName: "Тип работ модельного сервиса",
+                    operator: "in",
+                    valueCode: null,
+                    valueLabel: null,
+                    values: [
+                        { code: "Разработка", label: "Разработка" },
+                        {
+                            code: "Разработка и внедрение",
+                            label: "Разработка и внедрение",
+                        },
+                    ],
+                },
+            ],
+            triggerArchCount: {
+                kind: "modelService",
+                steps: [{ count: 1, coefficient: 1 }],
+                combinator: "and",
+            },
+        };
+        (0, vitest_1.expect)((0, v2_typical_work_per_instance_util_1.mergeArchInstanceTriggerSource)("model", dirtySource, {
+            autoML: true,
+            workType: "",
+        }).autoML).toBe(true);
+        (0, vitest_1.expect)((0, v2_typical_work_per_instance_util_1.matchTypicalWorkAppearanceTriggers)({
+            triggerInput,
+            archComponentType: "Модель",
+            source: dirtySource,
+            formData,
+        })).toBe(true);
+        const matched = (0, v2_typical_work_per_instance_util_1.listArchComponentInstances)(formData, "Модель").filter((instance) => (0, v2_typical_work_per_instance_util_1.archInstanceMatchesWorkTrigger)({
+            triggerInput,
+            source: (0, v2_typical_work_per_instance_util_1.mergeArchInstanceTriggerSource)("model", dirtySource, instance.row),
+            formData: (0, v2_typical_work_per_instance_util_1.formDataWithSingleArchInstance)(formData, "model", instance),
+        }));
+        (0, vitest_1.expect)(matched.map((row) => row.sourceLabel)).toEqual(["with-automl"]);
+    });
     (0, vitest_1.it)("appearance gate: work appears when any model matches AutoML (not only if all do)", () => {
         const formData = {
             generalInfo: {
@@ -276,9 +496,9 @@ const v2_work_arch_count_coeff_util_1 = require("./v2-work-arch-count-coeff.util
                 ],
             },
         };
-        // Flatten last-write would see autoML=false from the last model —
-        // form-level match must not be the gate for fan-out works.
-        (0, vitest_1.expect)((0, v2_trigger_formula_util_1.matchTypicalWorkTriggers)(triggerInput, source, formData)).toBe(false);
+        // Flatten last-write видел бы autoML=false у последней модели.
+        // overlayCrossComponentTriggerLookup собирает все значения → any-match.
+        (0, vitest_1.expect)((0, v2_trigger_formula_util_1.matchTypicalWorkTriggers)(triggerInput, source, formData)).toBe(true);
         (0, vitest_1.expect)((0, v2_typical_work_per_instance_util_1.matchTypicalWorkAppearanceTriggers)({
             triggerInput,
             archComponentType: "Модель",
@@ -287,7 +507,7 @@ const v2_work_arch_count_coeff_util_1 = require("./v2-work-arch-count-coeff.util
         })).toBe(true);
         const matched = (0, v2_typical_work_per_instance_util_1.listArchComponentInstances)(formData, "Модель").filter((instance) => (0, v2_typical_work_per_instance_util_1.archInstanceMatchesWorkTrigger)({
             triggerInput,
-            source: { ...source, ...instance.row },
+            source: (0, v2_typical_work_per_instance_util_1.mergeArchInstanceTriggerSource)("model", source, instance.row),
             formData: (0, v2_typical_work_per_instance_util_1.formDataWithSingleArchInstance)(formData, "model", instance),
         }));
         (0, vitest_1.expect)(matched.map((row) => row.sourceLabel)).toEqual(["ваыава"]);

@@ -10,6 +10,7 @@ import {
 	stripParamNameSourceKeys,
 } from "./v2-work-param-source-keys.util";
 import {
+	formatArchCountCoeffFactorLabel,
 	formatArchCountCoeffSteps,
 	formatWorkArchCountKindLabel,
 	parseArchCountCoeffSteps,
@@ -269,7 +270,7 @@ export function formatWorkFormulaReadableSymbolic(
 						? `→${token.workName.trim()}`
 						: "→работа";
 				case "arch_count_coeff":
-					return `Кол-${formatWorkArchCountKindLabel(token.archComponentKind)}`;
+					return formatArchCountCoeffFactorLabel(token.archComponentKind);
 				case "number":
 					return String(token.value);
 				case "operator":
@@ -378,7 +379,7 @@ export function formatWorkFormulaGeneralSummary(
 				case "work_ref":
 					return token.workName ? `→${token.workName}` : "→работа";
 				case "arch_count_coeff":
-					return `Кол-${formatWorkArchCountKindLabel(token.archComponentKind)}`;
+					return formatArchCountCoeffFactorLabel(token.archComponentKind);
 				case "number":
 					return String(token.value);
 				case "operator":
@@ -1195,7 +1196,7 @@ export function evaluateWorkFormula(
 			);
 			values.push(coeff);
 			labels.push(
-				`Кол-${formatWorkArchCountKindLabel(token.archComponentKind)}=${coeff}`,
+				`${formatArchCountCoeffFactorLabel(token.archComponentKind)}=${coeff}`,
 			);
 			expectOperand = false;
 			continue;

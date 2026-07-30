@@ -61,6 +61,15 @@ export declare function formatEmptyArchInstanceBreakdown(archComponentType: stri
  */
 export declare function formatNoTriggerMatchingArchInstanceBreakdown(archComponentType: string | null | undefined): string;
 /**
+ * Контекст триггера для экземпляра fan-out.
+ *
+ * Для «Модель»:
+ * - пустые/дефолтные поля строки (workType: "") не затирают модельный сервис;
+ * - осмысленные поля модели (autoML true/false, algorithmType, …) перекрывают
+ *   контекст — иначе autoML=false с flatten/другой модели «убивает» AutoML-работы.
+ */
+export declare function mergeArchInstanceTriggerSource(kind: V2WorkFormulaArchCountKind | null | undefined, baseSource: Record<string, unknown>, instanceRow: Record<string, unknown>): Record<string, unknown>;
+/**
  * Per-instance: включать экземпляр в сумму только если на нём сработал
  * триггер появления работы (параметры строки + arch_count на срезе formData).
  */

@@ -7,6 +7,7 @@ import {
 	formatPerInstanceBreakdownExpanded,
 	listArchComponentInstances,
 	matchTypicalWorkAppearanceTriggers,
+	mergeArchInstanceTriggerSource,
 	readPerInstanceArchCountOverride,
 	resolveArchComponentKindFromType,
 	resolveArchInstanceNameFieldKeys,
@@ -293,6 +294,265 @@ describe("v2-typical-work-per-instance", () => {
 		expect(matched.map((row) => row.sourceLabel)).toEqual(["m1"]);
 	});
 
+	it("appearance gate: MVP+modelService matches without any models (fan-out empty)", () => {
+		const formData = {
+			generalInfo: {
+				modelService: [
+					{
+						field_dEVFQVQn: "мс1",
+						field_o_HRj6VO: true,
+						workType: "Внедрение",
+					},
+				],
+			},
+			detailInfo: { modelsList: [] },
+		};
+		const source = formData.generalInfo.modelService[0]!;
+		const triggerInput = {
+			mode: "simple" as const,
+			rules: [
+				{
+					paramCode: "field_o_HRj6VO",
+					paramName: "Необходимость пилота (MVP)",
+					operator: "=" as const,
+					valueCode: "true",
+					valueLabel: "Да",
+				},
+			],
+			triggerArchCount: {
+				kind: "modelService" as const,
+				steps: [{ count: 1, coefficient: 1 }],
+				combinator: "and" as const,
+			},
+		};
+
+		expect(listArchComponentInstances(formData, "Модель")).toHaveLength(0);
+		expect(
+			matchTypicalWorkAppearanceTriggers({
+				triggerInput,
+				archComponentType: "Модель",
+				source,
+				formData,
+			}),
+		).toBe(true);
+	});
+
+	it("sourceSystem fan-out: readyPromReports=Нет on any model keeps work visible", () => {
+		const formData = {
+			generalInfo: { modelService: [{ workType: "Разработка" }] },
+			detailInfo: {
+				modelsList: [
+					{ "field_atxiq-UM": "m-no", readyPromReports: false },
+					{ "field_atxiq-UM": "m-yes", readyPromReports: true },
+				],
+				sourceSystems: [{ name: "src1", type: "Внутренний" }],
+			},
+		};
+		const source = formData.detailInfo.sourceSystems[0]!;
+		const triggerInput = {
+			mode: "simple" as const,
+			rules: [
+				{
+					paramCode: "readyPromReports",
+					paramName: "Наличие готовых промышленных витрин",
+					operator: "=" as const,
+					valueCode: "false",
+					valueLabel: "Нет",
+				},
+			],
+			triggerArchCount: {
+				kind: "sourceSystem" as const,
+				steps: [{ count: 1, coefficient: 1 }],
+				combinator: "and" as const,
+			},
+		};
+
+		expect(
+			matchTypicalWorkAppearanceTriggers({
+				triggerInput,
+				archComponentType: "Система-источник",
+				source,
+				formData,
+			}),
+		).toBe(true);
+
+		expect(
+			matchTypicalWorkAppearanceTriggers({
+				triggerInput,
+				archComponentType: "Система-источник",
+				source,
+				formData: {
+					...formData,
+					detailInfo: {
+						...formData.detailInfo,
+						modelsList: [
+							{ "field_atxiq-UM": "m-yes", readyPromReports: true },
+						],
+					},
+				},
+			}),
+		).toBe(false);
+	});
+
+	it("model fan-out keeps modelService workType when model workType is empty", () => {
+		const formData = {
+			generalInfo: {
+				modelService: [{ workType: "Разработка", field_dEVFQVQn: "мс1" }],
+			},
+			detailInfo: {
+				modelsList: [
+					{
+						"field_atxiq-UM": "only-automl",
+						autoML: true,
+						workType: "",
+					},
+				],
+			},
+		};
+		const source = formData.generalInfo.modelService[0]!;
+		const triggerInput = {
+			mode: "simple" as const,
+			rules: [
+				{
+					paramCode: "autoML",
+					paramName: "Необходимость AutoML",
+					operator: "=" as const,
+					valueCode: "true",
+					valueLabel: "Да",
+				},
+				{
+					paramCode: "workType",
+					paramName: "Тип работ модельного сервиса",
+					operator: "in" as const,
+					valueCode: null,
+					valueLabel: null,
+					values: [
+						{ code: "Разработка", label: "Разработка" },
+						{
+							code: "Разработка и внедрение",
+							label: "Разработка и внедрение",
+						},
+					],
+				},
+			],
+			triggerArchCount: {
+				kind: "modelService" as const,
+				steps: [{ count: 1, coefficient: 1 }],
+				combinator: "and" as const,
+			},
+		};
+
+		const instance = listArchComponentInstances(formData, "Модель")[0]!;
+		const merged = mergeArchInstanceTriggerSource(
+			"model",
+			source,
+			instance.row,
+		);
+		expect(merged.workType).toBe("Разработка");
+		expect(merged.autoML).toBe(true);
+
+		expect(
+			matchTypicalWorkAppearanceTriggers({
+				triggerInput,
+				archComponentType: "Модель",
+				source,
+				formData,
+			}),
+		).toBe(true);
+	});
+
+	it("model fan-out: one AutoML=false does not hide work if another model has AutoML=true", () => {
+		const formData = {
+			generalInfo: {
+				modelService: [{ workType: "Разработка", field_dEVFQVQn: "мс1" }],
+			},
+			detailInfo: {
+				modelsList: [
+					{
+						"field_atxiq-UM": "with-automl",
+						autoML: true,
+						workType: "",
+					},
+					{
+						"field_atxiq-UM": "without-automl",
+						autoML: false,
+						workType: "",
+					},
+				],
+			},
+		};
+		// Имитация «грязного» source: flatten последней модели протащил autoML=false.
+		const dirtySource = {
+			...formData.generalInfo.modelService[0]!,
+			autoML: false,
+		};
+		const triggerInput = {
+			mode: "simple" as const,
+			rules: [
+				{
+					paramCode: "autoML",
+					paramName: "Необходимость AutoML",
+					operator: "=" as const,
+					valueCode: "true",
+					valueLabel: "Да",
+				},
+				{
+					paramCode: "workType",
+					paramName: "Тип работ модельного сервиса",
+					operator: "in" as const,
+					valueCode: null,
+					valueLabel: null,
+					values: [
+						{ code: "Разработка", label: "Разработка" },
+						{
+							code: "Разработка и внедрение",
+							label: "Разработка и внедрение",
+						},
+					],
+				},
+			],
+			triggerArchCount: {
+				kind: "modelService" as const,
+				steps: [{ count: 1, coefficient: 1 }],
+				combinator: "and" as const,
+			},
+		};
+
+		expect(
+			mergeArchInstanceTriggerSource("model", dirtySource, {
+				autoML: true,
+				workType: "",
+			}).autoML,
+		).toBe(true);
+
+		expect(
+			matchTypicalWorkAppearanceTriggers({
+				triggerInput,
+				archComponentType: "Модель",
+				source: dirtySource,
+				formData,
+			}),
+		).toBe(true);
+
+		const matched = listArchComponentInstances(formData, "Модель").filter(
+			(instance) =>
+				archInstanceMatchesWorkTrigger({
+					triggerInput,
+					source: mergeArchInstanceTriggerSource(
+						"model",
+						dirtySource,
+						instance.row,
+					),
+					formData: formDataWithSingleArchInstance(
+						formData,
+						"model",
+						instance,
+					),
+				}),
+		);
+		expect(matched.map((row) => row.sourceLabel)).toEqual(["with-automl"]);
+	});
+
 	it("appearance gate: work appears when any model matches AutoML (not only if all do)", () => {
 		const formData = {
 			generalInfo: {
@@ -353,11 +613,11 @@ describe("v2-typical-work-per-instance", () => {
 			},
 		};
 
-		// Flatten last-write would see autoML=false from the last model —
-		// form-level match must not be the gate for fan-out works.
+		// Flatten last-write видел бы autoML=false у последней модели.
+		// overlayCrossComponentTriggerLookup собирает все значения → any-match.
 		expect(
 			matchTypicalWorkTriggers(triggerInput, source, formData),
-		).toBe(false);
+		).toBe(true);
 
 		expect(
 			matchTypicalWorkAppearanceTriggers({
@@ -372,7 +632,11 @@ describe("v2-typical-work-per-instance", () => {
 			(instance) =>
 				archInstanceMatchesWorkTrigger({
 					triggerInput,
-					source: { ...source, ...instance.row },
+					source: mergeArchInstanceTriggerSource(
+						"model",
+						source,
+						instance.row,
+					),
 					formData: formDataWithSingleArchInstance(
 						formData,
 						"model",

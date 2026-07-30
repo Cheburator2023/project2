@@ -488,6 +488,36 @@ export function formatNoTriggerMatchingArchInstanceBreakdown(
 }
 
 /**
+ * Контекст триггера для экземпляра fan-out.
+ *
+ * Для «Модель»:
+ * - пустые/дефолтные поля строки (workType: "") не затирают модельный сервис;
+ * - осмысленные поля модели (autoML true/false, algorithmType, …) перекрывают
+ *   контекст — иначе autoML=false с flatten/другой модели «убивает» AutoML-работы.
+ */
+export function mergeArchInstanceTriggerSource(
+	kind: V2WorkFormulaArchCountKind | null | undefined,
+	baseSource: Record<string, unknown>,
+	instanceRow: Record<string, unknown>,
+): Record<string, unknown> {
+	if (kind === "model") {
+		const merged: Record<string, unknown> = { ...baseSource };
+		for (const [key, value] of Object.entries(instanceRow)) {
+			if (!isMeaningfulArchInstanceOverlayValue(value)) continue;
+			merged[key] = value;
+		}
+		return merged;
+	}
+	return { ...baseSource, ...instanceRow };
+}
+
+function isMeaningfulArchInstanceOverlayValue(value: unknown): boolean {
+	if (value === undefined || value === null || value === "") return false;
+	if (Array.isArray(value) && value.length === 0) return false;
+	return true;
+}
+
+/**
  * Per-instance: включать экземпляр в сумму только если на нём сработал
  * триггер появления работы (параметры строки + arch_count на срезе formData).
  */
@@ -536,7 +566,11 @@ export function matchTypicalWorkAppearanceTriggers(params: {
 			return instances.some((instance) =>
 				archInstanceMatchesWorkTrigger({
 					triggerInput: params.triggerInput,
-					source: { ...params.source, ...instance.row },
+					source: mergeArchInstanceTriggerSource(
+						kind,
+						params.source,
+						instance.row,
+					),
 					formData: formDataWithSingleArchInstance(
 						params.formData,
 						kind,

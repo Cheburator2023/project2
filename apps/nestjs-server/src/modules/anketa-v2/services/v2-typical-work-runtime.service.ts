@@ -17,6 +17,7 @@ import {
 	formatTypicalWorkCoefficientDisplay,
 	isWorkCoefficientValueAvailable,
 	listArchComponentInstances,
+	mergeArchInstanceTriggerSource,
 	normalizeStoredFormula,
 	buildLaborCoefficientLookupSource,
 	parseStoredTypicalWorkCalculationLogic,
@@ -459,17 +460,6 @@ function evaluateWorkAcrossArchInstances(ctx: RuntimeWorkContext): {
 		{ schemaParams: ctx.schemaParams },
 	);
 
-	if (kind != null && kind !== "modelService" && instances.length === 0) {
-		return {
-			total: 0,
-			paramCoefficients: {},
-			instanceBreakdown: [],
-			expandedOverride: formatEmptyArchInstanceBreakdown(
-				ctx.work.archComponentType,
-			),
-		};
-	}
-
 	const assignment = ctx.assignmentByWorkId.get(ctx.work.id);
 	const triggerInput: TypicalWorkTriggerMatchInput = {
 		mode:
@@ -483,6 +473,54 @@ function evaluateWorkAcrossArchInstances(ctx: RuntimeWorkContext): {
 	};
 	const matchContext = { schemaParams: ctx.schemaParams };
 
+	/**
+	 * Fan-out kind (Модель / СИ / …) без экземпляров: не обнулять работу сразу.
+	 * Триггер может опираться только на модельный сервис (пример: MVP = Да И
+	 * modelService ≥ 1) — тогда считаем один раз по полному formData.
+	 */
+	if (kind != null && kind !== "modelService" && instances.length === 0) {
+		const appearsWithoutInstances =
+			!hasTypicalWorkTriggersConfigured(triggerInput) ||
+			matchTypicalWorkTriggers(
+				triggerInput,
+				ctx.source,
+				ctx.formData,
+				matchContext,
+			);
+		if (!appearsWithoutInstances) {
+			return {
+				total: 0,
+				paramCoefficients: {},
+				instanceBreakdown: [],
+				expandedOverride: formatEmptyArchInstanceBreakdown(
+					ctx.work.archComponentType,
+				),
+			};
+		}
+		const evaluated = evaluateWorkInstance(ctx, ctx.source, ctx.formData);
+		if (evaluated.total == null) {
+			return {
+				total: null,
+				paramCoefficients: {},
+				instanceBreakdown: [],
+				expandedOverride: "",
+			};
+		}
+		return {
+			total: evaluated.total,
+			paramCoefficients: evaluated.paramCoefficients,
+			instanceBreakdown: [
+				{
+					sourceLabel: "Контекст",
+					index: 0,
+					expanded: evaluated.breakdown.expanded,
+					total: evaluated.total,
+				},
+			],
+			expandedOverride: evaluated.breakdown.expanded,
+		};
+	}
+
 	const instanceBreakdown: TypicalWorkInstanceBreakdownLine[] = [];
 	let sum = 0;
 	let lastCoeffs: Record<string, number> = {};
@@ -493,7 +531,7 @@ function evaluateWorkAcrossArchInstances(ctx: RuntimeWorkContext): {
 		const useBaseSource = kind == null || kind === "modelService";
 		const source = useBaseSource
 			? ctx.source
-			: { ...ctx.source, ...instance.row };
+			: mergeArchInstanceTriggerSource(kind, ctx.source, instance.row);
 		const formData = formDataWithSingleArchInstance(
 			ctx.formData,
 			kind,

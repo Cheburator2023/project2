@@ -625,7 +625,7 @@ function collectFormulaFactorLines(params) {
             continue;
         }
         if (token.kind === "arch_count_coeff") {
-            const name = `Кол-${(0, v2_work_arch_count_coeff_util_1.formatWorkArchCountKindLabel)(token.archComponentKind)}`;
+            const name = (0, v2_work_arch_count_coeff_util_1.formatArchCountCoeffFactorLabel)(token.archComponentKind);
             const value = (0, v2_work_arch_count_coeff_util_1.resolveArchCountCoeffFromToken)(params.formData ?? {}, token.archComponentKind, token.steps);
             push(`arch:${token.archComponentKind}`, name, value);
         }

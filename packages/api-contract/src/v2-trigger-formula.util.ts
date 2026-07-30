@@ -16,6 +16,7 @@ import {
 	isAlwaysShownTriggerParam,
 	matchSingleTypicalWorkRuleForTriggerFormula,
 	normalizeTypicalWorkTriggerRuleForMatch,
+	overlayCrossComponentTriggerLookup,
 	typicalWorkRulesMatchSource,
 	V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_NAME,
 } from "./v2-works-catalog-match.util";
@@ -323,14 +324,18 @@ function evaluateTriggerParamToken(
 	token: Extract<V2TriggerFormulaToken, { kind: "param" }>,
 	ctx: TriggerFormulaEvalContext,
 ): boolean {
+	const rule = triggerParamTokenToRule(token);
 	const lookup = buildTypicalWorkTriggerLookupSource(
 		ctx.source,
 		ctx.formData,
 	);
-	return matchSingleTypicalWorkRuleForTriggerFormula(
-		triggerParamTokenToRule(token),
+	const enriched = overlayCrossComponentTriggerLookup(
 		lookup,
+		ctx.source,
+		ctx.formData,
+		[rule.paramCode],
 	);
+	return matchSingleTypicalWorkRuleForTriggerFormula(rule, enriched);
 }
 
 function evaluateTriggerOperand(
@@ -364,7 +369,10 @@ export function evaluateTriggerFormula(
 			const token = tokens[pos];
 			if (token?.kind !== "logic" || token.op !== "or") break;
 			pos++;
-			left = left || parseAnd();
+			// Всегда парсим правый операнд: short-circuit `||` сдвигает pos
+			// и ломает скобки (пример: (Да OR тип) при true слева → false).
+			const right = parseAnd();
+			left = left || right;
 		}
 		return left;
 	};
@@ -375,7 +383,8 @@ export function evaluateTriggerFormula(
 			const token = tokens[pos];
 			if (token?.kind !== "logic" || token.op !== "and") break;
 			pos++;
-			left = left && parsePrimary();
+			const right = parsePrimary();
+			left = left && right;
 		}
 		return left;
 	};

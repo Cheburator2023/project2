@@ -568,6 +568,47 @@ function mergeLaborLookupValue(existing: unknown, next: unknown): unknown {
 	return deduped.length === 1 ? deduped[0] : deduped;
 }
 
+function isOwnTriggerSourceValue(value: unknown): boolean {
+	return isPresentLaborLookupValue(value) || typeof value === "boolean";
+}
+
+/**
+ * Поля триггера с другого арх. компонента (напр. readyPromReports на моделях
+ * при fan-out по системам-источникам): flatten last-write даёт значение
+ * последней модели и ломает «хотя бы одна модель = Нет».
+ * Если поля нет на текущем source — подставляем все значения из formData
+ * (laborValueMatches по массиву = any).
+ */
+export function overlayCrossComponentTriggerLookup(
+	lookup: Record<string, unknown>,
+	source: Record<string, unknown>,
+	formData: Record<string, unknown> | undefined,
+	paramCodes: readonly string[],
+): Record<string, unknown> {
+	if (!formData || paramCodes.length === 0) return lookup;
+	const next: Record<string, unknown> = { ...lookup };
+	for (const code of paramCodes) {
+		const trimmed = code.trim();
+		if (!trimmed) continue;
+		if (isOwnTriggerSourceValue(source[trimmed])) continue;
+		const values = findFieldValuesWithSourceLabels(formData, trimmed).map(
+			(row) => row.value,
+		);
+		const meaningful = values.filter((value) => isOwnTriggerSourceValue(value));
+		if (meaningful.length === 0) continue;
+		const seen = new Set<string>();
+		const deduped: unknown[] = [];
+		for (const item of meaningful) {
+			const key = laborLookupItemKey(item);
+			if (seen.has(key)) continue;
+			seen.add(key);
+			deduped.push(item);
+		}
+		next[trimmed] = deduped.length === 1 ? deduped[0] : deduped;
+	}
+	return next;
+}
+
 /**
  * Разворачивает значение sourceContextPaths в плоский объект полей.
  * UI хранит dataProcess/dataMart/modelService как массив записей — берём первую.
@@ -1023,7 +1064,13 @@ export function typicalWorkRulesMatchSource(
 					paramCodes,
 				)
 			: lookupSource;
-	const paramMatch = matchTypicalWorkParamRules(resolvedRules, enrichedLookup);
+	const triggerLookup = overlayCrossComponentTriggerLookup(
+		enrichedLookup,
+		source,
+		formData,
+		paramCodes,
+	);
+	const paramMatch = matchTypicalWorkParamRules(resolvedRules, triggerLookup);
 	if (!hasArch) return paramMatch;
 
 	const combinator = triggerArchCount?.combinator ?? "and";

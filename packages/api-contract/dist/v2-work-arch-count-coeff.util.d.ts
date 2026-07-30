@@ -6,6 +6,7 @@ export declare const V2_WORK_ARCH_COUNT_LIMITS: Record<V2WorkFormulaArchCountKin
 export type { V2WorkArchCountCoeffStep, V2WorkFormulaArchCountKind };
 export { V2_WORK_FORMULA_ARCH_COUNT_KINDS } from "./v2-typical-work.types";
 export declare function formatWorkArchCountKindLabel(kind: V2WorkFormulaArchCountKind): string;
+export declare function formatArchCountCoeffFactorLabel(kind: V2WorkFormulaArchCountKind): string;
 export declare function parseWorkArchCountKindLabel(label: string): V2WorkFormulaArchCountKind | null;
 export declare function formatArchCountCoeffSteps(steps: readonly V2WorkArchCountCoeffStep[]): string;
 export declare function parseArchCountCoeffSteps(raw: string): V2WorkArchCountCoeffStep[] | null;

@@ -36,7 +36,7 @@ import {
 import {
 	resolveArchCountCoeffFromToken,
 	archCountTriggerMatches,
-	formatWorkArchCountKindLabel,
+	formatArchCountCoeffFactorLabel,
 	isTriggerArchCountConfigured,
 	type V2WorkArchCountCoeffStep,
 } from "./v2-work-arch-count-coeff.util";
@@ -893,7 +893,7 @@ function collectFormulaFactorLines(params: {
 			continue;
 		}
 		if (token.kind === "arch_count_coeff") {
-			const name = `Кол-${formatWorkArchCountKindLabel(token.archComponentKind)}`;
+			const name = formatArchCountCoeffFactorLabel(token.archComponentKind);
 			const value = resolveArchCountCoeffFromToken(
 				params.formData ?? {},
 				token.archComponentKind,
