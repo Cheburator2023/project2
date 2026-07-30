@@ -576,8 +576,10 @@ function isOwnTriggerSourceValue(value: unknown): boolean {
  * Поля триггера с другого арх. компонента (напр. readyPromReports на моделях
  * при fan-out по системам-источникам): flatten last-write даёт значение
  * последней модели и ломает «хотя бы одна модель = Нет».
- * Если поля нет на текущем source — подставляем все значения из formData
- * (laborValueMatches по массиву = any).
+ *
+ * Если в formData несколько разных ответов — всегда подставляем массив
+ * (laborValueMatches = any), даже когда source уже содержит last-write.
+ * Один ответ: не трогаем source, если поле на нём уже есть.
  */
 export function overlayCrossComponentTriggerLookup(
 	lookup: Record<string, unknown>,
@@ -590,7 +592,6 @@ export function overlayCrossComponentTriggerLookup(
 	for (const code of paramCodes) {
 		const trimmed = code.trim();
 		if (!trimmed) continue;
-		if (isOwnTriggerSourceValue(source[trimmed])) continue;
 		const values = findFieldValuesWithSourceLabels(formData, trimmed).map(
 			(row) => row.value,
 		);
@@ -604,7 +605,12 @@ export function overlayCrossComponentTriggerLookup(
 			seen.add(key);
 			deduped.push(item);
 		}
-		next[trimmed] = deduped.length === 1 ? deduped[0] : deduped;
+		if (deduped.length > 1) {
+			next[trimmed] = deduped;
+			continue;
+		}
+		if (isOwnTriggerSourceValue(source[trimmed])) continue;
+		next[trimmed] = deduped[0];
 	}
 	return next;
 }

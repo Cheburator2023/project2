@@ -304,6 +304,56 @@ describe("v2-typical-work-per-instance", () => {
             },
         })).toBe(false);
     });
+    it("02 Поиск данных: flatten last-write readyPromReports=Да не убивает работу при другой модели=Нет", () => {
+        const formData = {
+            generalInfo: { modelService: [{ workType: "Разработка" }] },
+            detailInfo: {
+                modelsList: [
+                    { "field_atxiq-UM": "вывы", readyPromReports: false },
+                    { "field_atxiq-UM": "ывввывы", readyPromReports: "Нет" },
+                    { "field_atxiq-UM": "вывыв", readyPromReports: true },
+                ],
+                sourceSystems: [{ name: "src1", type: "Внутренний" }],
+            },
+        };
+        // Как в runtime: source = flatten формы + строка СИ (last-write = Да).
+        const source = {
+            readyPromReports: true,
+            ...formData.detailInfo.sourceSystems[0],
+        };
+        const triggerInput = {
+            mode: "simple",
+            rules: [
+                {
+                    paramCode: "readyPromReports",
+                    paramName: "Наличие готовых промышленных витрин",
+                    operator: "=",
+                    valueCode: "false",
+                    valueLabel: "Нет",
+                },
+            ],
+            triggerArchCount: {
+                kind: "sourceSystem",
+                steps: [{ count: 1, coefficient: 1 }],
+                combinator: "and",
+            },
+        };
+        expect(matchTypicalWorkAppearanceTriggers({
+            triggerInput,
+            archComponentType: "Система-источник",
+            source,
+            formData,
+        })).toBe(true);
+        expect(archInstanceMatchesWorkTrigger({
+            triggerInput,
+            source: mergeArchInstanceTriggerSource("sourceSystem", source, formData.detailInfo.sourceSystems[0]),
+            formData: formDataWithSingleArchInstance(formData, "sourceSystem", {
+                sourceLabel: "src1",
+                row: formData.detailInfo.sourceSystems[0],
+                index: 0,
+            }),
+        })).toBe(true);
+    });
     it("model fan-out keeps modelService workType when model workType is empty", () => {
         const formData = {
             generalInfo: {

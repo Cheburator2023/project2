@@ -306,6 +306,56 @@ const v2_work_arch_count_coeff_util_1 = require("./v2-work-arch-count-coeff.util
             },
         })).toBe(false);
     });
+    (0, vitest_1.it)("02 Поиск данных: flatten last-write readyPromReports=Да не убивает работу при другой модели=Нет", () => {
+        const formData = {
+            generalInfo: { modelService: [{ workType: "Разработка" }] },
+            detailInfo: {
+                modelsList: [
+                    { "field_atxiq-UM": "вывы", readyPromReports: false },
+                    { "field_atxiq-UM": "ывввывы", readyPromReports: "Нет" },
+                    { "field_atxiq-UM": "вывыв", readyPromReports: true },
+                ],
+                sourceSystems: [{ name: "src1", type: "Внутренний" }],
+            },
+        };
+        // Как в runtime: source = flatten формы + строка СИ (last-write = Да).
+        const source = {
+            readyPromReports: true,
+            ...formData.detailInfo.sourceSystems[0],
+        };
+        const triggerInput = {
+            mode: "simple",
+            rules: [
+                {
+                    paramCode: "readyPromReports",
+                    paramName: "Наличие готовых промышленных витрин",
+                    operator: "=",
+                    valueCode: "false",
+                    valueLabel: "Нет",
+                },
+            ],
+            triggerArchCount: {
+                kind: "sourceSystem",
+                steps: [{ count: 1, coefficient: 1 }],
+                combinator: "and",
+            },
+        };
+        (0, vitest_1.expect)((0, v2_typical_work_per_instance_util_1.matchTypicalWorkAppearanceTriggers)({
+            triggerInput,
+            archComponentType: "Система-источник",
+            source,
+            formData,
+        })).toBe(true);
+        (0, vitest_1.expect)((0, v2_typical_work_per_instance_util_1.archInstanceMatchesWorkTrigger)({
+            triggerInput,
+            source: (0, v2_typical_work_per_instance_util_1.mergeArchInstanceTriggerSource)("sourceSystem", source, formData.detailInfo.sourceSystems[0]),
+            formData: (0, v2_typical_work_per_instance_util_1.formDataWithSingleArchInstance)(formData, "sourceSystem", {
+                sourceLabel: "src1",
+                row: formData.detailInfo.sourceSystems[0],
+                index: 0,
+            }),
+        })).toBe(true);
+    });
     (0, vitest_1.it)("model fan-out keeps modelService workType when model workType is empty", () => {
         const formData = {
             generalInfo: {
