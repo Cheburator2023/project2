@@ -6,7 +6,6 @@ import type {
 	V2JsonLogicValue,
 	V2LogicGraphDto,
 	V2LogicRuleDto,
-	V2LegacyStageEvaluationDto,
 	V2TaskTriggerItemDto,
 	V2TemplateVersionDto,
 } from "@smart-anketa/api-contract";
@@ -34,7 +33,6 @@ import {
 	flattenSourceContextValue,
 	resolveSourceTypicalWorksOutputPath,
 	resolveV2QuestionnaireUncertaintyCoefficient,
-	shouldSkipLegacyModelStreamStageSummary,
 	syncAtypicalWorkCoefficientsInFormData,
 	V2_MODEL_STREAM_EXECUTOR,
 	V2_MODEL_STREAM_SOURCE_ARRAY_PATH,
@@ -487,20 +485,19 @@ export class V2CalculationService {
 			};
 		});
 
-		// Legacy E2E — только если нет catalog модельного стрима в snapshot uiSchema.
+		// Legacy E2E + СФЕРА (baseScoreStream / scoreWithComplexityCoeff /
+		// deviationFromBaseline) + платформенные стримы. Не затирает
+		// total/typicalTotal/atypicalTotal — merge через spread prevSummary.
 		const sourceTypicalWorksPath = resolveSourceTypicalWorksOutputPath(
 			options?.jsonSchema,
 			options?.uiSchema,
 		);
-		let legacyStageEvaluation: V2LegacyStageEvaluationDto | null = null;
-		if (!shouldSkipLegacyModelStreamStageSummary(options?.uiSchema)) {
-			const legacy = applyLegacySummaryToFormData(liveData, {
-				sourceTypicalWorksPath,
-				uiSchema: options?.uiSchema,
-			});
-			liveData = legacy.formData;
-			legacyStageEvaluation = legacy.legacyStageEvaluation;
-		}
+		const legacy = applyLegacySummaryToFormData(liveData, {
+			sourceTypicalWorksPath,
+			uiSchema: options?.uiSchema,
+		});
+		liveData = legacy.formData;
+		const legacyStageEvaluation = legacy.legacyStageEvaluation;
 
 		const validationIssues = evaluateLogicValidationRules(rules, liveData);
 
