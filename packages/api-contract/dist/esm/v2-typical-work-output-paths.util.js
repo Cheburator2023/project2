@@ -1,5 +1,6 @@
-import { resolveV2AnketaArchComponent, resolveStreamExecutorForTypicalWorkOutputPath, } from "./v2-anketa-section-ui.util";
+import { resolveV2AnketaArchComponent, resolveStreamExecutorForTypicalWorkOutputPath, resolveTypicalWorkCatalogStreamLabel, } from "./v2-anketa-section-ui.util";
 import { typicalWorkAssignedToAnyExecutorStream } from "./v2-executor-streams.util";
+import { V2_MODEL_STREAM_EXECUTOR } from "./v2-model-stream-typical-works.constants";
 export const V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH = "streamDataSources.sourceTypicalTasks";
 /** Канонический вывод типовых работ «Контроль моделей». */
 export const V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH = "streamModelControl.field_G0AoYAl8";
@@ -86,6 +87,37 @@ export function collectTypicalWorkBlockBindings(uiSchema) {
         outputPath,
         boundWorkIds: readTypicalWorkBoundWorkIdsAtOutputPath(uiSchema, outputPath),
     }));
+}
+/**
+ * workId → подпись стрима каталога по boundWorkIds блоков typicalWork.
+ * Если работа привязана и к модельному, и к другому стриму — побеждает не-модельный
+ * (источники/ПиРМ и т.п.), чтобы ошибочно попавшие в массив модельного стрима
+ * строки в итоге уезжали в свой раздел.
+ */
+export function buildTypicalWorkIdToCatalogStreamLabelMap(uiSchema) {
+    const map = new Map();
+    for (const binding of collectTypicalWorkBlockBindings(uiSchema)) {
+        if (!binding.boundWorkIds?.length)
+            continue;
+        const label = resolveTypicalWorkCatalogStreamLabel(uiSchema, binding.outputPath);
+        if (!label)
+            continue;
+        for (const rawId of binding.boundWorkIds) {
+            const workId = rawId.trim();
+            if (!workId)
+                continue;
+            const prev = map.get(workId);
+            if (!prev) {
+                map.set(workId, label);
+                continue;
+            }
+            if (prev === V2_MODEL_STREAM_EXECUTOR &&
+                label !== V2_MODEL_STREAM_EXECUTOR) {
+                map.set(workId, label);
+            }
+        }
+    }
+    return map;
 }
 function patchBoundWorkIdsAtOutputPath(uiSchema, outputPath, boundWorkIds) {
     const segments = outputPath.split(".").filter(Boolean);

@@ -485,6 +485,68 @@ describe("v2-default-typical-works-logic.util", () => {
 		).toBe(V2_MODEL_STREAM_SOURCE_ARRAY_PATH);
 	});
 
+	it("upgradeTypicalWorksCatalogLogicRules overwrites stale worksCatalogStream on model path", () => {
+		const uiSchema = {
+			detailInfo: {
+				"ui:options": {
+					streamBlock: true,
+					streamExecutor: "Модельный стрим",
+				},
+				detailTypicalTasks: {
+					"ui:options": {
+						archComponent: "typicalWork",
+						streamExecutor: "Модельный стрим",
+					},
+				},
+			},
+		};
+		const staleLogic = {
+			rules: [
+				{
+					id: "typical-works-catalog-detailInfo-detailTypicalTasks",
+					kind: "task_trigger" as const,
+					targetPath: "/detailInfo/detailTypicalTasks",
+					condition: true,
+					dependencies: [],
+					payload: {
+						mode: "generated_rows",
+						worksCatalog: true,
+						worksCatalogStream: "fromSourceType",
+						outputArrayPath: "detailInfo.detailTypicalTasks",
+					},
+				},
+				{
+					id: "unified-typical-row-total:detailInfo_detailTypicalTasks",
+					kind: "row_computed" as const,
+					targetPath: "/detailInfo/detailTypicalTasks",
+					condition: true,
+					dependencies: [],
+					payload: {
+						arrayPath: "detailInfo.detailTypicalTasks",
+						fieldVar: "total",
+					},
+				},
+				{
+					id: "unified-typical-total",
+					kind: "computed" as const,
+					targetPath: "/summary/typicalTotal",
+					condition: true,
+					dependencies: [],
+					payload: {},
+				},
+			],
+		};
+		const upgraded = upgradeTypicalWorksCatalogLogicRules(staleLogic, {
+			uiSchema,
+		});
+		const catalogRule = upgraded.rules.find(
+			(rule) => rule.id === "typical-works-catalog-detailInfo-detailTypicalTasks",
+		);
+		expect(
+			(catalogRule?.payload as Record<string, unknown>).worksCatalogStream,
+		).toBe("Модельный стрим");
+	});
+
 	it("syncTypicalWorksCatalogLogicSnapshot writes template boundWorkIds into logic", () => {
 		const templateWorkId = "7147da4f-b4cd-445e-8ac3-838c4b106ca7";
 		const uiSchema = {

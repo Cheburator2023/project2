@@ -2,6 +2,40 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const vitest_1 = require("vitest");
 const v2_typical_work_output_paths_util_1 = require("./v2-typical-work-output-paths.util");
+const v2_model_stream_typical_works_constants_1 = require("./v2-model-stream-typical-works.constants");
+(0, vitest_1.describe)("buildTypicalWorkIdToCatalogStreamLabelMap", () => {
+    (0, vitest_1.it)("prefers non-model stream when work is bound to both model and sources", () => {
+        const sourceWorkId = "source-work-1";
+        const modelWorkId = "model-work-1";
+        const uiSchema = {
+            detailInfo: {
+                detailTypicalTasks: {
+                    "ui:options": {
+                        archComponent: "typicalWork",
+                        streamExecutor: v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_EXECUTOR,
+                        boundWorkIds: [modelWorkId, sourceWorkId],
+                    },
+                },
+            },
+            streamDataSources: {
+                "ui:options": {
+                    streamBlock: true,
+                    streamExecutor: "idsrc",
+                },
+                field_tw: {
+                    "ui:options": {
+                        archComponent: "typicalWork",
+                        streamExecutor: "Источники данных",
+                        boundWorkIds: [sourceWorkId],
+                    },
+                },
+            },
+        };
+        const map = (0, v2_typical_work_output_paths_util_1.buildTypicalWorkIdToCatalogStreamLabelMap)(uiSchema);
+        (0, vitest_1.expect)(map.get(sourceWorkId)).toBe("Источники данных");
+        (0, vitest_1.expect)(map.get(modelWorkId)).toBe(v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_EXECUTOR);
+    });
+});
 (0, vitest_1.describe)("backfillTypicalWorkBoundWorkIdsInUiSchema", () => {
     (0, vitest_1.it)("writes boundWorkIds per stream block from catalog", () => {
         const uiSchema = {

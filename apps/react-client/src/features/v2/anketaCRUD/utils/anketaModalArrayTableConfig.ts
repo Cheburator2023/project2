@@ -3,6 +3,7 @@ import type { AnketaCompactArrayTablePath } from "./anketaFormModalPaths";
 import { getArrayItemSchemaSliceForModal } from "./anketaSchemaAtPath";
 import { readAnketaFormContext } from "./anketaFormContext";
 import {
+	buildTypicalWorkIdToCatalogStreamLabelMap,
 	collectGeneratedTypicalWorkArrayPaths,
 	dedupeTypicalWorkRowsByWorkId,
 	listAllGeneratedTypicalWorkArrayPaths,
@@ -676,7 +677,7 @@ export function collectAppearedTypicalWorkRows(
 	);
 }
 
-/** Типовые работы, сгруппированные по пути вывода и стриму-исполнителю. */
+/** Типовые работы, сгруппированные по стриму-исполнителю (boundWorkIds > путь массива). */
 export function collectAppearedTypicalWorkGroups(
 	formData: Record<string, unknown> | null | undefined,
 	uiSchema?: Record<string, unknown>,
@@ -685,23 +686,25 @@ export function collectAppearedTypicalWorkGroups(
 	if (!formData && !liveFormData) return [];
 
 	const paths = resolveTypicalWorkCollectionPaths(uiSchema);
+	const workIdToStream = uiSchema
+		? buildTypicalWorkIdToCatalogStreamLabelMap(uiSchema)
+		: new Map<string, string>();
 	const globalWorkIdsSeen = new Set<string>();
-	const groups: AppearedTypicalWorkGroup[] = [];
+	const rowsByStream = new Map<
+		string,
+		{ path: string; streamExecutor: string | null; rows: Record<string, unknown>[] }
+	>();
 
 	for (const path of paths) {
-		const streamExecutor = resolveTypicalWorkCatalogStreamLabel(
-			uiSchema,
-			path,
-		);
+		const pathStream = resolveTypicalWorkCatalogStreamLabel(uiSchema, path);
 		const appeared = readTypicalWorkArrayAtPath(
 			formData,
 			liveFormData,
 			path,
 		).filter(isAppearedTypicalWorkRow);
 		const collapsed = dedupeTypicalWorkRowsByWorkId(appeared, {
-			groupBySourceName: streamExecutor === "Источники данных",
+			groupBySourceName: pathStream === "Источники данных",
 		});
-		const rows: Record<string, unknown>[] = [];
 		for (const item of collapsed) {
 			const workId = typeof item.workId === "string" ? item.workId.trim() : "";
 			if (workId) {
@@ -712,16 +715,36 @@ export function collectAppearedTypicalWorkGroups(
 				if (globalWorkIdsSeen.has(`fb:${key}`)) continue;
 				globalWorkIdsSeen.add(`fb:${key}`);
 			}
-			rows.push(item);
+			const streamExecutor =
+				(workId ? workIdToStream.get(workId) : undefined) ?? pathStream;
+			const groupKey = streamExecutor ?? path;
+			const existing = rowsByStream.get(groupKey);
+			if (existing) {
+				existing.rows.push(item);
+			} else {
+				rowsByStream.set(groupKey, {
+					path,
+					streamExecutor,
+					rows: [item],
+				});
+			}
 		}
-		if (rows.length === 0) continue;
+	}
+
+	const groups: AppearedTypicalWorkGroup[] = [];
+	for (const group of rowsByStream.values()) {
+		if (group.rows.length === 0) continue;
 		groups.push({
-			path,
-			streamExecutor,
+			path: group.path,
+			streamExecutor: group.streamExecutor,
 			rows:
-				streamExecutor === V2_MODEL_STREAM_EXECUTOR
-					? sortModelStreamTypicalWorkRows(rows)
-					: rows,
+				group.streamExecutor === V2_MODEL_STREAM_EXECUTOR
+					? sortModelStreamTypicalWorkRows(group.rows)
+					: group.streamExecutor === "Источники данных"
+						? dedupeTypicalWorkRowsByWorkId(group.rows, {
+								groupBySourceName: true,
+							})
+						: group.rows,
 		});
 	}
 

@@ -23,6 +23,13 @@ export declare function readTypicalWorkBoundWorkIdsAtOutputPath(uiSchema: unknow
 /** Все блоки typicalWork с путями вывода и привязками работ. */
 export declare function collectTypicalWorkBlockBindings(uiSchema: unknown): TypicalWorkBlockBinding[];
 /**
+ * workId → подпись стрима каталога по boundWorkIds блоков typicalWork.
+ * Если работа привязана и к модельному, и к другому стриму — побеждает не-модельный
+ * (источники/ПиРМ и т.п.), чтобы ошибочно попавшие в массив модельного стрима
+ * строки в итоге уезжали в свой раздел.
+ */
+export declare function buildTypicalWorkIdToCatalogStreamLabelMap(uiSchema: unknown): Map<string, string>;
+/**
  * Заменяет id работ в boundWorkIds после seed с переназначением uuid.
  */
 export declare function remapBoundWorkIdsInUiSchema(uiSchema: Record<string, unknown>, workIdMap: ReadonlyMap<string, string>): Record<string, unknown>;

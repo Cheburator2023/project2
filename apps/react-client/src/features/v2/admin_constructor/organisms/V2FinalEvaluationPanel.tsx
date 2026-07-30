@@ -412,8 +412,9 @@ export function V2FinalEvaluationPanel({
 				<Stack spacing={2}>
 					{uncertaintySummary != null ? (
 						<Metric
-							label="Общая неопределенность:"
+							label="Общая неопределенность (уже в формулах модельного стрима):"
 							value={uncertaintySummary}
+							title="Учитывается в типовых работах модельного стрима и в нетиповых. На итоговую строку сверху не домнажается."
 						/>
 					) : null}
 
@@ -575,13 +576,16 @@ function Metric({
 	label,
 	value,
 	valueColor,
+	title,
 }: {
 	label: string;
 	value: string;
 	valueColor?: string;
+	title?: string;
 }) {
 	return (
 		<Box
+			title={title}
 			sx={{
 				display: "flex",
 				alignItems: "baseline",

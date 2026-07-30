@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import {
 	adjustTypicalWorkTableColumns,
+	collectAppearedTypicalWorkGroups,
 	collectAppearedTypicalWorkRows,
 	collectTypicalWorkSourceNames,
 	filterTypicalWorkItems,
@@ -262,5 +263,52 @@ describe("typical work table helpers", () => {
 		);
 		expect(rows).toHaveLength(1);
 		expect(rows[0]?.workId).toBe(workId);
+	});
+
+	it("rebuckets source-bound works out of model stream path into Источники данных", () => {
+		const sourceWorkId = "61096f43-075f-4060-8ac4-eab56345480f";
+		const uiSchema = {
+			detailInfo: {
+				detailTypicalTasks: {
+					"ui:options": {
+						archComponent: "typicalWork",
+						streamExecutor: "Модельный стрим",
+						boundWorkIds: ["fbfa5b48-abae-442a-a7a7-6b7ccebe88f7"],
+					},
+				},
+			},
+			streamDataSources: {
+				"ui:options": {
+					streamBlock: true,
+					streamExecutor: "idsrc",
+				},
+				field_u7: {
+					"ui:options": {
+						archComponent: "typicalWork",
+						streamExecutor: "Источники данных",
+						boundWorkIds: [sourceWorkId],
+					},
+				},
+			},
+		};
+		const sourceRow = {
+			workId: sourceWorkId,
+			name: "Этап 210. Исследование и описание внутренних источников",
+			estimateHoursPerDay: 14,
+			coefficient: 3.5,
+			total: 49,
+			generatedByRuleId: "typical-works-catalog-detailInfo-detailTypicalTasks",
+		};
+		const groups = collectAppearedTypicalWorkGroups(
+			{
+				detailInfo: { detailTypicalTasks: [sourceRow] },
+				streamDataSources: { field_u7: [] },
+			},
+			uiSchema,
+		);
+		expect(groups).toHaveLength(1);
+		expect(groups[0]?.streamExecutor).toBe("Источники данных");
+		expect(groups[0]?.rows).toHaveLength(1);
+		expect(groups[0]?.rows[0]?.workId).toBe(sourceWorkId);
 	});
 });

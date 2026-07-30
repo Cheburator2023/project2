@@ -4,6 +4,7 @@ exports.LEGACY_GENERATED_TYPICAL_WORK_ARRAY_PATHS = exports.TYPICAL_WORK_BOUND_W
 exports.collectGeneratedTypicalWorkArrayPaths = collectGeneratedTypicalWorkArrayPaths;
 exports.readTypicalWorkBoundWorkIdsAtOutputPath = readTypicalWorkBoundWorkIdsAtOutputPath;
 exports.collectTypicalWorkBlockBindings = collectTypicalWorkBlockBindings;
+exports.buildTypicalWorkIdToCatalogStreamLabelMap = buildTypicalWorkIdToCatalogStreamLabelMap;
 exports.remapBoundWorkIdsInUiSchema = remapBoundWorkIdsInUiSchema;
 exports.backfillTypicalWorkBoundWorkIdsInUiSchema = backfillTypicalWorkBoundWorkIdsInUiSchema;
 exports.disableTypicalWorkCatalogBindingsInUiSchema = disableTypicalWorkCatalogBindingsInUiSchema;
@@ -13,6 +14,7 @@ exports.listAllGeneratedTypicalWorkArrayPaths = listAllGeneratedTypicalWorkArray
 exports.clearStaleGeneratedTypicalWorkPaths = clearStaleGeneratedTypicalWorkPaths;
 const v2_anketa_section_ui_util_1 = require("./v2-anketa-section-ui.util");
 const v2_executor_streams_util_1 = require("./v2-executor-streams.util");
+const v2_model_stream_typical_works_constants_1 = require("./v2-model-stream-typical-works.constants");
 exports.V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH = "streamDataSources.sourceTypicalTasks";
 /** Канонический вывод типовых работ «Контроль моделей». */
 exports.V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH = "streamModelControl.field_G0AoYAl8";
@@ -99,6 +101,37 @@ function collectTypicalWorkBlockBindings(uiSchema) {
         outputPath,
         boundWorkIds: readTypicalWorkBoundWorkIdsAtOutputPath(uiSchema, outputPath),
     }));
+}
+/**
+ * workId → подпись стрима каталога по boundWorkIds блоков typicalWork.
+ * Если работа привязана и к модельному, и к другому стриму — побеждает не-модельный
+ * (источники/ПиРМ и т.п.), чтобы ошибочно попавшие в массив модельного стрима
+ * строки в итоге уезжали в свой раздел.
+ */
+function buildTypicalWorkIdToCatalogStreamLabelMap(uiSchema) {
+    const map = new Map();
+    for (const binding of collectTypicalWorkBlockBindings(uiSchema)) {
+        if (!binding.boundWorkIds?.length)
+            continue;
+        const label = (0, v2_anketa_section_ui_util_1.resolveTypicalWorkCatalogStreamLabel)(uiSchema, binding.outputPath);
+        if (!label)
+            continue;
+        for (const rawId of binding.boundWorkIds) {
+            const workId = rawId.trim();
+            if (!workId)
+                continue;
+            const prev = map.get(workId);
+            if (!prev) {
+                map.set(workId, label);
+                continue;
+            }
+            if (prev === v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_EXECUTOR &&
+                label !== v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_EXECUTOR) {
+                map.set(workId, label);
+            }
+        }
+    }
+    return map;
 }
 function patchBoundWorkIdsAtOutputPath(uiSchema, outputPath, boundWorkIds) {
     const segments = outputPath.split(".").filter(Boolean);

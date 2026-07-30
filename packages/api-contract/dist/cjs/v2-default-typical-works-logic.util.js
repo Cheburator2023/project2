@@ -549,7 +549,9 @@ function mergeTypicalWorksCatalogRulePayload(existing, canonical) {
         }
         if (key === "sourceArrayPath" ||
             key === "sourceArchComponent" ||
-            key === "sourceBlockUid") {
+            key === "sourceBlockUid" ||
+            key === "worksCatalogStream" ||
+            key === "outputArrayPath") {
             if (cur !== next)
                 merged[key] = next;
             continue;
