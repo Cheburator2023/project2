@@ -18,6 +18,7 @@ import {
 } from "../utils/anketaArchObjectTableConfig";
 import {
 	archObjectListRowLabel,
+	canAppendArchObjectListItem,
 	readArchObjectListAtPath,
 } from "../utils/anketaArchObjectListPaths";
 
@@ -38,8 +39,11 @@ export function AnketaArchObjectPanel({
 		ctx.previewSchema,
 		ctx.previewUiSchema,
 	);
-	const items = readArchObjectListAtPath(ctx.formData ?? {}, pathKey);
+	const formData = ctx.formData ?? {};
+	const items = readArchObjectListAtPath(formData, pathKey);
 	const readOnly = isAnketaArchPathReadOnly(formContext, pathKey);
+	const showAddButton =
+		!readOnly && canAppendArchObjectListItem(formData, pathKey);
 
 	const addLabel = `Добавить ${sectionTitle.toLowerCase()}`;
 	const panelTestId = anketaMoleculeTestIdForPath(
@@ -129,7 +133,7 @@ export function AnketaArchObjectPanel({
 					Нет записей
 				</ListEmptyPlaceholder>
 			)}
-			{!readOnly ? (
+			{showAddButton ? (
 				<Box mt={2} data-test-id={`${panelTestId}--add-wrap`}>
 					<Button
 						variant="outlined"

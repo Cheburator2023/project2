@@ -29,10 +29,10 @@ function normalizeArchObjectLists(
 			current = (current as Record<string, unknown>)[part];
 		}
 		if (current == null) continue;
-		if (Array.isArray(current)) continue;
-		if (typeof current !== "object") continue;
-		const items = readArchObjectListAtPath(next, path);
-		next = writeArchObjectListAtPath(next, path, items);
+		if (Array.isArray(current) || typeof current === "object") {
+			const items = readArchObjectListAtPath(next, path);
+			next = writeArchObjectListAtPath(next, path, items);
+		}
 	}
 	return next;
 }

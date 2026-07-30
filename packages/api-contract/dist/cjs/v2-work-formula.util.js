@@ -225,7 +225,7 @@ function formatWorkFormulaReadableSymbolic(tokens) {
                     ? `→${token.workName.trim()}`
                     : "→работа";
             case "arch_count_coeff":
-                return `Кол-${(0, v2_work_arch_count_coeff_util_1.formatWorkArchCountKindLabel)(token.archComponentKind)}`;
+                return (0, v2_work_arch_count_coeff_util_1.formatArchCountCoeffFactorLabel)(token.archComponentKind);
             case "number":
                 return String(token.value);
             case "operator":
@@ -310,7 +310,7 @@ function formatWorkFormulaGeneralSummary(tokens, paramOrder) {
             case "work_ref":
                 return token.workName ? `→${token.workName}` : "→работа";
             case "arch_count_coeff":
-                return `Кол-${(0, v2_work_arch_count_coeff_util_1.formatWorkArchCountKindLabel)(token.archComponentKind)}`;
+                return (0, v2_work_arch_count_coeff_util_1.formatArchCountCoeffFactorLabel)(token.archComponentKind);
             case "number":
                 return String(token.value);
             case "operator":
@@ -993,7 +993,7 @@ function evaluateWorkFormula(formula, ctx) {
             const formData = ctx.formData ?? {};
             const coeff = (0, v2_work_arch_count_coeff_util_1.resolveArchCountCoeffFromToken)(formData, token.archComponentKind, token.steps);
             values.push(coeff);
-            labels.push(`Кол-${(0, v2_work_arch_count_coeff_util_1.formatWorkArchCountKindLabel)(token.archComponentKind)}=${coeff}`);
+            labels.push(`${(0, v2_work_arch_count_coeff_util_1.formatArchCountCoeffFactorLabel)(token.archComponentKind)}=${coeff}`);
             expectOperand = false;
             continue;
         }

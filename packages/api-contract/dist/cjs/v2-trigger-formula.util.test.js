@@ -96,4 +96,60 @@ const v2_trigger_formula_util_1 = require("./v2-trigger-formula.util");
         ], { source: { type: "b" } });
         (0, vitest_1.expect)(result).toBe(true);
     });
+    (0, vitest_1.it)("keeps paren OR true when left side already matches (no || short-circuit skip)", () => {
+        // A ≠ Не требуется И (пилот = Да ИЛИ тип ∈ {Разработка})
+        const tokens = [
+            {
+                kind: "param",
+                paramCode: "productionAdditionalReports",
+                paramName: "Продуктивизация",
+                operator: "!=",
+                valueCode: "не_требуется",
+                valueLabel: "Не требуется",
+            },
+            { kind: "logic", op: "and" },
+            { kind: "paren_open" },
+            {
+                kind: "param",
+                paramCode: "prePromEval",
+                paramName: "Необходимость поддержки проведения пилота",
+                operator: "=",
+                valueCode: "true",
+                valueLabel: "Да",
+            },
+            { kind: "logic", op: "or" },
+            {
+                kind: "param",
+                paramCode: "workType",
+                paramName: "Тип работ",
+                operator: "in",
+                values: [
+                    { code: "Разработка", label: "Разработка" },
+                    { code: "Внедрение", label: "Внедрение" },
+                ],
+            },
+            { kind: "paren_close" },
+        ];
+        (0, vitest_1.expect)((0, v2_trigger_formula_util_1.evaluateTriggerFormula)(tokens, {
+            source: {
+                productionAdditionalReports: "10",
+                prePromEval: true,
+                workType: "Разработка",
+            },
+        })).toBe(true);
+        (0, vitest_1.expect)((0, v2_trigger_formula_util_1.evaluateTriggerFormula)(tokens, {
+            source: {
+                productionAdditionalReports: "10",
+                prePromEval: true,
+                workType: "Сопровождение",
+            },
+        })).toBe(true);
+        (0, vitest_1.expect)((0, v2_trigger_formula_util_1.evaluateTriggerFormula)(tokens, {
+            source: {
+                productionAdditionalReports: "10",
+                prePromEval: false,
+                workType: "Разработка",
+            },
+        })).toBe(true);
+    });
 });

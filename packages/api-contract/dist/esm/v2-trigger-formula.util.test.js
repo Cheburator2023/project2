@@ -94,4 +94,60 @@ describe("evaluateTriggerFormula", () => {
         ], { source: { type: "b" } });
         expect(result).toBe(true);
     });
+    it("keeps paren OR true when left side already matches (no || short-circuit skip)", () => {
+        // A ≠ Не требуется И (пилот = Да ИЛИ тип ∈ {Разработка})
+        const tokens = [
+            {
+                kind: "param",
+                paramCode: "productionAdditionalReports",
+                paramName: "Продуктивизация",
+                operator: "!=",
+                valueCode: "не_требуется",
+                valueLabel: "Не требуется",
+            },
+            { kind: "logic", op: "and" },
+            { kind: "paren_open" },
+            {
+                kind: "param",
+                paramCode: "prePromEval",
+                paramName: "Необходимость поддержки проведения пилота",
+                operator: "=",
+                valueCode: "true",
+                valueLabel: "Да",
+            },
+            { kind: "logic", op: "or" },
+            {
+                kind: "param",
+                paramCode: "workType",
+                paramName: "Тип работ",
+                operator: "in",
+                values: [
+                    { code: "Разработка", label: "Разработка" },
+                    { code: "Внедрение", label: "Внедрение" },
+                ],
+            },
+            { kind: "paren_close" },
+        ];
+        expect(evaluateTriggerFormula(tokens, {
+            source: {
+                productionAdditionalReports: "10",
+                prePromEval: true,
+                workType: "Разработка",
+            },
+        })).toBe(true);
+        expect(evaluateTriggerFormula(tokens, {
+            source: {
+                productionAdditionalReports: "10",
+                prePromEval: true,
+                workType: "Сопровождение",
+            },
+        })).toBe(true);
+        expect(evaluateTriggerFormula(tokens, {
+            source: {
+                productionAdditionalReports: "10",
+                prePromEval: false,
+                workType: "Разработка",
+            },
+        })).toBe(true);
+    });
 });

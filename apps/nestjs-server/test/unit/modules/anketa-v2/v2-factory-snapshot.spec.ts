@@ -315,4 +315,31 @@ describe("v2 factory snapshot", () => {
 			}),
 		]);
 	});
+
+	it("модельный стрим 07: формула с prePromEval, без «Поддержка пилота»", () => {
+		const work = V2_FACTORY_TYPICAL_WORKS_SNAPSHOT.typicalWorks.find(
+			(row) =>
+				row.stream === "Модельный стрим" &&
+				row.stage === "07" &&
+				row.name === "Разработка витрины для применения модели",
+		);
+		expect(work?.triggerMode).toBe("formula");
+		expect(work?.triggerFormula?.text).toContain(
+			"Необходимость поддержки проведения пилота",
+		);
+		expect(work?.triggerFormula?.text).not.toContain("Поддержка пилота =");
+		expect(work?.triggerFormula?.tokens).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					kind: "param",
+					paramCode: "prePromEval",
+				}),
+				expect.objectContaining({
+					kind: "param",
+					paramCode: "productionAdditionalReports",
+					operator: "!=",
+				}),
+			]),
+		);
+	});
 });

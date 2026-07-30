@@ -36,7 +36,7 @@ import {
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, "..", "..", "..");
-const WORKS_CSV = join(REPO_ROOT, "llm", "Смарт-анкета_Модельный стрим.csv");
+const WORKS_CSV = join(REPO_ROOT, "llm", "Типовые работы модельных стримов.csv");
 const SNAPSHOT_PATH = join(
 	__dirname,
 	"..",
@@ -91,7 +91,7 @@ const REGISTRY_SEED: Array<{
 	{
 		id: "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4001",
 		displayName: "01. Постановка задачи",
-		archComponentType: "Модельный сервис",
+		archComponentType: "Модель",
 		norm: 33,
 	},
 	{

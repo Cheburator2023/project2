@@ -38,5 +38,9 @@
 	"field_jUm5syZf": {
 		"paramCode": "field_jUm5syZf",
 		"schemaFieldUid": "field_4fb7d302-c5f0-49e6-9cd2-959a1fbe1f4e"
+	},
+	"workType": {
+		"paramCode": "workType",
+		"schemaFieldUid": "field_22ae6d02-b421-41ee-ba8a-5b3153f0f040"
 	}
 }

@@ -6,14 +6,14 @@
 		"sourceTemplateId": "424b8ab7-1be4-4d0a-a0a9-05edadd77ff5",
 		"sourceTemplateName": "Схема god 29.07.2026 14:13 (export f115dca2)",
 		"counts": {
-			"works": 121
+			"works": 127
 		}
 	},
 	"works": [
 		{
 			"id": "fbfa5b48-abae-442a-a7a7-6b7ccebe88f7",
 			"name": "01. Постановка задачи",
-			"archComponentType": "Модельный сервис",
+			"archComponentType": "Модель",
 			"workType": null,
 			"streams": [
 				"Модельный стрим"
@@ -170,132 +170,132 @@
 			"id": "eeea39dc-f40c-4d39-8243-06026dcef124",
 			"name": "Визуализация результатов работы модельного сервиса",
 			"archComponentType": "Модельный сервис",
-			"workType": "Опциональная",
+			"workType": null,
 			"streams": [
 				"ПиРМ"
 			],
 			"normsByStream": {
-				"ПиРМ": 289
+				"ПиРМ": 289.0
 			}
 		},
 		{
 			"id": "850be3c4-f6d5-49f4-b04b-70997ef6727a",
 			"name": "Встраивание и отладка внешнего кода в конвейер AutoML по обучению модели",
 			"archComponentType": "Модель",
-			"workType": "Опциональная",
+			"workType": null,
 			"streams": [
 				"ПиРМ"
 			],
 			"normsByStream": {
-				"ПиРМ": 3
+				"ПиРМ": 3.0
 			}
 		},
 		{
 			"id": "24776d59-096d-44b3-8ade-989638ee6520",
 			"name": "Выделение ресурсного пула под обучение и исполнение модели",
 			"archComponentType": "Модельный сервис",
-			"workType": "Опциональная",
+			"workType": null,
 			"streams": [
 				"ПиРМ"
 			],
 			"normsByStream": {
-				"ПиРМ": 3
+				"ПиРМ": 3.0
 			}
 		},
 		{
 			"id": "bf62b7ee-555d-4071-a4cc-1e91c3514b0e",
 			"name": "Выделение ресурсного пула под обучение и применение модели",
 			"archComponentType": "Модель",
-			"workType": "Опциональная",
+			"workType": null,
 			"streams": [
 				"ПиРМ"
 			],
 			"normsByStream": {
-				"ПиРМ": 3
+				"ПиРМ": 3.0
 			}
 		},
 		{
 			"id": "370c9261-e018-424a-bddd-f493ebf055ad",
 			"name": "Добавление новой модели для автоматической разметки данных в ИС 1860, настройка Active Learning",
 			"archComponentType": "Система-источник",
-			"workType": "Опциональная",
+			"workType": null,
 			"streams": [
 				"ПиРМ"
 			],
 			"normsByStream": {
-				"ПиРМ": 130
+				"ПиРМ": 130.0
 			}
 		},
 		{
 			"id": "2337f8f8-af92-41f6-be17-fcbad93db834",
 			"name": "Добавление новой ML-библиотеки и/или фреймворка",
 			"archComponentType": "Модель",
-			"workType": "Опциональная",
+			"workType": null,
 			"streams": [
 				"ПиРМ"
 			],
 			"normsByStream": {
-				"ПиРМ": 4
+				"ПиРМ": 4.0
 			}
 		},
 		{
 			"id": "03c0c089-1bfd-469d-89db-2ba77c3c658e",
 			"name": "Контроль соблюдение архитектурных требований ПИМ и использования коммунальных ресурсов",
 			"archComponentType": "Модельный сервис",
-			"workType": "Опциональная",
+			"workType": null,
 			"streams": [
 				"ПиРМ"
 			],
 			"normsByStream": {
-				"ПиРМ": 2
+				"ПиРМ": 2.0
 			}
 		},
 		{
 			"id": "8f376072-a563-4922-9287-f2018649d680",
 			"name": "Настройка проекта и типового шаблона разметки",
 			"archComponentType": "Система-источник",
-			"workType": "Опциональная",
+			"workType": null,
 			"streams": [
 				"ПиРМ"
 			],
 			"normsByStream": {
-				"ПиРМ": 11
+				"ПиРМ": 11.0
 			}
 		},
 		{
 			"id": "12b4d99f-98b0-42af-aaac-34bc448ae9a2",
 			"name": "Настройка публикаций и бэкендов модельных сервисов на коммунальных HAPROXY балансировщиках",
 			"archComponentType": "Модельный сервис",
-			"workType": "Опциональная",
+			"workType": null,
 			"streams": [
 				"ПиРМ"
 			],
 			"normsByStream": {
-				"ПиРМ": 2
+				"ПиРМ": 2.0
 			}
 		},
 		{
 			"id": "9516a8d1-08ce-4751-8f1e-976a5d0b5cf4",
 			"name": "Обеспечение переноса артефактов модели между контурами посредством Репозитория моделей",
 			"archComponentType": "Модельный сервис",
-			"workType": "Опциональная",
+			"workType": null,
 			"streams": [
 				"ПиРМ"
 			],
 			"normsByStream": {
-				"ПиРМ": 10
+				"ПиРМ": 10.0
 			}
 		},
 		{
 			"id": "14072945-99ef-458c-a999-c4380a6555c6",
 			"name": "Организация хранения артефактов модели в Репозитории моделей",
 			"archComponentType": "Модельный сервис",
-			"workType": "Опциональная",
+			"workType": null,
 			"streams": [
 				"ПиРМ"
 			],
 			"normsByStream": {
-				"ПиРМ": 10
+				"ПиРМ": 10.0
 			}
 		},
 		{
@@ -338,79 +338,79 @@
 			"id": "0d79094d-ea6d-4434-a8fc-5b418fa157d4",
 			"name": "Первичное подключение ИС к Репозиторию моделей",
 			"archComponentType": "Модельный сервис",
-			"workType": "Опциональная",
+			"workType": null,
 			"streams": [
 				"ПиРМ"
 			],
 			"normsByStream": {
-				"ПиРМ": 22
+				"ПиРМ": 22.0
 			}
 		},
 		{
 			"id": "47ae25cc-bdd0-47dd-945f-31cd4f2e68b1",
 			"name": "Подключение источника данных",
 			"archComponentType": "Процесс обработки данных",
-			"workType": "Опциональная",
+			"workType": null,
 			"streams": [
 				"ПиРМ"
 			],
 			"normsByStream": {
-				"ПиРМ": 20
+				"ПиРМ": 20.0
 			}
 		},
 		{
-			"id": "fc947d2a-35a4-4248-b8e0-b9792cd5a00b",
+			"id": "e1d88de8-683e-44c1-9ea2-67262da0ada4",
 			"name": "Подключение источника данных для обучения модели",
 			"archComponentType": "Модель",
-			"workType": "Опциональная",
+			"workType": null,
 			"streams": [
 				"ПиРМ"
 			],
 			"normsByStream": {
-				"ПиРМ": 3
+				"ПиРМ": 3.0
 			}
 		},
 		{
 			"id": "7e96f1f7-5f28-42e3-a2b9-2a5beeb09700",
 			"name": "Постановка модели на регламентное переобучение",
 			"archComponentType": "Модель",
-			"workType": "Опциональная",
+			"workType": null,
 			"streams": [
 				"ПиРМ"
 			],
 			"normsByStream": {
-				"ПиРМ": 2
+				"ПиРМ": 2.0
 			}
 		},
 		{
 			"id": "30cda680-2e77-448c-91af-90dec89da7d4",
 			"name": "Предоставление данных из СХК через РЕПО",
 			"archComponentType": "Модельный сервис",
-			"workType": "Опциональная",
+			"workType": null,
 			"streams": [
 				"ПиРМ"
 			],
 			"normsByStream": {
-				"ПиРМ": 12
+				"ПиРМ": 12.0
 			}
 		},
 		{
 			"id": "f4b87ee4-b6d7-466e-8592-41113e1adc12",
 			"name": "Развертывание отдельного экземпляра ИС 1860 под конфиденциальные данные",
 			"archComponentType": "Система-источник",
-			"workType": "Опциональная",
+			"workType": null,
 			"streams": [
 				"ПиРМ"
 			],
 			"normsByStream": {
-				"ПиРМ": 251
+				"ПиРМ": 251.0
 			}
 		},
 		{
 			"id": "7df0a5fa-8df3-44ba-a5b2-bcbad564b770",
 			"name": "Разработка Набора признаков",
 			"archComponentType": "Объект / Витрина данных",
-			"workType": "Опциональная",
+			"workType": null,
 			"streams": [
 				"ПиРМ"
 			],
@@ -422,67 +422,67 @@
 			"id": "51b042f2-cf8b-4c2d-97ed-45d8572af6ca",
 			"name": "Реализация преобразований данных в конвейере AutoML по обучению модели",
 			"archComponentType": "Модель",
-			"workType": "Опциональная",
+			"workType": null,
 			"streams": [
 				"ПиРМ"
 			],
 			"normsByStream": {
-				"ПиРМ": 2
+				"ПиРМ": 2.0
 			}
 		},
 		{
 			"id": "dda1a510-41ff-43c6-9c47-69e0a17fc1d5",
 			"name": "Реализация регламентной загрузки данных в ИС 1860 и/или экспорта размеченных данных в ИС-потребитель",
 			"archComponentType": "Система-источник",
-			"workType": "Опциональная",
+			"workType": null,
 			"streams": [
 				"ПиРМ"
 			],
 			"normsByStream": {
-				"ПиРМ": 91
+				"ПиРМ": 91.0
 			}
 		},
 		{
 			"id": "9e59e524-19c3-45b3-855c-cf7516d64dbe",
 			"name": "Регистрация / обновление версии модели в СУМ",
 			"archComponentType": "Модель",
-			"workType": "Обязательная",
+			"workType": null,
 			"streams": [
 				"ПиРМ"
 			],
 			"normsByStream": {
-				"ПиРМ": 5
+				"ПиРМ": 5.0
 			}
 		},
 		{
 			"id": "e4f6d13c-4bd5-4598-813e-5600e7f9a602",
 			"name": "Регистрация / обновление модели в СУРМ, обеспечение присутствия модели на дашборде",
 			"archComponentType": "Модельный сервис",
-			"workType": "Обязательная",
+			"workType": null,
 			"streams": [
 				"ПиРМ"
 			],
 			"normsByStream": {
-				"ПиРМ": 10
+				"ПиРМ": 10.0
 			}
 		},
 		{
 			"id": "47677456-1b9f-438c-a2e5-e9791b613284",
 			"name": "Регистрация / обновление сервиса в СУМ, обеспечение продвижения по ЖЦМ, обеспечение хранения артефактов модели",
 			"archComponentType": "Модельный сервис",
-			"workType": "Обязательная",
+			"workType": null,
 			"streams": [
 				"ПиРМ"
 			],
 			"normsByStream": {
-				"ПиРМ": 10
+				"ПиРМ": 10.0
 			}
 		},
 		{
 			"id": "c3cd34b0-9487-4393-af9c-50d2f4f7547d",
 			"name": "Регистрация Признака в Хранилище признаков",
 			"archComponentType": "Модельный сервис",
-			"workType": "Обязательная",
+			"workType": null,
 			"streams": [
 				"ПиРМ"
 			],
@@ -494,60 +494,60 @@
 			"id": "928d5a15-3be5-4e79-98f6-93aabf0402c8",
 			"name": "Ручная обработка результатов автоматизированной разметки обращений клиентов в случае низкой степени уверенности модели",
 			"archComponentType": "Модельный сервис",
-			"workType": "Опциональная",
+			"workType": null,
 			"streams": [
 				"ПиРМ"
 			],
 			"normsByStream": {
-				"ПиРМ": 103
+				"ПиРМ": 103.0
 			}
 		},
 		{
 			"id": "edfd98a4-edbc-4692-861f-0c30fded05ab",
 			"name": "Сбор и предоставление данных об аллокации модельного сервиса",
 			"archComponentType": "Модельный сервис",
-			"workType": "Обязательная",
+			"workType": null,
 			"streams": [
 				"ПиРМ"
 			],
 			"normsByStream": {
-				"ПиРМ": 10
+				"ПиРМ": 10.0
 			}
 		},
 		{
 			"id": "f37a3640-f9df-46a9-8d34-66450f987296",
 			"name": "Создание и актуализация графа преобразования данных, используемых модельным сервисом",
 			"archComponentType": "Модельный сервис",
-			"workType": "Обязательная",
+			"workType": null,
 			"streams": [
 				"ПиРМ"
 			],
 			"normsByStream": {
-				"ПиРМ": 10
+				"ПиРМ": 10.0
 			}
 		},
 		{
 			"id": "dca027fc-2640-432b-bd9c-5cfc88697690",
 			"name": "Создание контроля качества Признаков в Хранилище признаков",
 			"archComponentType": "Объект / Витрина данных",
-			"workType": "Опциональная",
+			"workType": null,
 			"streams": [
 				"ПиРМ"
 			],
 			"normsByStream": {
-				"ПиРМ": 10
+				"ПиРМ": 10.0
 			}
 		},
 		{
 			"id": "693dbad0-b478-424d-8428-3e465a0abc76",
 			"name": "Сохранение объекта сырых данных в Хранилище признаков",
 			"archComponentType": "Объект / Витрина данных",
-			"workType": "Опциональная",
+			"workType": null,
 			"streams": [
 				"ПиРМ"
 			],
 			"normsByStream": {
-				"ПиРМ": 3
+				"ПиРМ": 3.0
 			}
 		},
 		{
@@ -1430,12 +1430,12 @@
 			"id": "e903feea-b18f-4ae5-b117-488ce8be9af6",
 			"name": "Airflow: обеспечение работоспособности и реконфигурация инфраструктуры для настройки DAG",
 			"archComponentType": "Модельный сервис",
-			"workType": "Обязательная",
+			"workType": null,
 			"streams": [
 				"ПиРМ"
 			],
 			"normsByStream": {
-				"ПиРМ": 7
+				"ПиРМ": 7.0
 			}
 		},
 		{
@@ -1460,6 +1460,78 @@
 			],
 			"normsByStream": {
 				"Модельный стрим": 68
+			}
+		},
+		{
+			"id": "45bffbba-dccc-4dc2-bb39-4074ae3ce278",
+			"name": "Загрузка моделей или библиотек в контур банка",
+			"archComponentType": "Модель",
+			"workType": null,
+			"streams": [
+				"ПиРМ"
+			],
+			"normsByStream": {
+				"ПиРМ": 1.0
+			}
+		},
+		{
+			"id": "5667871c-40f4-4c90-aba3-ef4f2c96b20c",
+			"name": "Добавление оборудования в кластер SSDP",
+			"archComponentType": "Модельный сервис",
+			"workType": null,
+			"streams": [
+				"ПиРМ"
+			],
+			"normsByStream": {
+				"ПиРМ": 1.0
+			}
+		},
+		{
+			"id": "e57eca42-6a91-4ffe-8f4c-8b592d03c95e",
+			"name": "Консультации по разворачиванию оркестратора",
+			"archComponentType": "Модельный сервис",
+			"workType": null,
+			"streams": [
+				"ПиРМ"
+			],
+			"normsByStream": {
+				"ПиРМ": 0
+			}
+		},
+		{
+			"id": "05a35e60-24be-43c9-b2aa-9c1c066a649f",
+			"name": "Кастомизация конфигурации оркестратора",
+			"archComponentType": "Модельный сервис",
+			"workType": null,
+			"streams": [
+				"ПиРМ"
+			],
+			"normsByStream": {
+				"ПиРМ": 0
+			}
+		},
+		{
+			"id": "d65b4723-d2c5-446c-a721-85f2d9da6bf2",
+			"name": "Консультация по подключению к тракту логированию моделей",
+			"archComponentType": "Модельный сервис",
+			"workType": null,
+			"streams": [
+				"ПиРМ"
+			],
+			"normsByStream": {
+				"ПиРМ": 0
+			}
+		},
+		{
+			"id": "27215355-3c1d-4c09-b703-3e99311dbcf3",
+			"name": "Настройка kafka и тракта логирования для нового потребителя",
+			"archComponentType": "Модельный сервис",
+			"workType": null,
+			"streams": [
+				"ПиРМ"
+			],
+			"normsByStream": {
+				"ПиРМ": 0
 			}
 		}
 	]

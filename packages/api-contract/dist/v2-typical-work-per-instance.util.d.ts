@@ -1,4 +1,6 @@
 import type { V2WorkFormulaArchCountKind } from "./v2-typical-work.types";
+import { type TypicalWorkTriggerMatchInput } from "./v2-trigger-formula.util";
+import type { TypicalWorkTriggerMatchContext } from "./v2-typical-works.util";
 /** Маркер в formData: принудительный count для arch_count_coeff в per-instance режиме. */
 export declare const V2_PER_INSTANCE_ARCH_COUNT_OVERRIDE_KEY = "__v2PerInstanceArchCountOverride";
 export type ArchComponentInstance = {
@@ -53,6 +55,48 @@ export type TypicalWorkInstanceEvalResult = {
  * Подпись для пустого per-instance расчёта (нет заполненных экземпляров арх. компонента).
  */
 export declare function formatEmptyArchInstanceBreakdown(archComponentType: string | null | undefined): string;
+/**
+ * Экземпляры есть, но ни один не удовлетворяет триггеру появления работы
+ * (например AutoML=Да только у части моделей).
+ */
+export declare function formatNoTriggerMatchingArchInstanceBreakdown(archComponentType: string | null | undefined): string;
+/**
+ * Контекст триггера для экземпляра fan-out.
+ *
+ * Для «Модель»:
+ * - пустые/дефолтные поля строки (workType: "") не затирают модельный сервис;
+ * - осмысленные поля модели (autoML true/false, algorithmType, …) перекрывают
+ *   контекст — иначе autoML=false с flatten/другой модели «убивает» AutoML-работы.
+ */
+export declare function mergeArchInstanceTriggerSource(kind: V2WorkFormulaArchCountKind | null | undefined, baseSource: Record<string, unknown>, instanceRow: Record<string, unknown>): Record<string, unknown>;
+/**
+ * Per-instance: включать экземпляр в сумму только если на нём сработал
+ * триггер появления работы (параметры строки + arch_count на срезе formData).
+ */
+export declare function archInstanceMatchesWorkTrigger(params: {
+    triggerInput: TypicalWorkTriggerMatchInput;
+    source: Record<string, unknown>;
+    formData: Record<string, unknown>;
+    matchContext?: TypicalWorkTriggerMatchContext;
+}): boolean;
+/**
+ * Триггер появления работы на уровне каталога.
+ *
+ * Для fan-out арх-компонентов (Модель, СИ, …) достаточно совпадения
+ * **хотя бы на одном** экземпляре. Иначе flatten formData перезаписывает
+ * поля вроде autoML последней строкой и работа пропадает, даже если
+ * у одной модели AutoML=Да.
+ *
+ * В сумму по-прежнему попадают только совпавшие экземпляры
+ * (`evaluateWorkAcrossArchInstances` / `archInstanceMatchesWorkTrigger`).
+ */
+export declare function matchTypicalWorkAppearanceTriggers(params: {
+    triggerInput: TypicalWorkTriggerMatchInput;
+    archComponentType: string | null | undefined;
+    source: Record<string, unknown>;
+    formData: Record<string, unknown>;
+    matchContext?: TypicalWorkTriggerMatchContext;
+}): boolean;
 export declare function formatPerInstanceBreakdownExpanded(instances: ReadonlyArray<{
     sourceLabel: string;
     total: number;

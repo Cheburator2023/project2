@@ -62,10 +62,7 @@ describe("mergeAnketaDisplayFormData", () => {
 	it("keeps modelService pseudo-array when merging controlTypicalTasks from calculation", () => {
 		const formData = {
 			generalInfo: {
-				modelService: [
-					{ workType: "Разработка", field_dEVFQVQn: "ms-1" },
-					{ workType: "Доработка", field_dEVFQVQn: "ms-2" },
-				],
+				modelService: [{ workType: "Разработка", field_dEVFQVQn: "ms-1" }],
 			},
 		};
 		const liveFormData = {
@@ -79,10 +76,7 @@ describe("mergeAnketaDisplayFormData", () => {
 		const display = mergeAnketaDisplayFormData(formData, liveFormData);
 
 		expect(readArchObjectListAtPath(display, "generalInfo.modelService")).toEqual(
-			[
-				{ workType: "Разработка", field_dEVFQVQn: "ms-1" },
-				{ workType: "Доработка", field_dEVFQVQn: "ms-2" },
-			],
+			[{ workType: "Разработка", field_dEVFQVQn: "ms-1" }],
 		);
 	});
 

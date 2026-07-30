@@ -1,6 +1,6 @@
 import { slugParamCode } from "./v2-param-slug.util";
 import { parseParamNameSourceKeys, stripParamNameSourceKeys, } from "./v2-work-param-source-keys.util";
-import { formatArchCountCoeffSteps, formatWorkArchCountKindLabel, parseArchCountCoeffSteps, parseWorkArchCountKindLabel, resolveArchCountCoeffFromToken, validateArchCountCoeffSteps, } from "./v2-work-arch-count-coeff.util";
+import { formatArchCountCoeffFactorLabel, formatArchCountCoeffSteps, formatWorkArchCountKindLabel, parseArchCountCoeffSteps, parseWorkArchCountKindLabel, resolveArchCountCoeffFromToken, validateArchCountCoeffSteps, } from "./v2-work-arch-count-coeff.util";
 const OP_SYMBOL = {
     "+": "+",
     "-": "−",
@@ -197,7 +197,7 @@ export function formatWorkFormulaReadableSymbolic(tokens) {
                     ? `→${token.workName.trim()}`
                     : "→работа";
             case "arch_count_coeff":
-                return `Кол-${formatWorkArchCountKindLabel(token.archComponentKind)}`;
+                return formatArchCountCoeffFactorLabel(token.archComponentKind);
             case "number":
                 return String(token.value);
             case "operator":
@@ -282,7 +282,7 @@ export function formatWorkFormulaGeneralSummary(tokens, paramOrder) {
             case "work_ref":
                 return token.workName ? `→${token.workName}` : "→работа";
             case "arch_count_coeff":
-                return `Кол-${formatWorkArchCountKindLabel(token.archComponentKind)}`;
+                return formatArchCountCoeffFactorLabel(token.archComponentKind);
             case "number":
                 return String(token.value);
             case "operator":
@@ -965,7 +965,7 @@ export function evaluateWorkFormula(formula, ctx) {
             const formData = ctx.formData ?? {};
             const coeff = resolveArchCountCoeffFromToken(formData, token.archComponentKind, token.steps);
             values.push(coeff);
-            labels.push(`Кол-${formatWorkArchCountKindLabel(token.archComponentKind)}=${coeff}`);
+            labels.push(`${formatArchCountCoeffFactorLabel(token.archComponentKind)}=${coeff}`);
             expectOperand = false;
             continue;
         }

@@ -15,6 +15,7 @@ exports.hasTypicalWorkTriggersConfigured = hasTypicalWorkTriggersConfigured;
 const v2_work_arch_count_coeff_util_1 = require("./v2-work-arch-count-coeff.util");
 const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
 const v2_work_param_source_keys_util_1 = require("./v2-work-param-source-keys.util");
+const v2_typical_works_util_1 = require("./v2-typical-works.util");
 const LOGIC_LABEL = {
     and: "И",
     or: "ИЛИ",
@@ -264,7 +265,10 @@ function compileTriggerFormulaTokensToJsonLogic(tokens) {
     return values.length === 1 ? (values[0] ?? false) : false;
 }
 function evaluateTriggerParamToken(token, ctx) {
-    return (0, v2_works_catalog_match_util_1.matchSingleTypicalWorkRuleForTriggerFormula)(triggerParamTokenToRule(token), ctx.source);
+    const rule = triggerParamTokenToRule(token);
+    const lookup = (0, v2_typical_works_util_1.buildTypicalWorkTriggerLookupSource)(ctx.source, ctx.formData);
+    const enriched = (0, v2_works_catalog_match_util_1.overlayCrossComponentTriggerLookup)(lookup, ctx.source, ctx.formData, [rule.paramCode]);
+    return (0, v2_works_catalog_match_util_1.matchSingleTypicalWorkRuleForTriggerFormula)(rule, enriched);
 }
 function evaluateTriggerOperand(token, ctx) {
     if (token.kind === "param")
@@ -287,7 +291,10 @@ function evaluateTriggerFormula(tokens, ctx) {
             if (token?.kind !== "logic" || token.op !== "or")
                 break;
             pos++;
-            left = left || parseAnd();
+            // Всегда парсим правый операнд: short-circuit `||` сдвигает pos
+            // и ломает скобки (пример: (Да OR тип) при true слева → false).
+            const right = parseAnd();
+            left = left || right;
         }
         return left;
     };
@@ -298,7 +305,8 @@ function evaluateTriggerFormula(tokens, ctx) {
             if (token?.kind !== "logic" || token.op !== "and")
                 break;
             pos++;
-            left = left && parsePrimary();
+            const right = parsePrimary();
+            left = left && right;
         }
         return left;
     };

@@ -116,4 +116,70 @@ describe("evaluateTriggerFormula", () => {
 		);
 		expect(result).toBe(true);
 	});
+
+	it("keeps paren OR true when left side already matches (no || short-circuit skip)", () => {
+		// A ≠ Не требуется И (пилот = Да ИЛИ тип ∈ {Разработка})
+		const tokens = [
+			{
+				kind: "param" as const,
+				paramCode: "productionAdditionalReports",
+				paramName: "Продуктивизация",
+				operator: "!=" as const,
+				valueCode: "не_требуется",
+				valueLabel: "Не требуется",
+			},
+			{ kind: "logic" as const, op: "and" as const },
+			{ kind: "paren_open" as const },
+			{
+				kind: "param" as const,
+				paramCode: "prePromEval",
+				paramName: "Необходимость поддержки проведения пилота",
+				operator: "=" as const,
+				valueCode: "true",
+				valueLabel: "Да",
+			},
+			{ kind: "logic" as const, op: "or" as const },
+			{
+				kind: "param" as const,
+				paramCode: "workType",
+				paramName: "Тип работ",
+				operator: "in" as const,
+				values: [
+					{ code: "Разработка", label: "Разработка" },
+					{ code: "Внедрение", label: "Внедрение" },
+				],
+			},
+			{ kind: "paren_close" as const },
+		];
+
+		expect(
+			evaluateTriggerFormula(tokens, {
+				source: {
+					productionAdditionalReports: "10",
+					prePromEval: true,
+					workType: "Разработка",
+				},
+			}),
+		).toBe(true);
+
+		expect(
+			evaluateTriggerFormula(tokens, {
+				source: {
+					productionAdditionalReports: "10",
+					prePromEval: true,
+					workType: "Сопровождение",
+				},
+			}),
+		).toBe(true);
+
+		expect(
+			evaluateTriggerFormula(tokens, {
+				source: {
+					productionAdditionalReports: "10",
+					prePromEval: false,
+					workType: "Разработка",
+				},
+			}),
+		).toBe(true);
+	});
 });

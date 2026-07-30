@@ -35,6 +35,7 @@ function createService({
 	laborParams = [],
 	laborRows = [],
 	versionConfigs = [],
+	works,
 }: {
 	rules: Array<{
 		workId: string;
@@ -51,6 +52,14 @@ function createService({
 		workId: string;
 		streamExecutor: string;
 		isActive: boolean;
+		triggerMode?: string;
+		triggerFormula?: {
+			tokens: unknown[];
+			text: string;
+		} | null;
+		triggerArchCountKind?: string | null;
+		triggerArchCountSteps?: Array<{ count: number; coefficient: number }> | null;
+		triggerArchCountCombinator?: string;
 	}>;
 	laborParams?: Array<{
 		workId: string;
@@ -83,21 +92,29 @@ function createService({
 		roundingStep: string | null;
 		calculationLogic: unknown;
 	}>;
+	works?: Array<{
+		id: string;
+		name: string;
+		workType: string;
+		archComponentType: string;
+	}>;
 }) {
-	const workRepository = repo([
-		{
-			id: WORK_WITH_TRIGGER,
-			name: "Работа с триггером",
-			workType: "Типовая",
-			archComponentType: "Система-источник",
-		},
-		{
-			id: WORK_WITHOUT_TRIGGERS,
-			name: "Работа без триггеров",
-			workType: "Типовая",
-			archComponentType: "Система-источник",
-		},
-	]);
+	const workRepository = repo(
+		works ?? [
+			{
+				id: WORK_WITH_TRIGGER,
+				name: "Работа с триггером",
+				workType: "Типовая",
+				archComponentType: "Система-источник",
+			},
+			{
+				id: WORK_WITHOUT_TRIGGERS,
+				name: "Работа без триггеров",
+				workType: "Типовая",
+				archComponentType: "Система-источник",
+			},
+		],
+	);
 	const normRepository = repo([
 		{
 			workId: WORK_WITH_TRIGGER,
@@ -691,6 +708,182 @@ describe("V2TypicalWorkRuntimeService", () => {
 		});
 
 		expect(tasks.length).toBeGreaterThan(0);
+	});
+
+	it("work 07 appears without dataMart when productization + workType match", async () => {
+		const workId = WORK_WITH_TRIGGER;
+		const service = createService({
+			works: [
+				{
+					id: workId,
+					name: "Разработка витрины для применения модели",
+					workType: "Опциональная",
+					archComponentType: "Объект / Витрина данных",
+				},
+			],
+			rules: [],
+			assignments: [
+				{
+					id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+					workId,
+					streamExecutor: STREAM,
+					isActive: true,
+					triggerMode: "formula",
+					triggerFormula: {
+						tokens: [
+							{
+								kind: "param",
+								paramCode: "productionAdditionalReports",
+								paramName:
+									"Необходимость продуктивизации и количество дополнительных витрин",
+								operator: "!=",
+								valueCode: "не_требуется",
+								valueLabel: "Не требуется",
+							},
+							{ kind: "logic", op: "and" },
+							{ kind: "paren_open" },
+							{
+								kind: "param",
+								paramCode: "prePromEval",
+								paramName: "Необходимость поддержки проведения пилота",
+								operator: "=",
+								valueCode: "true",
+								valueLabel: "Да",
+							},
+							{ kind: "logic", op: "or" },
+							{
+								kind: "param",
+								paramCode: "workType",
+								paramName: "Тип работ модельного сервиса",
+								operator: "in",
+								values: [
+									{ code: "Разработка", label: "Разработка" },
+									{ code: "Внедрение", label: "Внедрение" },
+									{
+										code: "Разработка и внедрение",
+										label: "Разработка и внедрение",
+									},
+								],
+							},
+							{ kind: "paren_close" },
+						],
+						text: "Необходимость продуктивизации и количество дополнительных витрин ≠ Не требуется И (Необходимость поддержки проведения пилота = Да ИЛИ Тип работ ∈ {Разработка, Внедрение, Разработка и внедрение})",
+					},
+				},
+			],
+			versionConfigs: [
+				{
+					workId,
+					streamExecutor: STREAM,
+					templateVersionId: "tpl-07",
+					formula: [{ kind: "norm" }],
+					formulaText: "N",
+					roundingMode: "none",
+					roundingStep: null,
+					calculationLogic: null,
+				},
+			],
+		});
+
+		const formData = {
+			generalInfo: {
+				productionAdditionalReports: "1",
+				modelService: [
+					{
+						field_dEVFQVQn: "мс1",
+						prePromEval: false,
+						workType: "Разработка",
+					},
+				],
+			},
+			detailInfo: { dataMart: [] },
+		};
+		const tasks = await service.buildCatalogTasks({
+			archComponentType: "Объект / Витрина данных",
+			streamExecutor: STREAM,
+			source: formData.generalInfo.modelService[0]!,
+			formData,
+			templateVersionId: "tpl-07",
+			atDate: "2025-06-01",
+		});
+
+		expect(tasks.map((task) => task.workId)).toEqual([workId]);
+		expect(tasks[0]?.total).toBeGreaterThan(0);
+	});
+
+	it("MVP on modelService appears without any models (fan-out empty)", async () => {
+		const mvpWorkId = WORK_WITH_TRIGGER;
+		const service = createService({
+			works: [
+				{
+					id: mvpWorkId,
+					name: "Разработка пилотной модели (MVP)",
+					workType: "Опциональная",
+					archComponentType: "Модель",
+				},
+			],
+			rules: [
+				{
+					workId: mvpWorkId,
+					streamExecutor: STREAM,
+					paramCode: "field_o_HRj6VO",
+					paramName: "Необходимость пилота (MVP)",
+					operator: "=",
+					valueCode: "true",
+					valueLabel: "Да",
+				},
+			],
+			assignments: [
+				{
+					id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+					workId: mvpWorkId,
+					streamExecutor: STREAM,
+					isActive: true,
+					triggerArchCountKind: "modelService",
+					triggerArchCountSteps: [{ count: 1, coefficient: 1 }],
+					triggerArchCountCombinator: "and",
+				},
+			],
+			versionConfigs: [
+				{
+					workId: mvpWorkId,
+					streamExecutor: STREAM,
+					templateVersionId: "tpl-mvp",
+					formula: [{ kind: "norm" }],
+					formulaText: "N",
+					roundingMode: "none",
+					roundingStep: null,
+					calculationLogic: null,
+				},
+			],
+		});
+
+		const formData = {
+			generalInfo: {
+				modelService: [
+					{
+						field_dEVFQVQn: "мс1",
+						field_o_HRj6VO: true,
+						workType: "Внедрение",
+					},
+				],
+			},
+			detailInfo: { modelsList: [] },
+		};
+		const tasks = await service.buildCatalogTasks({
+			archComponentType: "Модель",
+			streamExecutor: STREAM,
+			source: formData.generalInfo.modelService[0]!,
+			formData,
+			templateVersionId: "tpl-mvp",
+			atDate: "2025-06-01",
+		});
+
+		expect(tasks.map((task) => task.workId)).toEqual([mvpWorkId]);
+		expect(tasks[0]?.total).toBe(2);
+		expect(tasks[0]?.formulaBreakdown?.expanded).not.toContain(
+			"нет заполненных",
+		);
 	});
 
 	it("uses computed overallUncertainty from uncertaintyCalculation in formula total", async () => {

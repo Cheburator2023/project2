@@ -27,8 +27,11 @@ import {
 	typicalWorkItemDisplayName,
 } from "@react-client/features/v2/anketaCRUD/utils/anketaModalArrayTableConfig";
 import {
+	collectTypicalWorkBlockBindings,
 	dedupeTypicalWorkRowsByWorkId,
 	isModelStreamTypicalWorkVisibleInSummary,
+	resolveTypicalWorkCatalogStreamLabel,
+	shouldSkipLegacyModelStreamStageSummary,
 	sortModelStreamTypicalWorkRows,
 } from "@smart-anketa/api-contract";
 import { Fragment, useMemo, useState } from "react";
@@ -38,6 +41,16 @@ const MODEL_STREAM_LABEL = "Модельный стрим";
 const TYPICAL_WORK_TABLE_COLUMNS = [
 	"Название типовой работы",
 	"Базовая оценка",
+	"Коэффициент",
+	"Итог",
+] as const;
+
+/** Модельный стрим: базовые колонки + отклонения после «Базовая оценка». */
+const MODEL_STREAM_TYPICAL_WORK_TABLE_COLUMNS = [
+	"Название типовой работы",
+	"Базовая оценка",
+	"Отклонение",
+	"Общее отклонение",
 	"Коэффициент",
 	"Итог",
 ] as const;
@@ -93,6 +106,34 @@ function deviationColor(value: number | null | undefined): string | undefined {
 	return undefined;
 }
 
+/** (adjusted − base) / base × 100%; null если база не задана. */
+function percentDeviationFromBase(
+	base: number | null | undefined,
+	adjusted: number | null | undefined,
+): number | null {
+	if (
+		base === null ||
+		base === undefined ||
+		!Number.isFinite(base) ||
+		base === 0 ||
+		adjusted === null ||
+		adjusted === undefined ||
+		!Number.isFinite(adjusted)
+	) {
+		return null;
+	}
+	return ((adjusted - base) / base) * 100;
+}
+
+function readTypicalWorkFiniteNumber(value: unknown): number | null {
+	if (typeof value === "number" && Number.isFinite(value)) return value;
+	if (typeof value === "string" && value.trim()) {
+		const parsed = Number(value.replace(",", "."));
+		return Number.isFinite(parsed) ? parsed : null;
+	}
+	return null;
+}
+
 /** Unified-итоги (типовые + нетиповые): показываем, если есть ненулевые значения. */
 function hasNonZeroUnifiedTotals(summary: V2SummaryFormSlice): boolean {
 	return (
@@ -144,20 +185,33 @@ export function V2FinalEvaluationPanel({
 			: null;
 	const effectiveSummary =
 		calculationError || hideDetailedEstimates ? null : summary;
-	const rows = effectiveSummary?.detailedCalculation ?? [];
-	const platformRows = effectiveSummary?.platformStreams ?? [];
 	const typicalWorkGroups = useMemo(
 		() => collectAppearedTypicalWorkGroups(formData, uiSchema, liveFormData),
 		[formData, uiSchema, liveFormData],
 	);
-	const hasModelStreamCatalog = useMemo(
-		() =>
-			typicalWorkGroups.some(
-				(group) =>
-					group.streamExecutor === MODEL_STREAM_LABEL && group.rows.length > 0,
-			),
-		[typicalWorkGroups],
+	const hasModelStreamCatalogInSchema = useMemo(
+		() => shouldSkipLegacyModelStreamStageSummary(uiSchema),
+		[uiSchema],
 	);
+	const otherStreamCatalogLabels = useMemo(() => {
+		if (!uiSchema) return [] as string[];
+		const labels: string[] = [];
+		for (const binding of collectTypicalWorkBlockBindings(uiSchema)) {
+			if (
+				binding.boundWorkIds !== undefined &&
+				binding.boundWorkIds.length === 0
+			) {
+				continue;
+			}
+			const label = resolveTypicalWorkCatalogStreamLabel(
+				uiSchema,
+				binding.outputPath,
+			);
+			if (!label || label === MODEL_STREAM_LABEL) continue;
+			if (!labels.includes(label)) labels.push(label);
+		}
+		return labels;
+	}, [uiSchema]);
 	const modelStreamTypicalRows = useMemo(
 		() =>
 			sortModelStreamTypicalWorkRows(
@@ -169,19 +223,28 @@ export function V2FinalEvaluationPanel({
 			),
 		[typicalWorkGroups],
 	);
-	const useModelStreamTypicalWorksTable = hasModelStreamCatalog;
-	const otherTypicalWorkGroups = useMemo(
-		() =>
-			typicalWorkGroups.filter(
-				(group) => group.streamExecutor !== MODEL_STREAM_LABEL,
-			),
-		[typicalWorkGroups],
-	);
+	const otherTypicalWorkGroups = useMemo(() => {
+		const appeared = typicalWorkGroups.filter(
+			(group) => group.streamExecutor !== MODEL_STREAM_LABEL,
+		);
+		const seen = new Set(
+			appeared.map((group) => group.streamExecutor ?? group.path),
+		);
+		const emptyFromSchema = otherStreamCatalogLabels
+			.filter((label) => !seen.has(label))
+			.map((streamExecutor) => ({
+				path: `schema:${streamExecutor}`,
+				streamExecutor,
+				rows: [] as Record<string, unknown>[],
+			}));
+		return [...appeared, ...emptyFromSchema];
+	}, [typicalWorkGroups, otherStreamCatalogLabels]);
 	const typicalWorkRowCount =
 		modelStreamTypicalRows.length +
 		otherTypicalWorkGroups.reduce((sum, group) => sum + group.rows.length, 0);
 	const showModelStreamSection =
-		hasModelStreamCatalog || (!hasModelStreamCatalog && rows.length > 0);
+		hasModelStreamCatalogInSchema || modelStreamTypicalRows.length > 0;
+	const showOtherStreamsSection = otherTypicalWorkGroups.length > 0;
 	const showUnifiedHeadline = Boolean(
 		effectiveSummary && hasNonZeroUnifiedTotals(effectiveSummary),
 	);
@@ -189,17 +252,11 @@ export function V2FinalEvaluationPanel({
 		effectiveSummary && hasLegacyHeadline(effectiveSummary),
 	);
 	const hasData =
-		(effectiveSummary &&
-			(showUnifiedHeadline ||
-				showLegacyHeadline ||
-				rows.length > 0 ||
-				platformRows.length > 0)) ||
+		(effectiveSummary && (showUnifiedHeadline || showLegacyHeadline)) ||
 		typicalWorkRowCount > 0;
 	const showDetailedSection =
 		!hideDetailedEstimates &&
-		(showModelStreamSection ||
-			platformRows.length > 0 ||
-			otherTypicalWorkGroups.length > 0);
+		(showModelStreamSection || showOtherStreamsSection);
 
 	return (
 		<Box sx={{ width: "100%", minWidth: 0 }}>
@@ -276,7 +333,7 @@ export function V2FinalEvaluationPanel({
 								value={formatNum(effectiveSummary?.baseScoreStream)}
 							/>
 							<Metric
-								label="Оценка с поправкой на коэффициент сложности:"
+								label="Оценка с поправкой:"
 								value={formatNum(effectiveSummary?.scoreWithComplexityCoeff)}
 							/>
 							<Metric
@@ -306,7 +363,7 @@ export function V2FinalEvaluationPanel({
 						<Typography variant="body2" color="text.secondary">
 							{hideDetailedEstimates
 								? "Оценки работ недоступны для вашей роли."
-								: "Заполните анкету — здесь появится расчёт поэтапам и платформенным стримам."}
+								: "Заполните анкету — здесь появится расчёт по типовым работам стримов."}
 						</Typography>
 					) : null}
 
@@ -321,49 +378,29 @@ export function V2FinalEvaluationPanel({
 									<Typography variant="h6" fontWeight={700} mb={2}>
 										Модельный стрим
 									</Typography>
-									{useModelStreamTypicalWorksTable ? (
-										modelStreamTypicalRows.length > 0 ? (
-											<TypicalWorksMiniTable rows={modelStreamTypicalRows} />
-										) : (
-											<Typography variant="body2" color="text.secondary">
-												Работы модельного стрима появятся здесь после выполнения
-												условий появления в анкете.
-											</Typography>
-										)
-									) : rows.length > 0 ? (
-										<MiniTable
-											columns={[
-												"Наименование этапа E2E планирования",
-												"Базовая оценка",
-												"Оценка с поправкой",
-												"Отклонение",
-											]}
-											rows={rows.map((r) => ({
-												name: r.stageName ?? "—",
-												c1: formatNum(r.baseScore),
-												c2: formatNum(r.complexityCoeff ?? undefined),
-												c3: formatPercent(r.deviationFromBase ?? undefined),
-												c3Color: deviationColor(
-													r.deviationFromBase ?? undefined,
-												),
-												muted: r.disabled,
-												bold: r.stageName === "Итого",
-											}))}
+									{modelStreamTypicalRows.length > 0 ? (
+										<TypicalWorksMiniTable
+											rows={modelStreamTypicalRows}
+											showDeviations
 										/>
-									) : null}
-									{otherTypicalWorkGroups.length > 0 ||
-									platformRows.length > 0 ? (
+									) : (
+										<Typography variant="body2" color="text.secondary">
+											Работы модельного стрима появятся здесь после выполнения
+											условий появления в анкете.
+										</Typography>
+									)}
+									{showOtherStreamsSection ? (
 										<Divider sx={{ my: 4 }} />
 									) : null}
 								</>
 							) : null}
 
-							{otherTypicalWorkGroups.length > 0 ? (
+							{showOtherStreamsSection ? (
 								<>
 									<Typography variant="h6" fontWeight={700} mb={2}>
 										Появление типовых работ
 									</Typography>
-									<Stack spacing={3} mb={platformRows.length > 0 ? 4 : 0}>
+									<Stack spacing={3}>
 										{otherTypicalWorkGroups.map((group) => (
 											<Box key={group.path}>
 												{group.streamExecutor ? (
@@ -376,37 +413,20 @@ export function V2FinalEvaluationPanel({
 														{group.streamExecutor}
 													</Typography>
 												) : null}
-												<TypicalWorksMiniTable rows={group.rows} />
+												{group.rows.length > 0 ? (
+													<TypicalWorksMiniTable
+														rows={group.rows}
+														showDeviations
+													/>
+												) : (
+													<Typography variant="body2" color="text.secondary">
+														Работы стрима появятся здесь после выполнения
+														условий появления в анкете.
+													</Typography>
+												)}
 											</Box>
 										))}
 									</Stack>
-									{platformRows.length > 0 ? <Divider sx={{ mb: 5 }} /> : null}
-								</>
-							) : null}
-
-							{platformRows.length > 0 ? (
-								<>
-									<Typography variant="h6" fontWeight={700} mb={2}>
-										Стримы
-									</Typography>
-									<MiniTable
-										columns={[
-											"Наименование стрима",
-											"Базовая оценка",
-											"Оценка с поправкой",
-											"Отклонение",
-											"Оценка нетиповых задач",
-										]}
-										rows={platformRows.map((r) => ({
-											name: r.streamName ?? "—",
-											c1: formatNum(r.baseTypicalScore),
-											c2: formatNum(r.adjustedTypicalScore),
-											c3: formatPercent(r.deviationPercent ?? undefined),
-											c3Color: deviationColor(r.deviationPercent ?? undefined),
-											c4: formatNum(r.atypicalScore),
-										}))}
-										fiveCols
-									/>
 								</>
 							) : null}
 						</>
@@ -446,8 +466,34 @@ function Metric({
 	);
 }
 
-function TypicalWorksMiniTable({ rows }: { rows: Record<string, unknown>[] }) {
+function TypicalWorksMiniTable({
+	rows,
+	showDeviations = false,
+}: {
+	rows: Record<string, unknown>[];
+	/** Модельный стрим: колонки отклонения / общего отклонения после базы. */
+	showDeviations?: boolean;
+}) {
 	const [openByKey, setOpenByKey] = useState<Record<string, boolean>>({});
+	const columns = showDeviations
+		? MODEL_STREAM_TYPICAL_WORK_TABLE_COLUMNS
+		: TYPICAL_WORK_TABLE_COLUMNS;
+	const deviationRows = useMemo(() => {
+		if (!showDeviations) return null;
+		let runningBase = 0;
+		let runningTotal = 0;
+		return rows.map((item) => {
+			const base = readTypicalWorkFiniteNumber(item.estimateHoursPerDay);
+			const total = readTypicalWorkFiniteNumber(item.total);
+			const rowDeviation = percentDeviationFromBase(base, total);
+			if (base !== null) runningBase += base;
+			if (total !== null) runningTotal += total;
+			return {
+				rowDeviation,
+				overallDeviation: percentDeviationFromBase(runningBase, runningTotal),
+			};
+		});
+	}, [rows, showDeviations]);
 
 	return (
 		<Table
@@ -466,14 +512,14 @@ function TypicalWorksMiniTable({ rows }: { rows: Record<string, unknown>[] }) {
 		>
 			<TableHead>
 				<TableRow>
-					{TYPICAL_WORK_TABLE_COLUMNS.map((col, index) => (
+					{columns.map((col, index) => (
 						<TableCell
 							key={col}
 							align={index === 0 ? "left" : "right"}
 							sx={{
 								fontWeight: 700,
 								color: "text.secondary",
-								width: index === 0 ? "42%" : undefined,
+								width: index === 0 ? (showDeviations ? "30%" : "42%") : undefined,
 							}}
 						>
 							{col}
@@ -491,6 +537,7 @@ function TypicalWorksMiniTable({ rows }: { rows: Record<string, unknown>[] }) {
 							...prev,
 							[rowKey]: !prev[rowKey],
 						}));
+					const deviations = deviationRows?.[index];
 					return (
 						<Fragment key={rowKey}>
 							<TableRow
@@ -536,6 +583,26 @@ function TypicalWorksMiniTable({ rows }: { rows: Record<string, unknown>[] }) {
 								<TableCell align="right">
 									{formatTypicalWorkNumberValue(item.estimateHoursPerDay)}
 								</TableCell>
+								{showDeviations && deviations ? (
+									<>
+										<TableCell
+											align="right"
+											sx={{ color: deviationColor(deviations.rowDeviation) }}
+											title="(итог − база) / база × 100%"
+										>
+											{formatPercent(deviations.rowDeviation ?? undefined)}
+										</TableCell>
+										<TableCell
+											align="right"
+											sx={{
+												color: deviationColor(deviations.overallDeviation),
+											}}
+											title="Накопленное отклонение суммы итогов от суммы базовых оценок"
+										>
+											{formatPercent(deviations.overallDeviation ?? undefined)}
+										</TableCell>
+									</>
+								) : null}
 								<TableCell
 									align="right"
 									title={typicalWorkCoefficientColumnTitle(item)}
@@ -548,7 +615,7 @@ function TypicalWorksMiniTable({ rows }: { rows: Record<string, unknown>[] }) {
 							</TableRow>
 							<TableRow>
 								<TableCell
-									colSpan={TYPICAL_WORK_TABLE_COLUMNS.length}
+									colSpan={columns.length}
 									sx={{
 										py: 0,
 										px: 0.75,
@@ -565,96 +632,6 @@ function TypicalWorksMiniTable({ rows }: { rows: Record<string, unknown>[] }) {
 						</Fragment>
 					);
 				})}
-			</TableBody>
-		</Table>
-	);
-}
-
-function MiniTable({
-	columns,
-	rows,
-	fiveCols,
-}: {
-	columns: string[];
-	rows: Array<{
-		name: string;
-		c1: string;
-		c2: string;
-		c3: string;
-		c4?: string;
-		c3Color?: string;
-		muted?: boolean;
-		bold?: boolean;
-	}>;
-	fiveCols?: boolean;
-}) {
-	return (
-		<Table
-			size="small"
-			sx={{
-				tableLayout: "fixed",
-				width: "100%",
-				"& td, & th": {
-					px: 0.75,
-					py: 0.5,
-					fontSize: 12,
-					verticalAlign: "top",
-					wordBreak: "break-word",
-				},
-			}}
-		>
-			<TableHead>
-				<TableRow>
-					{columns.map((col, index) => (
-						<TableCell
-							key={col}
-							align={index === 0 ? "left" : "right"}
-							sx={{
-								fontWeight: 700,
-								color: "text.secondary",
-								width: index === 0 ? (fiveCols ? "32%" : "42%") : undefined,
-							}}
-						>
-							{col}
-						</TableCell>
-					))}
-				</TableRow>
-			</TableHead>
-			<TableBody>
-				{rows.map((row, index) => (
-					<TableRow
-						key={`${row.name}-${index}`}
-						sx={{
-							opacity: row.muted ? 0.45 : 1,
-							"& td": { fontWeight: row.bold ? 700 : 400 },
-						}}
-					>
-						<TableCell>
-							{fiveCols ? (
-								<Typography fontWeight={row.bold ? 700 : 500}>
-									{row.name}
-								</Typography>
-							) : (
-								<Stack direction="row" spacing={2}>
-									<Typography color="text.secondary" sx={{ minWidth: 28 }}>
-										{String(index + 1).padStart(2, "0")}.
-									</Typography>
-									<Typography fontWeight={row.bold ? 700 : 500}>
-										{row.name}
-									</Typography>
-								</Stack>
-							)}
-						</TableCell>
-						<TableCell align="right">{row.c1}</TableCell>
-						<TableCell align="right">{row.c2}</TableCell>
-						<TableCell align="right" sx={{ color: row.c3Color }}>
-							{row.c3}
-						</TableCell>
-						{fiveCols ? (
-							<TableCell align="right">{row.c4 ?? "—"}</TableCell>
-						) : null}
-					</TableRow>
-				))}
 			</TableBody>
 		</Table>
 	);

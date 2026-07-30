@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.V2_WORK_FORMULA_ARCH_COUNT_KINDS = exports.V2_WORK_ARCH_COUNT_LIMITS = void 0;
 exports.formatWorkArchCountKindLabel = formatWorkArchCountKindLabel;
+exports.formatArchCountCoeffFactorLabel = formatArchCountCoeffFactorLabel;
 exports.parseWorkArchCountKindLabel = parseWorkArchCountKindLabel;
 exports.formatArchCountCoeffSteps = formatArchCountCoeffSteps;
 exports.parseArchCountCoeffSteps = parseArchCountCoeffSteps;
@@ -96,6 +97,20 @@ function normalizeArchCountKind(value) {
 }
 function formatWorkArchCountKindLabel(kind) {
     return v2_anketa_section_ui_util_1.V2_ARCH_COMPONENT_LABELS[kind];
+}
+/**
+ * Подпись множителя arch_count_coeff в формулах / разборе
+ * («Коэф. по числу моделей», не путать с самим количеством).
+ */
+const ARCH_COUNT_COEFF_FACTOR_LABELS = {
+    model: "Коэф. по числу моделей",
+    sourceSystem: "Коэф. по числу систем-источников",
+    dataMart: "Коэф. по числу витрин",
+    dataProcess: "Коэф. по числу процессов",
+    modelService: "Коэф. по числу модельных сервисов",
+};
+function formatArchCountCoeffFactorLabel(kind) {
+    return ARCH_COUNT_COEFF_FACTOR_LABELS[kind];
 }
 function parseWorkArchCountKindLabel(label) {
     return normalizeArchCountKind(label);

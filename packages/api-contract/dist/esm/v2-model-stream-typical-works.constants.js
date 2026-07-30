@@ -1,16 +1,16 @@
 import { V2_IMPLEMENTATION_STREAM, V2_IMPLEMENTATION_STREAM_LABELS, } from "./v2-implementation-streams.util";
-/** Эталонные id 10 типовых работ модельного стрима (factory registry). */
+/** Эталонные id 10 типовых работ модельного стрима (factory registry / anketa boundWorkIds). */
 export const V2_MODEL_STREAM_FACTORY_WORK_IDS = [
-    "f5667ca4-4de8-4e65-a305-0a34b8945268",
-    "6ee9b8be-c732-4444-8f77-c19a38304a7e",
-    "b31f0862-349d-44df-9cd7-2fbafdc88c40",
-    "ea346f5c-c67f-430c-b56a-53b59b5bc18c",
-    "91929b5d-3e46-4c1e-95c7-0df362a74773",
-    "744fddb7-0705-4c89-a389-32d802dcb37c",
-    "86bb45a8-47da-425e-99be-3ff76b633378",
-    "ddfd88fb-e256-4e2b-ba41-f15642109db2",
-    "80e02a43-c142-4b67-bbd7-39e01e3a6f62",
-    "91538af2-084d-442a-a860-cd8b36f5c0ec",
+    "fbfa5b48-abae-442a-a7a7-6b7ccebe88f7", // 01. Постановка задачи
+    "8004b30d-592f-4fb6-81f4-b4e052f56d90", // 02. Поиск данных
+    "64e97c0a-8662-4530-9aac-57016cf4f32e", // 04. Построение витрины для разработки
+    "9c71a3a2-d980-4d39-a603-ca1d35f9ea31", // 05A. Разработка пилотной модели (MVP)
+    "4a349bdc-be66-4c86-b36c-b6733eec8455", // 05. Разработка модели
+    "d888922b-f141-4e9c-84bc-2c9dbc5dfee3", // AutoML: разработка
+    "278cd153-4188-4dea-bba7-a45edaed7bbf", // 05B. Пилотирование модели
+    "5862d9a7-b2d5-4a99-90f8-a042532a62aa", // 07. Разработка витрины для применения модели
+    "053b1fbc-25ef-4182-9b78-dc100ce19712", // 09. Адаптация и внедрение модели
+    "22c7a066-51de-4b59-b5a1-770733276212", // AutoML: внедрение
 ];
 export const V2_MODEL_STREAM_EXECUTOR = "Модельный стрим";
 /**
@@ -63,18 +63,16 @@ export function resolveModelStreamCatalogScopeDbStreams() {
     }
     return result;
 }
-/** Всегда показываются в блоке типовых работ и в «Подробном расчёте». */
-export const V2_MODEL_STREAM_ALWAYS_SHOWN_WORK_IDS = new Set([
-    "f5667ca4-4de8-4e65-a305-0a34b8945268",
-    "b31f0862-349d-44df-9cd7-2fbafdc88c40",
-    "91929b5d-3e46-4c1e-95c7-0df362a74773",
-    "ddfd88fb-e256-4e2b-ba41-f15642109db2",
-]);
-/** Всегда активны (формула считается даже без явных триггеров). */
-export const V2_MODEL_STREAM_ALWAYS_ACTIVE_WORK_IDS = new Set([
-    "f5667ca4-4de8-4e65-a305-0a34b8945268",
-    "91929b5d-3e46-4c1e-95c7-0df362a74773",
-]);
+/**
+ * @deprecated Работы модельного стрима появляются только по триггеру (CSV).
+ * Оставлено пустым для обратной совместимости импортов.
+ */
+export const V2_MODEL_STREAM_ALWAYS_SHOWN_WORK_IDS = new Set();
+/**
+ * @deprecated Работы модельного стрима считаются только по триггеру (CSV).
+ * Оставлено пустым для обратной совместимости импортов.
+ */
+export const V2_MODEL_STREAM_ALWAYS_ACTIVE_WORK_IDS = new Set();
 const MODEL_STREAM_WORK_ORDER = [
     /^01[\.\s]/i,
     /^02[\.\s]/i,

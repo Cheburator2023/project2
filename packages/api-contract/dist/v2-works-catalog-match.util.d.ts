@@ -123,6 +123,16 @@ export declare function coerceNumericLaborActual(actual: unknown): unknown;
 /** Читает значение по schemaPointer (`/generalInfo/field`, `/detailInfo/dataMart/items/field`). */
 export declare function readValueAtSchemaPointer(root: Record<string, unknown>, pointer: string): unknown;
 /**
+ * Поля триггера с другого арх. компонента (напр. readyPromReports на моделях
+ * при fan-out по системам-источникам): flatten last-write даёт значение
+ * последней модели и ломает «хотя бы одна модель = Нет».
+ *
+ * Если в formData несколько разных ответов — всегда подставляем массив
+ * (laborValueMatches = any), даже когда source уже содержит last-write.
+ * Один ответ: не трогаем source, если поле на нём уже есть.
+ */
+export declare function overlayCrossComponentTriggerLookup(lookup: Record<string, unknown>, source: Record<string, unknown>, formData: Record<string, unknown> | undefined, paramCodes: readonly string[]): Record<string, unknown>;
+/**
  * Разворачивает значение sourceContextPaths в плоский объект полей.
  * UI хранит dataProcess/dataMart/modelService как массив записей — берём первую.
  */

@@ -25,7 +25,7 @@ describe("anketaRjsfFormData.util", () => {
 	it("preserves arch object list arrays when applying RJSF onChange", () => {
 		const storage = {
 			generalInfo: {
-				modelService: [{ field_dEVFQVQn: "ms-1" }, { field_dEVFQVQn: "ms-2" }],
+				modelService: [{ field_dEVFQVQn: "ms-1" }],
 			},
 		};
 		const rjsfData = {
@@ -39,7 +39,6 @@ describe("anketaRjsfFormData.util", () => {
 
 		expect(readArchObjectListAtPath(next, "generalInfo.modelService")).toEqual([
 			{ field_dEVFQVQn: "ms-1" },
-			{ field_dEVFQVQn: "ms-2" },
 		]);
 		expect((next.generalInfo as { calcName: string }).calcName).toBe("Новое имя");
 	});

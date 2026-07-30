@@ -3,7 +3,7 @@ import { defaultWorkRounding, } from "./v2-typical-work.types";
 import { applyWorkRounding, applyWorkFormulaParamNames, formatWorkFormulaReadableSymbolic, formatWorkFormulaReadableWithValues, isParamToken, previewWorkFormula, tokensToText, validateWorkFormulaTokens, } from "./v2-work-formula.util";
 import { stripParamNameSourceKeys } from "./v2-work-param-source-keys.util";
 import { compileTriggerFormulaTokensToJsonLogic, hasTypicalWorkTriggersConfigured, matchTypicalWorkTriggers, } from "./v2-trigger-formula.util";
-import { resolveArchCountCoeffFromToken, archCountTriggerMatches, formatWorkArchCountKindLabel, isTriggerArchCountConfigured, } from "./v2-work-arch-count-coeff.util";
+import { resolveArchCountCoeffFromToken, archCountTriggerMatches, formatArchCountCoeffFactorLabel, isTriggerArchCountConfigured, } from "./v2-work-arch-count-coeff.util";
 import { evaluateTermsFormula, formatTermsSummary, resolveVersionConfigTokenFormula, } from "./v2-work-terms-formula.util";
 const OP_SYMBOL = {
     "+": "+",
@@ -606,7 +606,7 @@ function collectFormulaFactorLines(params) {
             continue;
         }
         if (token.kind === "arch_count_coeff") {
-            const name = `Кол-${formatWorkArchCountKindLabel(token.archComponentKind)}`;
+            const name = formatArchCountCoeffFactorLabel(token.archComponentKind);
             const value = resolveArchCountCoeffFromToken(params.formData ?? {}, token.archComponentKind, token.steps);
             push(`arch:${token.archComponentKind}`, name, value);
         }
