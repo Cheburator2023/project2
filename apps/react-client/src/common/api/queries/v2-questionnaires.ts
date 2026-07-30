@@ -265,7 +265,7 @@ export const useV2QuestionnaireEditLocks = (enabled = true) =>
 				method: "GET",
 			}),
 		enabled,
-		refetchInterval: 15_000,
+		refetchInterval: 5_000,
 		refetchOnWindowFocus: true,
 	});
 

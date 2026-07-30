@@ -283,22 +283,24 @@ describe("V2 calculation coverage — legacy E2E stages", () => {
 		"Нетиповые задачи",
 	];
 
-	it("always returns full detailedCalculation table from factory snapshot", async () => {
+	it("does not publish СФЕРА summary headlines on empty/fresh formData", async () => {
 		const summary = summaryOf(await evaluateSnapshot({}));
-		expect(summary.detailedCalculation.map((r) => r.stageName)).toEqual(
+		expect(summary.baseScoreStream).toBeUndefined();
+		expect(summary.scoreWithComplexityCoeff).toBeUndefined();
+		expect(summary.deviationFromBaseline).toBeUndefined();
+		expect(summary.detailedCalculation).toBeUndefined();
+	});
+
+	it("publishes СФЕРА summary when anketa has meaningful answers", async () => {
+		const summary = summaryOf(
+			await evaluateSnapshot({
+				generalInfo: { complexity: "1 — Низкая ×1.00" },
+			}),
+		);
+		expect(summary.detailedCalculation?.map((r) => r.stageName)).toEqual(
 			allStageNames,
 		);
-		expect(summary.platformStreams.length).toBeGreaterThanOrEqual(4);
-		expect(
-			summary.platformStreams.some((row) =>
-				row.streamName.includes("ДАДМ"),
-			),
-		).toBe(true);
-		expect(
-			summary.platformStreams.some((row) =>
-				row.streamName.includes("ПиРМ"),
-			),
-		).toBe(true);
+		expect(summary.platformStreams?.length).toBeGreaterThanOrEqual(4);
 		expect(summary.baseScoreStream).toBeGreaterThan(0);
 		expect(summary.scoreWithComplexityCoeff).toBeGreaterThan(0);
 	});

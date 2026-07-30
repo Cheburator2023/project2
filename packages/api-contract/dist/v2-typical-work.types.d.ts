@@ -9,7 +9,7 @@ export declare const V2_WORK_ROUNDING_MODE_VALUES: readonly ["CEIL", "FLOOR", "R
 export type V2WorkRoundingMode = (typeof V2_WORK_ROUNDING_MODE_VALUES)[number];
 export declare const V2_WORK_TRIGGER_STATUS_VALUES: readonly ["appears", "hidden", "no_triggers", "invalid"];
 export type V2WorkTriggerStatus = (typeof V2_WORK_TRIGGER_STATUS_VALUES)[number];
-export declare const V2_LOGIC_WORKSPACE_TAB_VALUES: readonly ["works", "atypicalWorks", "dependencies", "uncertainty", "jsonlogic"];
+export declare const V2_LOGIC_WORKSPACE_TAB_VALUES: readonly ["works", "atypicalWorks", "dependencies", "uncertainty", "deviations", "jsonlogic"];
 export type V2LogicWorkspaceTab = (typeof V2_LOGIC_WORKSPACE_TAB_VALUES)[number];
 export type V2WorkFormulaOperatorToken = "+" | "-" | "*" | "/";
 export declare const V2_WORK_FORMULA_ARCH_COUNT_KINDS: readonly ["model", "sourceSystem", "dataMart", "dataProcess", "modelService"];

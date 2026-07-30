@@ -30,6 +30,7 @@ export const V2_LOGIC_WORKSPACE_TAB_VALUES = [
     "atypicalWorks",
     "dependencies",
     "uncertainty",
+    "deviations",
     "jsonlogic",
 ];
 export const V2_WORK_FORMULA_ARCH_COUNT_KINDS = [

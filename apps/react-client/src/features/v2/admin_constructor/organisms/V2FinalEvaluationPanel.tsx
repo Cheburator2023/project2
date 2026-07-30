@@ -34,25 +34,24 @@ import {
 	shouldSkipLegacyModelStreamStageSummary,
 	sortModelStreamTypicalWorkRows,
 } from "@smart-anketa/api-contract";
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
 
 const MODEL_STREAM_LABEL = "Модельный стрим";
 
 const TYPICAL_WORK_TABLE_COLUMNS = [
-	"Название типовой работы",
-	"Базовая оценка",
-	"Коэффициент",
-	"Итог",
+	"Название",
+	"База",
+	"Коэфф",
+	"С поправкой",
 ] as const;
 
-/** Модельный стрим: базовые колонки + отклонения после «Базовая оценка». */
+/** Модельный стрим: база → отклонение (от среднего по экземплярам) → коэфф → сумма с поправкой. */
 const MODEL_STREAM_TYPICAL_WORK_TABLE_COLUMNS = [
-	"Название типовой работы",
-	"Базовая оценка",
+	"Название",
+	"База",
 	"Отклонение",
-	"Общее отклонение",
-	"Коэффициент",
-	"Итог",
+	"Коэфф",
+	"С поправкой",
 ] as const;
 
 export type V2SummaryFormSlice = {
@@ -132,6 +131,55 @@ function readTypicalWorkFiniteNumber(value: unknown): number | null {
 		return Number.isFinite(parsed) ? parsed : null;
 	}
 	return null;
+}
+
+/**
+ * Итоги по экземплярам формулы (уже отфильтрованные сработавшие).
+ */
+function readTypicalWorkInstanceTotals(
+	item: Record<string, unknown>,
+): number[] {
+	const raw = item.formulaBreakdown;
+	if (!raw || typeof raw !== "object" || Array.isArray(raw)) return [];
+	const list = (raw as Record<string, unknown>).instanceBreakdown;
+	if (!Array.isArray(list)) return [];
+	const totals: number[] = [];
+	for (const row of list) {
+		if (!row || typeof row !== "object" || Array.isArray(row)) continue;
+		const total = readTypicalWorkFiniteNumber(
+			(row as Record<string, unknown>).total,
+		);
+		if (total !== null) totals.push(total);
+	}
+	return totals;
+}
+
+/**
+ * База для отклонения: норматив × число сработавших формул (37×3 = 111).
+ * Оценка с поправкой: сумма итогов формул (166.5).
+ * Отклонение: (с поправкой − база×N) / (база×N) × 100%.
+ */
+function resolveTypicalWorkDeviationBases(item: Record<string, unknown>): {
+	unitBase: number | null;
+	formulaCount: number;
+	baseTotal: number | null;
+	adjustedTotal: number | null;
+} {
+	const unitBase = readTypicalWorkFiniteNumber(item.estimateHoursPerDay);
+	const instanceTotals = readTypicalWorkInstanceTotals(item);
+	const formulaCount =
+		instanceTotals.length > 0
+			? instanceTotals.length
+			: readTypicalWorkFiniteNumber(item.total) != null
+				? 1
+				: 0;
+	const adjustedTotal =
+		instanceTotals.length > 0
+			? instanceTotals.reduce((acc, value) => acc + value, 0)
+			: readTypicalWorkFiniteNumber(item.total);
+	const baseTotal =
+		unitBase !== null && formulaCount > 0 ? unitBase * formulaCount : unitBase;
+	return { unitBase, formulaCount, baseTotal, adjustedTotal };
 }
 
 /** Unified-итоги (типовые + нетиповые): показываем, если есть ненулевые значения. */
@@ -286,10 +334,14 @@ export function V2FinalEvaluationPanel({
 		hasModelStreamCatalogInSchema || modelStreamTypicalRows.length > 0;
 	const showOtherStreamsSection = otherTypicalWorkGroups.length > 0;
 	const showUnifiedHeadline = Boolean(
-		effectiveSummary && hasNonZeroUnifiedTotals(effectiveSummary),
+		typicalWorkRowCount > 0 &&
+			effectiveSummary &&
+			hasNonZeroUnifiedTotals(effectiveSummary),
 	);
 	const showLegacyHeadline = Boolean(
-		effectiveSummary && hasLegacyHeadline(effectiveSummary),
+		typicalWorkRowCount > 0 &&
+			effectiveSummary &&
+			hasLegacyHeadline(effectiveSummary),
 	);
 	const hasData =
 		(effectiveSummary && (showUnifiedHeadline || showLegacyHeadline)) ||
@@ -382,16 +434,21 @@ export function V2FinalEvaluationPanel({
 								value={formatNum(effectiveSummary?.baseScoreStream)}
 							/>
 							<Metric
-								label="Оценка с поправкой:"
+								label="Оценка с поправкой на коэффициент сложности:"
 								value={formatNum(effectiveSummary?.scoreWithComplexityCoeff)}
 							/>
 							<Metric
-								label="Отклонение относительно базовой оценки по стриму (СФЕРА):"
+								label="Отклонение (с поправкой относительно базы):"
 								value={formatPercent(effectiveSummary?.deviationFromBaseline)}
 								valueColor={deviationColor(
 									effectiveSummary?.deviationFromBaseline,
 								)}
 							/>
+							<Typography variant="caption" color="text.secondary">
+								Отклонение = (оценка с поправкой − базовая) / базовая × 100%.
+								Поправка учитывает коэффициент сложности и связанные множители
+								СФЕРА (модели, источники, неопределённость и др.).
+							</Typography>
 						</>
 					) : null}
 				</Stack>
@@ -544,26 +601,35 @@ function TypicalWorksMiniTable({
 	showDeviations = false,
 }: {
 	rows: Record<string, unknown>[];
-	/** Модельный стрим: колонки отклонения / общего отклонения после базы. */
+	/** Модельный стрим: колонка отклонения после базы (база×N формул vs сумма с поправкой). */
 	showDeviations?: boolean;
 }) {
 	const [openByKey, setOpenByKey] = useState<Record<string, boolean>>({});
+	const [deviationOpenByKey, setDeviationOpenByKey] = useState<
+		Record<string, boolean>
+	>({});
 	const columns = showDeviations
 		? MODEL_STREAM_TYPICAL_WORK_TABLE_COLUMNS
 		: TYPICAL_WORK_TABLE_COLUMNS;
 	const deviationRows = useMemo(() => {
 		if (!showDeviations) return null;
-		let runningBase = 0;
-		let runningTotal = 0;
 		return rows.map((item) => {
-			const base = readTypicalWorkFiniteNumber(item.estimateHoursPerDay);
-			const total = readTypicalWorkFiniteNumber(item.total);
-			const rowDeviation = percentDeviationFromBase(base, total);
-			if (base !== null) runningBase += base;
-			if (total !== null) runningTotal += total;
+			const { unitBase, formulaCount, baseTotal, adjustedTotal } =
+				resolveTypicalWorkDeviationBases(item);
+			const rowDeviation = percentDeviationFromBase(baseTotal, adjustedTotal);
+			const deviationCoeff =
+				baseTotal !== null &&
+				baseTotal !== 0 &&
+				adjustedTotal !== null
+					? adjustedTotal / baseTotal
+					: null;
 			return {
 				rowDeviation,
-				overallDeviation: percentDeviationFromBase(runningBase, runningTotal),
+				deviationCoeff,
+				unitBase,
+				formulaCount,
+				baseTotal,
+				adjustedTotal,
 			};
 		});
 	}, [rows, showDeviations]);
@@ -605,12 +671,31 @@ function TypicalWorksMiniTable({
 					const name = typicalWorkItemDisplayName(item, index);
 					const rowKey = `${String(item.workId ?? name)}-${index}`;
 					const open = Boolean(openByKey[rowKey]);
+					const deviationOpen = Boolean(deviationOpenByKey[rowKey]);
 					const toggle = () =>
 						setOpenByKey((prev) => ({
 							...prev,
 							[rowKey]: !prev[rowKey],
 						}));
+					const toggleDeviation = (event: MouseEvent | KeyboardEvent) => {
+						event.stopPropagation();
+						setDeviationOpenByKey((prev) => ({
+							...prev,
+							[rowKey]: !prev[rowKey],
+						}));
+					};
 					const deviations = deviationRows?.[index];
+					const deviationCoeff = deviations?.deviationCoeff ?? null;
+					const workTitleParts = [
+						open ? "Скрыть формулу" : "Показать формулу",
+						deviations?.baseTotal != null &&
+						deviations?.adjustedTotal != null
+							? `База×N=${formatTypicalWorkNumberValue(deviations.baseTotal)} · с поправкой=${formatTypicalWorkNumberValue(deviations.adjustedTotal)}`
+							: null,
+						deviations?.rowDeviation != null
+							? `Отклонение: ${formatPercent(deviations.rowDeviation)}`
+							: null,
+					].filter(Boolean);
 					return (
 						<Fragment key={rowKey}>
 							<TableRow
@@ -625,7 +710,7 @@ function TypicalWorksMiniTable({
 								tabIndex={0}
 								role="button"
 								aria-expanded={open}
-								title={open ? "Скрыть формулу" : "Показать формулу"}
+								title={workTitleParts.join(" · ")}
 								sx={{
 									cursor: "pointer",
 									bgcolor: open ? "action.hover" : undefined,
@@ -634,9 +719,6 @@ function TypicalWorksMiniTable({
 							>
 								<TableCell>
 									<Stack direction="row" spacing={1} alignItems="flex-start">
-										<Typography color="text.secondary" sx={{ minWidth: 28 }}>
-											{String(index + 1).padStart(2, "0")}.
-										</Typography>
 										<Typography fontWeight={500} sx={{ flex: 1, minWidth: 0 }}>
 											{name}
 										</Typography>
@@ -657,32 +739,36 @@ function TypicalWorksMiniTable({
 									{formatTypicalWorkNumberValue(item.estimateHoursPerDay)}
 								</TableCell>
 								{showDeviations && deviations ? (
-									<>
-										<TableCell
-											align="right"
-											sx={{ color: deviationColor(deviations.rowDeviation) }}
-											title="(итог − база) / база × 100%"
-										>
-											{formatPercent(deviations.rowDeviation ?? undefined)}
-										</TableCell>
-										<TableCell
-											align="right"
-											sx={{
-												color: deviationColor(deviations.overallDeviation),
-											}}
-											title="Накопленное отклонение суммы итогов от суммы базовых оценок"
-										>
-											{formatPercent(deviations.overallDeviation ?? undefined)}
-										</TableCell>
-									</>
+									<TableCell
+										align="right"
+										sx={{ color: deviationColor(deviations.rowDeviation) }}
+										title={
+											"Отклонение = (сумма с поправкой − база×N) / (база×N) × 100%, " +
+											"где N — число сработавших формул. " +
+											(deviations.unitBase != null && deviations.formulaCount > 0
+												? `База: ${formatTypicalWorkNumberValue(deviations.unitBase)}×${deviations.formulaCount}=${formatTypicalWorkNumberValue(deviations.baseTotal)}. `
+												: "") +
+											(deviations.adjustedTotal != null
+												? `С поправкой: ${formatTypicalWorkNumberValue(deviations.adjustedTotal)}.`
+												: "")
+										}
+									>
+										{formatPercent(deviations.rowDeviation ?? undefined)}
+									</TableCell>
 								) : null}
 								<TableCell
 									align="right"
-									title={typicalWorkCoefficientColumnTitle(item)}
+									title={
+										typicalWorkCoefficientColumnTitle(item) ??
+										"Сводный коэффициент поправки (для трудозатрат может быть Σ по экземплярам)"
+									}
 								>
 									{formatTypicalWorkCoefficientColumn(item)}
 								</TableCell>
-								<TableCell align="right">
+								<TableCell
+									align="right"
+									title="Сумма оценок с поправкой по экземплярам (трудозатраты). Отклонение = (эта сумма − база×N) / (база×N)."
+								>
 									{formatTypicalWorkNumberValue(item.total)}
 								</TableCell>
 							</TableRow>
@@ -698,6 +784,134 @@ function TypicalWorksMiniTable({
 									<Collapse in={open} timeout="auto" unmountOnExit>
 										<Box sx={{ pb: 1.25, pt: 0.25, width: "100%" }}>
 											<TypicalWorkFormulaBreakdownView item={item} />
+											{showDeviations ? (
+												<Box
+													sx={{
+														mt: 1.25,
+														pt: 1,
+														borderTop: "1px dashed",
+														borderColor: "divider",
+													}}
+												>
+													<Stack
+														direction="row"
+														alignItems="center"
+														spacing={0.5}
+														onClick={toggleDeviation}
+														onKeyDown={(event) => {
+															if (event.key === "Enter" || event.key === " ") {
+																event.preventDefault();
+																toggleDeviation(event);
+															}
+														}}
+														tabIndex={0}
+														role="button"
+														aria-expanded={deviationOpen}
+														title={
+															deviationOpen
+																? "Скрыть расчёт отклонений"
+																: "Показать расчёт отклонений"
+														}
+														sx={{
+															cursor: "pointer",
+															width: "fit-content",
+															userSelect: "none",
+														}}
+													>
+														{deviationOpen ? (
+															<ExpandLessIcon
+																fontSize="small"
+																sx={{ color: "text.secondary" }}
+															/>
+														) : (
+															<ExpandMoreIcon
+																fontSize="small"
+																sx={{ color: "text.secondary" }}
+															/>
+														)}
+														<Typography
+															variant="caption"
+															color="text.secondary"
+															fontWeight={700}
+														>
+															Расчёт отклонений
+														</Typography>
+													</Stack>
+													<Collapse
+														in={deviationOpen}
+														timeout="auto"
+														unmountOnExit
+													>
+														<Stack spacing={0.35} sx={{ mt: 0.75, pl: 0.5 }}>
+															<Typography
+																variant="caption"
+																color="text.secondary"
+																sx={{ display: "block", mb: 0.25 }}
+															>
+																База общая = норматив × число сработавших
+																формул; отклонение от суммы с поправкой.
+															</Typography>
+															<Typography
+																variant="body2"
+																sx={{
+																	fontFamily:
+																		"ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+																	fontSize: 12.5,
+																	lineHeight: 1.4,
+																	wordBreak: "break-word",
+																}}
+															>
+																база ={" "}
+																{formatTypicalWorkNumberValue(
+																	deviations?.unitBase ??
+																		item.estimateHoursPerDay,
+																)}
+																{deviations && deviations.formulaCount > 1
+																	? ` × ${deviations.formulaCount} = ${formatTypicalWorkNumberValue(deviations.baseTotal)}`
+																	: null}
+															</Typography>
+															<Typography
+																variant="body2"
+																sx={{
+																	fontFamily:
+																		"ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+																	fontSize: 12.5,
+																	lineHeight: 1.4,
+																	wordBreak: "break-word",
+																}}
+															>
+																с поправкой (сумма формул) ={" "}
+																{formatTypicalWorkNumberValue(
+																	deviations?.adjustedTotal ?? item.total,
+																)}
+															</Typography>
+															<Typography
+																variant="body2"
+																sx={{
+																	fontFamily:
+																		"ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+																	fontSize: 12.5,
+																	lineHeight: 1.4,
+																	color: deviationColor(
+																		deviations?.rowDeviation ?? undefined,
+																	),
+																	wordBreak: "break-word",
+																}}
+															>
+																отклонение = (с поправкой − база×N) / (база×N)
+																× 100% ={" "}
+																{formatPercent(
+																	deviations?.rowDeviation ?? undefined,
+																)}
+																{deviationCoeff != null &&
+																Number.isFinite(deviationCoeff)
+																	? ` · коэфф. = ${deviationCoeff.toFixed(2)}`
+																	: null}
+															</Typography>
+														</Stack>
+													</Collapse>
+												</Box>
+											) : null}
 										</Box>
 									</Collapse>
 								</TableCell>

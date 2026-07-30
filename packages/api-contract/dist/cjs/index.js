@@ -27,6 +27,7 @@ __exportStar(require("./v2-questionnaire-calc-name.util"), exports);
 __exportStar(require("./v2-questionnaire-uncertainty-coefficient.util"), exports);
 __exportStar(require("./v2-overall-uncertainty-config.util"), exports);
 __exportStar(require("./v2-overall-uncertainty-runtime.util"), exports);
+__exportStar(require("./v2-deviation-coefficients-config.util"), exports);
 __exportStar(require("./v2-questionnaire-registry-columns.util"), exports);
 __exportStar(require("./v2-questionnaire-registry-export.util"), exports);
 __exportStar(require("./v2-factory-snapshot.types"), exports);

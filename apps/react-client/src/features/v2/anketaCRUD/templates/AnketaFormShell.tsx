@@ -407,26 +407,68 @@ export function AnketaFormShell({
 	}, [questionnaireId, canExportReports]);
 
 	const headerLeadingAccessory = useMemo(
-		() =>
-			canRenameQuestionnaire ? (
-				<IconButton
-					size="small"
-					title="Переименовать анкету"
-					aria-label="Переименовать анкету"
-					disabled={renamePending}
-					onClick={() => setRenameDialogOpen(true)}
-					data-test-id={`${dataTestId}--rename`}
-				>
-					<EditOutlinedIcon fontSize="small" />
-				</IconButton>
-			) : null,
-		[canRenameQuestionnaire, dataTestId, renamePending],
+		() => (
+			<Box
+				sx={{
+					display: "inline-flex",
+					alignItems: "center",
+					gap: 1,
+					ml: 0.5,
+					flexShrink: 0,
+				}}
+				data-test-id={`${dataTestId}--leading`}
+			>
+				{canRenameQuestionnaire ? (
+					<IconButton
+						size="small"
+						title="Переименовать анкету"
+						aria-label="Переименовать анкету"
+						disabled={renamePending}
+						onClick={() => setRenameDialogOpen(true)}
+						data-test-id={`${dataTestId}--rename`}
+					>
+						<EditOutlinedIcon fontSize="small" />
+					</IconButton>
+				) : null}
+				{onSave && canSaveQuestionnaire ? (
+					<Box
+						component="span"
+						title={saveStatusLabel(saveStatus, saveErrorMessage)}
+						aria-label={saveStatusLabel(saveStatus, saveErrorMessage)}
+						data-test-id={`${dataTestId}--save-led`}
+						sx={{
+							width: 8,
+							height: 8,
+							borderRadius: "50%",
+							bgcolor: saveStatusLedColor(saveStatus),
+							flexShrink: 0,
+							display: "block",
+							mx: 0.5,
+							animation:
+								saveStatus === "saving" || saveStatus === "dirty"
+									? `${saveLedPulse} 1.1s ease-in-out infinite`
+									: "none",
+						}}
+					/>
+				) : null}
+				<AnketaSectionStatusChip kind="global" status={workflow.globalStatus} />
+			</Box>
+		),
+		[
+			canRenameQuestionnaire,
+			canSaveQuestionnaire,
+			dataTestId,
+			onSave,
+			renamePending,
+			saveErrorMessage,
+			saveStatus,
+			workflow.globalStatus,
+		],
 	);
 
 	const headerActions = useMemo(
 		() => (
 			<>
-				<AnketaSectionStatusChip kind="global" status={workflow.globalStatus} />
 				{!globallyLocked && canCompleteAnketa ? (
 					<IconButton
 						color="primary"
@@ -504,47 +546,19 @@ export function AnketaFormShell({
 					</IconButton>
 				) : null}
 				{onSave && canSaveQuestionnaire ? (
-					<Box
-						sx={{
-							display: "inline-flex",
-							alignItems: "center",
-							mx: 0.5,
-						}}
-						data-test-id={`${dataTestId}--save-group`}
+					<IconButton
+						onClick={onSave}
+						disabled={saveDisabled || savePending || effectiveReadOnly}
+						title="Сохранить"
+						aria-label="Сохранить"
+						data-test-id={`${dataTestId}--save`}
 					>
-						<Box
-							component="span"
-							title={saveStatusLabel(saveStatus, saveErrorMessage)}
-							aria-label={saveStatusLabel(saveStatus, saveErrorMessage)}
-							data-test-id={`${dataTestId}--save-led`}
-							sx={{
-								width: 8,
-								height: 8,
-								borderRadius: "50%",
-								bgcolor: saveStatusLedColor(saveStatus),
-								flexShrink: 0,
-								display: "block",
-								mx: 1,
-								animation:
-									saveStatus === "saving" || saveStatus === "dirty"
-										? `${saveLedPulse} 1.1s ease-in-out infinite`
-										: "none",
-							}}
-						/>
-						<IconButton
-							onClick={onSave}
-							disabled={saveDisabled || savePending || effectiveReadOnly}
-							title="Сохранить"
-							aria-label="Сохранить"
-							data-test-id={`${dataTestId}--save`}
-						>
-							{savePending ? (
-								<CircularProgress size={22} color="inherit" />
-							) : (
-								<SaveIcon />
-							)}
-						</IconButton>
-					</Box>
+						{savePending ? (
+							<CircularProgress size={22} color="inherit" />
+						) : (
+							<SaveIcon />
+						)}
+					</IconButton>
 				) : null}
 			</>
 		),
@@ -562,12 +576,8 @@ export function AnketaFormShell({
 			onSave,
 			saveDisabled,
 			savePending,
-			saveStatus,
-			saveErrorMessage,
 			dataTestId,
 			openCopyNameDialog,
-			saveDisabled,
-			savePending,
 			effectiveReadOnly,
 			workflow.globalStatus,
 			globallyLocked,

@@ -495,6 +495,7 @@ export class V2CalculationService {
 		const legacy = applyLegacySummaryToFormData(liveData, {
 			sourceTypicalWorksPath,
 			uiSchema: options?.uiSchema,
+			logic,
 		});
 		liveData = legacy.formData;
 		const legacyStageEvaluation = legacy.legacyStageEvaluation;

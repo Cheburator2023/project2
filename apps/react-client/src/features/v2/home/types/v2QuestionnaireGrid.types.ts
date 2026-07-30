@@ -14,7 +14,7 @@ export type V2QuestionnaireSeriesRow = {
 export type V2QuestionnaireVersionRow = V2QuestionnaireDto & {
 	rowKind: "version";
 	displayLabel: string;
-	/** Анкета сейчас редактируется — ряд в реестре заблокирован. */
+	/** Чужой lock: ряд в реестре заблокирован (свой lock не блокирует). */
 	isEditLocked?: boolean;
 };
 

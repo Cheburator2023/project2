@@ -10,6 +10,7 @@ import {
 	Patch,
 	Post,
 	Put,
+	Query,
 	Res,
 } from "@nestjs/common";
 import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
@@ -270,6 +271,27 @@ export class V2QuestionnaireController {
 	): Promise<void> {
 		return this.editLockService.release(id, {
 			label: body.lockedByLabel,
+			userId: questionnaireAuditUserId(user),
+		});
+	}
+
+	/**
+	 * Отдельный POST для снятия lock при закрытии вкладки (fetch keepalive).
+	 * Только query `lockedByLabel` — simple-request без CORS-preflight на unload.
+	 */
+	@Post(":id/edit-lock/release")
+	@HttpCode(HttpStatus.NO_CONTENT)
+	@RealmRole(Permission.ANKETA_EDIT_CALCULATION)
+	@ApiOperation({
+		summary: "Снять блокировку (unload/beacon)",
+	})
+	async releaseEditLockOnUnload(
+		@Param("id", ParseUUIDPipe) id: string,
+		@Query("lockedByLabel") lockedByLabel: string,
+		@CurrentUser() user: Record<string, unknown> | undefined,
+	): Promise<void> {
+		return this.editLockService.release(id, {
+			label: typeof lockedByLabel === "string" ? lockedByLabel : "",
 			userId: questionnaireAuditUserId(user),
 		});
 	}

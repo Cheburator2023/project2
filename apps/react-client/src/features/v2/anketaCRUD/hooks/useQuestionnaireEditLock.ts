@@ -7,6 +7,7 @@ import {
 	useRenewV2QuestionnaireEditLock,
 } from "@react-client/common/api/queries/v2-questionnaires";
 import { useQuestionnaireEditLocksStore } from "../stores/questionnaireEditLocksStore";
+import { releaseV2QuestionnaireEditLockOnUnload } from "../utils/releaseV2QuestionnaireEditLockOnUnload";
 import { useUserStore } from "@react-client/common/store/userStore";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { useQueryClient } from "@tanstack/react-query";
@@ -119,26 +120,69 @@ export function useQuestionnaireEditLock({
 	}, [acquire, bumpRegistryLocks, enabled, questionnaireId, upsertLock]);
 
 	useEffect(() => {
+		let cancelled = false;
 		heldRef.current = false;
 		setHolding(false);
 		setForeignLock(null);
 		setLockError(null);
 		if (!questionnaireId || !enabled) return;
 
-		void tryAcquire();
+		void (async () => {
+			try {
+				const lock = await acquire.mutateAsync({
+					id: questionnaireId,
+					body: { lockedByLabel: labelRef.current },
+				});
+				if (cancelled) {
+					removeLock(questionnaireId);
+					release.mutate(
+						{
+							id: questionnaireId,
+							body: { lockedByLabel: labelRef.current },
+						},
+						{ onSettled: () => bumpRegistryLocks() },
+					);
+					return;
+				}
+				heldRef.current = true;
+				setHolding(true);
+				setForeignLock(null);
+				setLockError(null);
+				upsertLock(lock);
+				bumpRegistryLocks();
+			} catch (err) {
+				if (cancelled) return;
+				heldRef.current = false;
+				setHolding(false);
+				const message = apiErrorMessage(err);
+				setLockError(message);
+				const lockFromError = lockFromAxiosError(err);
+				if (lockFromError) {
+					setForeignLock(lockFromError);
+					upsertLock(lockFromError);
+				} else {
+					setForeignLock({
+						questionnaireId,
+						lockedByLabel: "другой пользователь",
+						lockedByUserId: null,
+						expiresAt: new Date(
+							Date.now() + V2_QUESTIONNAIRE_EDIT_LOCK_TTL_MS,
+						).toISOString(),
+					});
+				}
+				bumpRegistryLocks();
+			}
+		})();
 
 		return () => {
+			cancelled = true;
 			if (!questionnaireId || !heldRef.current) return;
 			heldRef.current = false;
 			setHolding(false);
+			removeLock(questionnaireId);
 			release.mutate(
 				{ id: questionnaireId, body: { lockedByLabel: labelRef.current } },
-				{
-					onSuccess: () => {
-						removeLock(questionnaireId);
-						void qc.invalidateQueries({ queryKey: EDIT_LOCKS_QUERY_KEY });
-					},
-				},
+				{ onSettled: () => bumpRegistryLocks() },
 			);
 		};
 		// eslint-disable-next-line react-hooks/exhaustive-deps -- acquire once per id/enabled
@@ -167,14 +211,22 @@ export function useQuestionnaireEditLock({
 		if (!questionnaireId) return;
 		const onUnload = () => {
 			if (!heldRef.current) return;
-			void release.mutateAsync({
-				id: questionnaireId,
-				body: { lockedByLabel: labelRef.current },
-			});
+			heldRef.current = false;
+			setHolding(false);
+			removeLock(questionnaireId);
+			releaseV2QuestionnaireEditLockOnUnload(
+				questionnaireId,
+				labelRef.current,
+			);
 		};
+		// pagehide надёжнее beforeunload; оба — на случай разных браузеров.
 		window.addEventListener("pagehide", onUnload);
-		return () => window.removeEventListener("pagehide", onUnload);
-	}, [questionnaireId, release]);
+		window.addEventListener("beforeunload", onUnload);
+		return () => {
+			window.removeEventListener("pagehide", onUnload);
+			window.removeEventListener("beforeunload", onUnload);
+		};
+	}, [questionnaireId, removeLock]);
 
 	return {
 		readOnlyByLock,

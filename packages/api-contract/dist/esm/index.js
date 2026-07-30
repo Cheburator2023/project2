@@ -11,6 +11,7 @@ export * from "./v2-questionnaire-calc-name.util";
 export * from "./v2-questionnaire-uncertainty-coefficient.util";
 export * from "./v2-overall-uncertainty-config.util";
 export * from "./v2-overall-uncertainty-runtime.util";
+export * from "./v2-deviation-coefficients-config.util";
 export * from "./v2-questionnaire-registry-columns.util";
 export * from "./v2-questionnaire-registry-export.util";
 export * from "./v2-factory-snapshot.types";

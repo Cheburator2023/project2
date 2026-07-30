@@ -27,6 +27,7 @@ import {
 	v2QuestionnairesExportXlsx,
 } from "@react-client/common/api/queries/v2-questionnaires";
 import { useQuestionnaireEditLocksStore } from "@react-client/features/v2/anketaCRUD/stores/questionnaireEditLocksStore";
+import { isOwnV2QuestionnaireEditLock } from "@react-client/features/v2/anketaCRUD/utils/isOwnV2QuestionnaireEditLock";
 import { downloadBlob } from "@react-client/common/api/queries/kanban-board";
 import { usePermissions } from "@react-client/hooks/usePermissions";
 import { toast } from "@react-client/common/toasts";
@@ -474,14 +475,17 @@ export function V2QuestionnaireList() {
 		if (!filteredQuestionnaires.length) return [];
 		return filteredQuestionnaires.map((q) => {
 			const lock = locksById[q.id];
+			const lockedByOther =
+				Boolean(lock) && !isOwnV2QuestionnaireEditLock(lock, username);
 			return {
 				...q,
 				rowKind: "version" as const,
 				displayLabel: q.calcName,
-				isEditLocked: Boolean(lock),
+				/** Блокируем только чужой lock; свой — можно открыть повторно. */
+				isEditLocked: lockedByOther,
 			};
 		});
-	}, [filteredQuestionnaires, locksById]);
+	}, [filteredQuestionnaires, locksById, username]);
 
 	const rowClassRules = useMemo(
 		() => ({
