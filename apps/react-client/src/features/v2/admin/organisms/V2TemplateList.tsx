@@ -16,6 +16,7 @@ import { Flex } from "@react-client/common/primitives/Flex";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
 import { getAgGridMainMenuItems } from "@react-client/common/tableStuff/agGridMainMenuItems";
 import { registerAgGridTableModules } from "@react-client/common/tableStuff/agGridTableModules";
+import { AgGridRouterLink } from "@react-client/common/tableStuff/AgGridRouterLink";
 import { useAgGridColumnPersistence } from "@react-client/common/tableStuff/useAgGridColumnPersistence";
 import {
 	pathForAdminV2Template,
@@ -520,6 +521,25 @@ export const V2TemplateList = forwardRef<
 			sortable: false,
 			filter: "agTextColumnFilter",
 			floatingFilter: true,
+			cellRendererParams: {
+				innerRenderer: (p: ICellRendererParams<V2SchemaGridRow>) => {
+					const d = p.data;
+					const label =
+						(typeof p.value === "string" && p.value) ||
+						d?.displayLabel ||
+						"";
+					if (!d || !label) return label;
+					const to =
+						d.rowKind === "template"
+							? pathForAdminV2Template(d.id, d.currentVersionId)
+							: pathForAdminV2Template(d.templateId, d.id);
+					return (
+						<AgGridRouterLink to={to} title="Открыть схему">
+							{label}
+						</AgGridRouterLink>
+					);
+				},
+			},
 		}),
 		[],
 	);

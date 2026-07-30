@@ -19,6 +19,7 @@ import {
 } from "../molecules/V2WorkflowStatusCell";
 import { V2SchemaBindingStatusCell } from "../molecules/V2SchemaBindingStatusCell";
 import { V2EditLockStatusCell } from "../molecules/V2EditLockStatusCell";
+import { V2QuestionnaireNameCell } from "../molecules/V2QuestionnaireNameCell";
 import type { V2QuestionnaireGridRow } from "../types/v2QuestionnaireGrid.types";
 import {
 	formatGridCellValue,
@@ -149,6 +150,17 @@ function leafToColDef(leaf: V2RegistryLeafColumn): ColDef<V2QuestionnaireGridRow
 					const row = resolveVersionRow(p.data);
 					return row?.readableId ?? row?.id ?? "";
 				},
+			};
+		}
+		if (leaf.id === "calcName") {
+			return {
+				colId: leaf.id,
+				headerName: leaf.header,
+				minWidth,
+				resizable: true,
+				...baseFilter,
+				cellRenderer: V2QuestionnaireNameCell,
+				valueGetter: (p) => resolveVersionRow(p.data)?.calcName ?? "",
 			};
 		}
 		if (leaf.id === "schemaBindingStatus") {

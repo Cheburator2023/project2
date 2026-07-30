@@ -6,6 +6,7 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import { IconButton, Typography } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
+import { beginLogoutOverlay } from "@react-client/common/auth/logoutOverlayState";
 import { performMfeLogout } from "@react-client/common/auth/syncMfeAuth";
 import type { MainLayoutOutletContext } from "@react-client/common/layouts/mainLayoutOutletContext";
 import { Card } from "@react-client/common/muiCustom/Card";
@@ -189,6 +190,7 @@ export function Header({
 									color="inherit"
 									startIcon={<LogoutRoundedIcon fontSize="small" />}
 									onClick={() => {
+										beginLogoutOverlay();
 										if (outlet?.onLogout) {
 											outlet.onLogout();
 											return;

@@ -43,7 +43,11 @@ import {
 	clearAgGridColumnState,
 	saveAgGridColumnState,
 } from "@react-client/common/tableStuff/agGridColumnState";
-import { v2Routes } from "@react-client/routing/version/v2/routes";
+import {
+	pathForV2QuestionnaireCreate,
+	pathForV2QuestionnaireNewVersion,
+	pathForV2QuestionnairePreview,
+} from "@react-client/routing/common/pathHelpers";
 import type { V2QuestionnaireGridRow, V2QuestionnaireVersionRow } from "../types/v2QuestionnaireGrid.types";
 import {
 	AllCommunityModule,
@@ -69,7 +73,7 @@ import {
 } from "ag-grid-enterprise";
 import { AgGridReact } from "ag-grid-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router";
+import { Link as RouterLink, useNavigate } from "react-router";
 import {
 	agGridCustomMUITheme,
 	agGridCustomMUIThemeDark,
@@ -569,9 +573,7 @@ export function V2QuestionnaireList() {
 				});
 				return;
 			}
-			navigate(
-				`/v2/${v2Routes.calculationPreview.rootPath.replace(":id", row.id)}`,
-			);
+			navigate(pathForV2QuestionnairePreview(row.id));
 		},
 		[navigate],
 	);
@@ -670,9 +672,7 @@ export function V2QuestionnaireList() {
 					disabled: Boolean(row.isEditLocked),
 					action: () => {
 						if (row.isEditLocked) return;
-						navigate(
-							`/v2/${v2Routes.calculationPreview.rootPath.replace(":id", row.id)}`,
-						);
+						navigate(pathForV2QuestionnairePreview(row.id));
 					},
 				},
 				{
@@ -682,9 +682,7 @@ export function V2QuestionnaireList() {
 					disabled: Boolean(row.isEditLocked),
 					action: () => {
 						if (row.isEditLocked) return;
-						navigate(
-							`/v2/${v2Routes.calculationNewVersion.rootPath.replace(":id", row.id)}`,
-						);
+						navigate(pathForV2QuestionnaireNewVersion(row.id));
 					},
 				},
 				{
@@ -842,17 +840,14 @@ export function V2QuestionnaireList() {
 								) : null}
 								{canCreateCalculation ? (
 									<Button
+										component={RouterLink}
+										to={pathForV2QuestionnaireCreate()}
 										variant="contained"
 										size="small"
 										fullWidth
 										startIcon={<AddIcon />}
 										data-test-id="anketa-registry-create"
-										onClick={() => {
-											setHeaderMenuAnchor(null);
-											navigate(
-												`/v2/${v2Routes.calculationCreate.rootPath}`,
-											);
-										}}
+										onClick={() => setHeaderMenuAnchor(null)}
 									>
 										Создать анкету
 									</Button>
@@ -925,15 +920,12 @@ export function V2QuestionnaireList() {
 							) : null}
 							{canCreateCalculation ? (
 								<Button
+									component={RouterLink}
+									to={pathForV2QuestionnaireCreate()}
 									variant="contained"
 									size="small"
 									startIcon={<AddIcon />}
 									data-test-id="anketa-registry-create"
-									onClick={() =>
-										navigate(
-											`/v2/${v2Routes.calculationCreate.rootPath}`,
-										)
-									}
 								>
 									Создать анкету
 								</Button>

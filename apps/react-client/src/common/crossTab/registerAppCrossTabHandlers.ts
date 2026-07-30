@@ -1,6 +1,7 @@
 import {
 	clearMfeAuthState,
 } from "@react-client/common/auth/clearMfeAuthState";
+import { beginLogoutOverlay } from "@react-client/common/auth/logoutOverlayState";
 import {
 	ensureKeycloakSession,
 	redirectToKeycloakLogin,
@@ -57,6 +58,7 @@ export function registerAppCrossTabHandlers(): void {
 	subscribeAppSync((event) => {
 		switch (event.type) {
 			case "auth:logout":
+				beginLogoutOverlay();
 				clearMfeAuthState();
 				queryClient.clear();
 				globalThis.setTimeout(() => {
@@ -65,9 +67,17 @@ export function registerAppCrossTabHandlers(): void {
 						event.reason === "refresh-failed"
 					) {
 						redirectToKeycloakLogin();
-						return;
+					} else {
+						ensureKeycloakSession();
 					}
-					ensureKeycloakSession();
+					// Если Keycloak login/logout завис — не оставляем вкладку в оверлее навечно.
+					globalThis.setTimeout(() => {
+						const key = "auth:logout-fallback-reload-at";
+						const lastAt = Number(sessionStorage.getItem(key) || 0);
+						if (Date.now() - lastAt < 60_000) return;
+						sessionStorage.setItem(key, String(Date.now()));
+						globalThis.location.reload();
+					}, 6_000);
 				}, 0);
 				break;
 			case "auth:session-changed": {

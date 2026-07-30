@@ -9,6 +9,7 @@ import MuiMenuItem from "@mui/material/MenuItem";
 import { paperClasses } from "@mui/material/Paper";
 import { styled } from "@mui/material/styles";
 import { beginLogoutOverlay } from "@react-client/common/auth/logoutOverlayState";
+import { performMfeLogout } from "@react-client/common/auth/syncMfeAuth";
 import { isDevLikeEnvironment } from "@react-client/common/constants/dev";
 import { commonRoutes } from "@react-client/routing/common/routes";
 import { useState } from "react";
@@ -44,9 +45,12 @@ export function OptionsMenu({ onLogout }: { onLogout?: () => void }) {
 		if (loggingOut) return;
 		setAnchorEl(null);
 		setLoggingOut(true);
-		// Оверлей сразу; clear + Keycloak — после задержки внутри performMfeLogout.
 		beginLogoutOverlay();
-		onLogout?.();
+		if (onLogout) {
+			onLogout();
+			return;
+		}
+		performMfeLogout();
 	};
 
 	return (

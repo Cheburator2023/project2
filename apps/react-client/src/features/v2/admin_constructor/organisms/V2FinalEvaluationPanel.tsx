@@ -34,7 +34,15 @@ import {
 	shouldSkipLegacyModelStreamStageSummary,
 	sortModelStreamTypicalWorkRows,
 } from "@smart-anketa/api-contract";
-import { Fragment, useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
+import {
+	Fragment,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+	type KeyboardEvent,
+	type MouseEvent,
+} from "react";
 
 const MODEL_STREAM_LABEL = "Модельный стрим";
 
@@ -250,9 +258,7 @@ export function V2FinalEvaluationPanel({
 	}, [formData, hideDetailedEstimates, isLoading]);
 
 	const displaySummary =
-		!isLoading && summary
-			? summary
-			: (summary ?? lastGoodSummaryRef.current);
+		!isLoading && summary ? summary : (summary ?? lastGoodSummaryRef.current);
 	const displayLiveFormData =
 		!isLoading && liveFormData
 			? liveFormData
@@ -444,11 +450,6 @@ export function V2FinalEvaluationPanel({
 									effectiveSummary?.deviationFromBaseline,
 								)}
 							/>
-							<Typography variant="caption" color="text.secondary">
-								Отклонение = (оценка с поправкой − базовая) / базовая × 100%.
-								Поправка учитывает коэффициент сложности и связанные множители
-								СФЕРА (модели, источники, неопределённость и др.).
-							</Typography>
 						</>
 					) : null}
 				</Stack>
@@ -466,7 +467,12 @@ export function V2FinalEvaluationPanel({
 			>
 				<CardContent sx={{ p: compact ? 3 : 4, pt: compact ? 5 : 6 }}>
 					{!hasData && isLoading ? (
-						<Stack direction="row" alignItems="center" spacing={1.5} sx={{ py: 2 }}>
+						<Stack
+							direction="row"
+							alignItems="center"
+							spacing={1.5}
+							sx={{ py: 2 }}
+						>
 							<CircularProgress size={20} />
 							<Typography variant="body2" color="text.secondary">
 								Считаем типовые работы…
@@ -519,9 +525,7 @@ export function V2FinalEvaluationPanel({
 											условий появления в анкете.
 										</Typography>
 									)}
-									{showOtherStreamsSection ? (
-										<Divider sx={{ my: 4 }} />
-									) : null}
+									{showOtherStreamsSection ? <Divider sx={{ my: 4 }} /> : null}
 								</>
 							) : null}
 
@@ -618,9 +622,7 @@ function TypicalWorksMiniTable({
 				resolveTypicalWorkDeviationBases(item);
 			const rowDeviation = percentDeviationFromBase(baseTotal, adjustedTotal);
 			const deviationCoeff =
-				baseTotal !== null &&
-				baseTotal !== 0 &&
-				adjustedTotal !== null
+				baseTotal !== null && baseTotal !== 0 && adjustedTotal !== null
 					? adjustedTotal / baseTotal
 					: null;
 			return {
@@ -658,7 +660,8 @@ function TypicalWorksMiniTable({
 							sx={{
 								fontWeight: 700,
 								color: "text.secondary",
-								width: index === 0 ? (showDeviations ? "30%" : "42%") : undefined,
+								width:
+									index === 0 ? (showDeviations ? "30%" : "42%") : undefined,
 							}}
 						>
 							{col}
@@ -688,8 +691,7 @@ function TypicalWorksMiniTable({
 					const deviationCoeff = deviations?.deviationCoeff ?? null;
 					const workTitleParts = [
 						open ? "Скрыть формулу" : "Показать формулу",
-						deviations?.baseTotal != null &&
-						deviations?.adjustedTotal != null
+						deviations?.baseTotal != null && deviations?.adjustedTotal != null
 							? `База×N=${formatTypicalWorkNumberValue(deviations.baseTotal)} · с поправкой=${formatTypicalWorkNumberValue(deviations.adjustedTotal)}`
 							: null,
 						deviations?.rowDeviation != null
@@ -745,7 +747,8 @@ function TypicalWorksMiniTable({
 										title={
 											"Отклонение = (сумма с поправкой − база×N) / (база×N) × 100%, " +
 											"где N — число сработавших формул. " +
-											(deviations.unitBase != null && deviations.formulaCount > 0
+											(deviations.unitBase != null &&
+											deviations.formulaCount > 0
 												? `База: ${formatTypicalWorkNumberValue(deviations.unitBase)}×${deviations.formulaCount}=${formatTypicalWorkNumberValue(deviations.baseTotal)}. `
 												: "") +
 											(deviations.adjustedTotal != null
@@ -898,8 +901,8 @@ function TypicalWorksMiniTable({
 																	wordBreak: "break-word",
 																}}
 															>
-																отклонение = (с поправкой − база×N) / (база×N)
-																× 100% ={" "}
+																отклонение = (с поправкой − база×N) / (база×N) ×
+																100% ={" "}
 																{formatPercent(
 																	deviations?.rowDeviation ?? undefined,
 																)}

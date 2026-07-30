@@ -1,4 +1,5 @@
 import { commonRoutes } from "./routes";
+import { v2Routes } from "../version/v2/routes";
 
 /** Query-параметр выбранной версии шаблона на экранах конструктора / логики / предпросмотра. */
 export const V2_TEMPLATE_VERSION_QUERY = "versionId";
@@ -129,3 +130,12 @@ export const pathForAdminV2TemplatePreview = pathForAdminV2TemplateRead;
 
 /** @deprecated используйте pathForPlaygroundV2TemplateRead */
 export const pathForPlaygroundV2TemplatePreview = pathForPlaygroundV2TemplateRead;
+
+export const pathForV2QuestionnairePreview = (id: string) =>
+	`/v2/${v2Routes.calculationPreview.rootPath.replace(":id", id)}`;
+
+export const pathForV2QuestionnaireNewVersion = (id: string) =>
+	`/v2/${v2Routes.calculationNewVersion.rootPath.replace(":id", id)}`;
+
+export const pathForV2QuestionnaireCreate = () =>
+	`/v2/${v2Routes.calculationCreate.rootPath}`;

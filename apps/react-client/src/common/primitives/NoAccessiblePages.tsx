@@ -3,6 +3,7 @@ import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
 import Typography from "@mui/material/Typography";
+import { beginLogoutOverlay } from "@react-client/common/auth/logoutOverlayState";
 import { performMfeLogout } from "@react-client/common/auth/syncMfeAuth";
 import { Header } from "@react-client/common/navigation/organisms/Header";
 import { Flex } from "@react-client/common/primitives/Flex";
@@ -32,6 +33,7 @@ export const NoAccessiblePages = ({ onLogout }: NoAccessiblePagesProps = {}) => 
 	const handleLogout = () => {
 		if (loggingOut) return;
 		setLoggingOut(true);
+		beginLogoutOverlay();
 		const logout = onLogout ?? outlet?.onLogout;
 		if (logout) {
 			logout();

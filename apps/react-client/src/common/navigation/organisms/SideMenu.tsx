@@ -15,6 +15,7 @@ import {
 	getKeycloakUserDisplayName,
 	getKeycloakUserInitial,
 } from "@react-client/common/auth/keycloakUserText.util";
+import { beginLogoutOverlay } from "@react-client/common/auth/logoutOverlayState";
 import { usePermissions } from "@react-client/hooks/usePermissions";
 import { getAccessiblePages } from "@react-client/routing/accessiblePages";
 import { performMfeLogout } from "@react-client/common/auth/syncMfeAuth";
@@ -139,6 +140,7 @@ export function SideMenu({
 							size="small"
 							color="primary"
 							onClick={() => {
+								beginLogoutOverlay();
 								if (onLogout) {
 									onLogout();
 									return;
