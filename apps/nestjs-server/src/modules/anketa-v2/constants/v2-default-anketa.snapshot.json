@@ -373,6 +373,27 @@
 								"readyPromReports": {
 									"type": "boolean",
 									"title": "Наличие готовых промышленных витрин"
+								},
+								"field_jUm5syZf": {
+									"type": "array",
+									"items": {
+										"enum": [
+											"Батч",
+											"Батч + загрузка данных потребителю",
+											"Батч + Онлайн",
+											"Онлайн",
+											"Онлайн gpu",
+											"Стриминг",
+											"Мобильные устройства",
+											"LLM",
+											"Гео-сервисы",
+											"Внедрение в облаке",
+											"Графовая платформа"
+										],
+										"type": "string"
+									},
+									"title": "Каналы внедрения",
+									"uniqueItems": true
 								}
 							}
 						},
@@ -899,27 +920,6 @@
 							"field_imxB4YEd": {
 								"type": "boolean",
 								"title": "Первичное подключение ИС к РЕПО"
-							},
-							"field_jUm5syZf": {
-								"type": "array",
-								"items": {
-									"enum": [
-										"Батч",
-										"Батч + загрузка данных потребителю",
-										"Батч + Онлайн",
-										"Онлайн",
-										"Онлайн gpu",
-										"Стриминг",
-										"Мобильные устройства",
-										"LLM",
-										"Гео-сервисы",
-										"Внедрение в облаке",
-										"Графовая платформа"
-									],
-									"type": "string"
-								},
-								"title": "Каналы внедрения",
-								"uniqueItems": true
 							},
 							"field_kkbRs50S": {
 								"type": "boolean",
@@ -2431,7 +2431,8 @@
 				"items": {
 					"autoML": {
 						"ui:options": {
-							"schemaFieldUid": "field_8b58cf5d-ea4a-4180-8670-ff2021bcaa9b"
+							"schemaFieldUid": "field_8b58cf5d-ea4a-4180-8670-ff2021bcaa9b",
+							"semanticRole": "autoML"
 						}
 					},
 					"ui:order": [
@@ -2440,6 +2441,7 @@
 						"field_VbI-0aiT",
 						"readyPromReports",
 						"algorithmType",
+						"field_jUm5syZf",
 						"autoML",
 						"field_S41Rqt5E",
 						"field_S23CbRXp",
@@ -2458,7 +2460,8 @@
 						"ui:options": {
 							"tooltip": "По умолчанию применяется один тип алгоритма: >1 возможно для каскада или ансамблей моделей, если в одном решении используется комбинация алгоритмов/типов ML задач (т.е. для всех моделей/подмоделей решения может быть задействован один тип алгоритма). Заполняем вложенный список алгоритмов по типу данных, алгоритмов ML и инфраструктуры, участвующей во внедрении решения:\n\n· Табличные данные — любой ML-алгоритм (в т.ч. без учителя)\n· Текстовая аналитика — Классические модели — алгоритмы для текста (кроме LLM)\n· Текстовая аналитика — LLM — LLM для текста\n· Аудиоаналитика — алгоритмы для звука (аудио, видео)\n· Компьютерное зрение — CV — алгоритмы для изображений (аудио, видео)\n· Оптимизационная задача — модельный оптимизатор или эвристики\n· ГЕОаналитика — требуется платформа геоаналитики\n· Графовая аналитика — требуется графовая платформа",
 							"dictionaryCode": "v2.detailInfo.model.algorithmType",
-							"schemaFieldUid": "field_bd100464-101d-4d4e-8096-751dab52e01f"
+							"schemaFieldUid": "field_bd100464-101d-4d4e-8096-751dab52e01f",
+							"semanticRole": "algorithmType"
 						}
 					},
 					"field_58TkWuwu": {
@@ -2496,15 +2499,27 @@
 					"readyPromReports": {
 						"ui:widget": "checkbox",
 						"ui:options": {
-							"schemaFieldUid": "field_12d42005-7d15-4d0f-9aa0-2b6eebc596c8"
+							"schemaFieldUid": "field_12d42005-7d15-4d0f-9aa0-2b6eebc596c8",
+							"semanticRole": "readyPromReports"
 						}
+					},
+					"field_jUm5syZf": {
+						"ui:widget": "select",
+						"ui:options": {
+							"multiple": true,
+							"dictionaryCode": "v2.method.4.канал_внедрения",
+							"schemaFieldUid": "field_4fb7d302-c5f0-49e6-9cd2-959a1fbe1f4e",
+							"semanticRole": "deploymentChannels"
+						},
+						"ui:placeholder": "Каналы внедрения"
 					}
 				},
 				"ui:options": {
 					"addable": true,
 					"orderable": false,
 					"removable": true,
-					"schemaFieldUid": "field_bb404bf1-7006-43c4-952d-853735efd4bb"
+					"schemaFieldUid": "field_bb404bf1-7006-43c4-952d-853735efd4bb",
+					"semanticRole": "modelsList"
 				}
 			},
 			"parameters": {
@@ -2849,7 +2864,9 @@
 					"orderable": false,
 					"removable": true,
 					"archComponent": "sourceSystem",
-					"schemaFieldUid": "field_4a77415d-9c12-4256-bc63-4087d1196874"
+					"schemaFieldUid": "field_4a77415d-9c12-4256-bc63-4087d1196874",
+					"archBlockUid": "block_source_systems_v5",
+					"semanticRole": "sourceSystems"
 				}
 			},
 			"field_npwqpBHt": {
@@ -3009,7 +3026,6 @@
 					"field_dEVFQVQn",
 					"workType",
 					"modelClass",
-					"field_jUm5syZf",
 					"field_SvNx6iEq",
 					"field_o_HRj6VO",
 					"prePromEval",
@@ -3043,11 +3059,14 @@
 					"sectionRole": "subsection",
 					"archComponent": "modelService",
 					"schemaFieldUid": "field_3bc4dc73-6804-4107-8251-5e41d9a1dfed",
+					"archBlockUid": "block_model_service_v5",
+					"semanticRole": "modelService",
 					"showFilledCount": true
 				},
 				"prePromEval": {
 					"ui:options": {
-						"schemaFieldUid": "field_7ff20c0a-1cd7-4d66-99ae-b52ed1a9bb3a"
+						"schemaFieldUid": "field_7ff20c0a-1cd7-4d66-99ae-b52ed1a9bb3a",
+						"semanticRole": "prePromEval"
 					},
 					"ui:placeholder": "Необходимость поддержки проведения пилота"
 				},
@@ -3111,15 +3130,6 @@
 						"schemaFieldUid": "field_d3b505fd-e708-4ec0-9669-b6352b705d42"
 					},
 					"ui:placeholder": "Первичное подключение ИС к РЕПО"
-				},
-				"field_jUm5syZf": {
-					"ui:widget": "select",
-					"ui:options": {
-						"multiple": true,
-						"dictionaryCode": "v2.method.4.канал_внедрения",
-						"schemaFieldUid": "field_4fb7d302-c5f0-49e6-9cd2-959a1fbe1f4e"
-					},
-					"ui:placeholder": "Каналы внедрения"
 				},
 				"field_kkbRs50S": {
 					"ui:options": {
@@ -3200,14 +3210,16 @@
 			"assessedInitiativesCount": {
 				"ui:widget": "updown",
 				"ui:options": {
-					"schemaFieldUid": "field_89bf48ee-4f44-4995-86fa-5cb1132abe63"
+					"schemaFieldUid": "field_89bf48ee-4f44-4995-86fa-5cb1132abe63",
+					"semanticRole": "assessedInitiativesCount"
 				}
 			},
 			"productionAdditionalReports": {
 				"ui:widget": "select",
 				"ui:options": {
 					"dictionaryCode": "v2.method.26.необходимость_продуктивизации_и_количество_допол",
-					"schemaFieldUid": "field_d2a78102-57a7-4f7e-aad2-0cb015948496"
+					"schemaFieldUid": "field_d2a78102-57a7-4f7e-aad2-0cb015948496",
+					"semanticRole": "productionAdditionalReports"
 				}
 			}
 		},
@@ -4335,7 +4347,8 @@
 				"ui:options": {
 					"suffix": "%",
 					"tooltip": "При необходимости учесть дополнительные экспертные риски, заполнив поле \"Поправка на общую неопределенность\" значением в диапазоне от 0-30%",
-					"schemaFieldUid": "field_59399372-52ef-4e49-9535-b011a7b30782"
+					"schemaFieldUid": "field_59399372-52ef-4e49-9535-b011a7b30782",
+					"semanticRole": "uncertaintyAdjustment"
 				}
 			}
 		}
@@ -4819,6 +4832,7 @@
 					],
 					"outputArrayPath": "detailInfo.detailTypicalTasks",
 					"sourceArrayPath": "generalInfo.modelService",
+					"sourceArchComponent": "modelService",
 					"sourceContextPaths": [
 						"detailInfo",
 						"generalInfo",
@@ -4976,6 +4990,7 @@
 					],
 					"outputArrayPath": "streamDataSources.field_u-7AkDrP",
 					"sourceArrayPath": "detailInfo.sourceSystems",
+					"sourceArchComponent": "sourceSystem",
 					"sourceContextPaths": [
 						"detailInfo.dataMart",
 						"detailInfo.dataProcess"

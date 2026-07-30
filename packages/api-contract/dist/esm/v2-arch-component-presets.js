@@ -97,27 +97,6 @@ const SNAPSHOT_ARCH_PRESETS = {
                     "type": "boolean",
                     "title": "Первичное подключение ИС к РЕПО"
                 },
-                "field_jUm5syZf": {
-                    "type": "array",
-                    "items": {
-                        "enum": [
-                            "Батч",
-                            "Батч + загрузка данных потребителю",
-                            "Батч + Онлайн",
-                            "Онлайн",
-                            "Онлайн gpu",
-                            "Стриминг",
-                            "Мобильные устройства",
-                            "LLM",
-                            "Гео-сервисы",
-                            "Внедрение в облаке",
-                            "Графовая платформа"
-                        ],
-                        "type": "string"
-                    },
-                    "title": "Каналы внедрения",
-                    "uniqueItems": true
-                },
                 "field_kkbRs50S": {
                     "type": "boolean",
                     "title": "Хранение артефактов в РЕПО"
@@ -136,6 +115,7 @@ const SNAPSHOT_ARCH_PRESETS = {
             "sectionRole": "subsection",
             "archComponent": "modelService",
             "schemaFieldUid": "field_3bc4dc73-6804-4107-8251-5e41d9a1dfed",
+            "semanticRole": "modelService",
             "showFilledCount": true
         },
         "uiBranch": {
@@ -143,7 +123,6 @@ const SNAPSHOT_ARCH_PRESETS = {
                 "field_dEVFQVQn",
                 "workType",
                 "modelClass",
-                "field_jUm5syZf",
                 "field_SvNx6iEq",
                 "field_o_HRj6VO",
                 "prePromEval",
@@ -239,15 +218,6 @@ const SNAPSHOT_ARCH_PRESETS = {
                     "schemaFieldUid": "field_d3b505fd-e708-4ec0-9669-b6352b705d42"
                 },
                 "ui:placeholder": "Первичное подключение ИС к РЕПО"
-            },
-            "field_jUm5syZf": {
-                "ui:widget": "select",
-                "ui:options": {
-                    "multiple": true,
-                    "dictionaryCode": "v2.method.4.канал_внедрения",
-                    "schemaFieldUid": "field_4fb7d302-c5f0-49e6-9cd2-959a1fbe1f4e"
-                },
-                "ui:placeholder": "Каналы внедрения"
             },
             "field_kkbRs50S": {
                 "ui:options": {
@@ -498,7 +468,8 @@ const SNAPSHOT_ARCH_PRESETS = {
             "orderable": false,
             "removable": true,
             "archComponent": "sourceSystem",
-            "schemaFieldUid": "field_4a77415d-9c12-4256-bc63-4087d1196874"
+            "schemaFieldUid": "field_4a77415d-9c12-4256-bc63-4087d1196874",
+            "semanticRole": "sourceSystems"
         },
         "uiBranch": {
             "items": {
@@ -1201,6 +1172,27 @@ const SNAPSHOT_ARCH_PRESETS = {
                 "readyPromReports": {
                     "type": "boolean",
                     "title": "Наличие готовых промышленных витрин"
+                },
+                "field_jUm5syZf": {
+                    "type": "array",
+                    "items": {
+                        "enum": [
+                            "Батч",
+                            "Батч + загрузка данных потребителю",
+                            "Батч + Онлайн",
+                            "Онлайн",
+                            "Онлайн gpu",
+                            "Стриминг",
+                            "Мобильные устройства",
+                            "LLM",
+                            "Гео-сервисы",
+                            "Внедрение в облаке",
+                            "Графовая платформа"
+                        ],
+                        "type": "string"
+                    },
+                    "title": "Каналы внедрения",
+                    "uniqueItems": true
                 }
             }
         },
@@ -1217,6 +1209,7 @@ const SNAPSHOT_ARCH_PRESETS = {
                 "field_VbI-0aiT",
                 "readyPromReports",
                 "algorithmType",
+                "field_jUm5syZf",
                 "autoML",
                 "field_S41Rqt5E",
                 "field_S23CbRXp",
@@ -1275,6 +1268,16 @@ const SNAPSHOT_ARCH_PRESETS = {
                 "ui:options": {
                     "schemaFieldUid": "field_12d42005-7d15-4d0f-9aa0-2b6eebc596c8"
                 }
+            },
+            "field_jUm5syZf": {
+                "ui:widget": "select",
+                "ui:options": {
+                    "multiple": true,
+                    "dictionaryCode": "v2.method.4.канал_внедрения",
+                    "schemaFieldUid": "field_4fb7d302-c5f0-49e6-9cd2-959a1fbe1f4e",
+                    "semanticRole": "deploymentChannels"
+                },
+                "ui:placeholder": "Каналы внедрения"
             }
         }
     }

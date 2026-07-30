@@ -97,7 +97,7 @@
 		{
 			"id": "053b1fbc-25ef-4182-9b78-dc100ce19712",
 			"name": "09. Адаптация и внедрение модели",
-			"archComponentType": "Модельный сервис",
+			"archComponentType": "Модель",
 			"workType": null,
 			"streams": [
 				"Модельный стрим"

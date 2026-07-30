@@ -78,6 +78,7 @@ import {
 	findCatalogRowsForRegistryWork,
 	findCatalogFormulaForStream,
 	findCatalogLaborParamGroup,
+	findRegistryEntryForWork,
 	groupCatalogWorks,
 	inferTriggerValueLabel,
 	normalizeArchComponentType,
@@ -249,14 +250,16 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 				`Typical works catalog: ${count} works (factory snapshot seed on template create only)`,
 			);
 			await this.ensureFactoryVersionConfigs();
+			// Всегда чиним arch/формулы/триггеры по registry+catalog (напр. после
+			// переноса параметра и смены archComponent у работы 09).
+			await this.syncFactoryCatalogTriggers();
+			await this.syncFactoryParamBindings();
 			if (process.env.V2_FACTORY_CATALOG_SYNC_ON_START === "true") {
 				await this.syncFactoryLaborCoefficients();
-				await this.syncFactoryCatalogTriggers();
-				await this.syncFactoryParamBindings();
 				await this.syncFactoryLaborArchCounts();
 			} else {
 				this.logger.log(
-					"Factory catalog DB sync skipped (static snapshot; set V2_FACTORY_CATALOG_SYNC_ON_START=true to repair dev DB)",
+					"Factory labor coefficient sync skipped (set V2_FACTORY_CATALOG_SYNC_ON_START=true to repair coeffs in DB)",
 				);
 			}
 			return;
@@ -469,6 +472,10 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 				trimmedTemplateId,
 				trimmedVersionId,
 			);
+			// Восстановить формулы/триггеры, если registry↔catalog разъехались
+			// (напр. смена archComponent у «09. Адаптация…»).
+			await this.syncFactoryCatalogTriggers();
+			await this.syncFactoryParamBindings();
 			return 0;
 		}
 
@@ -1553,12 +1560,7 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 	 * параметров схемы при этом сохраняются.
 	 */
 	async syncFactoryLaborCoefficients(): Promise<number> {
-		const registryByWorkKey = new Map(
-			V2_FACTORY_TEMPLATE_TYPICAL_WORKS_REGISTRY.works.map((entry) => [
-				`${normalizeArchComponentType(entry.archComponentType)}|${entry.name.trim()}`,
-				entry,
-			]),
-		);
+		const registryWorks = V2_FACTORY_TEMPLATE_TYPICAL_WORKS_REGISTRY.works;
 		const works = await this.workRepository.find({
 			where: { templateId: Not(IsNull()) },
 		});
@@ -1581,10 +1583,14 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 
 		let synchronized = 0;
 		for (const work of works) {
-			const registry = registryByWorkKey.get(
-				`${normalizeArchComponentType(work.archComponentType)}|${work.name.trim()}`,
-			);
+			const registry = findRegistryEntryForWork(work, registryWorks);
 			if (!registry) continue;
+			const nextArch = normalizeArchComponentType(registry.archComponentType);
+			if (work.archComponentType !== nextArch) {
+				work.archComponentType = nextArch;
+				await this.workRepository.save(work);
+				synchronized++;
+			}
 
 			const catalogRows = findCatalogRowsForRegistryWork(
 				registry,
@@ -1803,12 +1809,7 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 	 * Нужно для шаблонов, созданных до исправления сопоставления E2E-этапов.
 	 */
 	async syncFactoryCatalogTriggers(): Promise<number> {
-		const registryByWorkKey = new Map(
-			V2_FACTORY_TEMPLATE_TYPICAL_WORKS_REGISTRY.works.map((entry) => [
-				`${normalizeArchComponentType(entry.archComponentType)}|${entry.name.trim()}`,
-				entry,
-			]),
-		);
+		const registryWorks = V2_FACTORY_TEMPLATE_TYPICAL_WORKS_REGISTRY.works;
 		const works = await this.workRepository.find({
 			where: { templateId: Not(IsNull()) },
 		});
@@ -1828,10 +1829,14 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 
 		let synchronized = 0;
 		for (const work of works) {
-			const registry = registryByWorkKey.get(
-				`${normalizeArchComponentType(work.archComponentType)}|${work.name.trim()}`,
-			);
+			const registry = findRegistryEntryForWork(work, registryWorks);
 			if (!registry) continue;
+			const nextArch = normalizeArchComponentType(registry.archComponentType);
+			if (work.archComponentType !== nextArch) {
+				work.archComponentType = nextArch;
+				await this.workRepository.save(work);
+				synchronized++;
+			}
 
 			const catalogRows = findCatalogRowsForRegistryWork(
 				registry,
@@ -1880,12 +1885,7 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 
 	/** Исправляет paramCode/schemaFieldUid и triggerArchCount по factory snapshot. */
 	async syncFactoryParamBindings(): Promise<number> {
-		const registryByWorkKey = new Map(
-			V2_FACTORY_TEMPLATE_TYPICAL_WORKS_REGISTRY.works.map((entry) => [
-				`${normalizeArchComponentType(entry.archComponentType)}|${entry.name.trim()}`,
-				entry,
-			]),
-		);
+		const registryWorks = V2_FACTORY_TEMPLATE_TYPICAL_WORKS_REGISTRY.works;
 		const works = await this.workRepository.find({
 			where: { templateId: Not(IsNull()) },
 		});
@@ -1903,10 +1903,14 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 
 		let synchronized = 0;
 		for (const work of works) {
-			const registry = registryByWorkKey.get(
-				`${normalizeArchComponentType(work.archComponentType)}|${work.name.trim()}`,
-			);
+			const registry = findRegistryEntryForWork(work, registryWorks);
 			if (!registry) continue;
+			const nextArch = normalizeArchComponentType(registry.archComponentType);
+			if (work.archComponentType !== nextArch) {
+				work.archComponentType = nextArch;
+				await this.workRepository.save(work);
+				synchronized++;
+			}
 
 			const catalogRows = findCatalogRowsForRegistryWork(
 				registry,
@@ -2137,12 +2141,7 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 	}
 
 	async syncFactoryLaborArchCounts(): Promise<number> {
-		const registryByWorkKey = new Map(
-			V2_FACTORY_TEMPLATE_TYPICAL_WORKS_REGISTRY.works.map((entry) => [
-				`${normalizeArchComponentType(entry.archComponentType)}|${entry.name.trim()}`,
-				entry,
-			]),
-		);
+		const registryWorks = V2_FACTORY_TEMPLATE_TYPICAL_WORKS_REGISTRY.works;
 		const works = await this.workRepository.find({
 			where: { templateId: Not(IsNull()) },
 		});
@@ -2162,10 +2161,14 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 
 		let synchronized = 0;
 		for (const work of works) {
-			const registry = registryByWorkKey.get(
-				`${normalizeArchComponentType(work.archComponentType)}|${work.name.trim()}`,
-			);
+			const registry = findRegistryEntryForWork(work, registryWorks);
 			if (!registry) continue;
+			const nextArch = normalizeArchComponentType(registry.archComponentType);
+			if (work.archComponentType !== nextArch) {
+				work.archComponentType = nextArch;
+				await this.workRepository.save(work);
+				synchronized++;
+			}
 
 			const catalogRows = findCatalogRowsForRegistryWork(
 				registry,
@@ -2251,15 +2254,27 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 		}
 
 		const catalogGroups = groupCatalogWorks();
+		const registryWorks = V2_FACTORY_TEMPLATE_TYPICAL_WORKS_REGISTRY.works;
 
 		for (const work of works) {
+			const registry = findRegistryEntryForWork(work, registryWorks);
 			const catalogRows = findCatalogRowsForRegistryWork(
-				{
+				registry ?? {
 					name: work.name,
 					archComponentType: work.archComponentType,
 				},
 				catalogGroups,
 			);
+			if (
+				registry &&
+				work.archComponentType !==
+					normalizeArchComponentType(registry.archComponentType)
+			) {
+				work.archComponentType = normalizeArchComponentType(
+					registry.archComponentType,
+				);
+				await this.workRepository.save(work);
+			}
 			const streams = assignmentsByWork.get(work.id) ?? [];
 			for (const stream of streams) {
 				await this.ensureWorkVersionConfig(

@@ -621,7 +621,7 @@ describe("v2-typical-work-per-instance", () => {
 	it("appearance gate: work appears when any model matches AutoML (not only if all do)", () => {
 		const formData = {
 			generalInfo: {
-				modelService: [{ workType: "Внедрение", field_jUm5syZf: "канал" }],
+				modelService: [{ workType: "Внедрение" }],
 			},
 			detailInfo: {
 				modelsList: [
@@ -629,11 +629,13 @@ describe("v2-typical-work-per-instance", () => {
 						"field_atxiq-UM": "ваыава",
 						autoML: true,
 						algorithmType: "Аудио-аналитика",
+						field_jUm5syZf: "канал",
 					},
 					{
 						"field_atxiq-UM": "01. Постановка задачи2",
 						autoML: false,
 						algorithmType: "Компьютерное зрение",
+						field_jUm5syZf: "канал",
 					},
 					{
 						"field_atxiq-UM": "66666677777",

@@ -139,7 +139,7 @@ const REGISTRY_SEED: Array<{
 	{
 		id: "f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4009",
 		displayName: "09. Адаптация и внедрение модели",
-		archComponentType: "Модельный сервис",
+		archComponentType: "Модель",
 		norm: 50,
 	},
 	{

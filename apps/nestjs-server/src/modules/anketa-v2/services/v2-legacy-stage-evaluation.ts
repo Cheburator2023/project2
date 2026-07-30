@@ -136,12 +136,13 @@ function getProductionAdditionalReportsCoefficient(
 function extractCoefficients(
 	data: Record<string, unknown>,
 	config: V2DeviationCoefficientsConfig,
+	formContextOptions?: { jsonSchema?: unknown; uiSchema?: unknown },
 ): Coefficients {
 	const generalInfo = readRecord(data.generalInfo);
 	const detailInfo = readRecord(data.detailInfo);
 	const detailParams =
 		readRecord(detailInfo?.model) ?? readRecord(detailInfo?.parameters);
-	const ctx = resolveLegacyFormContext(data);
+	const ctx = resolveLegacyFormContext(data, formContextOptions);
 
 	return {
 		modelsCountCoefficient: calculateModelsCoefficient(
@@ -318,8 +319,9 @@ function calculateAllStages(
 	data: Record<string, unknown>,
 	coefficients: Coefficients,
 	config: V2DeviationCoefficientsConfig,
+	formContextOptions?: { jsonSchema?: unknown; uiSchema?: unknown },
 ): Record<V2StageKey, number> {
-	const ctx = resolveLegacyFormContext(data);
+	const ctx = resolveLegacyFormContext(data, formContextOptions);
 	const assessedInitiativesCount = ctx.assessedInitiativesCount;
 
 	const c = coefficients;
@@ -473,6 +475,7 @@ export function evaluateLegacyV2Summary(
 	options?: {
 		sourceTypicalWorksPath?: string | null;
 		uiSchema?: unknown;
+		jsonSchema?: unknown;
 		logic?: V2LogicGraphDto | null;
 		deviationCoefficients?: V2DeviationCoefficientsConfig | null;
 	},
@@ -482,8 +485,12 @@ export function evaluateLegacyV2Summary(
 		(options?.logic
 			? parseDeviationCoefficientsConfigFromLogic(options.logic.rules)
 			: createDefaultDeviationCoefficientsConfig());
-	const coefficients = extractCoefficients(data, config);
-	const stages = calculateAllStages(data, coefficients, config);
+	const formContextOptions = {
+		jsonSchema: options?.jsonSchema,
+		uiSchema: options?.uiSchema,
+	};
+	const coefficients = extractCoefficients(data, config, formContextOptions);
+	const stages = calculateAllStages(data, coefficients, config, formContextOptions);
 	const generalInfo = readRecord(data.generalInfo);
 	const mlPlatform = readRecord(data.streamMlPlatform ?? data.mlPlatform);
 
@@ -651,8 +658,11 @@ function countFilledNamedRows(rows: unknown[]): number {
  * Пустая/только что созданная анкета не должна показывать «базу» и «поправку»
  * от дефолтов modelsCount=1 / dataSourcesCount=1.
  */
-export function hasLegacySummaryInputs(data: Record<string, unknown>): boolean {
-	const ctx = resolveLegacyFormContext(data);
+export function hasLegacySummaryInputs(
+	data: Record<string, unknown>,
+	options?: { jsonSchema?: unknown; uiSchema?: unknown },
+): boolean {
+	const ctx = resolveLegacyFormContext(data, options);
 	if (ctx.modelsList.length > 0) return true;
 	if (ctx.algorithmTypes.length > 0) return true;
 	if (ctx.deploymentChannels.length > 0) return true;
@@ -695,6 +705,7 @@ export function applyLegacySummaryToFormData(
 	options?: {
 		sourceTypicalWorksPath?: string | null;
 		uiSchema?: unknown;
+		jsonSchema?: unknown;
 		logic?: V2LogicGraphDto | null;
 		deviationCoefficients?: V2DeviationCoefficientsConfig | null;
 	},
@@ -702,7 +713,10 @@ export function applyLegacySummaryToFormData(
 	const next = { ...data };
 	const prevSummary = readRecord(next.summary) ?? {};
 
-	if (!hasLegacySummaryInputs(data)) {
+	if (!hasLegacySummaryInputs(data, {
+		jsonSchema: options?.jsonSchema,
+		uiSchema: options?.uiSchema,
+	})) {
 		const cleared = { ...prevSummary };
 		delete cleared.baseScoreStream;
 		delete cleared.scoreWithComplexityCoeff;

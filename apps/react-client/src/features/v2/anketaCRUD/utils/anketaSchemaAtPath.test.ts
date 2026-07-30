@@ -83,7 +83,6 @@ describe("anketaSchemaAtPath modal slices", () => {
 			"workType",
 			"modelClass",
 			"field_dEVFQVQn",
-			"field_jUm5syZf",
 			"field_SvNx6iEq",
 			"field_o_HRj6VO",
 			"prePromEval",

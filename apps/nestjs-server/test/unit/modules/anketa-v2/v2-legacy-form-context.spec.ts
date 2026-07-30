@@ -40,7 +40,20 @@ describe("v2-legacy-form-context.util", () => {
 			},
 		});
 		expect(ctx.pilotModelRequired).toBe("Да");
+		// Dual-read: каналы ещё могут лежать на modelService в старых анкетах.
 		expect(ctx.deploymentChannels).toEqual(["Батч + Онлайн", "Онлайн"]);
+	});
+
+	it("reads deployment channels from modelsList (canonical)", () => {
+		const ctx = resolveLegacyFormContext({
+			detailInfo: {
+				modelsList: [
+					{ field_jUm5syZf: ["Онлайн"] },
+					{ field_jUm5syZf: ["Батч", "Онлайн"] },
+				],
+			},
+		});
+		expect(ctx.deploymentChannels).toEqual(["Онлайн", "Батч"]);
 	});
 
 	it("counts sourceSystems for dataSourcesCount", () => {
@@ -104,6 +117,54 @@ describe("v2-legacy-form-context.util", () => {
 			generalInfo: { assessedInitiativesCount: 5 },
 		});
 		expect(ctx.assessedInitiativesCount).toBe(5);
+	});
+
+	it("prefers semanticRole path over hardcoded generalInfo when schema is moved", () => {
+		const jsonSchema = {
+			type: "object",
+			properties: {
+				elsewhere: {
+					type: "object",
+					properties: {
+						assessedInitiativesCount: { type: "integer" },
+						sourceSystems: {
+							type: "array",
+							items: { type: "object", properties: { name: { type: "string" } } },
+						},
+					},
+				},
+			},
+		};
+		const uiSchema = {
+			elsewhere: {
+				assessedInitiativesCount: {
+					"ui:options": {
+						schemaFieldUid: "field-assessed",
+						semanticRole: "assessedInitiativesCount",
+					},
+				},
+				sourceSystems: {
+					"ui:options": {
+						archComponent: "sourceSystem",
+						archBlockUid: "block-src",
+						semanticRole: "sourceSystems",
+						schemaFieldUid: "field-src",
+					},
+				},
+			},
+		};
+		const ctx = resolveLegacyFormContext(
+			{
+				elsewhere: {
+					assessedInitiativesCount: 7,
+					sourceSystems: [{ name: "A" }, { name: "B" }],
+				},
+				generalInfo: { assessedInitiativesCount: 1 },
+			},
+			{ jsonSchema, uiSchema },
+		);
+		expect(ctx.assessedInitiativesCount).toBe(7);
+		expect(ctx.dataSourcesCount).toBe(2);
 	});
 });
 
@@ -172,8 +233,8 @@ describe("evaluateLegacyV2Summary snapshot sensitivity", () => {
 	it("changes stage09 when deployment channels are set", () => {
 		const none = evaluateLegacyV2Summary({ generalInfo: { modelService: {} } });
 		const withChannels = evaluateLegacyV2Summary({
-			generalInfo: {
-				modelService: [{ field_jUm5syZf: ["Онлайн", "Батч + Онлайн"] }],
+			detailInfo: {
+				modelsList: [{ field_jUm5syZf: ["Онлайн", "Батч + Онлайн"] }],
 			},
 		});
 		expect(stageScore(none, "09. Адаптация и внедрение")).toBeNull();

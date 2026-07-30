@@ -441,14 +441,18 @@ describe("V2 calculation coverage — rule kinds & guards", () => {
 				modelService: [
 					{
 						field_o_HRj6VO: true,
-						field_jUm5syZf: ["Онлайн"],
 					},
 				],
 			},
 			detailInfo: {
 				sourceSystems: [{ name: "src", type: "Внутренний" }],
-				modelsList: [{ algorithmType: "NLP", autoML: false }],
-				field_npwqpBHt: [
+				modelsList: [
+					{
+						algorithmType: "NLP",
+						autoML: false,
+						field_jUm5syZf: ["Онлайн"],
+					},
+				],				field_npwqpBHt: [
 					{
 						name: "custom",
 						estimateHoursPerDay: 5,

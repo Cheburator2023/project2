@@ -2,6 +2,7 @@ import { formatParamNameWithSourceKeys, parseParamNameSourceKeys, stripParamName
 import { resolveCatalogTriggerStoredValue } from "./v2-param-slug.util";
 import { archCountTriggerMatches, isTriggerArchCountConfigured, } from "./v2-work-arch-count-coeff.util";
 import { buildTypicalWorkTriggerLookupSource } from "./v2-typical-works.util";
+import { buildV2SchemaFieldIndex } from "./v2-schema-field-index.util";
 export { formatParamNameWithSourceKeys, parseParamNameSourceKeys, stripParamNameSourceKeys, };
 /** Единый стрим-исполнитель для типовых работ систем-источников. */
 export const V2_SOURCE_STREAM = "Источники данных";
@@ -53,6 +54,7 @@ export function normalizeTypicalWorkTriggerRuleForMatch(rule) {
         operator: rule.operator ?? "=",
         valueCode: rule.valueCode,
         valueLabel: rule.valueLabel,
+        schemaFieldUid: rule.schemaFieldUid ?? null,
     };
     if (rule.operator === "in" || rule.operator === "not_in") {
         return {
@@ -517,16 +519,22 @@ export function findFieldValueInFormData(formData, fieldCode) {
     return values.length === 1 ? values[0] : values;
 }
 /** Контекст для коэффициентов: строка arch-компонента + поля formData вне строки (generalInfo и т.д.). */
-export function buildLaborCoefficientLookupSource(source, formData, schemaParams, paramCodes) {
+export function buildLaborCoefficientLookupSource(source, formData, schemaParams, paramCodes, options) {
     const merged = { ...source };
     const codes = new Set(paramCodes);
+    const fieldIndex = options?.schemaFieldIndex ?? null;
     const isPresent = (value) => isPresentLaborLookupValue(value);
     for (const param of schemaParams) {
         if (!codes.has(param.code))
             continue;
         if (isPresent(merged[param.code]))
             continue;
-        const pointer = param.schemaPointer?.trim();
+        // 1) Стабильный uid → pointer из индекса (переживает DnD).
+        const uid = param.schemaFieldUid?.trim();
+        const pointerFromUid = uid && fieldIndex
+            ? fieldIndex.byUid.get(uid)?.pointer
+            : undefined;
+        const pointer = pointerFromUid ?? param.schemaPointer?.trim();
         if (!pointer)
             continue;
         const fromForm = readValueAtSchemaPointer(formData, pointer);
@@ -782,8 +790,12 @@ export function typicalWorkRulesMatchSource(rules, source, formData, triggerArch
     const paramCodes = [
         ...new Set(resolvedRules.map((rule) => rule.paramCode.trim()).filter(Boolean)),
     ];
+    const schemaFieldIndex = matchContext?.schemaFieldIndex ??
+        (matchContext?.jsonSchema || matchContext?.uiSchema
+            ? buildV2SchemaFieldIndex(matchContext.jsonSchema, matchContext.uiSchema)
+            : null);
     const enrichedLookup = formData && matchContext?.schemaParams?.length
-        ? buildLaborCoefficientLookupSource(lookupSource, formData, matchContext.schemaParams, paramCodes)
+        ? buildLaborCoefficientLookupSource(lookupSource, formData, matchContext.schemaParams, paramCodes, { schemaFieldIndex })
         : lookupSource;
     const triggerLookup = overlayCrossComponentTriggerLookup(enrichedLookup, source, formData, paramCodes);
     const paramMatch = matchTypicalWorkParamRules(resolvedRules, triggerLookup);
@@ -802,7 +814,22 @@ export function remapTriggerRulesToSchemaParams(rules, schemaParams) {
     if (!schemaParams?.length)
         return rules;
     const byCode = new Set(schemaParams.map((param) => param.code));
+    const byUid = new Map(schemaParams
+        .filter((param) => param.schemaFieldUid?.trim())
+        .map((param) => [param.schemaFieldUid.trim(), param]));
     return rules.map((rule) => {
+        const uid = rule.schemaFieldUid?.trim();
+        if (uid) {
+            const byFieldUid = byUid.get(uid);
+            if (byFieldUid) {
+                return {
+                    ...rule,
+                    paramCode: byFieldUid.code,
+                    paramName: byFieldUid.name ?? rule.paramName,
+                    schemaFieldUid: uid,
+                };
+            }
+        }
         const code = rule.paramCode.trim();
         if (!code || byCode.has(code))
             return rule;
@@ -814,7 +841,11 @@ export function remapTriggerRulesToSchemaParams(rules, schemaParams) {
         const byName = schemaParams.find((param) => stripParamNameSourceKeys(param.name).trim().toLowerCase() === ruleName);
         if (!byName)
             return rule;
-        return { ...rule, paramCode: byName.code };
+        return {
+            ...rule,
+            paramCode: byName.code,
+            schemaFieldUid: byName.schemaFieldUid ?? rule.schemaFieldUid,
+        };
     });
 }
 export function hasTypicalWorkTriggersConfiguredSimple(rules, triggerArchCount) {

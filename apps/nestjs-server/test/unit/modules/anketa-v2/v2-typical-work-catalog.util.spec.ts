@@ -28,14 +28,36 @@ describe("v2-typical-work-catalog util", () => {
 		const rows = findCatalogRowsForRegistryWork(
 			{
 				name: "09. Адаптация и внедрение модели",
-				archComponentType: "Модельный сервис",
+				archComponentType: "Модель",
 			},
 			groups,
 		);
 
 		expect(rows).toHaveLength(1);
 		expect(rows[0]?.formulaText).toContain("архкоэф(Модели");
-		expect(rows[0]?.triggerRules?.[0]?.paramName).toBe("Каналы внедрения");
+		expect(rows[0]?.component).toBe("Модель");
+		expect(rows[0]?.triggerMode).toBe("formula");
+		expect(rows[0]?.triggerFormula?.tokens?.length).toBeGreaterThan(0);
+		expect(
+			rows[0]?.triggerRules?.some((r) => r.paramCode === "field_jUm5syZf"),
+		).toBe(true);
+		expect(
+			rows[0]?.laborCoefficients?.some((c) => c.paramCode === "field_jUm5syZf"),
+		).toBe(true);
+	});
+
+	it("falls back to stage+name when registry archComponent is stale", () => {
+		const groups = groupCatalogWorks();
+		const rows = findCatalogRowsForRegistryWork(
+			{
+				name: "09. Адаптация и внедрение модели",
+				archComponentType: "Модельный сервис",
+			},
+			groups,
+		);
+		expect(rows).toHaveLength(1);
+		expect(rows[0]?.component).toBe("Модель");
+		expect(rows[0]?.triggerFormula?.tokens?.length).toBeGreaterThan(0);
 	});
 
 	it("fans out model-stream catalog settings to mother + children", () => {
@@ -89,11 +111,11 @@ describe("v2-typical-work-catalog util", () => {
 		const stage01 = findCatalogRowsForRegistryWork(
 			{
 				name: "01. Постановка задачи",
-				archComponentType: "Модельный сервис",
+				archComponentType: "Модель",
 			},
 			groups,
 		);
-		expect(stage01[0]?.triggerArchCount?.kind).toBe("modelService");
+		expect(stage01[0]?.triggerArchCount?.kind).toBe("model");
 		expect(stage01[0]?.triggerArchCount?.steps?.[0]).toMatchObject({
 			count: 1,
 			coefficient: 1,

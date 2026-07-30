@@ -12,10 +12,15 @@ import {
 	V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH,
 	V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
 } from "./v2-typical-work-output-paths.util";
+import {
+	V2_CATALOG_SOURCE_ARCH_BY_STREAM,
+	resolveCatalogSourceArrayPath,
+} from "./v2-schema-field-index.util";
 
-/** Источник триггеров модельного стрима — arch object list «Модельный сервис». */
+/** Источник триггеров модельного стрима — arch object list «Модельный сервис» (fallback path). */
 export const V2_MODEL_STREAM_SOURCE_ARRAY_PATH = "generalInfo.modelService";
-
+export const V2_MODEL_STREAM_SOURCE_ARCH_COMPONENT =
+	V2_CATALOG_SOURCE_ARCH_BY_STREAM.modelStream;
 /** Заменяет dot-путь в JsonLogic (`{"var": "a.b.c"}` и вложенные узлы). */
 export function replaceDotPathInJsonLogic(
 	value: unknown,
@@ -85,8 +90,27 @@ export type PatchV2TypicalWorksLogicOptions = {
 
 /** Канонические пути v5: источники в detailInfo, вывод — в stream-блоки. */
 export const V2_SOURCE_SYSTEMS_ARRAY_PATH = "detailInfo.sourceSystems";
+export const V2_SOURCE_SYSTEMS_ARCH_COMPONENT =
+	V2_CATALOG_SOURCE_ARCH_BY_STREAM.sourceSystems;
 export { V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH };
 export { V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH };
+
+function resolveCatalogSourcePathForRule(options?: {
+	jsonSchema?: unknown;
+	uiSchema?: unknown;
+	sourceArchComponent: string;
+	fallbackPath: string;
+}): string {
+	return (
+		resolveCatalogSourceArrayPath({
+			jsonSchema: options?.jsonSchema,
+			uiSchema: options?.uiSchema,
+			sourceArchComponent: options?.sourceArchComponent,
+			fallbackPath: options?.fallbackPath,
+		}) ?? options?.fallbackPath ??
+		""
+	);
+}
 
 export function typicalWorksCatalogRuleId(outputArrayPath: string): string {
 	return `typical-works-catalog-${outputArrayPath.replace(/\./g, "-")}`;
@@ -94,7 +118,11 @@ export function typicalWorksCatalogRuleId(outputArrayPath: string): string {
 
 export function buildModelStreamTypicalWorksCatalogRule(
 	outputArrayPath: string,
-	options?: { boundWorkIds?: string[] | undefined },
+	options?: {
+		boundWorkIds?: string[] | undefined;
+		jsonSchema?: unknown;
+		uiSchema?: unknown;
+	},
 ): V2LogicRuleDto {
 	const boundWorkIds = options?.boundWorkIds;
 	const hasExplicitBinding = boundWorkIds !== undefined;
@@ -103,6 +131,12 @@ export function buildModelStreamTypicalWorksCatalogRule(
 	const allowedWorkIds = hasExplicitBinding
 		? (boundWorkIds ?? [])
 		: [...V2_MODEL_STREAM_FACTORY_WORK_IDS];
+	const sourceArrayPath = resolveCatalogSourcePathForRule({
+		jsonSchema: options?.jsonSchema,
+		uiSchema: options?.uiSchema,
+		sourceArchComponent: V2_MODEL_STREAM_SOURCE_ARCH_COMPONENT,
+		fallbackPath: V2_MODEL_STREAM_SOURCE_ARRAY_PATH,
+	});
 
 	return {
 		id: typicalWorksCatalogRuleId(outputArrayPath),
@@ -121,7 +155,8 @@ export function buildModelStreamTypicalWorksCatalogRule(
 			worksCatalogStream: V2_MODEL_STREAM_EXECUTOR,
 			worksCatalogAllArchComponents: true,
 			outputArrayPath,
-			sourceArrayPath: V2_MODEL_STREAM_SOURCE_ARRAY_PATH,
+			sourceArchComponent: V2_MODEL_STREAM_SOURCE_ARCH_COMPONENT,
+			sourceArrayPath,
 			allowedWorkIds,
 			sourceContextPaths: ["detailInfo", "generalInfo", "uncertaintyCalculation"],
 			taskCode: "CATALOG_MODEL_STREAM_TASKS",
@@ -132,12 +167,22 @@ export function buildModelStreamTypicalWorksCatalogRule(
 
 export function buildSourceTypicalWorksCatalogRule(
 	outputArrayPath: string = V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
-	options?: { boundWorkIds?: string[] | undefined },
+	options?: {
+		boundWorkIds?: string[] | undefined;
+		jsonSchema?: unknown;
+		uiSchema?: unknown;
+	},
 ): V2LogicRuleDto {
 	const boundWorkIds = options?.boundWorkIds;
 	const hasExplicitBinding = boundWorkIds !== undefined;
 	const enabled =
 		!hasExplicitBinding || (boundWorkIds?.length ?? 0) > 0;
+	const sourceArrayPath = resolveCatalogSourcePathForRule({
+		jsonSchema: options?.jsonSchema,
+		uiSchema: options?.uiSchema,
+		sourceArchComponent: V2_SOURCE_SYSTEMS_ARCH_COMPONENT,
+		fallbackPath: V2_SOURCE_SYSTEMS_ARRAY_PATH,
+	});
 
 	const payload: Record<string, unknown> = {
 		hint:
@@ -154,7 +199,8 @@ export function buildSourceTypicalWorksCatalogRule(
 		taskCode: "CATALOG_SOURCE_TASKS",
 		calcModel: "unified",
 		outputArrayPath,
-		sourceArrayPath: V2_SOURCE_SYSTEMS_ARRAY_PATH,
+		sourceArchComponent: V2_SOURCE_SYSTEMS_ARCH_COMPONENT,
+		sourceArrayPath,
 	};
 	if (hasExplicitBinding) {
 		payload.allowedWorkIds = boundWorkIds ?? [];
@@ -167,7 +213,7 @@ export function buildSourceTypicalWorksCatalogRule(
 		condition: enabled,
 		description:
 			"ФТ-024: типовые работы «Система-источник» из справочника работ (назначения + триггеры).",
-		dependencies: [`/${V2_SOURCE_SYSTEMS_ARRAY_PATH.replace(/\./g, "/")}`],
+		dependencies: [`/${sourceArrayPath.replace(/\./g, "/")}`],
 		payload,
 	};
 }
@@ -511,6 +557,7 @@ export function patchV2TypicalWorksLogicRules(
 						binding.outputPath,
 						binding.boundWorkIds,
 						streamExecutor,
+						options,
 					),
 				);
 			}
@@ -518,6 +565,10 @@ export function patchV2TypicalWorksLogicRules(
 			patched.push(
 				buildSourceTypicalWorksCatalogRule(
 					sourceOutputPath ?? V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
+					{
+						jsonSchema: options?.jsonSchema,
+						uiSchema: options?.uiSchema,
+					},
 				),
 			);
 		}
@@ -565,10 +616,13 @@ function buildCatalogRuleForTypicalWorkBinding(
 	outputPath: string,
 	boundWorkIds: string[] | undefined,
 	streamExecutor: string | null,
+	options?: PatchV2TypicalWorksLogicOptions,
 ): V2LogicRuleDto {
 	if (streamExecutor === V2_MODEL_STREAM_EXECUTOR) {
 		return buildModelStreamTypicalWorksCatalogRule(outputPath, {
 			boundWorkIds,
+			jsonSchema: options?.jsonSchema,
+			uiSchema: options?.uiSchema,
 		});
 	}
 	if (
@@ -583,6 +637,8 @@ function buildCatalogRuleForTypicalWorkBinding(
 	}
 	return buildSourceTypicalWorksCatalogRule(outputPath, {
 		boundWorkIds,
+		jsonSchema: options?.jsonSchema,
+		uiSchema: options?.uiSchema,
 	});
 }
 
@@ -606,6 +662,7 @@ function buildCanonicalTypicalWorksCatalogRules(
 				binding.outputPath,
 				binding.boundWorkIds,
 				streamExecutor,
+				options,
 			);
 			rules.set(rule.id, rule);
 		}
@@ -624,6 +681,10 @@ function buildCanonicalTypicalWorksCatalogRules(
 		);
 		const rule = buildSourceTypicalWorksCatalogRule(
 			sourceOutputPath ?? V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
+			{
+				jsonSchema: options?.jsonSchema,
+				uiSchema: options?.uiSchema,
+			},
 		);
 		rules.set(rule.id, rule);
 	}
@@ -641,6 +702,8 @@ const CATALOG_PAYLOAD_UPGRADE_KEYS = [
 	"worksCatalogArchComponent",
 	"outputArrayPath",
 	"sourceArrayPath",
+	"sourceArchComponent",
+	"sourceBlockUid",
 	"sourceContextPaths",
 	"taskCode",
 	"calcModel",
@@ -669,11 +732,11 @@ function mergeTypicalWorksCatalogRulePayload(
 			continue;
 		}
 		if (
-			key === "sourceArrayPath" &&
-			canonical.worksCatalogStream === V2_MODEL_STREAM_EXECUTOR &&
-			cur !== next
+			key === "sourceArrayPath" ||
+			key === "sourceArchComponent" ||
+			key === "sourceBlockUid"
 		) {
-			merged[key] = next;
+			if (cur !== next) merged[key] = next;
 			continue;
 		}
 		if (cur === undefined || cur === null || cur === "") {

@@ -33,6 +33,7 @@ import type {
 import {
 	buildEmptyV2AnketaTemplateSnapshot,
 	resolveV2AnketaCanvasUiKind,
+	rewriteSchemaPathsInValue,
 	syncTriggerGatedGroupActivationFromTypicalWorks,
 } from "@smart-anketa/api-contract";
 import { createResetSchemaEditorPreviewFormData } from "../utils/previewFormReset";
@@ -1732,8 +1733,28 @@ export const V2TemplateSchemaEditor = ({
 						key,
 						safeIndex,
 					);
-					if (uiOptions && Object.keys(uiOptions).length > 0) {
-						nextUi = patchUiOptionsAtPointer(nextUi, childPointer, uiOptions);
+					const optionsToPatch = { ...(uiOptions ?? {}) };
+					if (
+						typeof optionsToPatch.archComponent === "string" &&
+						optionsToPatch.archComponent.trim() &&
+						(typeof optionsToPatch.archBlockUid !== "string" ||
+							!String(optionsToPatch.archBlockUid).trim())
+					) {
+						optionsToPatch.archBlockUid = `block_${crypto.randomUUID()}`;
+					}
+					if (
+						Object.keys(optionsToPatch).length > 0 &&
+						(typeof optionsToPatch.schemaFieldUid !== "string" ||
+							!String(optionsToPatch.schemaFieldUid).trim())
+					) {
+						optionsToPatch.schemaFieldUid = `field_${crypto.randomUUID()}`;
+					}
+					if (Object.keys(optionsToPatch).length > 0) {
+						nextUi = patchUiOptionsAtPointer(
+							nextUi,
+							childPointer,
+							optionsToPatch,
+						);
 					}
 					if (uiBranch && Object.keys(uiBranch).length > 0) {
 						nextUi = mergeUiBranchAtPointer(nextUi, childPointer, uiBranch);
@@ -1838,6 +1859,14 @@ export const V2TemplateSchemaEditor = ({
 			);
 			if (!nextSchema) return;
 
+			const key = pointerSegments(sourcePointer).at(-1);
+			const nextPointer =
+				key == null
+					? null
+					: targetParentPointer === "/"
+						? `/${key}`
+						: `${targetParentPointer.replace(/\/$/, "")}/${key}`;
+
 			pushDraftHistory();
 			setJsonSchema(nextSchema);
 			setUiSchema(
@@ -1849,13 +1878,19 @@ export const V2TemplateSchemaEditor = ({
 				) as UiSchema,
 			);
 
-			const key = pointerSegments(sourcePointer).at(-1);
-			const nextPointer =
-				key == null
-					? null
-					: targetParentPointer === "/"
-						? `/${key}`
-						: `${targetParentPointer.replace(/\/$/, "")}/${key}`;
+			if (nextPointer && nextPointer !== sourcePointer) {
+				setLogic((prev) => ({
+					...prev,
+					rules: prev.rules.map((rule) =>
+						rewriteSchemaPathsInValue(
+							rule,
+							sourcePointer,
+							nextPointer,
+						) as V2LogicRuleDto,
+					),
+				}));
+			}
+
 			setSelectedPointer(nextPointer);
 		},
 		[jsonSchema, uiSchema, pushDraftHistory],

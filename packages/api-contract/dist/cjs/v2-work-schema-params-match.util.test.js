@@ -108,15 +108,18 @@ const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
             jsonSchema: {
                 type: "object",
                 properties: {
-                    modelService: {
-                        type: "object",
-                        properties: {
-                            field_jUm5syZf: {
-                                type: "array",
-                                title: "Каналы внедрения",
-                                items: {
-                                    type: "string",
-                                    enum: ["Батч", "Онлайн"],
+                    modelsList: {
+                        type: "array",
+                        items: {
+                            type: "object",
+                            properties: {
+                                field_jUm5syZf: {
+                                    type: "array",
+                                    title: "Каналы внедрения",
+                                    items: {
+                                        type: "string",
+                                        enum: ["Батч", "Онлайн"],
+                                    },
                                 },
                             },
                         },
@@ -124,9 +127,13 @@ const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
                 },
             },
             uiSchema: {
-                modelService: {
-                    field_jUm5syZf: {
-                        "ui:options": { schemaFieldUid: "field_4fb7d302-c5f0-49e6-9cd2-959a1fbe1f4e" },
+                modelsList: {
+                    items: {
+                        field_jUm5syZf: {
+                            "ui:options": {
+                                schemaFieldUid: "field_4fb7d302-c5f0-49e6-9cd2-959a1fbe1f4e",
+                            },
+                        },
                     },
                 },
             },

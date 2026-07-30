@@ -37,6 +37,7 @@ import {
 	V2_MODEL_STREAM_EXECUTOR,
 	V2_MODEL_STREAM_SOURCE_ARRAY_PATH,
 	V2_SOURCE_SYSTEMS_ARRAY_PATH,
+	resolveCatalogSourceArrayPath,
 	type V2ParamDependencyGraph,
 	type V2ParamDefLike,
 } from "@smart-anketa/api-contract";
@@ -85,6 +86,9 @@ type TaskTriggerPayload = {
 	worksCatalogStream?: string;
 	/** Источник — массив (по умолчанию). */
 	sourceArrayPath?: string;
+	/** Стабильная привязка источника: archComponent / blockUid (path — derived). */
+	sourceArchComponent?: string;
+	sourceBlockUid?: string;
 	/** Источник — один объект (витрина, процесс). */
 	sourceObjectPath?: string;
 	/** Доп. контекст для коэффициентов (напр. modelService при controlTypes). */
@@ -430,6 +434,7 @@ export class V2CalculationService {
 				paramDefs,
 				options?.uiSchema as Record<string, unknown> | undefined,
 				uncertaintyConfig,
+				options?.jsonSchema,
 			);
 		}
 
@@ -495,6 +500,7 @@ export class V2CalculationService {
 		const legacy = applyLegacySummaryToFormData(liveData, {
 			sourceTypicalWorksPath,
 			uiSchema: options?.uiSchema,
+			jsonSchema: options?.jsonSchema,
 			logic,
 		});
 		liveData = legacy.formData;
@@ -557,6 +563,7 @@ export class V2CalculationService {
 		paramDefs: V2ParamDefLike[],
 		uiSchema?: Record<string, unknown>,
 		uncertaintyConfig?: import("@smart-anketa/api-contract").V2OverallUncertaintyConfig,
+		jsonSchema?: unknown,
 	): Promise<Record<string, unknown>> {
 		const payload = (rule.payload ?? {}) as TaskTriggerPayload;
 		if (payload.mode !== "generated_rows") return data;
@@ -601,7 +608,12 @@ export class V2CalculationService {
 					);
 		}
 
-		const sourceRows = this.resolveGeneratedRowSources(data, payload, uiSchema);
+		const sourceRows = this.resolveGeneratedRowSources(
+			data,
+			payload,
+			uiSchema,
+			jsonSchema,
+		);
 		if (sourceRows.length === 0) {
 			return payload.outputMode === "append"
 				? clearRowsGeneratedByRule()
@@ -844,6 +856,7 @@ export class V2CalculationService {
 		data: Record<string, unknown>,
 		payload: TaskTriggerPayload,
 		uiSchema?: Record<string, unknown>,
+		jsonSchema?: unknown,
 	): unknown[] {
 		const objectPath = payload.sourceObjectPath?.trim();
 		if (objectPath) {
@@ -851,15 +864,27 @@ export class V2CalculationService {
 			if (!obj || typeof obj !== "object" || Array.isArray(obj)) return [];
 			return [obj];
 		}
-		const arrayPath = payload.sourceArrayPath?.trim();
+		const catalogStream = payload.worksCatalogStream?.trim() ?? "";
+		const arrayPath =
+			resolveCatalogSourceArrayPath({
+				jsonSchema,
+				uiSchema,
+				sourceArchComponent: payload.sourceArchComponent,
+				sourceBlockUid: payload.sourceBlockUid,
+				fallbackPath:
+					payload.sourceArrayPath?.trim() ||
+					(payload.worksCatalog && catalogStream === V2_MODEL_STREAM_EXECUTOR
+						? V2_MODEL_STREAM_SOURCE_ARRAY_PATH
+						: null),
+			}) ?? payload.sourceArrayPath?.trim();
 		const outputPath = payload.outputArrayPath?.trim();
 		const referencePath = outputPath || arrayPath || "";
-		const catalogStream = payload.worksCatalogStream?.trim() ?? "";
 
 		// Модельный стрим / catalog: один контекст — per-instance fan-out в runtime.
 		if (payload.worksCatalog && catalogStream === V2_MODEL_STREAM_EXECUTOR) {
+			const modelServicePath = arrayPath || V2_MODEL_STREAM_SOURCE_ARRAY_PATH;
 			const modelServiceRows = readFilledArchComponentListRows(
-				readByDotPath(data, V2_MODEL_STREAM_SOURCE_ARRAY_PATH),
+				readByDotPath(data, modelServicePath),
 			);
 			if (modelServiceRows.length > 0) return [modelServiceRows[0]!];
 			if (referencePath) {

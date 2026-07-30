@@ -778,10 +778,16 @@ describe("V2CalculationService", () => {
 			{
 				generalInfo: {
 					complexity: "4 — Высокая ×2.00",
-					modelService: [{ field_o_HRj6VO: true, field_jUm5syZf: ["Онлайн"] }],
+					modelService: [{ field_o_HRj6VO: true }],
 				},
 				detailInfo: {
-					modelsList: [{ algorithmType: "CV", autoML: true }],
+					modelsList: [
+						{
+							algorithmType: "CV",
+							autoML: true,
+							field_jUm5syZf: ["Онлайн"],
+						},
+					],
 					sourceSystems: [{ name: "src-1", type: "Внутренний" }],
 				},
 				uncertaintyCalculation: {
@@ -792,11 +798,11 @@ describe("V2CalculationService", () => {
 			{ jsonSchema, uiSchema },
 		);
 
-		expect(result.legacyStageEvaluation).toBeNull();
+		expect(result.legacyStageEvaluation?.applied).toBe(true);
 		expect(
 			(result.formData.summary as { scoreWithComplexityCoeff?: number })
 				.scoreWithComplexityCoeff,
-		).toBeUndefined();
+		).toBeGreaterThan(0);
 	});
 
 	it("parses string atypical coefficients in row_computed", async () => {

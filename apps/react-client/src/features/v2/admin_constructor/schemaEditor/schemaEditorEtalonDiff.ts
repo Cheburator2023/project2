@@ -214,6 +214,8 @@ function scrubEntityNoise(
 			key === "formulaBadge" ||
 			key === "calculationLogic" ||
 			key === "schemaFieldUid" ||
+			key === "archBlockUid" ||
+			key === "semanticRole" ||
 			key === "sortOrder"
 		) {
 			continue;

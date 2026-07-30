@@ -44,6 +44,7 @@ export * from "./v2-works-catalog-match.util";
 export * from "./v2-work-schema-params-match.util";
 export * from "./v2-param-slug.util";
 export * from "./v2-template-work-schema-params.util";
+export * from "./v2-schema-field-index.util";
 export * from "./v2-typical-work.types";
 export * from "./v2-typical-work-v4.types";
 export * from "./v2-trigger-formula.util";

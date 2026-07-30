@@ -24,6 +24,7 @@ export type TypicalWorkRuleLike = {
         code: string;
         label: string | null;
     }>;
+    schemaFieldUid?: string | null;
 };
 /** Вход для normalize: factory snapshot может хранить values как string[]. */
 export type TypicalWorkTriggerRuleMatchInput = Omit<TypicalWorkRuleLike, "values"> & {
@@ -31,6 +32,7 @@ export type TypicalWorkTriggerRuleMatchInput = Omit<TypicalWorkRuleLike, "values
         code: string;
         label: string | null;
     } | string>;
+    schemaFieldUid?: string | null;
 };
 /** Приводит legacy/snapshot-правила к виду, пригодному для сопоставления с ответами анкеты. */
 export declare function normalizeTypicalWorkTriggerRuleForMatch(rule: TypicalWorkTriggerRuleMatchInput): TypicalWorkRuleLike;
@@ -150,7 +152,11 @@ export declare function buildLaborCoefficientLookupSource(source: Record<string,
     code: string;
     name?: string | null;
     schemaPointer?: string | null;
-}>, paramCodes: readonly string[]): Record<string, unknown>;
+    schemaFieldUid?: string | null;
+}>, paramCodes: readonly string[], options?: {
+    /** Индекс схемы: uid → актуальный pointer (path не SoT). */
+    schemaFieldIndex?: import("./v2-schema-field-index.util").V2SchemaFieldIndex | null;
+}): Record<string, unknown>;
 /** Сопоставление значения поля анкеты с кодом/меткой из справочника или схемы. */
 export declare function laborValueMatches(actual: unknown, valueCode: string | null | undefined, valueLabel: string | null | undefined): boolean;
 export declare function matchSingleTypicalWorkRuleForTriggerFormula(rule: TypicalWorkRuleLike, source: Record<string, unknown>): boolean;
@@ -163,6 +169,7 @@ export declare function typicalWorkRulesMatchSource(rules: TypicalWorkRuleLike[]
 export declare function remapTriggerRulesToSchemaParams(rules: TypicalWorkRuleLike[], schemaParams?: ReadonlyArray<{
     code: string;
     name?: string | null;
+    schemaFieldUid?: string | null;
 }> | null): TypicalWorkRuleLike[];
 export declare function hasTypicalWorkTriggersConfiguredSimple(rules: TypicalWorkRuleLike[], triggerArchCount?: TypicalWorkTriggerArchCountLike | null): boolean;
 export declare function resolveLaborCoefficient(source: Record<string, unknown>, paramCode: string, valueCode: string | null, valueLabel: string | null, paramName?: string | null): boolean;

@@ -1,7 +1,8 @@
 import type { V2JsonLogicValue, V2LogicGraphDto, V2LogicRuleDto } from "./v2-template.types";
 import { V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH, V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH } from "./v2-typical-work-output-paths.util";
-/** Источник триггеров модельного стрима — arch object list «Модельный сервис». */
+/** Источник триггеров модельного стрима — arch object list «Модельный сервис» (fallback path). */
 export declare const V2_MODEL_STREAM_SOURCE_ARRAY_PATH = "generalInfo.modelService";
+export declare const V2_MODEL_STREAM_SOURCE_ARCH_COMPONENT: "modelService";
 /** Заменяет dot-путь в JsonLogic (`{"var": "a.b.c"}` и вложенные узлы). */
 export declare function replaceDotPathInJsonLogic(value: unknown, oldPath: string, newPath: string): unknown;
 export type PatchV2TypicalWorksLogicOptions = {
@@ -10,14 +11,19 @@ export type PatchV2TypicalWorksLogicOptions = {
 };
 /** Канонические пути v5: источники в detailInfo, вывод — в stream-блоки. */
 export declare const V2_SOURCE_SYSTEMS_ARRAY_PATH = "detailInfo.sourceSystems";
+export declare const V2_SOURCE_SYSTEMS_ARCH_COMPONENT: "sourceSystem";
 export { V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH };
 export { V2_CONTROL_TYPICAL_TASKS_OUTPUT_PATH };
 export declare function typicalWorksCatalogRuleId(outputArrayPath: string): string;
 export declare function buildModelStreamTypicalWorksCatalogRule(outputArrayPath: string, options?: {
     boundWorkIds?: string[] | undefined;
+    jsonSchema?: unknown;
+    uiSchema?: unknown;
 }): V2LogicRuleDto;
 export declare function buildSourceTypicalWorksCatalogRule(outputArrayPath?: string, options?: {
     boundWorkIds?: string[] | undefined;
+    jsonSchema?: unknown;
+    uiSchema?: unknown;
 }): V2LogicRuleDto;
 /** Каталог типовых работ стрима-исполнителя (ПиРМ и др.) — все типы арх. компонентов. */
 export declare function buildExecutorStreamTypicalWorksCatalogRule(outputArrayPath: string, options: {

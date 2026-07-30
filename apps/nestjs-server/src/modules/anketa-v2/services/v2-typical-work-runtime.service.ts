@@ -20,6 +20,7 @@ import {
 	mergeArchInstanceTriggerSource,
 	normalizeStoredFormula,
 	buildLaborCoefficientLookupSource,
+	buildV2SchemaFieldIndex,
 	parseStoredTypicalWorkCalculationLogic,
 	resolveActiveNormOnDate,
 	resolveArchComponentKindFromType,
@@ -130,6 +131,7 @@ type RuntimeWorkContext = {
 	triggersMatch: boolean;
 	alwaysShown: boolean;
 	uncertaintyConfig?: import("@smart-anketa/api-contract").V2OverallUncertaintyConfig;
+	schemaFieldIndex?: import("@smart-anketa/api-contract").V2SchemaFieldIndex | null;
 };
 
 function decimalToNumber(value: string | number | null | undefined): number {
@@ -156,6 +158,7 @@ function mapRuleEntity(rule: V2TypicalWorkRuleEntity): TypicalWorkRuleLike {
 		valueCode: rule.valueCode,
 		valueLabel: rule.valueLabel,
 		values: rule.valueCodes ?? undefined,
+		schemaFieldUid: rule.schemaFieldUid ?? null,
 	});
 }
 
@@ -183,6 +186,7 @@ function resolveParamCoefficients(ctx: RuntimeWorkContext): Record<string, numbe
 		ctx.formData,
 		ctx.schemaParams,
 		laborParamCodes,
+		{ schemaFieldIndex: ctx.schemaFieldIndex },
 	);
 
 	for (const header of ctx.laborParams) {
@@ -357,6 +361,7 @@ function buildRuntimeFactorCoeffResolver(
 			ctx.formData,
 			ctx.schemaParams,
 			listLaborParamCodes(ctx),
+			{ schemaFieldIndex: ctx.schemaFieldIndex },
 		),
 	});
 }
@@ -471,7 +476,10 @@ function evaluateWorkAcrossArchInstances(ctx: RuntimeWorkContext): {
 			(assignment?.triggerFormula as TypicalWorkTriggerMatchInput["triggerFormula"]) ??
 			null,
 	};
-	const matchContext = { schemaParams: ctx.schemaParams };
+	const matchContext = {
+		schemaParams: ctx.schemaParams,
+		schemaFieldIndex: ctx.schemaFieldIndex,
+	};
 
 	/**
 	 * Fan-out kind (Модель / СИ / …) без экземпляров: не обнулять работу сразу.
@@ -763,7 +771,12 @@ export class V2TypicalWorkRuntimeService {
 		const assignmentById = new Map(assignments.map((a) => [a.id, a]));
 		const methodologyCatalog =
 			await this.paramCatalogService.listTriggerStatusCatalog(params.atDate);
-		const schemaParams = await this.loadSchemaParams(params.templateVersionId);
+		const {
+			schemaParams,
+			schemaFieldIndex,
+			jsonSchema,
+			uiSchema,
+		} = await this.loadSchemaParams(params.templateVersionId);
 		const coefficientValueCatalog = buildWorkCoefficientCatalog({
 			schemaParams,
 			laborParams: laborParams.map((row) => ({
@@ -810,7 +823,12 @@ export class V2TypicalWorkRuntimeService {
 				archComponentType: work.archComponentType,
 				source: params.source,
 				formData: params.formData ?? params.source,
-				matchContext: { schemaParams },
+				matchContext: {
+					schemaParams,
+					schemaFieldIndex,
+					jsonSchema: jsonSchema ?? undefined,
+					uiSchema: uiSchema ?? undefined,
+				},
 			});
 			const alwaysActive = isModelStreamAlwaysActiveWork(work.id);
 			const alwaysShown =
@@ -838,6 +856,7 @@ export class V2TypicalWorkRuntimeService {
 				triggersMatch,
 				alwaysShown,
 				uncertaintyConfig: params.uncertaintyConfig,
+				schemaFieldIndex,
 			});
 		}
 
@@ -958,16 +977,42 @@ export class V2TypicalWorkRuntimeService {
 
 	private async loadSchemaParams(
 		templateVersionId: string | null,
-	): Promise<WorkSchemaParamDef[]> {
-		if (!templateVersionId) return [];
+	): Promise<{
+		schemaParams: WorkSchemaParamDef[];
+		schemaFieldIndex: ReturnType<typeof buildV2SchemaFieldIndex> | null;
+		jsonSchema: Record<string, unknown> | null;
+		uiSchema: Record<string, unknown> | null;
+	}> {
+		if (!templateVersionId) {
+			return {
+				schemaParams: [],
+				schemaFieldIndex: null,
+				jsonSchema: null,
+				uiSchema: null,
+			};
+		}
 		const version = await this.templateVersionRepository.findOne({
 			where: { id: templateVersionId },
 		});
-		if (!version) return [];
-		return buildWorkSchemaParamsFromTemplate({
-			jsonSchema: (version.jsonSchema ?? {}) as Record<string, unknown>,
-			uiSchema: (version.uiSchema ?? {}) as Record<string, unknown>,
-		});
+		if (!version) {
+			return {
+				schemaParams: [],
+				schemaFieldIndex: null,
+				jsonSchema: null,
+				uiSchema: null,
+			};
+		}
+		const jsonSchema = (version.jsonSchema ?? {}) as Record<string, unknown>;
+		const uiSchema = (version.uiSchema ?? {}) as Record<string, unknown>;
+		return {
+			schemaParams: buildWorkSchemaParamsFromTemplate({
+				jsonSchema,
+				uiSchema,
+			}),
+			schemaFieldIndex: buildV2SchemaFieldIndex(jsonSchema, uiSchema),
+			jsonSchema,
+			uiSchema,
+		};
 	}
 
 	private async resolveAllowedWorkIdsForTemplate(

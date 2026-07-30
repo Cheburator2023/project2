@@ -211,7 +211,48 @@ export function findCatalogRowsForRegistryWork(
 			if (row.name.trim() === name) matches.push(row);
 		}
 	}
-	return matches;
+	if (matches.length > 0) return matches;
+
+	/**
+	 * Fallback: смена archComponent у работы (напр. канал внедрения → Модель)
+	 * ломает ключ component|stage|name. Если stage+name уникальны в каталоге —
+	 * берём эту строку, иначе не угадываем.
+	 */
+	if (!stage) return [];
+	const stripped = stripWorkStagePrefix(entry.name);
+	const byStageName: V2FactoryTypicalWork[] = [];
+	for (const rows of catalogGroups.values()) {
+		for (const row of rows) {
+			if (row.stage.trim() !== stage) continue;
+			if (row.name.trim() !== stripped && row.name.trim() !== name) continue;
+			byStageName.push(row);
+		}
+	}
+	if (byStageName.length === 1) return byStageName;
+	return [];
+}
+
+/** Сопоставление DB-работы с registry: сначала id, затем component|name, затем уникальное имя. */
+export function findRegistryEntryForWork<
+	T extends { id: string; name: string; archComponentType: string },
+>(
+	work: { id: string; name: string; archComponentType: string },
+	registryWorks: readonly T[],
+): T | undefined {
+	const byId = registryWorks.find((entry) => entry.id === work.id);
+	if (byId) return byId;
+
+	const arch = normalizeArchComponentType(work.archComponentType);
+	const name = work.name.trim();
+	const byKey = registryWorks.find(
+		(entry) =>
+			normalizeArchComponentType(entry.archComponentType) === arch &&
+			entry.name.trim() === name,
+	);
+	if (byKey) return byKey;
+
+	const byName = registryWorks.filter((entry) => entry.name.trim() === name);
+	return byName.length === 1 ? byName[0] : undefined;
 }
 
 export function groupCatalogWorks(): Map<string, V2FactoryTypicalWork[]> {

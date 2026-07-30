@@ -1,4 +1,9 @@
-import { isPositiveBinaryFormValue } from "@smart-anketa/api-contract";
+import {
+	buildV2SchemaFieldIndex,
+	isPositiveBinaryFormValue,
+	resolveFormValueBySemanticRole,
+	type V2SchemaFieldIndex,
+} from "@smart-anketa/api-contract";
 import { parseFormNumber } from "./v2-form-number.util";
 
 function readRecord(value: unknown): Record<string, unknown> | undefined {
@@ -47,9 +52,31 @@ export type V2LegacyFormContext = {
 	uncertaintyAdjustmentPercent: number;
 };
 
+export type ResolveLegacyFormContextOptions = {
+	jsonSchema?: unknown;
+	uiSchema?: unknown;
+};
+
+function pickBySemanticRole(
+	data: Record<string, unknown>,
+	index: V2SchemaFieldIndex | null,
+	role: string,
+	fallback: () => unknown,
+): unknown {
+	if (!index) return fallback();
+	const fromRole = resolveFormValueBySemanticRole(data, index, role);
+	return fromRole !== undefined ? fromRole : fallback();
+}
+
 export function resolveLegacyFormContext(
 	data: Record<string, unknown>,
+	options?: ResolveLegacyFormContextOptions,
 ): V2LegacyFormContext {
+	const index =
+		options?.jsonSchema != null || options?.uiSchema != null
+			? buildV2SchemaFieldIndex(options?.jsonSchema, options?.uiSchema)
+			: null;
+
 	const generalInfo = readRecord(data.generalInfo);
 	const detailInfo = readRecord(data.detailInfo);
 	const streamModelControl = readRecord(data.streamModelControl);
@@ -58,23 +85,32 @@ export function resolveLegacyFormContext(
 
 	const detailParams =
 		readRecord(detailInfo?.model) ?? readRecord(detailInfo?.parameters);
-	const modelService = readArchObjectRecord(generalInfo?.modelService);
+	const modelService = readArchObjectRecord(
+		pickBySemanticRole(data, index, "modelService", () => generalInfo?.modelService),
+	);
 	const dataMart =
 		readArchObjectRecord(detailInfo?.dataMart) ??
 		readArchObjectRecord(streamModelControl?.dataObjects);
 
-	const modelsList =
-		readArray(detailInfo?.modelsList).length > 0
-			? readArray(detailInfo?.modelsList)
-			: readArray(readRecord(streamModelControl?.models)?.modelsList).length > 0
-				? readArray(readRecord(streamModelControl?.models)?.modelsList)
-				: readArray(readRecord(data.models)?.modelsList);
+	const modelsListRaw = pickBySemanticRole(data, index, "modelsList", () => {
+		if (readArray(detailInfo?.modelsList).length > 0) return detailInfo?.modelsList;
+		if (readArray(readRecord(streamModelControl?.models)?.modelsList).length > 0) {
+			return readRecord(streamModelControl?.models)?.modelsList;
+		}
+		return readRecord(data.models)?.modelsList;
+	});
+	const modelsList = readArray(modelsListRaw);
 
 	const modelsCountFromList = modelsList.length;
+	const modelsCountFromRole = parseFormNumber(
+		pickBySemanticRole(data, index, "modelsCount", () => undefined),
+	);
 	const modelsCount =
 		modelsCountFromList > 0
 			? modelsCountFromList
-			: Math.max(1, Number(detailParams?.modelsCount) || 1);
+			: modelsCountFromRole != null && modelsCountFromRole > 0
+				? modelsCountFromRole
+				: Math.max(1, Number(detailParams?.modelsCount) || 1);
 
 	const algorithmTypes: string[] = [];
 	for (const model of modelsList) {
@@ -85,7 +121,12 @@ export function resolveLegacyFormContext(
 			"";
 		if (algo) algorithmTypes.push(algo);
 	}
-	const singleType = detailParams?.algorithmType;
+	const singleType = pickBySemanticRole(
+		data,
+		index,
+		"algorithmType",
+		() => detailParams?.algorithmType,
+	);
 	if (typeof singleType === "string" && singleType.trim()) {
 		algorithmTypes.push(singleType.trim());
 	}
@@ -93,15 +134,25 @@ export function resolveLegacyFormContext(
 	const autoMlFromList = modelsList.some((model) =>
 		isPositiveBinaryFormValue(readRecord(model)?.autoML),
 	);
+	const autoMlFromRole = isPositiveBinaryFormValue(
+		pickBySemanticRole(data, index, "autoML", () => detailParams?.autoML),
+	);
 	const autoMlRequired: "Да" | "Не требуется" =
-		autoMlFromList || isPositiveBinaryFormValue(detailParams?.autoML)
-			? "Да"
-			: "Не требуется";
+		autoMlFromList || autoMlFromRole ? "Да" : "Не требуется";
 
-	const pilotFromLegacy = String(generalInfo?.pilotNeed ?? "");
+	const pilotFromLegacy = String(
+		pickBySemanticRole(data, index, "pilotNeed", () => generalInfo?.pilotNeed) ??
+			"",
+	);
+	const prePromFromRole = pickBySemanticRole(
+		data,
+		index,
+		"prePromEval",
+		() => modelService?.prePromEval,
+	);
 	const pilotFromModelService =
 		isPositiveBinaryFormValue(modelService?.field_o_HRj6VO) ||
-		isPositiveBinaryFormValue(modelService?.prePromEval);
+		isPositiveBinaryFormValue(prePromFromRole);
 	const pilotModelRequired: "Да" | "Не требуется" =
 		pilotFromLegacy.includes("MVP") ||
 		pilotFromLegacy === "Требуется" ||
@@ -109,25 +160,36 @@ export function resolveLegacyFormContext(
 			? "Да"
 			: "Не требуется";
 	const pilotSupportRequired: "Да" | "Не требуется" =
-		pilotFromLegacy === "Требуется" ||
-		isPositiveBinaryFormValue(modelService?.prePromEval)
+		pilotFromLegacy === "Требуется" || isPositiveBinaryFormValue(prePromFromRole)
 			? "Да"
 			: pilotModelRequired;
 
-	const deploymentChannels = resolveDeploymentChannels(generalInfo, modelService);
+	const deploymentChannels = resolveDeploymentChannels(
+		generalInfo,
+		modelService,
+		modelsList,
+		data,
+		index,
+	);
 
-	const sourceRows = [
+	const sourceRowsRaw = pickBySemanticRole(data, index, "sourceSystems", () => [
 		...readArray(detailInfo?.sourceSystems),
 		...readArray(streamDataSources?.sourceSystems),
-	];
+	]);
+	const sourceRows = readArray(sourceRowsRaw);
 	const namedSources = countFilledNamedRows(sourceRows);
 	const dataProcessing =
 		readRecord(detailInfo?.dataProcess) ??
 		readRecord(streamModelControl?.dataProcessing) ??
 		readRecord(data.dataProcessing);
+	const dataSourcesCountFromRole = parseFormNumber(
+		pickBySemanticRole(data, index, "dataSourcesCount", () => undefined),
+	);
 	const dataSourcesCount = Math.max(
 		1,
-		namedSources ||
+		(dataSourcesCountFromRole != null && dataSourcesCountFromRole > 0
+			? dataSourcesCountFromRole
+			: namedSources) ||
 			Number(dataProcessing?.sourcesRDS) ||
 			readArray(
 				readRecord(streamModelControl?.dataObjects)?.trainingSources,
@@ -143,10 +205,20 @@ export function resolveLegacyFormContext(
 	const readyPromFromDataMart = isPositiveBinaryFormValue(
 		dataMart?.readyPromReports,
 	);
+	const readyPromFromRole = isPositiveBinaryFormValue(
+		pickBySemanticRole(data, index, "readyPromReports", () => undefined),
+	);
 	const readyPromReports: "Да" | "Нет" =
-		readyPromFromModels || readyPromFromDataMart ? "Да" : "Нет";
+		readyPromFromModels || readyPromFromDataMart || readyPromFromRole
+			? "Да"
+			: "Нет";
 
-	const productionAdditionalReportsRaw = generalInfo?.productionAdditionalReports;
+	const productionAdditionalReportsRaw = pickBySemanticRole(
+		data,
+		index,
+		"productionAdditionalReports",
+		() => generalInfo?.productionAdditionalReports,
+	);
 	// Не подставлять metricsCount / «кол-во признаков» — это другой параметр.
 	// Пустое поле → дефолт v1 «1» (см. getProductionAdditionalReportsCoefficient).
 	const productionAdditionalReports =
@@ -159,14 +231,27 @@ export function resolveLegacyFormContext(
 		99,
 		Math.max(
 			1,
-			parseFormNumber(generalInfo?.assessedInitiativesCount) ?? 1,
+			parseFormNumber(
+				pickBySemanticRole(
+					data,
+					index,
+					"assessedInitiativesCount",
+					() => generalInfo?.assessedInitiativesCount,
+				),
+			) ?? 1,
 		),
 	);
 
 	const uncertaintyAdjustmentPercent =
-		parseFormNumber(uncertainty?.field_QCwwo5c5) ??
-		parseFormNumber(uncertainty?.uncertaintyAdjustment) ??
-		0;
+		parseFormNumber(
+			pickBySemanticRole(
+				data,
+				index,
+				"uncertaintyAdjustment",
+				() =>
+					uncertainty?.field_QCwwo5c5 ?? uncertainty?.uncertaintyAdjustment,
+			),
+		) ?? 0;
 
 	return {
 		modelsList,
@@ -187,7 +272,34 @@ export function resolveLegacyFormContext(
 function resolveDeploymentChannels(
 	generalInfo: Record<string, unknown> | undefined,
 	modelService: Record<string, unknown> | undefined,
+	modelsList: unknown[],
+	data: Record<string, unknown>,
+	index: V2SchemaFieldIndex | null,
 ): string[] {
+	const fromModels: string[] = [];
+	const seen = new Set<string>();
+	for (const model of modelsList) {
+		for (const channel of readArray(readRecord(model)?.field_jUm5syZf)) {
+			if (typeof channel !== "string" || !channel.trim()) continue;
+			if (seen.has(channel)) continue;
+			seen.add(channel);
+			fromModels.push(channel);
+		}
+	}
+	if (fromModels.length > 0) return fromModels;
+
+	const fromRole = pickBySemanticRole(
+		data,
+		index,
+		"deploymentChannels",
+		() => undefined,
+	);
+	const fromRoleArr = readArray(fromRole).filter(
+		(v): v is string => typeof v === "string" && v.trim().length > 0,
+	);
+	if (fromRoleArr.length > 0) return fromRoleArr;
+
+	// Dual-read: старые анкеты хранили каналы на modelService.
 	const fromModelService = readArray(modelService?.field_jUm5syZf).filter(
 		(v): v is string => typeof v === "string" && v.trim().length > 0,
 	);

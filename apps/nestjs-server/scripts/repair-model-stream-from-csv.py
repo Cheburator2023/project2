@@ -239,7 +239,7 @@ def production_values() -> list[dict]:
 
 
 def channel_values() -> list[dict]:
-	# Labels aligned with generalInfo.modelService.field_jUm5syZf schema enum
+	# Labels aligned with detailInfo.modelsList.items.field_jUm5syZf schema enum
 	return [
 		{"label": "Не требуется", "code": "не_требуется", "coefficient": 0},
 		{"label": "Батч", "code": "батч", "coefficient": 0.5},
@@ -533,7 +533,7 @@ PATCHES: dict[str, dict] = {
 		"formulaText": "N × коэф(complexity) × коэф(overallUncertainty) × коэф(productionAdditionalReports) × коэф(assessedInitiativesCount)",
 	},
 	"09|Адаптация и внедрение модели": {
-		"component": "Модельный сервис",
+		"component": "Модель",
 		"triggerMode": "formula",
 		"triggerFormula": formula(
 			[
@@ -657,7 +657,7 @@ def main() -> None:
 		"AutoML: разработка": "Модель",
 		"05B. Пилотирование модели": "Модельный сервис",
 		"07. Разработка витрины для применения модели": "Объект / Витрина данных",
-		"09. Адаптация и внедрение модели": "Модельный сервис",
+		"09. Адаптация и внедрение модели": "Модель",
 		"AutoML: внедрение": "Модель",
 	}
 	reg_patched = 0

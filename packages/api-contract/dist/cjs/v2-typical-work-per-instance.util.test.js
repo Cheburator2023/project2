@@ -490,7 +490,7 @@ const v2_work_arch_count_coeff_util_1 = require("./v2-work-arch-count-coeff.util
     (0, vitest_1.it)("appearance gate: work appears when any model matches AutoML (not only if all do)", () => {
         const formData = {
             generalInfo: {
-                modelService: [{ workType: "Внедрение", field_jUm5syZf: "канал" }],
+                modelService: [{ workType: "Внедрение" }],
             },
             detailInfo: {
                 modelsList: [
@@ -498,11 +498,13 @@ const v2_work_arch_count_coeff_util_1 = require("./v2-work-arch-count-coeff.util
                         "field_atxiq-UM": "ваыава",
                         autoML: true,
                         algorithmType: "Аудио-аналитика",
+                        field_jUm5syZf: "канал",
                     },
                     {
                         "field_atxiq-UM": "01. Постановка задачи2",
                         autoML: false,
                         algorithmType: "Компьютерное зрение",
+                        field_jUm5syZf: "канал",
                     },
                     {
                         "field_atxiq-UM": "66666677777",
