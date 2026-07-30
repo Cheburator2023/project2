@@ -1,5 +1,21 @@
 # Semantic Versioning Changelog
 
+# [1.50.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.49.0...v1.50.0) (2026-07-30)
+
+
+### Bug Fixes
+
+* confl fix ([4456156](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/44561562cce500eee80809a0523ef74e07cb78f5))
+* streamline legacy model handling in V2CalculationService and enhance V2FinalEvaluationPanel ([0d3e7de](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/0d3e7de09630547f48f2b72e8c54a2e795d9e533))
+
+
+### Features
+
+* add new scripts for repairing typical works from CSV ([bd360dc](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/bd360dcf41ddea2e1ab8c68b27860e104e720fc2))
+* enhance TotalUncertaintyModal and OverallUncertaintyPanels with adjustment settings and preview functionality ([5ab7ef0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/5ab7ef0c535b4402f15029164fb286f32bd91b6a))
+* enhance typical work trigger handling and arch instance evaluation ([5beaffe](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/5beaffecb1012f4b6b83e3609af39e22e1e95add))
+* implement resizable scales panel in OverallUncertaintyPanel ([f5ea496](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/f5ea4969ebe6698ea7b15549bc98d09f998ddf6d))
+
 # [1.49.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.48.0...v1.49.0) (2026-07-29)
 
 
