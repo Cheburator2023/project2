@@ -18,7 +18,7 @@ export function AnketaCreateMetaDialog({
 		<AnketaCalcNameDialog
 			open={open}
 			title="Новая анкета"
-			confirmLabel="Продолжить"
+			confirmLabel="Создать"
 			onCancel={onCancel}
 			onConfirm={onConfirm}
 			data-test-id={dataTestId}

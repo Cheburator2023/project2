@@ -6,6 +6,8 @@ import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessag
 import { toast } from "@react-client/common/toasts";
 import { AnketaFormShell } from "@react-client/features/v2/anketaCRUD/templates/AnketaFormShell";
 import { useV2AnketaSchemaEngine } from "@react-client/features/v2/anketaCRUD/hooks/useV2AnketaSchemaEngine";
+import { useDebouncedQuestionnaireSave } from "@react-client/features/v2/anketaCRUD/hooks/useDebouncedQuestionnaireSave";
+import { useQuestionnaireEditLock } from "@react-client/features/v2/anketaCRUD/hooks/useQuestionnaireEditLock";
 import { stripQuestionnaireCalcNameFromFormData } from "@react-client/features/v2/anketaCRUD/utils/anketaQuestionnaireMeta.util";
 import { useMemo } from "react";
 import { useParams } from "react-router";
@@ -16,6 +18,10 @@ export const AnketaPreviewPageV2 = () => {
 		id ?? "",
 	);
 	const updateMutation = useUpdateV2Questionnaire();
+	const editLock = useQuestionnaireEditLock({
+		questionnaireId: id,
+		enabled: Boolean(formPackage && !formPackage.readOnly),
+	});
 
 	const source = useMemo(
 		() =>
@@ -34,32 +40,28 @@ export const AnketaPreviewPageV2 = () => {
 	);
 
 	const engine = useV2AnketaSchemaEngine(source);
+	const formDataForSave = useMemo(
+		() => stripQuestionnaireCalcNameFromFormData(engine.displayFormData),
+		[engine.displayFormData],
+	);
+
+	const effectiveReadOnly =
+		Boolean(formPackage?.readOnly) || editLock.readOnlyByLock;
+
+	const autosave = useDebouncedQuestionnaireSave({
+		questionnaireId: id,
+		calcName: formPackage?.questionnaire.calcName,
+		formData: formDataForSave,
+		enabled: Boolean(formPackage && !error && !effectiveReadOnly),
+	});
 
 	const onSave = () => {
-		if (!id || !formPackage) return;
-		updateMutation.mutate(
-			{
-				id,
-				body: {
-					calcName: formPackage.questionnaire.calcName,
-					formData: stripQuestionnaireCalcNameFromFormData(
-						engine.displayFormData,
-					),
-					finalCoefficient: null,
-				},
-			},
-			{
-				onSuccess: () => toast.success("Анкета сохранена"),
-				onError: (err) =>
-					toast.error("Не удалось сохранить", {
-						description: apiErrorMessage(err),
-					}),
-			},
-		);
+		if (!id || !formPackage || effectiveReadOnly) return;
+		autosave.saveNow();
 	};
 
 	const onRenameQuestionnaire = (calcName: string) => {
-		if (!id) return;
+		if (!id || effectiveReadOnly) return;
 		updateMutation.mutate(
 			{ id, body: { calcName } },
 			{
@@ -90,13 +92,22 @@ export const AnketaPreviewPageV2 = () => {
 			questionnaireCalcName={formPackage?.questionnaire.calcName}
 			questionnaireStatus={formPackage?.questionnaire.status}
 			onRenameQuestionnaire={
-				formPackage && !errorMessage ? onRenameQuestionnaire : undefined
+				formPackage && !errorMessage && !effectiveReadOnly
+					? onRenameQuestionnaire
+					: undefined
 			}
 			renamePending={updateMutation.isPending}
 			schemaBinding={formPackage?.questionnaire.schemaBinding}
-			readOnly={formPackage?.readOnly}
-			onSave={formPackage && !errorMessage ? onSave : undefined}
-			savePending={updateMutation.isPending}
+			readOnly={effectiveReadOnly}
+			lockMessage={
+				editLock.readOnlyByLock
+					? "Анкета сейчас редактируется другим пользователем"
+					: null
+			}
+			onSave={formPackage && !errorMessage && !effectiveReadOnly ? onSave : undefined}
+			savePending={autosave.isSaving}
+			saveStatus={autosave.status}
+			saveErrorMessage={autosave.errorMessage}
 		/>
 	);
 };

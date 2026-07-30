@@ -10,6 +10,7 @@ import { V2DictionaryEntity } from "./entities/v2-dictionary.entity";
 import { V2DictionaryItemEntity } from "./entities/v2-dictionary-item.entity";
 import { V2QuestionnaireEntity } from "./entities/v2-questionnaire.entity";
 import { V2QuestionnaireCommentEntity } from "./entities/v2-questionnaire-comment.entity";
+import { V2QuestionnaireEditLockEntity } from "./entities/v2-questionnaire-edit-lock.entity";
 import { V2FactorySnapshotService } from "./services/v2-factory-snapshot.service";
 import { V2FactoryTypicalWorksPublishService } from "./services/v2-factory-typical-works-publish.service";
 import { V2TemplateService } from "./services/v2-template.service";
@@ -27,6 +28,7 @@ import { V2CalculationController } from "./controllers/v2-calculation.controller
 import { V2CalculationService } from "./services/v2-calculation.service";
 import { V2QuestionnaireService } from "./services/v2-questionnaire.service";
 import { V2QuestionnaireCommentService } from "./services/v2-questionnaire-comment.service";
+import { V2QuestionnaireEditLockService } from "./services/v2-questionnaire-edit-lock.service";
 import { V2QuestionnaireController } from "./controllers/v2-questionnaire.controller";
 import { V2TypicalWorkEntity } from "./entities/v2-typical-work.entity";
 import { V2TypicalWorkNormEntity } from "./entities/v2-typical-work-norm.entity";
@@ -65,6 +67,7 @@ import { V2StreamCatalogService } from "./services/v2-stream-catalog.service";
 			V2DictionaryItemEntity,
 			V2QuestionnaireEntity,
 			V2QuestionnaireCommentEntity,
+			V2QuestionnaireEditLockEntity,
 			V2TypicalWorkEntity,
 			V2TypicalWorkNormEntity,
 			V2TypicalWorkRuleEntity,
@@ -107,6 +110,7 @@ import { V2StreamCatalogService } from "./services/v2-stream-catalog.service";
 		V2CalculationService,
 		V2QuestionnaireService,
 		V2QuestionnaireCommentService,
+		V2QuestionnaireEditLockService,
 		V2TypicalWorkSeedService,
 		V2TypicalWorkService,
 		V2TypicalWorkWriteService,

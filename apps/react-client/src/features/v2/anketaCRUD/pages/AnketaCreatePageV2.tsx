@@ -2,21 +2,25 @@ import { useV2Templates } from "@react-client/common/api/queries/v2-templates";
 import { useCreateV2Questionnaire } from "@react-client/common/api/queries/v2-questionnaires";
 import { toast } from "@react-client/common/toasts";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
-import { AnketaFormShell } from "@react-client/features/v2/anketaCRUD/templates/AnketaFormShell";
-import { useV2AnketaSchemaEngine } from "@react-client/features/v2/anketaCRUD/hooks/useV2AnketaSchemaEngine";
 import { AnketaCreateMetaDialog } from "@react-client/features/v2/anketaCRUD/organisms/AnketaCreateMetaDialog";
-import { stripQuestionnaireCalcNameFromFormData } from "@react-client/features/v2/anketaCRUD/utils/anketaQuestionnaireMeta.util";
+import { Flex } from "@react-client/common/primitives/Flex";
 import { v2Routes } from "@react-client/routing/version/v2/routes";
+import CircularProgress from "@mui/material/CircularProgress";
+import Typography from "@mui/material/Typography";
 import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 
+/**
+ * Создание анкеты: имя → сразу POST на бек → переход в редактирование.
+ * Форма до сохранения больше не открывается.
+ */
 export const AnketaCreatePageV2 = () => {
 	const navigate = useNavigate();
 	const [searchParams] = useSearchParams();
 	const requestedTemplateId = searchParams.get("templateId")?.trim() || null;
 	const { data: templates, isLoading: templatesLoading } = useV2Templates();
 	const createMutation = useCreateV2Questionnaire();
-	const [calcName, setCalcName] = useState<string | null>(null);
+	const [dialogOpen, setDialogOpen] = useState(true);
 
 	const activeTemplate = useMemo(() => {
 		if (!templates?.length) return undefined;
@@ -27,21 +31,9 @@ export const AnketaCreatePageV2 = () => {
 		return templates.find((t) => t.currentVersionId) ?? templates[0];
 	}, [requestedTemplateId, templates]);
 
-	const source = useMemo(
-		() =>
-			activeTemplate
-				? {
-						templateId: activeTemplate.id,
-						versionId: activeTemplate.currentVersionId,
-					}
-				: null,
-		[activeTemplate],
-	);
-
-	const engine = useV2AnketaSchemaEngine(calcName ? source : null);
-
-	const onSave = () => {
-		if (!calcName?.trim()) {
+	const createAndOpen = (calcName: string) => {
+		const name = calcName.trim();
+		if (!name) {
 			toast.error("Укажите название анкеты");
 			return;
 		}
@@ -49,22 +41,23 @@ export const AnketaCreatePageV2 = () => {
 			toast.error("Нет опубликованной актуальной схемы для создания анкеты");
 			return;
 		}
+		setDialogOpen(false);
 		createMutation.mutate(
 			{
 				templateId: activeTemplate.id,
-				calcName: calcName.trim(),
-				formData: stripQuestionnaireCalcNameFromFormData(
-					engine.displayFormData,
-				),
+				calcName: name,
+				formData: {},
 			},
 			{
 				onSuccess: (created) => {
 					toast.success("Анкета создана");
 					navigate(
 						`/v2/${v2Routes.calculationPreview.rootPath.replace(":id", created.id)}`,
+						{ replace: true },
 					);
 				},
 				onError: (err) => {
+					setDialogOpen(true);
 					toast.error("Не удалось создать анкету", {
 						description: apiErrorMessage(err),
 					});
@@ -73,26 +66,33 @@ export const AnketaCreatePageV2 = () => {
 		);
 	};
 
+	const creating = createMutation.isPending;
+
 	return (
 		<>
 			<AnketaCreateMetaDialog
-				open={calcName == null}
+				open={dialogOpen && !creating}
 				onCancel={() => navigate(`/v2/${v2Routes.home.rootPath}`)}
-				onConfirm={setCalcName}
+				onConfirm={createAndOpen}
 			/>
-			{calcName ? (
-				<AnketaFormShell
-					data-test-id="anketa-create-page"
-					source={source}
-					engine={engine}
-					loading={templatesLoading}
-					questionnaireCalcName={calcName}
-					onRenameQuestionnaire={setCalcName}
-					onSave={onSave}
-					savePending={createMutation.isPending}
-					saveDisabled={!activeTemplate?.currentVersionId}
-				/>
-			) : null}
+			{(creating || templatesLoading) && (
+				<Flex
+					flexDirection="column"
+					alignItems="center"
+					justifyContent="center"
+					gap={12}
+					height="100%"
+					minHeight="240px"
+					data-test-id="anketa-create-page--saving"
+				>
+					<CircularProgress size={28} />
+					<Typography variant="body2" color="text.secondary">
+						{templatesLoading
+							? "Загрузка шаблонов…"
+							: "Создание анкеты…"}
+					</Typography>
+				</Flex>
+			)}
 		</>
 	);
 };

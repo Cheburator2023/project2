@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.V2_SCHEMA_BINDING_STATUS_RU = exports.V2_SCHEMA_BINDING_STATUS_VALUES = exports.V2_QUESTIONNAIRE_STATUS_RU = exports.V2_QUESTIONNAIRE_STATUS_VALUES = void 0;
+exports.V2_QUESTIONNAIRE_EDIT_LOCK_TTL_MS = exports.V2_SCHEMA_BINDING_STATUS_RU = exports.V2_SCHEMA_BINDING_STATUS_VALUES = exports.V2_QUESTIONNAIRE_STATUS_RU = exports.V2_QUESTIONNAIRE_STATUS_VALUES = void 0;
 exports.formatV2QuestionnaireStatus = formatV2QuestionnaireStatus;
 exports.formatV2SchemaBindingStatus = formatV2SchemaBindingStatus;
 exports.V2_QUESTIONNAIRE_STATUS_VALUES = [
@@ -34,3 +34,5 @@ function formatV2SchemaBindingStatus(status) {
         return "";
     return (exports.V2_SCHEMA_BINDING_STATUS_RU[status] ?? String(status));
 }
+/** TTL блокировки редактирования анкеты (heartbeat продлевает). */
+exports.V2_QUESTIONNAIRE_EDIT_LOCK_TTL_MS = 2 * 60 * 1000;

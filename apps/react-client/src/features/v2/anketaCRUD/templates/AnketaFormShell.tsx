@@ -1,6 +1,8 @@
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import BugReportOutlinedIcon from "@mui/icons-material/BugReportOutlined";
+import SaveIcon from "@mui/icons-material/Save";
+import TaskAltIcon from "@mui/icons-material/TaskAlt";
 import Alert from "@mui/material/Alert";
 import {
 	Box,
@@ -13,6 +15,7 @@ import {
 	DialogTitle,
 	IconButton,
 	Typography,
+	keyframes,
 } from "@mui/material";
 import type { V2SchemaBindingDto } from "@smart-anketa/api-contract";
 import {
@@ -31,6 +34,7 @@ import {
 	useState,
 	type ReactNode,
 } from "react";
+import type { QuestionnaireSaveStatus } from "../hooks/useDebouncedQuestionnaireSave";
 import {
 	AnketaGlobalCompleteDialog,
 	type AnketaGlobalCompleteDialogPhase,
@@ -66,7 +70,10 @@ import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessag
 import { usePermissions } from "@react-client/hooks/usePermissions";
 import { useUserStore } from "@react-client/common/store/userStore";
 import { IS_DEV } from "@react-client/common/constants/dev";
-import { buildQuestionnaireCopyCalcName, stripQuestionnaireCalcNameFromFormData } from "../utils/anketaQuestionnaireMeta.util";
+import {
+	buildQuestionnaireCopyCalcName,
+	stripQuestionnaireCalcNameFromFormData,
+} from "../utils/anketaQuestionnaireMeta.util";
 
 type Engine = V2AnketaSchemaEngine;
 
@@ -78,6 +85,11 @@ type Props = {
 	onSave?: () => void;
 	saveDisabled?: boolean;
 	savePending?: boolean;
+	/** Статус автосохранения (дискетка + индикатор). */
+	saveStatus?: QuestionnaireSaveStatus;
+	saveErrorMessage?: string | null;
+	/** Сообщение о блокировке редактирования другим пользователем. */
+	lockMessage?: string | null;
 	headerExtra?: ReactNode;
 	questionnaireId?: string;
 	questionnaireCalcName?: string;
@@ -93,6 +105,43 @@ type Props = {
 	"data-test-id"?: string;
 };
 
+const saveLedPulse = keyframes`
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0.35; }
+`;
+
+function saveStatusLedColor(status: QuestionnaireSaveStatus): string {
+	switch (status) {
+		case "saved":
+			return "success.main";
+		case "error":
+			return "error.main";
+		case "dirty":
+		case "saving":
+			return "warning.main";
+		default:
+			return "action.disabled";
+	}
+}
+
+function saveStatusLabel(
+	status: QuestionnaireSaveStatus,
+	errorMessage?: string | null,
+): string {
+	switch (status) {
+		case "saving":
+			return "Сохранение…";
+		case "saved":
+			return "Сохранено";
+		case "dirty":
+			return "Есть несохранённые изменения";
+		case "error":
+			return errorMessage?.trim() || "Ошибка сохранения";
+		default:
+			return "Автосохранение";
+	}
+}
+
 /** Общая оболочка анкеты: layout по макету + RJSF + итоговая оценка. */
 export function AnketaFormShell({
 	source,
@@ -102,6 +151,9 @@ export function AnketaFormShell({
 	onSave,
 	saveDisabled,
 	savePending,
+	saveStatus = "idle",
+	saveErrorMessage = null,
+	lockMessage = null,
 	headerExtra,
 	questionnaireId,
 	questionnaireCalcName,
@@ -154,8 +206,7 @@ export function AnketaFormShell({
 	const permissionReadOnly = questionnaireId
 		? !canEditCalculation
 		: !canCreateCalculation;
-	const effectiveReadOnly =
-		readOnly || globallyLocked || permissionReadOnly;
+	const effectiveReadOnly = readOnly || globallyLocked || permissionReadOnly;
 	const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
 	const [calculationDebugOpen, setCalculationDebugOpen] = useState(false);
 	const [completeDialogPhase, setCompleteDialogPhase] =
@@ -263,8 +314,7 @@ export function AnketaFormShell({
 	}, []);
 
 	const suggestedCopyName = useMemo(
-		() =>
-			buildQuestionnaireCopyCalcName(questionnaireCalcName ?? "Анкета"),
+		() => buildQuestionnaireCopyCalcName(questionnaireCalcName ?? "Анкета"),
 		[questionnaireCalcName],
 	);
 
@@ -378,23 +428,23 @@ export function AnketaFormShell({
 			<>
 				<AnketaSectionStatusChip kind="global" status={workflow.globalStatus} />
 				{!globallyLocked && canCompleteAnketa ? (
-					<Button
-						variant="contained"
-						size="small"
+					<IconButton
+						color="primary"
 						disabled={!allSectionsCompleted || effectiveReadOnly}
 						title={
 							allSectionsCompleted
-								? undefined
+								? V2_ANKETA_GLOBAL_COMPLETE_LABEL
 								: "Сначала завершите заполнение всех основных разделов"
 						}
+						aria-label={V2_ANKETA_GLOBAL_COMPLETE_LABEL}
 						onClick={openCompleteDialog}
-						sx={{ fontWeight: 600, whiteSpace: "nowrap" }}
+						data-test-id={`${dataTestId}--complete`}
 					>
-						{V2_ANKETA_GLOBAL_COMPLETE_LABEL}
-					</Button>
+						<TaskAltIcon />
+					</IconButton>
 				) : null}
 				{headerExtra}
-				{IS_DEV && (
+				{/* {IS_DEV && (
 					<Button
 						variant="outlined"
 						size="small"
@@ -405,7 +455,7 @@ export function AnketaFormShell({
 					>
 						Диагностика расчёта
 					</Button>
-				)}
+				)} */}
 				{workflow.globalStatus === "Заполнено" &&
 				canHoldCalculation &&
 				questionnaireId ? (
@@ -441,14 +491,10 @@ export function AnketaFormShell({
 						size="small"
 						color="error"
 						title={
-							deleteIsHard
-								? "Удалить анкету"
-								: "Сделать анкету неактивной"
+							deleteIsHard ? "Удалить анкету" : "Сделать анкету неактивной"
 						}
 						aria-label={
-							deleteIsHard
-								? "Удалить анкету"
-								: "Сделать анкету неактивной"
+							deleteIsHard ? "Удалить анкету" : "Сделать анкету неактивной"
 						}
 						disabled={bulkDelete.isPending}
 						onClick={() => setDeleteDialogOpen(true)}
@@ -458,20 +504,47 @@ export function AnketaFormShell({
 					</IconButton>
 				) : null}
 				{onSave && canSaveQuestionnaire ? (
-					<Button
-						variant="contained"
-						size="small"
-						onClick={onSave}
-						disabled={saveDisabled || savePending || effectiveReadOnly}
-						startIcon={
-							savePending ? (
-								<CircularProgress size={16} color="inherit" />
-							) : undefined
-						}
-						sx={{ fontWeight: 600, textTransform: "none", whiteSpace: "nowrap" }}
+					<Box
+						sx={{
+							display: "inline-flex",
+							alignItems: "center",
+							mx: 0.5,
+						}}
+						data-test-id={`${dataTestId}--save-group`}
 					>
-						{isEditingQuestionnaire ? "Сохранить" : "Создать"}
-					</Button>
+						<Box
+							component="span"
+							title={saveStatusLabel(saveStatus, saveErrorMessage)}
+							aria-label={saveStatusLabel(saveStatus, saveErrorMessage)}
+							data-test-id={`${dataTestId}--save-led`}
+							sx={{
+								width: 8,
+								height: 8,
+								borderRadius: "50%",
+								bgcolor: saveStatusLedColor(saveStatus),
+								flexShrink: 0,
+								display: "block",
+								mx: 1,
+								animation:
+									saveStatus === "saving" || saveStatus === "dirty"
+										? `${saveLedPulse} 1.1s ease-in-out infinite`
+										: "none",
+							}}
+						/>
+						<IconButton
+							onClick={onSave}
+							disabled={saveDisabled || savePending || effectiveReadOnly}
+							title="Сохранить"
+							aria-label="Сохранить"
+							data-test-id={`${dataTestId}--save`}
+						>
+							{savePending ? (
+								<CircularProgress size={22} color="inherit" />
+							) : (
+								<SaveIcon />
+							)}
+						</IconButton>
+					</Box>
 				) : null}
 			</>
 		),
@@ -487,6 +560,11 @@ export function AnketaFormShell({
 			headerExtra,
 			isEditingQuestionnaire,
 			onSave,
+			saveDisabled,
+			savePending,
+			saveStatus,
+			saveErrorMessage,
+			dataTestId,
 			openCopyNameDialog,
 			saveDisabled,
 			savePending,
@@ -535,6 +613,11 @@ export function AnketaFormShell({
 						</Typography>
 					) : (
 						<>
+							{lockMessage ? (
+								<Alert severity="warning" sx={{ mb: 2 }}>
+									{lockMessage}
+								</Alert>
+							) : null}
 							{engine.dictionaryEnumsLoading ? (
 								<Alert severity="info" sx={{ mb: 2 }}>
 									Загрузка справочников…
@@ -580,9 +663,7 @@ export function AnketaFormShell({
 				open={completeDialogOpen}
 				phase={completeDialogPhase}
 				onClose={closeCompleteDialog}
-				canSave={
-					Boolean(onSave) && canSaveQuestionnaire && !saveDisabled
-				}
+				canSave={Boolean(onSave) && canSaveQuestionnaire && !saveDisabled}
 				savePending={savePending}
 				hasQuestionnaireId={Boolean(questionnaireId)}
 				createCopyPending={createCopy.isPending}

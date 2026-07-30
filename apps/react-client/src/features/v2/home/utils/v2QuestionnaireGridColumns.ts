@@ -18,12 +18,14 @@ import {
 	v2WorkflowSectionStatusCell,
 } from "../molecules/V2WorkflowStatusCell";
 import { V2SchemaBindingStatusCell } from "../molecules/V2SchemaBindingStatusCell";
+import { V2EditLockStatusCell } from "../molecules/V2EditLockStatusCell";
 import type { V2QuestionnaireGridRow } from "../types/v2QuestionnaireGrid.types";
 import {
 	formatGridCellValue,
 	getFormValue,
 	resolveVersionRow,
 } from "./v2QuestionnaireGridValue";
+import { useQuestionnaireEditLocksStore } from "@react-client/features/v2/anketaCRUD/stores/questionnaireEditLocksStore";
 
 const SET_COLUMN_FILTER = "agSetColumnFilter" as const;
 
@@ -95,6 +97,23 @@ function leafToColDef(leaf: V2RegistryLeafColumn): ColDef<V2QuestionnaireGridRow
 				cellRenderer: V2WorkflowGlobalStatusCell,
 				valueGetter: (p) =>
 					resolveVersionRow(p.data)?.workflowGlobalStatus ?? null,
+			};
+		}
+		if (leaf.id === "editLock") {
+			return {
+				colId: leaf.id,
+				headerName: leaf.header,
+				minWidth: Math.max(minWidth, 140),
+				resizable: true,
+				...baseFilter,
+				cellRenderer: V2EditLockStatusCell,
+				valueGetter: (p) => {
+					const id = resolveVersionRow(p.data)?.id;
+					if (!id) return null;
+					return useQuestionnaireEditLocksStore.getState().locksById[id]
+						? "Редактируется"
+						: null;
+				},
 			};
 		}
 		if (leaf.id === "createdAt" || leaf.id === "updatedAt") {

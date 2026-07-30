@@ -1,6 +1,7 @@
 import DownloadIcon from "@mui/icons-material/Download";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import {
 	Button,
 	Divider,
@@ -9,24 +10,28 @@ import {
 	DialogContent,
 	DialogContentText,
 	DialogTitle,
+	IconButton,
+	Popover,
 	Stack,
 	TextField,
 	Typography,
 	styled,
 	useColorScheme,
+	useMediaQuery,
 } from "@mui/material";
 import {
 	useBulkDeleteV2Questionnaires,
+	useV2QuestionnaireEditLocks,
 	useV2QuestionnaireRegistryConfig,
 	useV2Questionnaires,
 	v2QuestionnairesExportXlsx,
 } from "@react-client/common/api/queries/v2-questionnaires";
+import { useQuestionnaireEditLocksStore } from "@react-client/features/v2/anketaCRUD/stores/questionnaireEditLocksStore";
 import { downloadBlob } from "@react-client/common/api/queries/kanban-board";
 import { usePermissions } from "@react-client/hooks/usePermissions";
 import { toast } from "@react-client/common/toasts";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { Flex } from "@react-client/common/primitives/Flex";
-import { Spacer } from "@react-client/common/primitives/Spacer";
 import { Header } from "@react-client/common/navigation/organisms/Header";
 import { SearchInput } from "@react-client/common/navigation/organisms/SearchInput";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
@@ -118,6 +123,12 @@ const GridWrapper = styled(Flex)`
 	& > div {
 		width: 100%;
 		height: 100%;
+	}
+
+	.ag-row.v2-questionnaire-row--edit-locked {
+		opacity: 0.55;
+		filter: grayscale(0.35);
+		cursor: not-allowed;
 	}
 `;
 
@@ -370,6 +381,10 @@ export function V2QuestionnaireList() {
 	>([]);
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 	const [isExporting, setIsExporting] = useState(false);
+	const [headerMenuAnchor, setHeaderMenuAnchor] =
+		useState<HTMLElement | null>(null);
+	const compactHeader = useMediaQuery("(max-width:1360px)");
+	const headerMenuOpen = Boolean(headerMenuAnchor);
 
 	const gridTheme =
 		mode === "light" || mode === undefined
@@ -377,6 +392,43 @@ export function V2QuestionnaireList() {
 			: agGridCustomMUIThemeDark;
 
 	const { data: questionnaires, isLoading } = useV2Questionnaires();
+	const { data: editLocksPayload } = useV2QuestionnaireEditLocks(true);
+	const setEditLocks = useQuestionnaireEditLocksStore((s) => s.setLocks);
+	const locksById = useQuestionnaireEditLocksStore((s) => s.locksById);
+
+	useEffect(() => {
+		setEditLocks(editLocksPayload?.locks ?? []);
+	}, [editLocksPayload, setEditLocks]);
+
+	const defaultColDef = useMemo(
+		() => ({
+			sortable: true,
+			resizable: true,
+			filter: "agSetColumnFilter" as const,
+			filterParams: AG_GRID_SET_FILTER_PARAMS,
+			minWidth: 90,
+			mainMenuItems: getAgGridMainMenuItems,
+		}),
+		[],
+	);
+
+	const defaultColGroupDef = useMemo(
+		() => ({
+			marryChildren: false,
+		}),
+		[],
+	);
+
+	const rowSelection = useMemo(
+		() => ({
+			mode: "multiRow" as const,
+			checkboxes: true,
+			headerCheckbox: true,
+			enableClickSelection: false,
+		}),
+		[],
+	);
+
 	const username = useUserStore((s) => s.username);
 	const groups = useUserStore((s) => s.groups);
 	const canDeleteInRegistry =
@@ -420,12 +472,25 @@ export function V2QuestionnaireList() {
 
 	const rowData = useMemo<V2QuestionnaireVersionRow[]>(() => {
 		if (!filteredQuestionnaires.length) return [];
-		return filteredQuestionnaires.map((q) => ({
-			...q,
-			rowKind: "version" as const,
-			displayLabel: q.calcName,
-		}));
-	}, [filteredQuestionnaires]);
+		return filteredQuestionnaires.map((q) => {
+			const lock = locksById[q.id];
+			return {
+				...q,
+				rowKind: "version" as const,
+				displayLabel: q.calcName,
+				isEditLocked: Boolean(lock),
+			};
+		});
+	}, [filteredQuestionnaires, locksById]);
+
+	const rowClassRules = useMemo(
+		() => ({
+			"v2-questionnaire-row--edit-locked": (
+				params: { data?: V2QuestionnaireGridRow | undefined },
+			) => Boolean(resolveVersionRow(params.data)?.isEditLocked),
+		}),
+		[],
+	);
 
 	const columnTree = useMemo(
 		() => registryConfig?.columnTree ?? [],
@@ -494,6 +559,12 @@ export function V2QuestionnaireList() {
 		(e: RowDoubleClickedEvent<V2QuestionnaireGridRow>) => {
 			const row = resolveVersionRow(e.data);
 			if (!row) return;
+			if (row.isEditLocked) {
+				toast.error("Анкета сейчас редактируется", {
+					description: "Откройте позже, когда блокировка снимется",
+				});
+				return;
+			}
 			navigate(
 				`/v2/${v2Routes.calculationPreview.rootPath.replace(":id", row.id)}`,
 			);
@@ -585,21 +656,32 @@ export function V2QuestionnaireList() {
 				exportIds.length > 1
 					? `Экспорт в XLSX (${exportIds.length})`
 					: "Экспорт в XLSX";
+			const lockedHint = row.isEditLocked
+				? "Анкета сейчас редактируется"
+				: undefined;
 
 			return [
 				{
-					name: "Открыть",
-					action: () =>
+					name: lockedHint ? `Открыть (${lockedHint})` : "Открыть",
+					disabled: Boolean(row.isEditLocked),
+					action: () => {
+						if (row.isEditLocked) return;
 						navigate(
 							`/v2/${v2Routes.calculationPreview.rootPath.replace(":id", row.id)}`,
-						),
+						);
+					},
 				},
 				{
-					name: "Новая версия анкеты",
-					action: () =>
+					name: lockedHint
+						? `Новая версия анкеты (${lockedHint})`
+						: "Новая версия анкеты",
+					disabled: Boolean(row.isEditLocked),
+					action: () => {
+						if (row.isEditLocked) return;
 						navigate(
 							`/v2/${v2Routes.calculationNewVersion.rootPath.replace(":id", row.id)}`,
-						),
+						);
+					},
 				},
 				{
 					name: exportLabel,
@@ -664,74 +746,197 @@ export function V2QuestionnaireList() {
 			width="100%"
 		>
 			<Header>
-				<Flex gap={8} alignItems="center" wrap="wrap" width="100%">
-					<Flex width="100%" maxWidth="420px" minWidth="200px" flexGrow={1}>
-						<SearchInput
-							gridApi={gridApi}
-							placeholder="Поиск по реестру"
-							inputId="v2_registry_quick_filter"
-						/>
+				{compactHeader ? (
+					<>
+						<IconButton
+							size="small"
+							onClick={(e) => setHeaderMenuAnchor(e.currentTarget)}
+							title="Действия реестра"
+							aria-label="Действия реестра"
+							aria-controls={headerMenuOpen ? "v2-registry-header-menu" : undefined}
+							aria-haspopup="true"
+							aria-expanded={headerMenuOpen ? "true" : undefined}
+							data-test-id="anketa-registry-header-menu"
+						>
+							<MoreVertIcon />
+						</IconButton>
+						<Popover
+							id="v2-registry-header-menu"
+							open={headerMenuOpen}
+							anchorEl={headerMenuAnchor}
+							onClose={() => setHeaderMenuAnchor(null)}
+							anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+							transformOrigin={{ vertical: "top", horizontal: "right" }}
+							slotProps={{
+								paper: {
+									sx: { p: 1.5, width: 320, maxWidth: "calc(100vw - 24px)" },
+								},
+							}}
+						>
+							<Flex flexDirection="column" gap={10} width="100%">
+								<SearchInput
+									gridApi={gridApi}
+									placeholder="Поиск по реестру"
+									inputId="v2_registry_quick_filter"
+								/>
+								{canExportReports ? (
+									<>
+										<Button
+											variant="outlined"
+											size="small"
+											fullWidth
+											startIcon={<DownloadIcon />}
+											disabled={isExporting || isLoading}
+											onClick={() => {
+												setHeaderMenuAnchor(null);
+												void handleExportXlsx();
+											}}
+										>
+											{isExporting ? "Экспорт…" : "Экспорт всех"}
+										</Button>
+										<Button
+											variant="outlined"
+											size="small"
+											fullWidth
+											startIcon={<DownloadIcon />}
+											disabled={
+												isExporting ||
+												isLoading ||
+												selectedVersions.length === 0
+											}
+											onClick={() => {
+												setHeaderMenuAnchor(null);
+												void handleExportXlsx(
+													selectedVersions.map((row) => row.id),
+												);
+											}}
+										>
+											{isExporting
+												? "Экспорт…"
+												: `Экспорт выбранных (${selectedVersions.length})`}
+										</Button>
+									</>
+								) : null}
+								{canDeleteInRegistry ? (
+									<Button
+										variant="outlined"
+										size="small"
+										fullWidth
+										color="error"
+										startIcon={<DeleteOutlineIcon />}
+										disabled={
+											!selectedVersions.length || bulkDelete.isPending
+										}
+										title="Черновик — полное удаление; Заполнено/Утверждена — статус «Неактивная». Руководители DS·ModelOps / sarep — свой стрим; конфигуратор — все."
+										onClick={() => {
+											setHeaderMenuAnchor(null);
+											setDeleteDialogOpen(true);
+										}}
+									>
+										Удалить выбранные ({selectedVersions.length})
+									</Button>
+								) : null}
+								{canCreateCalculation ? (
+									<Button
+										variant="contained"
+										size="small"
+										fullWidth
+										startIcon={<AddIcon />}
+										data-test-id="anketa-registry-create"
+										onClick={() => {
+											setHeaderMenuAnchor(null);
+											navigate(
+												`/v2/${v2Routes.calculationCreate.rootPath}`,
+											);
+										}}
+									>
+										Создать анкету
+									</Button>
+								) : null}
+							</Flex>
+						</Popover>
+					</>
+				) : (
+					<Flex
+						gap={8}
+						alignItems="center"
+						justifyContent="flex-end"
+						flexShrink={0}
+						minWidth="0"
+					>
+						<Flex width="280px" minWidth="200px" flexShrink={0}>
+							<SearchInput
+								gridApi={gridApi}
+								placeholder="Поиск по реестру"
+								inputId="v2_registry_quick_filter"
+							/>
+						</Flex>
+						<Stack direction="row" spacing={1} alignItems="center" flexShrink={0}>
+							{canExportReports ? (
+								<>
+									<Button
+										variant="outlined"
+										size="small"
+										startIcon={<DownloadIcon />}
+										disabled={isExporting || isLoading}
+										onClick={() => void handleExportXlsx()}
+									>
+										{isExporting ? "Экспорт…" : "Экспорт всех"}
+									</Button>
+									<Button
+										variant="outlined"
+										size="small"
+										startIcon={<DownloadIcon />}
+										disabled={
+											isExporting ||
+											isLoading ||
+											selectedVersions.length === 0
+										}
+										onClick={() =>
+											void handleExportXlsx(
+												selectedVersions.map((row) => row.id),
+											)
+										}
+									>
+										{isExporting
+											? "Экспорт…"
+											: `Экспорт выбранных (${selectedVersions.length})`}
+									</Button>
+								</>
+							) : null}
+							{canDeleteInRegistry ? (
+								<Button
+									variant="outlined"
+									size="small"
+									color="error"
+									startIcon={<DeleteOutlineIcon />}
+									disabled={
+										!selectedVersions.length || bulkDelete.isPending
+									}
+									title="Черновик — полное удаление; Заполнено/Утверждена — статус «Неактивная». Руководители DS·ModelOps / sarep — свой стрим; конфигуратор — все."
+									onClick={() => setDeleteDialogOpen(true)}
+								>
+									Удалить выбранные ({selectedVersions.length})
+								</Button>
+							) : null}
+							{canCreateCalculation ? (
+								<Button
+									variant="contained"
+									size="small"
+									startIcon={<AddIcon />}
+									data-test-id="anketa-registry-create"
+									onClick={() =>
+										navigate(
+											`/v2/${v2Routes.calculationCreate.rootPath}`,
+										)
+									}
+								>
+									Создать анкету
+								</Button>
+							) : null}
+						</Stack>
 					</Flex>
-					<Spacer />
-					<Stack direction="row" spacing={1} alignItems="center">
-					{canExportReports ? (
-						<>
-							<Button
-								variant="outlined"
-								size="small"
-								startIcon={<DownloadIcon />}
-								disabled={isExporting || isLoading}
-								onClick={() => void handleExportXlsx()}
-							>
-								{isExporting ? "Экспорт…" : "Экспорт всех"}
-							</Button>
-							<Button
-								variant="outlined"
-								size="small"
-								startIcon={<DownloadIcon />}
-								disabled={
-									isExporting || isLoading || selectedVersions.length === 0
-								}
-								onClick={() =>
-									void handleExportXlsx(
-										selectedVersions.map((row) => row.id),
-									)
-								}
-							>
-								{isExporting
-									? "Экспорт…"
-									: `Экспорт выбранных (${selectedVersions.length})`}
-							</Button>
-						</>
-					) : null}
-					{canDeleteInRegistry ? (
-						<Button
-							variant="outlined"
-							size="small"
-							color="error"
-							startIcon={<DeleteOutlineIcon />}
-							disabled={!selectedVersions.length || bulkDelete.isPending}
-							title="Черновик — полное удаление; Заполнено/Утверждена — статус «Неактивная». Руководители DS·ModelOps / sarep — свой стрим; конфигуратор — все."
-							onClick={() => setDeleteDialogOpen(true)}
-						>
-							Удалить выбранные ({selectedVersions.length})
-						</Button>
-					) : null}
-					{canCreateCalculation && (
-						<Button
-							variant="contained"
-							size="small"
-							startIcon={<AddIcon />}
-							data-test-id="anketa-registry-create"
-							onClick={() =>
-								navigate(`/v2/${v2Routes.calculationCreate.rootPath}`)
-							}
-						>
-							Создать анкету
-						</Button>
-					)}
-					</Stack>
-				</Flex>
+				)}
 			</Header>
 			<Dialog
 				open={deleteDialogOpen}
@@ -767,19 +972,11 @@ export function V2QuestionnaireList() {
 					rowData={rowData}
 					columnDefs={columnDefs}
 					getRowId={getRowId}
-					defaultColDef={{
-						sortable: true,
-						resizable: true,
-						filter: "agSetColumnFilter",
-						filterParams: AG_GRID_SET_FILTER_PARAMS,
-						minWidth: 90,
-						mainMenuItems: getAgGridMainMenuItems,
-					}}
+					rowClassRules={rowClassRules}
+					defaultColDef={defaultColDef}
 					headerHeight={32}
 					groupHeaderHeight={32}
-					defaultColGroupDef={{
-						marryChildren: false,
-					}}
+					defaultColGroupDef={defaultColGroupDef}
 					sideBar={sideBar}
 					onRowDoubleClicked={onRowDoubleClicked}
 					getContextMenuItems={getContextMenuItems}
@@ -792,12 +989,7 @@ export function V2QuestionnaireList() {
 						if (event.finished) persistColumnState(event.api);
 					}}
 					loading={isLoading || isRegistryConfigLoading}
-					rowSelection={{
-						mode: "multiRow",
-						checkboxes: true,
-						headerCheckbox: true,
-						enableClickSelection: false,
-					}}
+					rowSelection={rowSelection}
 					onSelectionChanged={(
 						e: SelectionChangedEvent<V2QuestionnaireGridRow>,
 					) => {

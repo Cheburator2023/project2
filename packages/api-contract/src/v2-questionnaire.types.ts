@@ -174,6 +174,24 @@ export type V2QuestionnaireCommentDto = {
 	createdAt: string;
 };
 
+/** TTL блокировки редактирования анкеты (heartbeat продлевает). */
+export const V2_QUESTIONNAIRE_EDIT_LOCK_TTL_MS = 2 * 60 * 1000;
+
+export type V2QuestionnaireEditLockDto = {
+	questionnaireId: string;
+	lockedByLabel: string;
+	lockedByUserId: string | null;
+	expiresAt: string;
+};
+
+export type AcquireV2QuestionnaireEditLockRequestDto = {
+	lockedByLabel: string;
+};
+
+export type V2QuestionnaireEditLocksListDto = {
+	locks: V2QuestionnaireEditLockDto[];
+};
+
 export type CreateV2QuestionnaireCommentRequestDto = {
 	body: string;
 	parentCommentId?: string | null;

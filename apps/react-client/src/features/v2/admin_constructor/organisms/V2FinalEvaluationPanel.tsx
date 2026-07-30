@@ -34,7 +34,7 @@ import {
 	shouldSkipLegacyModelStreamStageSummary,
 	sortModelStreamTypicalWorkRows,
 } from "@smart-anketa/api-contract";
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 
 const MODEL_STREAM_LABEL = "Модельный стрим";
 
@@ -179,15 +179,55 @@ export function V2FinalEvaluationPanel({
 	liveFormData,
 	hideDetailedEstimates = false,
 }: Props) {
+	const lastGoodSummaryRef = useRef<V2SummaryFormSlice | null>(null);
+	const lastGoodLiveFormDataRef = useRef<Record<string, unknown> | null>(null);
+	const lastGoodFormDataRef = useRef<Record<string, unknown> | null>(null);
+
+	useEffect(() => {
+		if (!isLoading && summary && !calculationError && !hideDetailedEstimates) {
+			lastGoodSummaryRef.current = summary;
+		}
+	}, [calculationError, hideDetailedEstimates, isLoading, summary]);
+
+	useEffect(() => {
+		if (!isLoading && liveFormData && !hideDetailedEstimates) {
+			lastGoodLiveFormDataRef.current = liveFormData;
+		}
+	}, [hideDetailedEstimates, isLoading, liveFormData]);
+
+	useEffect(() => {
+		if (!isLoading && formData && !hideDetailedEstimates) {
+			lastGoodFormDataRef.current = formData;
+		}
+	}, [formData, hideDetailedEstimates, isLoading]);
+
+	const displaySummary =
+		!isLoading && summary
+			? summary
+			: (summary ?? lastGoodSummaryRef.current);
+	const displayLiveFormData =
+		!isLoading && liveFormData
+			? liveFormData
+			: (liveFormData ?? lastGoodLiveFormDataRef.current);
+	const displayFormData =
+		!isLoading && formData
+			? formData
+			: (formData ?? lastGoodFormDataRef.current);
+
 	const uncertaintySummary =
-		!hideDetailedEstimates && formData
-			? uncertaintySummaryText(formData)
+		!hideDetailedEstimates && displayFormData
+			? uncertaintySummaryText(displayFormData)
 			: null;
 	const effectiveSummary =
-		calculationError || hideDetailedEstimates ? null : summary;
+		calculationError || hideDetailedEstimates ? null : displaySummary;
 	const typicalWorkGroups = useMemo(
-		() => collectAppearedTypicalWorkGroups(formData, uiSchema, liveFormData),
-		[formData, uiSchema, liveFormData],
+		() =>
+			collectAppearedTypicalWorkGroups(
+				displayFormData,
+				uiSchema,
+				displayLiveFormData,
+			),
+		[displayFormData, uiSchema, displayLiveFormData],
 	);
 	const hasModelStreamCatalogInSchema = useMemo(
 		() => shouldSkipLegacyModelStreamStageSummary(uiSchema),
@@ -293,8 +333,17 @@ export function V2FinalEvaluationPanel({
 							Экспорт в Excel
 						</Button>
 					) : null}
-					{isLoading ? <CircularProgress size={16} /> : null}
 				</Stack>
+
+				{isLoading ? (
+					<Alert
+						severity="info"
+						icon={<CircularProgress size={18} />}
+						sx={{ mb: 2 }}
+					>
+						Идёт пересчёт трудоёмкости и появление типовых работ…
+					</Alert>
+				) : null}
 
 				{calculationError ? (
 					<Alert severity="error" sx={{ mb: 2 }}>
@@ -359,6 +408,14 @@ export function V2FinalEvaluationPanel({
 				}}
 			>
 				<CardContent sx={{ p: compact ? 3 : 4, pt: compact ? 5 : 6 }}>
+					{!hasData && isLoading ? (
+						<Stack direction="row" alignItems="center" spacing={1.5} sx={{ py: 2 }}>
+							<CircularProgress size={20} />
+							<Typography variant="body2" color="text.secondary">
+								Считаем типовые работы…
+							</Typography>
+						</Stack>
+					) : null}
 					{!hasData && !isLoading && typicalWorkRowCount === 0 ? (
 						<Typography variant="body2" color="text.secondary">
 							{hideDetailedEstimates
@@ -368,9 +425,25 @@ export function V2FinalEvaluationPanel({
 					) : null}
 
 					{showDetailedSection ? (
-						<>
+						<Box
+							sx={{
+								opacity: isLoading ? 0.55 : 1,
+								transition: "opacity 160ms ease",
+								pointerEvents: isLoading ? "none" : "auto",
+							}}
+						>
 							<Typography variant="h5" fontWeight={700} mb={4}>
 								Подробный расчет
+								{isLoading ? (
+									<Typography
+										component="span"
+										variant="body2"
+										color="text.secondary"
+										sx={{ ml: 1.5, fontWeight: 500 }}
+									>
+										обновляется…
+									</Typography>
+								) : null}
 							</Typography>
 
 							{showModelStreamSection ? (
@@ -429,7 +502,7 @@ export function V2FinalEvaluationPanel({
 									</Stack>
 								</>
 							) : null}
-						</>
+						</Box>
 					) : null}
 				</CardContent>
 			</Card>

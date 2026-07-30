@@ -458,6 +458,7 @@ function buildMetaRegistryGroup() {
         metaLeaf("version", "Версия", "version"),
         metaLeaf("status", "Статус записи", "status"),
         metaLeaf("workflowGlobalStatus", "Статус анкеты", "workflowGlobalStatus"),
+        metaLeaf("editLock", "Редактирование", "editLock"),
         metaLeaf("author", "Автор", "author"),
         metaLeaf("templateName", "Шаблон", "templateName"),
         metaLeaf("schemaBindingStatus", "Привязка схемы", "schemaBinding.status"),

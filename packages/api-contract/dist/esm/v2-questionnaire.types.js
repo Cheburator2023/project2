@@ -29,3 +29,5 @@ export function formatV2SchemaBindingStatus(status) {
         return "";
     return (V2_SCHEMA_BINDING_STATUS_RU[status] ?? String(status));
 }
+/** TTL блокировки редактирования анкеты (heartbeat продлевает). */
+export const V2_QUESTIONNAIRE_EDIT_LOCK_TTL_MS = 2 * 60 * 1000;
