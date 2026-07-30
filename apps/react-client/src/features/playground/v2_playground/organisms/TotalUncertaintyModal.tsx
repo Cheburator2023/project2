@@ -22,7 +22,7 @@ import { useV2DictionaryEnumsMaps } from "@react-client/common/api/queries/v2-te
 import { Flex } from "@react-client/common/primitives/Flex";
 import { buildUncertaintyModalRiskGroups } from "@react-client/features/v2/anketaCRUD/utils/v2UncertaintyModalConfig";
 import type { V2OverallUncertaintyCalcBreakdown } from "@smart-anketa/api-contract";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const INITIATIVE_TIMELINE_DICTIONARY = "v2.method.21.сроки_инициативы";
 const INITIATIVE_COST_DICTIONARY = "v2.method.22.стоимость_инициативы";
@@ -186,19 +186,25 @@ export const TotalUncertaintyModal = ({
 		risks: initialRisks,
 	});
 
+	// Сидим форму только при открытии модалки. `defaultValues` с родителя —
+	// новый объект на каждый пересчёт/autosave displayFormData; если держать
+	// его в deps и всегда setValues, незакоммиченные правки сбрасываются.
+	const wasOpenRef = useRef(false);
 	useEffect(() => {
-		if (!open) return;
-		setValues({
-			initiativeTimeline: defaultValues?.initiativeTimeline ?? "",
-			initiativeCost: defaultValues?.initiativeCost ?? "",
-			totalUncertaintyAdjustment:
-				defaultValues?.totalUncertaintyAdjustment ?? "",
-			risks: {
-				...initialRisks,
-				...defaultValues?.risks,
-			},
-		});
-	}, [defaultValues, initialRisks, open]);
+		if (open && !wasOpenRef.current) {
+			setValues({
+				initiativeTimeline: defaultValues?.initiativeTimeline ?? "",
+				initiativeCost: defaultValues?.initiativeCost ?? "",
+				totalUncertaintyAdjustment:
+					defaultValues?.totalUncertaintyAdjustment ?? "",
+				risks: {
+					...initialRisks,
+					...defaultValues?.risks,
+				},
+			});
+		}
+		wasOpenRef.current = open;
+	}, [open, defaultValues, initialRisks]);
 
 	const patchRisk = (
 		riskId: string,
