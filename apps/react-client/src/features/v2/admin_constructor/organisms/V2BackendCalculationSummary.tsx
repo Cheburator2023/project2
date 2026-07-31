@@ -14,7 +14,7 @@ import { useDebouncedV2Calculation } from "../hooks/useDebouncedV2Calculation";
 
 function formatNum(value: number | null): string {
 	if (value === null || !Number.isFinite(value)) return "—";
-	return Number.isInteger(value) ? String(value) : value.toFixed(2);
+	return Number.isInteger(value) ? value.toFixed(1) : value.toFixed(2);
 }
 
 type Props = {
