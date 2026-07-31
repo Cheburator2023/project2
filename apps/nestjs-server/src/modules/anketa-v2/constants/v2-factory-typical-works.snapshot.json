@@ -9826,29 +9826,9 @@
         }
       ],
       "laborParams": [
-        "Тип работ",
         "Количество метрик"
       ],
       "laborCoefficients": [
-        {
-          "paramName": "Тип работ @ workType|тип_работ",
-          "values": [
-            {
-              "label": "Разработка",
-              "coefficient": 1
-            },
-            {
-              "label": "Доработка",
-              "coefficient": 1
-            },
-            {
-              "label": "Настройка",
-              "coefficient": 1
-            }
-          ],
-          "paramCode": "workType",
-          "schemaFieldUid": "field_6f91d0c5-3949-4468-88e9-29741af2b07d"
-        },
         {
           "paramName": "Количество метрик @ field_28IPlEQu|количество_метрик",
           "values": [
@@ -9869,7 +9849,7 @@
           "schemaFieldUid": "field_e03806f6-01f4-44ee-835a-e9e5bae8f6c6"
         }
       ],
-      "formulaText": "N × (коэф(workType) + коэф(field_28IPlEQu))",
+      "formulaText": "N × коэф(field_28IPlEQu)",
       "roundingMode": "CEIL",
       "roundingStep": 0.1,
       "triggerArchCount": null,

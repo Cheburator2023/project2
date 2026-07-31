@@ -4,7 +4,9 @@ import type { V2TypicalWorkParameterDto } from "@smart-anketa/api-contract";
 import {
 	buildLaborCoefficientRowsFromParamValues,
 	buildSchemaWorkParameters,
+	countSameNamedSchemaParams,
 	isSchemaLaborParamCandidate,
+	schemaParamArchCaption,
 	jsonPointerToLogicVarPath,
 	resolveSchemaParamFieldRef,
 	schemaParamIdFromPointer,
@@ -1232,6 +1234,131 @@ describe("triggerRuleGroupKey", () => {
 		];
 		const next = excludeRulesByGroupKey(rules, "type", schemaParams);
 		expect(next).toHaveLength(0);
+	});
+});
+
+describe("archRef параметра схемы", () => {
+	const jsonSchema: RJSFSchema = {
+		type: "object",
+		properties: {
+			detailInfo: {
+				type: "object",
+				properties: {
+					modelService: {
+						type: "object",
+						title: "Модельный сервис",
+						properties: {
+							workType: { type: "string", enum: ["Разработка", "Внедрение"] },
+						},
+					},
+					dataMart: {
+						type: "object",
+						title: "Объект / Витрина данных",
+						properties: {
+							workType: { type: "string", enum: ["Разработка", "Настройка"] },
+						},
+					},
+				},
+			},
+		},
+	};
+
+	function hint(pointer: string, uid: string): FieldPathHint {
+		return {
+			pointer,
+			key: "workType",
+			title: "Тип работ",
+			varPath: pointer.slice(1).replace(/\//g, "."),
+			schemaFieldUid: uid,
+			dictionaryCode: null,
+			codesPreview: null,
+		};
+	}
+
+	const modelServicePointer = "/detailInfo/modelService/workType";
+	const dataMartPointer = "/detailInfo/dataMart/workType";
+
+	function build(uiSchema: Record<string, unknown>) {
+		return buildSchemaWorkParameters({
+			fieldPathHints: [
+				hint(modelServicePointer, "field-ms-worktype"),
+				hint(dataMartPointer, "field-dm-worktype"),
+			],
+			uiSchema,
+			jsonSchema,
+			enumMapByCode: {},
+		});
+	}
+
+	it("берёт archBlockUid арх-блока как стабильный id компонента", () => {
+		const params = build({
+			detailInfo: {
+				modelService: {
+					"ui:options": {
+						archComponent: "modelService",
+						archBlockUid: "block_model_service_v1",
+						schemaFieldUid: "field-ms-block",
+					},
+				},
+			},
+		});
+		const param = params.find(
+			(item) => item.schemaPointer === modelServicePointer,
+		);
+		expect(param?.archRef).toEqual({
+			type: "modelService",
+			label: "Модельный сервис",
+			blockUid: "block_model_service_v1",
+			blockTitle: "Модельный сервис",
+			blockPointer: "/detailInfo/modelService",
+		});
+		expect(schemaParamArchCaption(param)).toBe(
+			"Модельный сервис · modelService · block_model_service_v1",
+		);
+	});
+
+	it("падает на schemaFieldUid блока, когда archBlockUid не проставлен", () => {
+		const params = build({
+			detailInfo: {
+				dataMart: {
+					"ui:options": {
+						archComponent: "dataMart",
+						schemaFieldUid: "field-dm-block",
+					},
+				},
+			},
+		});
+		const param = params.find((item) => item.schemaPointer === dataMartPointer);
+		expect(param?.archRef?.blockUid).toBe("field-dm-block");
+	});
+
+	it("без арх-компонента archRef пуст", () => {
+		const params = build({});
+		expect(params.every((param) => param.archRef === null)).toBe(true);
+		expect(schemaParamArchCaption(params[0])).toBeNull();
+	});
+
+	it("считает одноимённые поля в других арх-компонентах", () => {
+		const params = build({
+			detailInfo: {
+				modelService: {
+					"ui:options": {
+						archComponent: "modelService",
+						archBlockUid: "block_model_service_v1",
+					},
+				},
+				dataMart: {
+					"ui:options": {
+						archComponent: "dataMart",
+						archBlockUid: "block_data_mart_v1",
+					},
+				},
+			},
+		});
+		const param = params.find(
+			(item) => item.schemaPointer === modelServicePointer,
+		);
+		expect(countSameNamedSchemaParams(param, params)).toBe(1);
 	});
 });
 

@@ -131,4 +131,78 @@ describe("V2TypicalWorkWriteService.reconcileSchemaField", () => {
 		);
 		expect(impact.worksUpdated).toBe(1);
 	});
+
+	it("reports affected works with names and per-work impact in dry run", async () => {
+		const { service } = setup();
+		const impact = await service.reconcileSchemaField({
+			templateVersionId: "version-1",
+			mode: "dryRun",
+			operation: "delete",
+			field: { schemaFieldUid: "field-1", previousCode: "field_code" },
+		});
+
+		expect(service.patchWork).not.toHaveBeenCalled();
+		expect(impact.affectedWorks).toEqual([
+			{
+				workId: "work-1",
+				workName: "work-1",
+				streamExecutor: "Источник",
+				rulesUpdated: 0,
+				rulesRemoved: 1,
+				laborParamsUpdated: 0,
+				laborParamsRemoved: 0,
+				formulaInvalidated: false,
+			},
+		]);
+	});
+
+	it("rebinds refs whose schemaFieldUid no longer exists in the schema", async () => {
+		const { service, typicalWorkService } = setup();
+		typicalWorkService.getWorkCardForSchemaSync.mockImplementation(
+			(workId: string) => Promise.resolve(card(workId, "dead-field")),
+		);
+
+		const impact = await service.reconcileSchemaField({
+			templateVersionId: "version-1",
+			mode: "apply",
+			operation: "upsert",
+			staleSchemaFieldUids: ["dead-field"],
+			field: {
+				schemaFieldUid: "field-1",
+				previousCode: "field_code",
+				code: "field_code",
+				name: "Поле",
+			},
+		});
+
+		expect(impact.worksUpdated).toBe(1);
+		expect(service.patchWork).toHaveBeenCalledWith(
+			"work-1",
+			expect.objectContaining({
+				rules: [expect.objectContaining({ schemaFieldUid: "field-1" })],
+			}),
+		);
+	});
+
+	it("keeps refs bound to a live field untouched", async () => {
+		const { service, typicalWorkService } = setup();
+		typicalWorkService.getWorkCardForSchemaSync.mockImplementation(
+			(workId: string) => Promise.resolve(card(workId, "another-live-field")),
+		);
+
+		const impact = await service.reconcileSchemaField({
+			templateVersionId: "version-1",
+			mode: "apply",
+			operation: "upsert",
+			field: {
+				schemaFieldUid: "field-1",
+				previousCode: "field_code",
+				code: "renamed",
+				name: "Поле",
+			},
+		});
+
+		expect(impact.worksUpdated).toBe(0);
+		expect(service.patchWork).not.toHaveBeenCalled();
+	});
 });

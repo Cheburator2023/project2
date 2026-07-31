@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.mergeSchemaSyncAffectedWorks = mergeSchemaSyncAffectedWorks;
 exports.laborCoefficientStoredKey = laborCoefficientStoredKey;
 exports.dedupeLaborCoefficientsByStoredValue = dedupeLaborCoefficientsByStoredValue;
 exports.mergeLaborParamGroupsByParamCode = mergeLaborParamGroupsByParamCode;
@@ -8,6 +9,25 @@ const v2_param_slug_util_1 = require("./v2-param-slug.util");
 const v2_template_work_schema_params_util_1 = require("./v2-template-work-schema-params.util");
 const v2_work_param_source_keys_util_1 = require("./v2-work-param-source-keys.util");
 const v2_work_formula_util_1 = require("./v2-work-formula.util");
+/** Слияние записей об одной работе, затронутой несколькими полями схемы. */
+function mergeSchemaSyncAffectedWorks(target, incoming) {
+    const byKey = new Map(target.map((work) => [`${work.workId}:${work.streamExecutor}`, work]));
+    for (const work of incoming) {
+        const key = `${work.workId}:${work.streamExecutor}`;
+        const existing = byKey.get(key);
+        if (!existing) {
+            byKey.set(key, { ...work });
+            continue;
+        }
+        existing.rulesUpdated += work.rulesUpdated;
+        existing.rulesRemoved += work.rulesRemoved;
+        existing.laborParamsUpdated += work.laborParamsUpdated;
+        existing.laborParamsRemoved += work.laborParamsRemoved;
+        existing.formulaInvalidated =
+            existing.formulaInvalidated || work.formulaInvalidated;
+    }
+    return [...byKey.values()];
+}
 function collectFieldAliasCodes(request) {
     const aliases = new Set();
     for (const code of [
@@ -43,8 +63,9 @@ function matchesField(ref, request) {
         ref.schemaFieldUid === request.field.schemaFieldUid) {
         return true;
     }
-    /** Уже привязан к другому полю — не перехватывать по коду/имени. */
-    if (ref.schemaFieldUid?.trim()) {
+    /** Уже привязан к другому живому полю — не перехватывать по коду/имени. */
+    const refUid = ref.schemaFieldUid?.trim();
+    if (refUid && !request.staleSchemaFieldUids?.includes(refUid)) {
         return false;
     }
     const aliases = collectFieldAliasCodes(request);

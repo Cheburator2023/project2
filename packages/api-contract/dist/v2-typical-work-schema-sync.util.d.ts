@@ -3,6 +3,13 @@ export type V2TypicalWorkSchemaFieldSyncRequestDto = {
     templateVersionId: string;
     mode: "dryRun" | "apply";
     operation: "upsert" | "delete";
+    /**
+     * Uid-ы полей, которых больше нет в схеме версии. Ссылки работ на них
+     * считаются непривязанными: иначе поле, пересозданное в конструкторе,
+     * навсегда остаётся с мёртвой привязкой (матч по коду/имени блокируется
+     * при заполненном schemaFieldUid).
+     */
+    staleSchemaFieldUids?: string[];
     field: {
         schemaFieldUid: string;
         previousCode?: string | null;
@@ -16,6 +23,17 @@ export type V2TypicalWorkSchemaFieldSyncRequestDto = {
         }>;
     };
 };
+/** Работа, которую затронет синхронизация, — для предпросмотра перед apply. */
+export type V2TypicalWorkSchemaSyncAffectedWorkDto = {
+    workId: string;
+    workName: string;
+    streamExecutor: string;
+    rulesUpdated: number;
+    rulesRemoved: number;
+    laborParamsUpdated: number;
+    laborParamsRemoved: number;
+    formulaInvalidated: boolean;
+};
 export type V2TypicalWorkSchemaFieldSyncImpactDto = {
     worksMatched: number;
     worksUpdated: number;
@@ -24,7 +42,10 @@ export type V2TypicalWorkSchemaFieldSyncImpactDto = {
     laborParamsUpdated: number;
     laborParamsRemoved: number;
     formulasInvalidated: number;
+    affectedWorks: V2TypicalWorkSchemaSyncAffectedWorkDto[];
 };
+/** Слияние записей об одной работе, затронутой несколькими полями схемы. */
+export declare function mergeSchemaSyncAffectedWorks(target: V2TypicalWorkSchemaSyncAffectedWorkDto[], incoming: V2TypicalWorkSchemaSyncAffectedWorkDto[]): V2TypicalWorkSchemaSyncAffectedWorkDto[];
 export type V2TypicalWorkSchemaBulkSyncResponseDto = V2TypicalWorkSchemaFieldSyncImpactDto & {
     fieldsProcessed: number;
     consistencyIssues: import("./v2-template-work-schema-params.util").TypicalWorkSchemaConsistencyIssue[];
@@ -54,6 +75,6 @@ export declare function mergeLaborParamGroupsByParamCode<T extends MergeableLabo
 export declare function reconcileTypicalWorkCardWithSchemaField(card: V2TypicalWorkCardDto, request: V2TypicalWorkSchemaFieldSyncRequestDto): {
     card: V2TypicalWorkCardDto;
     changed: boolean;
-    impact: Omit<V2TypicalWorkSchemaFieldSyncImpactDto, "worksMatched" | "worksUpdated">;
+    impact: Omit<V2TypicalWorkSchemaFieldSyncImpactDto, "worksMatched" | "worksUpdated" | "affectedWorks">;
 };
 export {};

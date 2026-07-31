@@ -55,6 +55,7 @@ import { useSchemaEditor } from "../../SchemaEditorContext";
 import {
 	buildLaborCoefficientRowsFromParamValues,
 	buildSchemaWorkParameters,
+	countSameNamedSchemaParams,
 	findSchemaWorkParameter,
 	isSchemaLaborParamCandidate,
 	isSchemaLaborParamUsed,
@@ -63,6 +64,7 @@ import {
 	resolveSchemaParamForTriggerRule,
 	resolveWorkParameterOption,
 	schemaLaborParamPickerCaption,
+	schemaParamArchCaption,
 	schemaParamRuleName,
 	schemaWorkParameterEmptyPickerMessage,
 	triggerRuleGroupKey,
@@ -1448,6 +1450,19 @@ export function TypicalWorkEditableCard({
 										group.paramCode,
 										group.paramName,
 									);
+									const laborSchemaParam = resolveSchemaParamForTriggerRule(
+										{
+											paramCode: group.paramCode,
+											paramName: group.paramName,
+										},
+										paramOptions,
+									);
+									const laborArchCaption =
+										schemaParamArchCaption(laborSchemaParam);
+									const laborSameNamedCount = countSameNamedSchemaParams(
+										laborSchemaParam,
+										paramOptions,
+									);
 									const numericLaborRows =
 										paramMeta?.numeric === true ||
 										resolveNumericLaborPresetRows(
@@ -1535,13 +1550,34 @@ export function TypicalWorkEditableCard({
 												>
 													{group.paramCode}
 												</Box>
-												<Typography
-													sx={{ flex: 1, fontSize: 12.5, fontWeight: 700 }}
-												>
-													{paramMeta?.name ??
-														group.paramName ??
-														group.paramCode}
-												</Typography>
+												<Box sx={{ flex: 1, minWidth: 0 }}>
+													<Typography
+														sx={{ fontSize: 12.5, fontWeight: 700 }}
+													>
+														{paramMeta?.name ??
+															group.paramName ??
+															group.paramCode}
+													</Typography>
+													{laborArchCaption ? (
+														<Typography
+															sx={{
+																fontSize: 11,
+																color: "#6b7484",
+																wordBreak: "break-all",
+															}}
+															title={
+																laborSameNamedCount > 0
+																	? `В схеме есть ещё ${laborSameNamedCount} поле(й) с таким же названием — проверьте, что выбран нужный арх-компонент`
+																	: undefined
+															}
+														>
+															{laborArchCaption}
+															{laborSameNamedCount > 0
+																? ` · ещё ${laborSameNamedCount} одноимённых`
+																: ""}
+														</Typography>
+													) : null}
+												</Box>
 												<Select
 													size="small"
 													data-test-id="labor-param-mode-select"

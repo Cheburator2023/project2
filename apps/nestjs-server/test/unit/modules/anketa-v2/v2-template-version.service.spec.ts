@@ -45,6 +45,7 @@ describe("V2TemplateVersionService.createDraftFromDefault", () => {
 				laborParamsUpdated: 0,
 				laborParamsRemoved: 0,
 				formulasInvalidated: 0,
+				affectedWorks: [],
 				fieldsProcessed: 0,
 				consistencyIssues: [],
 			})),

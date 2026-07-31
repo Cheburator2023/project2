@@ -25,6 +25,13 @@ export type V2TypicalWorkSchemaFieldSyncRequestDto = {
 	templateVersionId: string;
 	mode: "dryRun" | "apply";
 	operation: "upsert" | "delete";
+	/**
+	 * Uid-ы полей, которых больше нет в схеме версии. Ссылки работ на них
+	 * считаются непривязанными: иначе поле, пересозданное в конструкторе,
+	 * навсегда остаётся с мёртвой привязкой (матч по коду/имени блокируется
+	 * при заполненном schemaFieldUid).
+	 */
+	staleSchemaFieldUids?: string[];
 	field: {
 		schemaFieldUid: string;
 		previousCode?: string | null;
@@ -36,6 +43,18 @@ export type V2TypicalWorkSchemaFieldSyncRequestDto = {
 	};
 };
 
+/** Работа, которую затронет синхронизация, — для предпросмотра перед apply. */
+export type V2TypicalWorkSchemaSyncAffectedWorkDto = {
+	workId: string;
+	workName: string;
+	streamExecutor: string;
+	rulesUpdated: number;
+	rulesRemoved: number;
+	laborParamsUpdated: number;
+	laborParamsRemoved: number;
+	formulaInvalidated: boolean;
+};
+
 export type V2TypicalWorkSchemaFieldSyncImpactDto = {
 	worksMatched: number;
 	worksUpdated: number;
@@ -44,7 +63,33 @@ export type V2TypicalWorkSchemaFieldSyncImpactDto = {
 	laborParamsUpdated: number;
 	laborParamsRemoved: number;
 	formulasInvalidated: number;
+	affectedWorks: V2TypicalWorkSchemaSyncAffectedWorkDto[];
 };
+
+/** Слияние записей об одной работе, затронутой несколькими полями схемы. */
+export function mergeSchemaSyncAffectedWorks(
+	target: V2TypicalWorkSchemaSyncAffectedWorkDto[],
+	incoming: V2TypicalWorkSchemaSyncAffectedWorkDto[],
+): V2TypicalWorkSchemaSyncAffectedWorkDto[] {
+	const byKey = new Map(
+		target.map((work) => [`${work.workId}:${work.streamExecutor}`, work]),
+	);
+	for (const work of incoming) {
+		const key = `${work.workId}:${work.streamExecutor}`;
+		const existing = byKey.get(key);
+		if (!existing) {
+			byKey.set(key, { ...work });
+			continue;
+		}
+		existing.rulesUpdated += work.rulesUpdated;
+		existing.rulesRemoved += work.rulesRemoved;
+		existing.laborParamsUpdated += work.laborParamsUpdated;
+		existing.laborParamsRemoved += work.laborParamsRemoved;
+		existing.formulaInvalidated =
+			existing.formulaInvalidated || work.formulaInvalidated;
+	}
+	return [...byKey.values()];
+}
 
 export type V2TypicalWorkSchemaBulkSyncResponseDto =
 	V2TypicalWorkSchemaFieldSyncImpactDto & {
@@ -107,8 +152,9 @@ function matchesField(
 		return true;
 	}
 
-	/** Уже привязан к другому полю — не перехватывать по коду/имени. */
-	if (ref.schemaFieldUid?.trim()) {
+	/** Уже привязан к другому живому полю — не перехватывать по коду/имени. */
+	const refUid = ref.schemaFieldUid?.trim();
+	if (refUid && !request.staleSchemaFieldUids?.includes(refUid)) {
 		return false;
 	}
 
@@ -471,7 +517,7 @@ export function reconcileTypicalWorkCardWithSchemaField(
 	changed: boolean;
 	impact: Omit<
 		V2TypicalWorkSchemaFieldSyncImpactDto,
-		"worksMatched" | "worksUpdated"
+		"worksMatched" | "worksUpdated" | "affectedWorks"
 	>;
 } {
 	const matchingRules = card.rules.filter((rule) =>

@@ -29,9 +29,13 @@ import type {
 	TypicalWorkSchemaConsistencyIssue,
 	V2LogicRuleDto,
 	V2LogicWorkspaceTab,
+	V2TypicalWorkSchemaFieldSyncImpactDto,
+	V2TypicalWorkSchemaFieldSyncRequestDto,
+	V2TypicalWorkSchemaSyncAffectedWorkDto,
 } from "@smart-anketa/api-contract";
 import {
 	buildEmptyV2AnketaTemplateSnapshot,
+	mergeSchemaSyncAffectedWorks,
 	resolveV2AnketaCanvasUiKind,
 	rewriteSchemaPathsInValue,
 	syncTriggerGatedGroupActivationFromTypicalWorks,
@@ -39,7 +43,14 @@ import {
 import { createResetSchemaEditorPreviewFormData } from "../utils/previewFormReset";
 import { evaluateRuleLive } from "../schemaEditor/panels/logicPanel/helpers";
 import { nanoid } from "nanoid";
-import { Box, Button, CircularProgress, Typography } from "@mui/material";
+import {
+	Alert,
+	Box,
+	Button,
+	CircularProgress,
+	Snackbar,
+	Typography,
+} from "@mui/material";
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
@@ -131,6 +142,10 @@ import {
 	toggleRequiredAtPointer,
 	updatePropertyAtPointer,
 } from "../utils/schemaMutators";
+import {
+	SchemaWorkSyncConfirmDialog,
+	type SchemaWorkSyncChangeDto,
+} from "../schemaEditor/panels/typicalWorksPanel/SchemaWorkSyncConfirmDialog";
 import { V2TemplateSaveDialog } from "./V2TemplateSaveDialog";
 import { SchemaEditorLeaveDialog } from "./SchemaEditorLeaveDialog";
 import type { V2TemplateStatus } from "@smart-anketa/api-contract";
@@ -208,6 +223,79 @@ type DraftHistorySnapshot = {
 };
 
 const DRAFT_HISTORY_LIMIT = 50;
+
+/** Слепок параметра схемы для детекта правок, затрагивающих типовые работы. */
+type SchemaParamSyncSnapshot = {
+	code: string;
+	name: string;
+	/** Арх-компонент поля: без него перенос между блоками не детектится. */
+	archBlockUid: string | null;
+	archLabel: string | null;
+	values: Array<{ code: string; label: string }>;
+};
+
+type PendingWorkSync = {
+	versionId: string;
+	changes: SchemaWorkSyncChangeDto[];
+	affectedWorks: V2TypicalWorkSchemaSyncAffectedWorkDto[];
+	/** Пусто для массовой синхронизации всей версии. */
+	fields: Array<{
+		uid: string;
+		before: SchemaParamSyncSnapshot;
+		after: SchemaParamSyncSnapshot;
+	}>;
+};
+
+function describeSchemaParamChange(
+	before: SchemaParamSyncSnapshot,
+	after: SchemaParamSyncSnapshot,
+): SchemaWorkSyncChangeDto {
+	const parts: string[] = [];
+	if (before.archBlockUid !== after.archBlockUid) {
+		parts.push(
+			`перенесено: ${before.archLabel ?? "вне арх-компонента"} → ${after.archLabel ?? "вне арх-компонента"}`,
+		);
+	}
+	if (before.name !== after.name) {
+		parts.push(`переименовано: «${before.name}» → «${after.name}»`);
+	}
+	if (before.code !== after.code) {
+		parts.push(`код поля: ${before.code} → ${after.code}`);
+	}
+	if (JSON.stringify(before.values) !== JSON.stringify(after.values)) {
+		parts.push("изменён набор значений");
+	}
+	return {
+		fieldName: after.name || after.code,
+		summary: parts.length > 0 ? parts.join("; ") : "поле изменено",
+	};
+}
+
+function buildSchemaFieldSyncRequest(
+	versionId: string,
+	mode: "dryRun" | "apply",
+	entry: {
+		uid: string;
+		before: SchemaParamSyncSnapshot;
+		after: SchemaParamSyncSnapshot;
+	},
+): V2TypicalWorkSchemaFieldSyncRequestDto {
+	return {
+		templateVersionId: versionId,
+		mode,
+		operation: "upsert",
+		field: {
+			schemaFieldUid: entry.uid,
+			previousCode: entry.before.code,
+			code: entry.after.code,
+			name: entry.after.name,
+			values:
+				entry.before.values.length > 0 || entry.after.values.length > 0
+					? entry.after.values
+					: undefined,
+		},
+	};
+}
 
 interface V2TemplateSchemaEditorProps {
 	templateId: string;
@@ -959,35 +1047,39 @@ export const V2TemplateSchemaEditor = ({
 			}),
 		[fieldPathHints, uiSchema, jsonSchema, enumMapByCode],
 	);
-	const previousSchemaParamsRef = useRef<
-		Map<
-			string,
-			{
-				code: string;
-				name: string;
-				values: Array<{ code: string; label: string }>;
-			}
-		>
-	>(new Map());
+	const previousSchemaParamsRef = useRef<Map<string, SchemaParamSyncSnapshot>>(
+		new Map(),
+	);
 	const schemaParamsBaselineVersionRef = useRef<string | null>(null);
 	const pendingSchemaSyncBeforeRef = useRef(
-		new Map<
-			string,
-			{
-				code: string;
-				name: string;
-				values: Array<{ code: string; label: string }>;
-			}
-		>(),
+		new Map<string, SchemaParamSyncSnapshot>(),
 	);
 	const schemaSyncTimerRef = useRef<number | null>(null);
 	const initialSchemaBulkSyncRef = useRef<string | null>(null);
 	const bulkSyncTrackedVersionRef = useRef<string | null>(null);
 	const [consistencyRefreshTick, setConsistencyRefreshTick] = useState(0);
+	const [workSyncConfirm, setWorkSyncConfirm] =
+		useState<PendingWorkSync | null>(null);
+	const [deferredWorkSync, setDeferredWorkSync] =
+		useState<PendingWorkSync | null>(null);
+	const [workSyncApplying, setWorkSyncApplying] = useState(false);
 
 	const refreshSchemaConsistencyIssues = useCallback(() => {
 		setConsistencyRefreshTick((tick) => tick + 1);
 	}, []);
+
+	const applyFieldSyncEntries = useCallback(
+		async (versionId: string, entries: PendingWorkSync["fields"]) => {
+			await Promise.all(
+				entries.map((entry) =>
+					syncTypicalWorksSchemaField.mutateAsync(
+						buildSchemaFieldSyncRequest(versionId, "apply", entry),
+					),
+				),
+			);
+		},
+		[syncTypicalWorksSchemaField.mutateAsync],
+	);
 
 	useEffect(() => {
 		if (dictionaryEnumsLoading) return;
@@ -1005,10 +1097,11 @@ export const V2TemplateSchemaEditor = ({
 			setConsistencyRefreshTick(0);
 		}
 
-		const shouldApply =
+		/** Первый заход в версию: только тогда предлагаем синхронизацию. */
+		const isFirstVisit =
 			initialSchemaBulkSyncRef.current !== versionId &&
 			consistencyRefreshTick === 0;
-		if (shouldApply) {
+		if (isFirstVisit) {
 			initialSchemaBulkSyncRef.current = versionId;
 		}
 
@@ -1020,23 +1113,29 @@ export const V2TemplateSchemaEditor = ({
 				try {
 					const result = await bulkSyncSchemaFields({
 						templateVersionId: versionId,
-						// apply только при первом заходе; refresh / Issues — dryRun
-						mode: shouldApply ? "apply" : "dryRun",
+						// Всегда dryRun: apply — только после подтверждения админом.
+						mode: "dryRun",
 					});
 					if (cancelled) return;
 					setSchemaConsistencyIssues(result.consistencyIssues);
-					if (
-						shouldApply &&
-						(result.worksUpdated > 0 ||
-							result.laborParamsUpdated > 0 ||
-							result.rulesUpdated > 0)
-					) {
-						requestCalculationRefresh();
+					if (isFirstVisit && result.affectedWorks.length > 0) {
+						setWorkSyncConfirm({
+							versionId,
+							fields: [],
+							changes: [
+								{
+									fieldName: "Схема версии",
+									summary:
+										"привязки типовых работ расходятся с текущими полями",
+								},
+							],
+							affectedWorks: result.affectedWorks,
+						});
 					}
 					return;
 				} catch (error) {
 					if (attempt >= maxAttempts) {
-						if (shouldApply && !cancelled) {
+						if (isFirstVisit && !cancelled) {
 							toast.error(apiErrorMessage(error));
 						}
 						return;
@@ -1057,7 +1156,6 @@ export const V2TemplateSchemaEditor = ({
 		bulkSyncSchemaFields,
 		consistencyRefreshTick,
 		dictionaryEnumsLoading,
-		requestCalculationRefresh,
 		schemaWorkParams.length,
 	]);
 
@@ -1070,11 +1168,13 @@ export const V2TemplateSchemaEditor = ({
 		const current = new Map(
 			schemaWorkParams
 				.filter((param) => param.schemaFieldUid)
-				.map((param) => [
+				.map((param): [string, SchemaParamSyncSnapshot] => [
 					param.schemaFieldUid!,
 					{
 						code: param.code,
 						name: param.name,
+						archBlockUid: param.archRef?.blockUid ?? null,
+						archLabel: param.archRef?.label ?? null,
 						values: param.values.map((value) => ({
 							code: value.code,
 							label: value.label,
@@ -1110,34 +1210,46 @@ export const V2TemplateSchemaEditor = ({
 		schemaSyncTimerRef.current = window.setTimeout(() => {
 			const pending = [...pendingSchemaSyncBeforeRef.current];
 			pendingSchemaSyncBeforeRef.current.clear();
-			void Promise.all(
-				pending.map(([schemaFieldUid, before]) => {
-					const param = current.get(schemaFieldUid);
-					if (!param) return Promise.resolve();
-					return syncTypicalWorksSchemaField.mutateAsync({
-						templateVersionId: versionId,
-						mode: "apply",
-						operation: "upsert",
-						field: {
-							schemaFieldUid,
-							previousCode: before.code,
-							code: param.code,
-							name: param.name,
-							values:
-								before.values.length > 0 || param.values.length > 0
-									? param.values
-									: undefined,
-						},
+			const entries = pending.flatMap(([uid, before]) => {
+				const after = current.get(uid);
+				return after ? [{ uid, before, after }] : [];
+			});
+			if (entries.length === 0) return;
+
+			void (async () => {
+				try {
+					const impacts = await Promise.all(
+						entries.map((entry) =>
+							syncTypicalWorksSchemaField.mutateAsync(
+								buildSchemaFieldSyncRequest(versionId, "dryRun", entry),
+							),
+						),
+					);
+					const affectedWorks = impacts.reduce<
+						V2TypicalWorkSchemaSyncAffectedWorkDto[]
+					>(
+						(sum, impact) =>
+							mergeSchemaSyncAffectedWorks(sum, impact.affectedWorks),
+						[],
+					);
+					/** Работы не задеты — подтверждать нечего, и apply был бы пустым. */
+					if (affectedWorks.length === 0) return;
+
+					setWorkSyncConfirm({
+						versionId,
+						fields: entries,
+						changes: entries.map((entry) =>
+							describeSchemaParamChange(entry.before, entry.after),
+						),
+						affectedWorks,
 					});
-				}),
-			)
-				.then(requestCalculationRefresh)
-				.catch((error) => {
-					for (const [uid, before] of pending) {
-						pendingSchemaSyncBeforeRef.current.set(uid, before);
+				} catch (error) {
+					for (const entry of entries) {
+						pendingSchemaSyncBeforeRef.current.set(entry.uid, entry.before);
 					}
 					toast.error(apiErrorMessage(error));
-				});
+				}
+			})();
 		}, 500);
 		return () => {
 			if (schemaSyncTimerRef.current) {
@@ -1147,10 +1259,46 @@ export const V2TemplateSchemaEditor = ({
 	}, [
 		activeVersion?.id,
 		dictionaryEnumsLoading,
-		requestCalculationRefresh,
 		schemaWorkParams,
 		syncTypicalWorksSchemaField.mutateAsync,
 	]);
+
+	const handleConfirmWorkSync = useCallback(async () => {
+		if (!workSyncConfirm) return;
+		setWorkSyncApplying(true);
+		try {
+			if (workSyncConfirm.fields.length > 0) {
+				await applyFieldSyncEntries(
+					workSyncConfirm.versionId,
+					workSyncConfirm.fields,
+				);
+			} else {
+				await bulkSyncSchemaFields({
+					templateVersionId: workSyncConfirm.versionId,
+					mode: "apply",
+				});
+			}
+			setWorkSyncConfirm(null);
+			setDeferredWorkSync(null);
+			requestCalculationRefresh();
+			refreshSchemaConsistencyIssues();
+		} catch (error) {
+			toast.error(apiErrorMessage(error));
+		} finally {
+			setWorkSyncApplying(false);
+		}
+	}, [
+		applyFieldSyncEntries,
+		bulkSyncSchemaFields,
+		refreshSchemaConsistencyIssues,
+		requestCalculationRefresh,
+		workSyncConfirm,
+	]);
+
+	const handleDismissWorkSync = useCallback(() => {
+		setDeferredWorkSync(workSyncConfirm);
+		setWorkSyncConfirm(null);
+	}, [workSyncConfirm]);
 
 	const logicPathFieldHint = useMemo(() => {
 		if (!logicPathPick) return undefined;
@@ -1998,7 +2146,7 @@ export const V2TemplateSchemaEditor = ({
 	const getFieldDeleteImpact = useCallback(
 		async (pointer: string) => {
 			const versionId = activeVersion?.id;
-			const empty = {
+			const empty: V2TypicalWorkSchemaFieldSyncImpactDto = {
 				worksMatched: 0,
 				worksUpdated: 0,
 				rulesUpdated: 0,
@@ -2006,6 +2154,7 @@ export const V2TemplateSchemaEditor = ({
 				laborParamsUpdated: 0,
 				laborParamsRemoved: 0,
 				formulasInvalidated: 0,
+				affectedWorks: [],
 			};
 			if (!versionId) return empty;
 			const params = schemaParamsInSubtree(pointer).filter(
@@ -2035,6 +2184,10 @@ export const V2TemplateSchemaEditor = ({
 						sum.laborParamsRemoved + impact.laborParamsRemoved,
 					formulasInvalidated:
 						sum.formulasInvalidated + impact.formulasInvalidated,
+					affectedWorks: mergeSchemaSyncAffectedWorks(
+						sum.affectedWorks,
+						impact.affectedWorks,
+					),
 				}),
 				empty,
 			);
@@ -2918,6 +3071,37 @@ export const V2TemplateSchemaEditor = ({
 				/>
 			) : null}
 			{leaveDialog}
+			<SchemaWorkSyncConfirmDialog
+				open={workSyncConfirm !== null}
+				pending={workSyncApplying}
+				changes={workSyncConfirm?.changes ?? []}
+				affectedWorks={workSyncConfirm?.affectedWorks ?? []}
+				onConfirm={() => void handleConfirmWorkSync()}
+				onDismiss={handleDismissWorkSync}
+			/>
+			<Snackbar
+				open={deferredWorkSync !== null && workSyncConfirm === null}
+				anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+			>
+				<Alert
+					severity="warning"
+					action={
+						<Button
+							size="small"
+							color="inherit"
+							onClick={() => {
+								setWorkSyncConfirm(deferredWorkSync);
+								setDeferredWorkSync(null);
+							}}
+						>
+							Синхронизировать
+						</Button>
+					}
+				>
+					Типовые работы не обновлены под изменённую схему:{" "}
+					{deferredWorkSync?.affectedWorks.length ?? 0}
+				</Alert>
+			</Snackbar>
 			</SchemaEditorDockProvider>
 		</SchemaEditorProvider>
 	);

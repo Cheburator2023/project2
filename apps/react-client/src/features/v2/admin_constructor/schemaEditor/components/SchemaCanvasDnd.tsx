@@ -26,7 +26,9 @@ import {
 	type NodeModel,
 	type TreeMethods,
 } from "@minoru/react-dnd-treeview";
+import { Flex } from "@react-client/common/primitives/Flex";
 import { useSchemaConstructorSettings } from "@react-client/common/settings/schemaConstructorSettings";
+import { describeAffectedWorkImpact } from "../panels/typicalWorksPanel/SchemaWorkSyncConfirmDialog";
 import {
 	useCallback,
 	useEffect,
@@ -1341,13 +1343,26 @@ export function SchemaCanvasPanel({
 						<Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
 							Проверяем связи с типовыми работами…
 						</Typography>
-					) : deleteImpact && deleteImpact.worksMatched > 0 ? (
-						<Typography variant="body2" color="error" sx={{ mt: 1 }}>
-							Будут обновлены типовые работы: {deleteImpact.worksMatched},
-							условия: {deleteImpact.rulesRemoved}, параметры трудоёмкости:{" "}
-							{deleteImpact.laborParamsRemoved}. Связанные формулы будут
-							помечены как требующие исправления.
-						</Typography>
+					) : deleteImpact && deleteImpact.affectedWorks.length > 0 ? (
+						<>
+							<Typography variant="body2" color="error" sx={{ mt: 1 }}>
+								Будут изменены типовые работы:{" "}
+								{deleteImpact.affectedWorks.length}. Связанные формулы будут
+								помечены как требующие исправления.
+							</Typography>
+							<Flex flexDirection="column" gap={4} padding="8px 0 0">
+								{deleteImpact.affectedWorks.map((work) => (
+									<Typography
+										key={`${work.workId}:${work.streamExecutor}`}
+										variant="caption"
+										color="text.secondary"
+									>
+										{work.workName} · {work.streamExecutor} ·{" "}
+										{describeAffectedWorkImpact(work)}
+									</Typography>
+								))}
+							</Flex>
+						</>
 					) : null}
 				</DialogContent>
 				<DialogActions>

@@ -2,6 +2,25 @@ import { normalizeStoredValueCode, normalizeStoredValueLabel, slugParamCode, } f
 import { schemaEnumValueMatchesRule } from "./v2-template-work-schema-params.util";
 import { formatParamNameWithSourceKeys, stripParamNameSourceKeys, } from "./v2-work-param-source-keys.util";
 import { isParamToken, markUnknownFormulaLaborParamTokensInvalid, reconcileFormulaLaborParamTokens, tokensToText, } from "./v2-work-formula.util";
+/** Слияние записей об одной работе, затронутой несколькими полями схемы. */
+export function mergeSchemaSyncAffectedWorks(target, incoming) {
+    const byKey = new Map(target.map((work) => [`${work.workId}:${work.streamExecutor}`, work]));
+    for (const work of incoming) {
+        const key = `${work.workId}:${work.streamExecutor}`;
+        const existing = byKey.get(key);
+        if (!existing) {
+            byKey.set(key, { ...work });
+            continue;
+        }
+        existing.rulesUpdated += work.rulesUpdated;
+        existing.rulesRemoved += work.rulesRemoved;
+        existing.laborParamsUpdated += work.laborParamsUpdated;
+        existing.laborParamsRemoved += work.laborParamsRemoved;
+        existing.formulaInvalidated =
+            existing.formulaInvalidated || work.formulaInvalidated;
+    }
+    return [...byKey.values()];
+}
 function collectFieldAliasCodes(request) {
     const aliases = new Set();
     for (const code of [
@@ -37,8 +56,9 @@ function matchesField(ref, request) {
         ref.schemaFieldUid === request.field.schemaFieldUid) {
         return true;
     }
-    /** Уже привязан к другому полю — не перехватывать по коду/имени. */
-    if (ref.schemaFieldUid?.trim()) {
+    /** Уже привязан к другому живому полю — не перехватывать по коду/имени. */
+    const refUid = ref.schemaFieldUid?.trim();
+    if (refUid && !request.staleSchemaFieldUids?.includes(refUid)) {
         return false;
     }
     const aliases = collectFieldAliasCodes(request);

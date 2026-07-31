@@ -24,8 +24,11 @@ import {
 	resolveCanonicalWorkArchComponentType,
 } from "./typicalWorkPatchErrors";
 import {
+	formatArchComponentRef,
 	resolveArchComponentAtPointer,
+	resolveArchComponentRefAtPointer,
 	resolveSchemaNodeType,
+	type ArchComponentRef,
 } from "../../propertiesFieldKind";
 import type { FieldPathHint } from "../../types";
 
@@ -71,6 +74,8 @@ export function schemaWorkParameterEmptyPickerMessage(
 export type SchemaBuiltWorkParameterDto = V2TypicalWorkParameterDto & {
 	/** Свободный ввод (type: string без enum/справочника). */
 	textual?: boolean;
+	/** Арх-компонент, внутри которого лежит поле схемы. */
+	archRef?: ArchComponentRef | null;
 };
 
 export function isSchemaTextualParam(
@@ -130,12 +135,37 @@ function schemaLaborParamModeHint(
 	return "Нет дискретных значений — Any-of, скорее всего, не подойдёт";
 }
 
-/** Подсказка в селекте «Параметр трудоёмкости» — id поля, путь и уместный режим. */
+/** «Модельный сервис · modelService · block_a1b2c3» — арх-компонент поля. */
+export function schemaParamArchCaption(
+	param: SchemaBuiltWorkParameterDto | undefined,
+): string | null {
+	return formatArchComponentRef(param?.archRef);
+}
+
+/**
+ * Сколько ещё полей схемы носят то же название. Одноимённые поля в разных
+ * арх-компонентах — самая частая причина привязки работы не к тому компоненту.
+ */
+export function countSameNamedSchemaParams(
+	param: Pick<V2TypicalWorkParameterDto, "code" | "name"> | undefined,
+	paramOptions: Array<Pick<V2TypicalWorkParameterDto, "code" | "name">>,
+): number {
+	const name = param?.name.trim().toLocaleLowerCase("ru");
+	if (!name) return 0;
+	return paramOptions.filter(
+		(other) =>
+			other.code !== param?.code &&
+			other.name.trim().toLocaleLowerCase("ru") === name,
+	).length;
+}
+
+/** Подсказка в селекте «Параметр трудоёмкости» — арх-компонент, путь и режим. */
 export function schemaLaborParamPickerCaption(
 	param: SchemaBuiltWorkParameterDto,
 ): string {
 	const ref = resolveSchemaParamFieldRef(param);
 	const pathParts = [
+		schemaParamArchCaption(param),
 		param.id,
 		ref.varPath || param.description?.trim() || null,
 		ref.fieldKey !== param.code ? ref.fieldKey : null,
@@ -332,14 +362,10 @@ function schemaParamCodeFromHint(
 
 function schemaParamDescription(
 	hint: FieldPathHint,
-	uiSchema: Record<string, unknown> | undefined,
+	archRef: ArchComponentRef | null,
 ): string {
-	const fieldArch = resolveArchComponentAtPointer(uiSchema, hint.pointer);
-	const archLabel = fieldArch
-		? (V2_ARCH_COMPONENT_LABELS[fieldArch as V2ArchComponentType] ?? fieldArch)
-		: null;
 	const path = hint.varPath || hint.pointer;
-	return archLabel ? `${archLabel} · ${path}` : path;
+	return archRef ? `${archRef.label} · ${path}` : path;
 }
 
 type BuiltSchemaParam = SchemaBuiltWorkParameterDto & {
@@ -366,6 +392,7 @@ function finalizeSchemaWorkParameters(
 			dictionaryCode: param.dictionaryCode,
 			numeric: param.numeric,
 			textual: param.textual,
+			archRef: param.archRef,
 			values: param.values,
 			sourceKeys: [param.code],
 		}))
@@ -487,12 +514,18 @@ export function buildSchemaWorkParameters({
 		if (!name) continue;
 
 		const code = schemaParamCodeFromHint(hint, usedCodes);
+		const archRef = resolveArchComponentRefAtPointer(
+			uiSchema,
+			hint.pointer,
+			jsonSchema,
+		);
 		params.push({
 			id: `schema:${hint.schemaFieldUid ?? hint.pointer}`,
 			schemaFieldUid: hint.schemaFieldUid ?? undefined,
 			code,
 			name,
-			description: schemaParamDescription(hint, uiSchema),
+			description: schemaParamDescription(hint, archRef),
+			archRef,
 			dictionaryCode,
 			numeric,
 			textual,
@@ -688,9 +721,8 @@ export function excludeRulesByGroupKey<T extends TriggerRuleLike>(
 }
 
 /** CSV/seed-триггер → поле схемы анкеты (алиас «Тип источника (внешний)» → `type`). */
-export function resolveSchemaParamForTriggerRule(
-	rule: TriggerRuleLike,
-	paramOptions: V2TypicalWorkParameterDto[],
-): V2TypicalWorkParameterDto | undefined {
+export function resolveSchemaParamForTriggerRule<
+	T extends V2TypicalWorkParameterDto,
+>(rule: TriggerRuleLike, paramOptions: T[]): T | undefined {
 	return resolveWorkSchemaParamForRule(rule, paramOptions);
 }
