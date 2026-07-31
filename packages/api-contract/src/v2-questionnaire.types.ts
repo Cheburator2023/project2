@@ -177,6 +177,12 @@ export type V2QuestionnaireCommentDto = {
 /** TTL блокировки редактирования анкеты (heartbeat продлевает). */
 export const V2_QUESTIONNAIRE_EDIT_LOCK_TTL_MS = 2 * 60 * 1000;
 
+/**
+ * Бездействие в открытой анкете: снимаем occupancy-lock и показываем экран выхода.
+ * Heartbeat сам по себе не удерживает сессию дольше этого окна без активности.
+ */
+export const V2_QUESTIONNAIRE_EDIT_IDLE_TIMEOUT_MS = 30 * 60 * 1000;
+
 export type V2QuestionnaireEditLockDto = {
 	questionnaireId: string;
 	lockedByLabel: string;

@@ -8,12 +8,14 @@ import { AnketaFormShell } from "@react-client/features/v2/anketaCRUD/templates/
 import { useV2AnketaSchemaEngine } from "@react-client/features/v2/anketaCRUD/hooks/useV2AnketaSchemaEngine";
 import { useDebouncedQuestionnaireSave } from "@react-client/features/v2/anketaCRUD/hooks/useDebouncedQuestionnaireSave";
 import { useQuestionnaireEditLock } from "@react-client/features/v2/anketaCRUD/hooks/useQuestionnaireEditLock";
+import { AnketaEditSessionTimeoutScreen } from "@react-client/features/v2/anketaCRUD/organisms/AnketaEditSessionTimeoutScreen";
 import { stripQuestionnaireCalcNameFromFormData } from "@react-client/features/v2/anketaCRUD/utils/anketaQuestionnaireMeta.util";
-import { useMemo } from "react";
-import { useParams } from "react-router";
+import { useCallback, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router";
 
 export const AnketaPreviewPageV2 = () => {
 	const { id } = useParams<{ id: string }>();
+	const navigate = useNavigate();
 	const { data: formPackage, isLoading, error } = useV2QuestionnaireFormPackage(
 		id ?? "",
 	);
@@ -22,6 +24,8 @@ export const AnketaPreviewPageV2 = () => {
 		questionnaireId: id,
 		enabled: Boolean(formPackage && !formPackage.readOnly),
 	});
+	const { readOnlyByLock, sessionTimedOut, resumeAfterTimeout } = editLock;
+	const [resumingSession, setResumingSession] = useState(false);
 
 	const source = useMemo(
 		() =>
@@ -46,13 +50,15 @@ export const AnketaPreviewPageV2 = () => {
 	);
 
 	const effectiveReadOnly =
-		Boolean(formPackage?.readOnly) || editLock.readOnlyByLock;
+		Boolean(formPackage?.readOnly) || readOnlyByLock;
 
 	const autosave = useDebouncedQuestionnaireSave({
 		questionnaireId: id,
 		calcName: formPackage?.questionnaire.calcName,
 		formData: formDataForSave,
-		enabled: Boolean(formPackage && !error && !effectiveReadOnly),
+		enabled: Boolean(
+			formPackage && !error && !effectiveReadOnly && !sessionTimedOut,
+		),
 	});
 
 	const onSave = () => {
@@ -74,12 +80,40 @@ export const AnketaPreviewPageV2 = () => {
 		);
 	};
 
+	const onReturnToAnketa = useCallback(async () => {
+		setResumingSession(true);
+		try {
+			const ok = await resumeAfterTimeout();
+			if (!ok) {
+				toast.warning("Не удалось снова занять анкету", {
+					description:
+						"Возможно, её сейчас редактирует другой пользователь",
+				});
+			}
+		} finally {
+			setResumingSession(false);
+		}
+	}, [resumeAfterTimeout]);
+
 	const errorMessage =
 		!isLoading && (error || !formPackage)
 			? error
 				? apiErrorMessage(error)
 				: "Анкета не найдена"
 			: null;
+
+	if (sessionTimedOut && !errorMessage) {
+		return (
+			<AnketaEditSessionTimeoutScreen
+				questionnaireTitle={formPackage?.questionnaire.calcName}
+				resuming={resumingSession}
+				onReturnToAnketa={() => {
+					void onReturnToAnketa();
+				}}
+				onGoToRegistry={() => navigate("/v2")}
+			/>
+		);
+	}
 
 	return (
 		<AnketaFormShell
@@ -100,7 +134,7 @@ export const AnketaPreviewPageV2 = () => {
 			schemaBinding={formPackage?.questionnaire.schemaBinding}
 			readOnly={effectiveReadOnly}
 			lockMessage={
-				editLock.readOnlyByLock
+				readOnlyByLock && !sessionTimedOut
 					? "Анкета сейчас редактируется другим пользователем"
 					: null
 			}

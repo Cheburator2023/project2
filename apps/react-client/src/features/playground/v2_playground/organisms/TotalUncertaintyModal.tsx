@@ -68,7 +68,9 @@ function buildDictionaryOptions(
 	];
 }
 
-function toSelectOptions(values: string[] | undefined): DictionarySelectOption[] {
+function toSelectOptions(
+	values: string[] | undefined,
+): DictionarySelectOption[] {
 	if (!values || values.length === 0) {
 		return [{ value: "", label: "Не выбрано" }];
 	}
@@ -139,8 +141,7 @@ export const TotalUncertaintyModal = ({
 	const adjMin = adjustment?.minPct ?? 0;
 	const adjMax = adjustment?.maxPct ?? UNCERTAINTY_ADJUSTMENT_MAX;
 	const adjHint =
-		adjustment?.hint ??
-		"Экспертная надбавка, добавляется к агрегату по рискам";
+		adjustment?.hint ?? "Экспертная надбавка, добавляется к агрегату по рискам";
 
 	const { enumMapByCode } = useV2DictionaryEnumsMaps(
 		timelineOptionsProp && costOptionsProp
@@ -225,7 +226,9 @@ export const TotalUncertaintyModal = ({
 
 	// Пока сроки и стоимость не выбраны, базовый уровень не определён — риски заблокированы.
 	const risksLocked = !values.initiativeTimeline || !values.initiativeCost;
-	const filledRiskCount = Object.values(values.risks).filter(isRiskFilled).length;
+	const filledRiskCount = Object.values(values.risks).filter(
+		isRiskFilled,
+	).length;
 	const breakdown = useMemo(
 		() => (computeBreakdown ? computeBreakdown(values) : null),
 		[computeBreakdown, values],
@@ -240,7 +243,11 @@ export const TotalUncertaintyModal = ({
 			PaperProps={{ sx: { borderRadius: 1.5, overflow: "hidden" } }}
 		>
 			<DialogTitle sx={{ pb: 1.5 }}>
-				<Stack direction="row" alignItems="center" justifyContent="space-between">
+				<Stack
+					direction="row"
+					alignItems="center"
+					justifyContent="space-between"
+				>
 					<Typography variant="h5" component="span" sx={{ fontWeight: 600 }}>
 						Расчет общей неопределенности
 					</Typography>
@@ -318,9 +325,7 @@ export const TotalUncertaintyModal = ({
 							step: 1,
 						}}
 						InputProps={{
-							endAdornment: (
-								<InputAdornment position="end">%</InputAdornment>
-							),
+							endAdornment: <InputAdornment position="end">%</InputAdornment>,
 						}}
 						helperText={`Опционально, ${adjMin}–${adjMax}%. ${adjHint}`}
 					/>
@@ -335,11 +340,6 @@ export const TotalUncertaintyModal = ({
 							заполнено {filledRiskCount} из {riskGroups.length}
 						</Typography>
 					</Flex>
-					<Typography variant="caption" color="text.secondary">
-						{risksLocked
-							? "Сначала выберите сроки и стоимость инициативы — риски заблокированы"
-							: "Отметьте применимые риски: вероятность и влияние на Цели. Вероятность «Не применимо» оставляет риск в списке, но вносит ноль"}
-					</Typography>
 
 					{riskGroups.map((risk) => {
 						const selection = values.risks[risk.id] ?? emptyRiskSelection();
@@ -448,7 +448,11 @@ export const TotalUncertaintyModal = ({
 									{line}
 								</Typography>
 							))}
-							<Flex alignItems="baseline" justifyContent="space-between" sx={{ mt: 1 }}>
+							<Flex
+								alignItems="baseline"
+								justifyContent="space-between"
+								sx={{ mt: 1 }}
+							>
 								<Typography variant="caption" sx={{ opacity: 0.7 }}>
 									Общая неопределённость
 								</Typography>
