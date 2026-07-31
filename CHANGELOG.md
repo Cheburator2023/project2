@@ -1,5 +1,26 @@
 # Semantic Versioning Changelog
 
+# [1.51.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.50.0...v1.51.0) (2026-07-31)
+
+
+### Bug Fixes
+
+* prevent resetting form values on reopening TotalUncertaintyModal ([d7a3c85](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/d7a3c85fd471ed97d710b6b54dc003aaea10cfe8))
+* update number formatting in V2BackendCalculationSummary and V2FinalEvaluationPanel ([f128e95](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/f128e95a637f09ed7e1d64d9a465e43213597c07))
+* update uncertainty label in V2FinalEvaluationPanel for clarity ([72a7c25](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/72a7c25e45d4777ab2d955a4c28da8f951d7d9fa))
+
+
+### Features
+
+* add release lock functionality for questionnaire edit on unload ([f6c80c2](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/f6c80c2efa3ddc94bf090cf6ea6f037334277360))
+* enhance logout handling with fallback reload mechanism ([850912d](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/850912d259e4f7782c3475607a6adbabfaa4df9e))
+* enhance schema synchronization for typical works ([413ee8f](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/413ee8fb31bd9ca4d0d46420578e51c3887a173f))
+* enhance typical work handling and add catalog stream mapping ([9878f59](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/9878f59593f3dba31635e5fb22a828eacb7462af))
+* implement questionnaire edit lock functionality ([5012e54](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/5012e54f12221f40cb7b8ef42a1f8e977565e5ad))
+* implement session timeout handling for questionnaire editing ([c9aa9dc](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/c9aa9dc36d2a8213345f739040433b5b1b064d3b))
+* refactor implementation stream handling and introduce v2_stream table ([1c4fa2d](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/1c4fa2d78d27ebae372d6c609277bde165d6b3e2))
+* update schema definitions and enhance deployment channel handling ([97c4642](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/97c464296a57f33a0e37d1ca485704e2d2705541))
+
 # [1.50.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.49.0...v1.50.0) (2026-07-30)
 
 
