@@ -3,9 +3,6 @@ import {
 	NotFoundException,
 	ConflictException,
 	BadRequestException,
-	Inject,
-	forwardRef,
-	Optional,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { In, Repository } from "typeorm";
@@ -13,7 +10,6 @@ import {
 	V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE,
 	isValidImplementationStreamCodeFormat,
 	isV2ImplementationStreamCode,
-	parseImplementationStreamPayload,
 } from "@smart-anketa/api-contract";
 import { V2DictionaryEntity } from "../entities/v2-dictionary.entity";
 import { V2DictionaryItemEntity } from "../entities/v2-dictionary-item.entity";
@@ -40,8 +36,6 @@ import type {
 	CreateV2DictionaryItemDto,
 	UpdateV2DictionaryItemDto,
 } from "../dto";
-import { V2StreamCatalogService } from "./v2-stream-catalog.service";
-
 export type V2DictionaryWithMeta = V2DictionaryEntity & {
 	isDefault: boolean;
 	isInUse: boolean;
@@ -56,9 +50,6 @@ export class V2DictionaryService {
 		private readonly itemRepository: Repository<V2DictionaryItemEntity>,
 		@InjectRepository(V2TemplateVersionEntity)
 		private readonly versionRepository: Repository<V2TemplateVersionEntity>,
-		@Optional()
-		@Inject(forwardRef(() => V2StreamCatalogService))
-		private readonly streamCatalog?: V2StreamCatalogService,
 	) {}
 
 	async findAll(): Promise<V2DictionaryEntity[]> {
@@ -222,9 +213,7 @@ export class V2DictionaryService {
 		dictionary.category = def.category;
 		dictionary.description = def.description;
 
-		const saved = await this.dictionaryRepository.save(dictionary);
-		this.invalidateStreamCatalogIfNeeded(dictionary.code);
-		return saved;
+		return this.dictionaryRepository.save(dictionary);
 	}
 
 	async bulkDelete(ids: string[]): Promise<BulkDeleteV2DictionariesResultDto> {
@@ -373,9 +362,7 @@ export class V2DictionaryService {
 			...normalized,
 		});
 
-		const saved = await this.itemRepository.save(item);
-		this.invalidateStreamCatalogIfNeeded(dictionary.code);
-		return saved;
+		return this.itemRepository.save(item);
 	}
 
 	async updateItem(
@@ -390,22 +377,17 @@ export class V2DictionaryService {
 
 		if (dictCode === V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE) {
 			const nextLabel =
-				typeof dto.label === "string" ? dto.label : item.label;
-			const nextPayload = parseImplementationStreamPayload(
-				dto.payload !== undefined ? dto.payload : item.payload,
-				{ label: nextLabel, code: item.code },
-			);
+				typeof dto.label === "string" ? dto.label.trim() : item.label;
 			Object.assign(item, {
 				...dto,
-				payload: nextPayload,
+				label: nextLabel,
+				payload: { storeCode: true },
 			});
 		} else {
 			Object.assign(item, dto);
 		}
 
-		const saved = await this.itemRepository.save(item);
-		this.invalidateStreamCatalogIfNeeded(dictCode);
-		return saved;
+		return this.itemRepository.save(item);
 	}
 
 	async deleteItem(id: string): Promise<void> {
@@ -418,17 +400,10 @@ export class V2DictionaryService {
 			isV2ImplementationStreamCode(item.code)
 		) {
 			throw new ConflictException(
-				"Заводской стрим нельзя удалить. Можно отключить (Активен = нет).",
+				"Заводской элемент справочника формы нельзя удалить. Можно отключить (Активен = нет).",
 			);
 		}
 		await this.itemRepository.remove(item);
-		this.invalidateStreamCatalogIfNeeded(dictionary?.code ?? "");
-	}
-
-	private invalidateStreamCatalogIfNeeded(dictionaryCode: string): void {
-		if (dictionaryCode === V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE) {
-			this.streamCatalog?.invalidate();
-		}
 	}
 
 	private normalizeStreamItemDto(
@@ -441,18 +416,18 @@ export class V2DictionaryService {
 		const code = dto.code.trim().toLowerCase();
 		if (!isValidImplementationStreamCodeFormat(code)) {
 			throw new BadRequestException(
-				"Код стрима: 1–6 символов [a-z0-9] (например rb, kmbkcb)",
+				"Код: 1–6 символов [a-z0-9] (например rb, kmbkcb)",
 			);
 		}
 		const label = dto.label.trim();
 		if (!label) {
-			throw new BadRequestException("Подпись стрима обязательна");
+			throw new BadRequestException("Подпись обязательна");
 		}
 		return {
 			...dto,
 			code,
 			label,
-			payload: parseImplementationStreamPayload(dto.payload, { label, code }),
+			payload: { storeCode: true },
 		};
 	}
 

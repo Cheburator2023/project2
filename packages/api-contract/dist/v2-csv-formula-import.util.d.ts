@@ -100,14 +100,17 @@ export declare function parseCsvLaborCoefficients(formulaRaw: string, archCompon
 export declare function parseCsvFormulaImportRows(csvText: string): CsvFormulaImportRow[];
 export declare function buildCatalogMatchKey(row: Pick<CsvFormulaImportRow, "stream" | "component" | "stage" | "name">): string;
 export declare function normalizeParamLabel(label: string): string;
+/** Триггер «Создание модельного сервиса» = arch-count modelService ≥ 1, не param. */
+export declare function isCsvModelServiceCreateTrigger(paramName: string): boolean;
+export declare function mapCsvControlTypeValue(raw: string): string;
 export declare function resolveCsvParamCode(label: string, candidates: CsvFormulaParamCandidate[], overrides?: Record<string, string>): string | null;
 export declare function extractFormulaCoreFromCsvText(formulaRaw: string): {
     core: string;
     roundingMode: CsvFormulaRoundingMode;
     roundingStep: number | null;
 } | null;
-export declare function buildFormulaTextFromCsvCore(core: string, resolveParamCode: (label: string) => string | null): Pick<CsvFormulaBuildResult, "formulaText" | "unmatchedParams" | "skippedSpecial">;
-export declare function buildFormulaFromCsvRow(row: Pick<CsvFormulaImportRow, "formulaRaw" | "laborParams">, candidates: CsvFormulaParamCandidate[], overrides?: Record<string, string>): CsvFormulaBuildResult | null;
+export declare function buildFormulaTextFromCsvCore(core: string, resolveParamCode: (label: string) => string | null, preferLaborLabels?: ReadonlySet<string>): Pick<CsvFormulaBuildResult, "formulaText" | "unmatchedParams" | "skippedSpecial">;
+export declare function buildFormulaFromCsvRow(row: Pick<CsvFormulaImportRow, "formulaRaw" | "laborParams" | "laborCoefficientsRaw">, candidates: CsvFormulaParamCandidate[], overrides?: Record<string, string>): CsvFormulaBuildResult | null;
 export declare function csvRowToCatalogPatch(row: CsvFormulaImportRow, candidates: CsvFormulaParamCandidate[], overrides?: Record<string, string>): {
     patch: CsvFormulaCatalogPatch | null;
     build: CsvFormulaBuildResult | null;

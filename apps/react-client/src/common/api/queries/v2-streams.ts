@@ -1,21 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-	V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE,
 	buildFactoryImplementationStreamCatalog,
 	normalizeImplementationStreamCatalogEntry,
 	type V2ImplementationStreamCatalogEntry,
 	type V2ImplementationStreamPayload,
 } from "@smart-anketa/api-contract";
 import { apiClient } from "../helpers/apiClient";
-import {
-	useCreateV2DictionaryItem,
-	useDeleteV2DictionaryItem,
-	useUpdateV2DictionaryItem,
-	useV2DictionaryByCode,
-	useV2DictionaryItems,
-} from "./v2-templates";
 
 export type V2StreamCatalogRow = {
+	id: string;
 	code: string;
 	label: string;
 	order: number;
@@ -98,23 +91,15 @@ export function useV2ImplementationStreamCatalog(options?: {
 	};
 }
 
-export function useV2StreamsDictionary() {
-	return useV2DictionaryByCode(V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE);
-}
-
+/** Реестр стримов (таблица v2_stream), включая неактивные. */
 export function useV2StreamsRegistryItems() {
-	const dictionaryQuery = useV2StreamsDictionary();
-	const dictionaryId = dictionaryQuery.data?.id ?? "";
-	const itemsQuery = useV2DictionaryItems(dictionaryId);
+	const query = useV2StreamCatalog({ includeInactive: true });
 	return {
-		dictionary: dictionaryQuery.data,
-		dictionaryId,
-		items: itemsQuery.data ?? [],
-		isLoading: dictionaryQuery.isLoading || itemsQuery.isLoading,
-		isError: dictionaryQuery.isError || itemsQuery.isError,
+		items: query.data ?? [],
+		isLoading: query.isLoading,
+		isError: query.isError,
 		refetch: async () => {
-			await dictionaryQuery.refetch();
-			await itemsQuery.refetch();
+			await query.refetch();
 		},
 	};
 }
@@ -123,10 +108,6 @@ export function useInvalidateV2StreamCatalog() {
 	const queryClient = useQueryClient();
 	return () => {
 		void queryClient.invalidateQueries({ queryKey: STREAMS_QUERY_KEY });
-		void queryClient.invalidateQueries({ queryKey: ["v2-dictionaries"] });
-		void queryClient.invalidateQueries({
-			queryKey: ["v2-dictionaries", "json"],
-		});
 	};
 }
 
@@ -169,33 +150,20 @@ export function buildStreamItemPayload(
 			isUmbrellaStream,
 		},
 	});
-	return (
-		entry?.payload ?? {
-			storeCode: true,
-			dbNames: splitCsv(input.dbNames),
-			legacyLabels: splitCsv(input.legacyLabels),
-			keycloakAliases: splitCsv(input.keycloakAliases),
-			v1Labels: splitCsv(input.v1Labels),
-			isModelStream: isUmbrellaStream ? false : input.isModelStream,
-			isUmbrellaStream,
-		}
-	);
+	if (!entry) {
+		throw new Error("Некорректный код/подпись стрима");
+	}
+	return entry.payload;
 }
 
 export function useCreateV2StreamItem() {
-	const createItem = useCreateV2DictionaryItem();
 	const invalidate = useInvalidateV2StreamCatalog();
 	return useMutation({
-		mutationFn: async ({
-			dictionaryId,
-			input,
-		}: {
-			dictionaryId: string;
-			input: StreamRegistryItemInput;
-		}) =>
-			createItem.mutateAsync({
-				dictionaryId,
-				dto: {
+		mutationFn: async (input: StreamRegistryItemInput) =>
+			apiClient<V2StreamCatalogRow>({
+				url: "/v2/streams",
+				method: "POST",
+				data: {
 					code: input.code.trim().toLowerCase(),
 					label: input.label.trim(),
 					order: input.order,
@@ -208,7 +176,6 @@ export function useCreateV2StreamItem() {
 }
 
 export function useUpdateV2StreamItem() {
-	const updateItem = useUpdateV2DictionaryItem();
 	const invalidate = useInvalidateV2StreamCatalog();
 	return useMutation({
 		mutationFn: async ({
@@ -218,9 +185,10 @@ export function useUpdateV2StreamItem() {
 			itemId: string;
 			input: StreamRegistryItemInput;
 		}) =>
-			updateItem.mutateAsync({
-				itemId,
-				dto: {
+			apiClient<V2StreamCatalogRow>({
+				url: `/v2/streams/${itemId}`,
+				method: "PUT",
+				data: {
 					label: input.label.trim(),
 					order: input.order,
 					isActive: input.isActive,
@@ -232,10 +200,13 @@ export function useUpdateV2StreamItem() {
 }
 
 export function useDeleteV2StreamItem() {
-	const deleteItem = useDeleteV2DictionaryItem();
 	const invalidate = useInvalidateV2StreamCatalog();
 	return useMutation({
-		mutationFn: async (itemId: string) => deleteItem.mutateAsync(itemId),
+		mutationFn: async (itemId: string) =>
+			apiClient<void>({
+				url: `/v2/streams/${itemId}`,
+				method: "DELETE",
+			}),
 		onSuccess: () => invalidate(),
 	});
 }

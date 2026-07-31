@@ -16,9 +16,10 @@ exports.resolveCatalogDbExecutorName = resolveCatalogDbExecutorName;
 exports.buildStreamFilterAliasMap = buildStreamFilterAliasMap;
 exports.catalogCodes = catalogCodes;
 exports.catalogEnumPair = catalogEnumPair;
+exports.buildFactoryAnketaFormStreamDictionaryItems = buildFactoryAnketaFormStreamDictionaryItems;
 /**
- * Каталог стрим-исполнителей (DB-owned): payload items словаря
- * `v2.generalInfo.implementationStream` + resolved DTO для клиента/Nest.
+ * Каталог стрим-исполнителей (таблица `v2_stream` / factory fallback).
+ * Справочник формы `v2.generalInfo.implementationStream` — отдельно (только enum анкеты).
  */
 const v2_implementation_streams_util_1 = require("./v2-implementation-streams.util");
 Object.defineProperty(exports, "V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE", { enumerable: true, get: function () { return v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE; } });
@@ -103,24 +104,26 @@ function buildFactoryImplementationStreamPayload(code) {
     const dbNames = [...(FACTORY_DB_NAMES[code] ?? [])];
     if (label && !dbNames.includes(label))
         dbNames.unshift(label);
+    const isModelStream = v2_model_stream_typical_works_constants_1.V2_MODEL_IMPLEMENTATION_STREAM_CODES.includes(code);
     return {
         storeCode: true,
         fieldPointer: FIELD_POINTER,
         dbNames,
         legacyLabels: [...(FACTORY_LEGACY_LABELS[code] ?? [])],
         keycloakAliases: [...(FACTORY_KEYCLOAK_ALIASES[code] ?? [])],
-        isModelStream: v2_model_stream_typical_works_constants_1.V2_MODEL_IMPLEMENTATION_STREAM_CODES.includes(code),
+        isModelStream,
         isUmbrellaStream: false,
         v1Labels: [...(FACTORY_V1_LABELS[code] ?? [])],
     };
 }
-/** Заводской зонтичный стрим «Модельный стрим» (реестр + soft-sync). */
+/** Заводской зонтичный стрим «Модельный стрим» (реестр / конструктор типовых работ). */
 function buildFactoryModelUmbrellaStreamCatalogEntry() {
     return {
         code: v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_UMBRELLA_CODE,
         label: v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_EXECUTOR,
         order: -1,
-        isActive: true,
+        // Зонтик: в реестре isActive=false; каталог типовых работ резолвится по коду.
+        isActive: false,
         payload: {
             storeCode: true,
             fieldPointer: FIELD_POINTER,
@@ -314,7 +317,7 @@ function catalogCodes(catalog, options) {
         .filter((entry) => includeUmbrella || !entry.payload.isUmbrellaStream)
         .map((entry) => entry.code);
 }
-/** Коды/подписи для enum `implementationStream` в анкете (без зонтичных). */
+/** Коды/подписи из каталога реестра (без зонтичных). Форма анкеты — из словаря. */
 function catalogEnumPair(catalog) {
     const active = catalog
         .filter((entry) => entry.isActive && !entry.payload.isUmbrellaStream)
@@ -324,4 +327,13 @@ function catalogEnumPair(catalog) {
         enums: active.map((entry) => entry.code),
         enumNames: active.map((entry) => entry.label),
     };
+}
+/** Заводские items словаря формы: только 5 модельных стримов (1:1 с select анкеты). */
+function buildFactoryAnketaFormStreamDictionaryItems() {
+    return v2_model_stream_typical_works_constants_1.V2_MODEL_IMPLEMENTATION_STREAM_CODES.map((code, order) => ({
+        code,
+        label: v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM_LABELS[code],
+        order,
+        payload: { storeCode: true },
+    }));
 }

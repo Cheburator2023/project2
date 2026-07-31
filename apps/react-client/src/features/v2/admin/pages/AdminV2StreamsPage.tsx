@@ -25,13 +25,13 @@ import {
 	useUpdateV2StreamItem,
 	useV2StreamsRegistryItems,
 	type StreamRegistryItemInput,
+	type V2StreamCatalogRow,
 } from "@react-client/common/api/queries/v2-streams";
 import { V2AdminButton } from "@react-client/features/v2/admin/atoms/V2AdminButton";
 import { toast } from "@react-client/common/toasts";
 import {
 	isFactoryProtectedStreamCode,
 	parseImplementationStreamPayload,
-	type V2DictionaryItemDto,
 } from "@smart-anketa/api-contract";
 import {
 	agGridCustomMUITheme,
@@ -54,9 +54,7 @@ const GridWrapper = styled(Box)`
 	}
 `;
 
-type StreamRow = V2DictionaryItemDto & {
-	isModelStream: boolean;
-	isUmbrellaStream: boolean;
+type StreamRow = V2StreamCatalogRow & {
 	isFactory: boolean;
 	originLabel: string;
 	activeLabel: string;
@@ -86,7 +84,7 @@ function streamKindLabel(payload: {
 	return "Обычный";
 }
 
-function itemToForm(item: V2DictionaryItemDto): StreamRegistryItemInput {
+function itemToForm(item: V2StreamCatalogRow): StreamRegistryItemInput {
 	const payload = parseImplementationStreamPayload(item.payload, {
 		label: item.label,
 		code: item.code,
@@ -108,15 +106,14 @@ function itemToForm(item: V2DictionaryItemDto): StreamRegistryItemInput {
 export function AdminV2StreamsPage() {
 	const { mode } = useColorScheme();
 	const gridPersistence = useAgGridColumnPersistence("v2.streams.registry");
-	const { dictionary, dictionaryId, items, isLoading, isError } =
-		useV2StreamsRegistryItems();
+	const { items, isLoading, isError } = useV2StreamsRegistryItems();
 
 	const createStream = useCreateV2StreamItem();
 	const updateStream = useUpdateV2StreamItem();
 	const deleteStream = useDeleteV2StreamItem();
 
 	const [dialogOpen, setDialogOpen] = useState(false);
-	const [editing, setEditing] = useState<V2DictionaryItemDto | null>(null);
+	const [editing, setEditing] = useState<V2StreamCatalogRow | null>(null);
 	const [form, setForm] = useState<StreamRegistryItemInput>(emptyForm);
 
 	const rows: StreamRow[] = useMemo(
@@ -166,7 +163,7 @@ export function AdminV2StreamsPage() {
 				headerName: "В списках",
 				width: 110,
 				headerTooltip:
-					"Да — стрим показывается в конструкторе, логике и форме анкеты. Нет — скрыт из новых выборов. Зонтичные не попадают в выбор implementationStream анкеты.",
+					"Да — стрим в конструкторе, логике типовых работ и runtime (таблица v2_stream). Справочник формы анкеты — отдельно.",
 			},
 			{
 				field: "dbNamesDisplay",
@@ -189,7 +186,7 @@ export function AdminV2StreamsPage() {
 		setDialogOpen(true);
 	}, [items.length]);
 
-	const openEdit = useCallback((item: V2DictionaryItemDto) => {
+	const openEdit = useCallback((item: V2StreamCatalogRow) => {
 		setEditing(item);
 		setForm(itemToForm(item));
 		setDialogOpen(true);
@@ -202,7 +199,6 @@ export function AdminV2StreamsPage() {
 		Boolean(editing) && isFactoryProtectedStreamCode(editing!.code);
 
 	const save = useCallback(() => {
-		if (!dictionaryId) return;
 		if (editing) {
 			updateStream.mutate(
 				{ itemId: editing.id, input: form },
@@ -219,24 +215,19 @@ export function AdminV2StreamsPage() {
 			);
 			return;
 		}
-		createStream.mutate(
-			{ dictionaryId, input: form },
-			{
-				onSuccess: () => {
-					toast.success(
-						form.isUmbrellaStream
-							? "Зонтичный стрим создан"
-							: "Стрим создан",
-					);
-					setDialogOpen(false);
-				},
-				onError: (err) =>
-					toast.error("Не удалось создать", {
-						description: apiErrorMessage(err),
-					}),
+		createStream.mutate(form, {
+			onSuccess: () => {
+				toast.success(
+					form.isUmbrellaStream ? "Зонтичный стрим создан" : "Стрим создан",
+				);
+				setDialogOpen(false);
 			},
-		);
-	}, [createStream, dictionaryId, editing, form, updateStream]);
+			onError: (err) =>
+				toast.error("Не удалось создать", {
+					description: apiErrorMessage(err),
+				}),
+		});
+	}, [createStream, editing, form, updateStream]);
 
 	const remove = useCallback(() => {
 		if (!editing) return;
@@ -262,10 +253,10 @@ export function AdminV2StreamsPage() {
 				<Flex alignItems="center" gap={12} flexGrow={1}>
 					<Typography variant="h6">Реестр стримов</Typography>
 					<Typography variant="body2" color="text.secondary">
-						{dictionary?.code ?? "v2.generalInfo.implementationStream"}
+						таблица v2_stream
 					</Typography>
 					<Flex flexGrow={1} />
-					<V2AdminButton onClick={openCreate} disabled={!dictionaryId || pending}>
+					<V2AdminButton onClick={openCreate} disabled={pending}>
 						Добавить стрим
 					</V2AdminButton>
 				</Flex>
@@ -274,21 +265,13 @@ export function AdminV2StreamsPage() {
 			<Card padding="12px" height="100%" overflow="hidden">
 				<Flex flexDirection="column" gap={8} height="100%" minHeight="0">
 					<Typography variant="body2" color="text.secondary">
-						Стримы для анкеты, конструктора и типовых работ.{" "}
-						<strong>Зонтичный</strong> — общий каталог типовых работ на группу
-						дочерних (заводской пример: «Модельный стрим» / код{" "}
-						<code>mdls</code>). <strong>Дочерний модельный</strong> — входит в
-						этот зонтик. <strong>Из поставки</strong> — системные (удалить
-						нельзя). <strong>Добавлен вручную</strong> — ваши, можно удалять.
+						Каталог для конструктора, runtime и фильтров. Поле анкеты
+						«Стрим-исполнитель» берётся из отдельного справочника формы (только
+						то, что там активно). <strong>Зонтичный</strong> — общий каталог
+						типовых работ (заводской <code>mdls</code>).
 					</Typography>
 					{isError ? (
-						<Alert severity="error">Не удалось загрузить справочник стримов</Alert>
-					) : null}
-					{!isLoading && !dictionaryId ? (
-						<Alert severity="warning">
-							Справочник implementationStream ещё не создан. Перезапустите
-							сервер (factory seed) или создайте его в «Справочниках».
-						</Alert>
+						<Alert severity="error">Не удалось загрузить реестр стримов</Alert>
 					) : null}
 					<GridWrapper>
 						<AgGridReact<StreamRow>
@@ -346,7 +329,7 @@ export function AdminV2StreamsPage() {
 						{editingIsFactory ? (
 							<Typography variant="body2" color="text.secondary">
 								Заводской стрим нельзя удалить. Можно изменить подпись,
-								метаданные или отключить (Активен = нет).
+								метаданные или отключить (В списках = нет).
 							</Typography>
 						) : null}
 						<TextField
@@ -441,7 +424,7 @@ export function AdminV2StreamsPage() {
 									}
 								/>
 							}
-							label="Активен"
+							label="В списках (конструктор / runtime)"
 						/>
 						<FormControlLabel
 							control={
@@ -461,7 +444,7 @@ export function AdminV2StreamsPage() {
 						/>
 						<Typography variant="caption" color="text.secondary">
 							Зонтик — общий каталог типовых работ для нескольких дочерних
-							стримов. Не выбирается в поле implementationStream анкеты.
+							стримов.
 						</Typography>
 						<FormControlLabel
 							control={
@@ -481,10 +464,6 @@ export function AdminV2StreamsPage() {
 							}
 							label="Дочерний модельный стрим"
 						/>
-						<Typography variant="caption" color="text.secondary">
-							Дочерний — входит в зонтик «Модельный стрим» (общий каталог 10
-							типовых работ). Нельзя совмещать с флагом зонтика.
-						</Typography>
 					</Flex>
 				</DialogContent>
 				<DialogActions>
@@ -498,12 +477,7 @@ export function AdminV2StreamsPage() {
 					</Button>
 					<Button
 						variant="contained"
-						disabled={
-							pending ||
-							!form.code.trim() ||
-							!form.label.trim() ||
-							(!editing && !dictionaryId)
-						}
+						disabled={pending || !form.code.trim() || !form.label.trim()}
 						onClick={save}
 					>
 						Сохранить

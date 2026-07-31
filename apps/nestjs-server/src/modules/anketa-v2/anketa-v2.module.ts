@@ -54,6 +54,7 @@ import { V2KeycloakRoleSyncService } from "./services/v2-keycloak-role-sync.serv
 import { V2RuntimeSettingsEntity } from "./entities/v2-runtime-settings.entity";
 import { V2RuntimeSettingsService } from "./services/v2-runtime-settings.service";
 import { V2RuntimeSettingsController } from "./controllers/v2-runtime-settings.controller";
+import { V2StreamEntity } from "./entities/v2-stream.entity";
 import { V2StreamCatalogController } from "./controllers/v2-stream-catalog.controller";
 import { V2StreamCatalogService } from "./services/v2-stream-catalog.service";
 
@@ -65,6 +66,7 @@ import { V2StreamCatalogService } from "./services/v2-stream-catalog.service";
 			V2TemplateAuditEntity,
 			V2DictionaryEntity,
 			V2DictionaryItemEntity,
+			V2StreamEntity,
 			V2QuestionnaireEntity,
 			V2QuestionnaireCommentEntity,
 			V2QuestionnaireEditLockEntity,

@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { V2_IMPLEMENTATION_STREAM } from "./v2-implementation-streams.util";
 import {
+	buildFactoryAnketaFormStreamDictionaryItems,
 	buildFactoryImplementationStreamCatalog,
 	buildStreamFilterAliasMap,
+	catalogEnumPair,
 	findImplementationStreamCatalogEntry,
 	isValidImplementationStreamCodeFormat,
 	parseImplementationStreamPayload,
@@ -10,7 +12,10 @@ import {
 	resolveCatalogEntryScopeStreams,
 	resolveModelStreamCatalogScopeFromEntries,
 } from "./v2-implementation-stream-catalog.util";
-import { V2_MODEL_STREAM_EXECUTOR } from "./v2-model-stream-typical-works.constants";
+import {
+	V2_MODEL_IMPLEMENTATION_STREAM_CODES,
+	V2_MODEL_STREAM_EXECUTOR,
+} from "./v2-model-stream-typical-works.constants";
 
 describe("v2-implementation-stream-catalog.util", () => {
 	it("builds factory catalog with model flags, umbrella and dbNames", () => {
@@ -19,6 +24,7 @@ describe("v2-implementation-stream-catalog.util", () => {
 		const umbrella = catalog.find((entry) => entry.payload.isUmbrellaStream);
 		expect(umbrella?.code).toBe("mdls");
 		expect(umbrella?.label).toBe(V2_MODEL_STREAM_EXECUTOR);
+		expect(umbrella?.isActive).toBe(false);
 		expect(umbrella?.payload.isModelStream).toBe(false);
 		const kmb = catalog.find(
 			(entry) => entry.code === V2_IMPLEMENTATION_STREAM.KMBKCB,
@@ -33,6 +39,22 @@ describe("v2-implementation-stream-catalog.util", () => {
 			(entry) => entry.code === V2_IMPLEMENTATION_STREAM.IDSRC,
 		);
 		expect(idsrc?.payload.isModelStream).toBe(false);
+		expect(idsrc?.isActive).toBe(true);
+	});
+
+	it("form dictionary seed has only five model streams", () => {
+		const items = buildFactoryAnketaFormStreamDictionaryItems();
+		expect(items.map((item) => item.code)).toEqual([
+			...V2_MODEL_IMPLEMENTATION_STREAM_CODES,
+		]);
+		expect(items.every((item) => item.payload.storeCode === true)).toBe(true);
+	});
+
+	it("catalog enum pair excludes umbrella and inactive", () => {
+		const { enums } = catalogEnumPair(buildFactoryImplementationStreamCatalog());
+		expect(enums).toContain(V2_IMPLEMENTATION_STREAM.IDSRC);
+		expect(enums).toContain(V2_IMPLEMENTATION_STREAM.RB);
+		expect(enums).not.toContain("mdls");
 	});
 
 	it("parses payload with defaults from label", () => {

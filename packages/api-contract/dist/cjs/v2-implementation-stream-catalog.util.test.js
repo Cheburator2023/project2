@@ -11,6 +11,7 @@ const v2_model_stream_typical_works_constants_1 = require("./v2-model-stream-typ
         const umbrella = catalog.find((entry) => entry.payload.isUmbrellaStream);
         (0, vitest_1.expect)(umbrella?.code).toBe("mdls");
         (0, vitest_1.expect)(umbrella?.label).toBe(v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_EXECUTOR);
+        (0, vitest_1.expect)(umbrella?.isActive).toBe(false);
         (0, vitest_1.expect)(umbrella?.payload.isModelStream).toBe(false);
         const kmb = catalog.find((entry) => entry.code === v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.KMBKCB);
         (0, vitest_1.expect)(kmb?.payload.isModelStream).toBe(true);
@@ -19,6 +20,20 @@ const v2_model_stream_typical_works_constants_1 = require("./v2-model-stream-typ
         (0, vitest_1.expect)(kmb?.payload.keycloakAliases.length).toBeGreaterThan(0);
         const idsrc = catalog.find((entry) => entry.code === v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.IDSRC);
         (0, vitest_1.expect)(idsrc?.payload.isModelStream).toBe(false);
+        (0, vitest_1.expect)(idsrc?.isActive).toBe(true);
+    });
+    (0, vitest_1.it)("form dictionary seed has only five model streams", () => {
+        const items = (0, v2_implementation_stream_catalog_util_1.buildFactoryAnketaFormStreamDictionaryItems)();
+        (0, vitest_1.expect)(items.map((item) => item.code)).toEqual([
+            ...v2_model_stream_typical_works_constants_1.V2_MODEL_IMPLEMENTATION_STREAM_CODES,
+        ]);
+        (0, vitest_1.expect)(items.every((item) => item.payload.storeCode === true)).toBe(true);
+    });
+    (0, vitest_1.it)("catalog enum pair excludes umbrella and inactive", () => {
+        const { enums } = (0, v2_implementation_stream_catalog_util_1.catalogEnumPair)((0, v2_implementation_stream_catalog_util_1.buildFactoryImplementationStreamCatalog)());
+        (0, vitest_1.expect)(enums).toContain(v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.IDSRC);
+        (0, vitest_1.expect)(enums).toContain(v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.RB);
+        (0, vitest_1.expect)(enums).not.toContain("mdls");
     });
     (0, vitest_1.it)("parses payload with defaults from label", () => {
         const payload = (0, v2_implementation_stream_catalog_util_1.parseImplementationStreamPayload)({ isModelStream: true, keycloakAliases: ["Dept A"] }, { label: "Новый стрим" });

@@ -1,10 +1,10 @@
 /**
- * Каталог стрим-исполнителей (DB-owned): payload items словаря
- * `v2.generalInfo.implementationStream` + resolved DTO для клиента/Nest.
+ * Каталог стрим-исполнителей (таблица `v2_stream` / factory fallback).
+ * Справочник формы `v2.generalInfo.implementationStream` — отдельно (только enum анкеты).
  */
 import { V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE, type V2ImplementationStreamCode } from "./v2-implementation-streams.util";
 export { V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE };
-/** Payload элемента справочника implementationStream. */
+/** Payload элемента реестра стримов (`v2_stream`). */
 export type V2ImplementationStreamPayload = {
     storeCode: true;
     fieldPointer?: string;
@@ -21,7 +21,6 @@ export type V2ImplementationStreamPayload = {
     isModelStream: boolean;
     /**
      * Зонтичный / общий стрим: каталог типовых работ на несколько дочерних.
-     * Не выбирается в `generalInfo.implementationStream` анкеты.
      */
     isUmbrellaStream: boolean;
     /** v1 streamExecutor aliases для фильтра реестра. */
@@ -35,7 +34,7 @@ export type V2ImplementationStreamCatalogEntry = {
     payload: V2ImplementationStreamPayload;
 };
 export declare function buildFactoryImplementationStreamPayload(code: V2ImplementationStreamCode): V2ImplementationStreamPayload;
-/** Заводской зонтичный стрим «Модельный стрим» (реестр + soft-sync). */
+/** Заводской зонтичный стрим «Модельный стрим» (реестр / конструктор типовых работ). */
 export declare function buildFactoryModelUmbrellaStreamCatalogEntry(): V2ImplementationStreamCatalogEntry;
 /** Factory entries для seed / soft-sync / fallback до загрузки БД. */
 export declare function buildFactoryImplementationStreamCatalog(): V2ImplementationStreamCatalogEntry[];
@@ -68,8 +67,17 @@ export declare function catalogCodes(catalog: readonly V2ImplementationStreamCat
     activeOnly?: boolean;
     includeUmbrella?: boolean;
 }): string[];
-/** Коды/подписи для enum `implementationStream` в анкете (без зонтичных). */
+/** Коды/подписи из каталога реестра (без зонтичных). Форма анкеты — из словаря. */
 export declare function catalogEnumPair(catalog: readonly V2ImplementationStreamCatalogEntry[]): {
     enums: string[];
     enumNames: string[];
 };
+/** Заводские items словаря формы: только 5 модельных стримов (1:1 с select анкеты). */
+export declare function buildFactoryAnketaFormStreamDictionaryItems(): Array<{
+    code: string;
+    label: string;
+    order: number;
+    payload: {
+        storeCode: true;
+    };
+}>;

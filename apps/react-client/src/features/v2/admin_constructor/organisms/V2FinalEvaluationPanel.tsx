@@ -89,11 +89,7 @@ function formatNum(value: number | null | undefined): string {
 	if (value === null || value === undefined || !Number.isFinite(value)) {
 		return "—";
 	}
-	return Math.abs(value) >= 100
-		? value.toFixed(0)
-		: Number.isInteger(value)
-			? String(value)
-			: value.toFixed(1);
+	return Number.isInteger(value) ? String(value) : value.toFixed(2);
 }
 
 function formatPercent(value: number | null | undefined): string {
