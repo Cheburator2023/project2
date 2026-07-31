@@ -21,8 +21,8 @@ export function V2UncertaintyModalWidget(props: WidgetProps) {
 			justifyContent="space-between"
 			sx={{ width: "100%" }}
 		>
-			<Typography variant="body2" color="text.secondary">
-				Общая неопределенность: {summary}
+			<Typography variant="h6" color="text.secondary">
+				Общая неопределенность: <b>{summary}</b>
 			</Typography>
 			<Box>
 				<Button

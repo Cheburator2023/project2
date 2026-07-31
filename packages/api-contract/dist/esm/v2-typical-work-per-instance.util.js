@@ -4,6 +4,15 @@ import { readFilledArchComponentListRows } from "./v2-typical-works.util";
 import { isFilledTypicalWorkSourceRow } from "./v2-typical-works.util";
 /** Маркер в formData: принудительный count для arch_count_coeff в per-instance режиме. */
 export const V2_PER_INSTANCE_ARCH_COUNT_OVERRIDE_KEY = "__v2PerInstanceArchCountOverride";
+/**
+ * Маркер в formData: сколько экземпляров арх-компонента входит в сумму работы.
+ *
+ * Архкоэф задаёт множитель для всего набора компонентов (2 модели → 1,75 нормы).
+ * Работа на fan-out компоненте повторяется по каждому экземпляру, поэтому на
+ * экземпляр приходится доля `коэф(N) / N` — иначе скидка за объём теряется
+ * и за 2 модели платятся ровно 2 нормы.
+ */
+export const V2_PER_INSTANCE_ARCH_COUNT_SHARE_KEY = "__v2PerInstanceArchCountShare";
 function readRecord(value) {
     return value && typeof value === "object" && !Array.isArray(value)
         ? value
@@ -299,25 +308,43 @@ export function readPerInstanceArchCountOverride(formData, kind) {
         return null;
     return value;
 }
+export function readPerInstanceArchCountShare(formData, kind) {
+    const record = readRecord(formData?.[V2_PER_INSTANCE_ARCH_COUNT_SHARE_KEY]);
+    if (!record)
+        return null;
+    const value = Number(record[kind]);
+    if (!Number.isFinite(value) || value < 1)
+        return null;
+    return value;
+}
 /** formData с принудительным arch_count для kind итерации (=1). */
-export function withPerInstanceArchCountOverride(formData, kind, count = 1) {
+export function withPerInstanceArchCountOverride(formData, kind, count = 1, shareOf) {
     if (!kind)
         return formData;
-    return {
+    const next = {
         ...formData,
         [V2_PER_INSTANCE_ARCH_COUNT_OVERRIDE_KEY]: {
             ...readRecord(formData[V2_PER_INSTANCE_ARCH_COUNT_OVERRIDE_KEY]),
             [kind]: count,
         },
     };
+    if (shareOf != null && Number.isFinite(shareOf) && shareOf >= 1) {
+        next[V2_PER_INSTANCE_ARCH_COUNT_SHARE_KEY] = {
+            ...readRecord(formData[V2_PER_INSTANCE_ARCH_COUNT_SHARE_KEY]),
+            [kind]: shareOf,
+        };
+    }
+    return next;
 }
 /**
  * formData, где массив итерируемого kind содержит только текущий экземпляр —
  * labor deep-lookup не подтягивает соседние экземпляры.
  */
-export function formDataWithSingleArchInstance(formData, kind, instance) {
+export function formDataWithSingleArchInstance(formData, kind, instance, 
+/** Сколько экземпляров входит в сумму — для доли архкоэф на экземпляр. */
+instanceCount) {
     if (!kind || kind === "modelService") {
-        return withPerInstanceArchCountOverride(formData, kind, 1);
+        return withPerInstanceArchCountOverride(formData, kind, 1, instanceCount);
     }
     const detailInfo = { ...readRecord(formData.detailInfo) };
     const generalInfo = { ...readRecord(formData.generalInfo) };
@@ -365,7 +392,7 @@ export function formDataWithSingleArchInstance(formData, kind, instance) {
         generalInfo,
         streamModelControl,
         streamDataSources,
-    }, kind, 1);
+    }, kind, 1, instanceCount);
 }
 /**
  * Подпись для пустого per-instance расчёта (нет заполненных экземпляров арх. компонента).

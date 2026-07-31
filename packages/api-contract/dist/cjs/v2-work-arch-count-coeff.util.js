@@ -427,6 +427,13 @@ function resolveWorkArchComponentCount(formData, kind) {
     }
 }
 function resolveArchCountCoeffFromToken(formData, kind, steps) {
+    // Fan-out по этому же компоненту: работа уже повторяется по каждому
+    // экземпляру, поэтому на экземпляр приходится доля общего множителя.
+    const share = (0, v2_typical_work_per_instance_util_1.readPerInstanceArchCountShare)(formData, kind);
+    if (share != null) {
+        const total = lookupArchCountCoefficient(steps, share);
+        return total == null ? 1 : total / share;
+    }
     const count = resolveWorkArchComponentCount(formData, kind);
     return lookupArchCountCoefficient(steps, count) ?? 1;
 }

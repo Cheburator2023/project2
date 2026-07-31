@@ -4,12 +4,12 @@
     "factoryBundle": true,
     "description": "Заводской снимок каталога типовых работ и методологических параметров. Редактируется в репозитории; не генерируется из внешних CSV.",
     "counts": {
-      "typicalWorks": 155,
-      "typicalWorksWithNorm": 150,
+      "typicalWorks": 152,
+      "typicalWorksWithNorm": 148,
       "streams": 6,
       "components": 6,
       "stages": 20,
-      "typicalWorksWithFormula": 132,
+      "typicalWorksWithFormula": 130,
       "dictionaries": 48
     },
     "streams": [
@@ -523,27 +523,27 @@
           "paramName": "Количество сущностей (исходных таблиц) @ field_Y_K0Hy0e|количество_сущностей_исходных_таблиц",
           "values": [
             {
-              "label": "Точечное(1-4)",
+              "label": "Точечное (1-4)",
               "coefficient": 0.5
             },
             {
-              "label": "Малое(5-9)",
+              "label": "Малое (5-9)",
               "coefficient": 0.75
             },
             {
-              "label": "Среднее(9-15)",
+              "label": "Среднее (9-15)",
               "coefficient": 1
             },
             {
-              "label": "Крупное(15-20)",
+              "label": "Крупное (15-20)",
               "coefficient": 1.25
             },
             {
-              "label": "Большое(20-25)",
+              "label": "Большое (20-25)",
               "coefficient": 1.5
             },
             {
-              "label": "Масштабное(25+)",
+              "label": "Масштабное (25+)",
               "coefficient": 1.75
             },
             {
@@ -581,7 +581,7 @@
           "paramName": "Риск появления дополнительных систем-источников @ field_whHc-OoW|риск_появления_дополнительных_систем_источников",
           "values": [
             {
-              "label": "Есть",
+              "label": "Да",
               "coefficient": 0.75
             },
             {
@@ -695,27 +695,27 @@
           "paramName": "Количество сущностей (исходных таблиц) @ field_Y_K0Hy0e|количество_сущностей_исходных_таблиц",
           "values": [
             {
-              "label": "Точечное(1-4)",
+              "label": "Точечное (1-4)",
               "coefficient": 0.5
             },
             {
-              "label": "Малое(5-9)",
+              "label": "Малое (5-9)",
               "coefficient": 0.75
             },
             {
-              "label": "Среднее(9-15)",
+              "label": "Среднее (9-15)",
               "coefficient": 1
             },
             {
-              "label": "Крупное(15-20)",
+              "label": "Крупное (15-20)",
               "coefficient": 1.25
             },
             {
-              "label": "Большое(20-25)",
+              "label": "Большое (20-25)",
               "coefficient": 1.5
             },
             {
-              "label": "Масштабное(25+)",
+              "label": "Масштабное (25+)",
               "coefficient": 1.75
             },
             {
@@ -753,7 +753,7 @@
           "paramName": "Риск появления дополнительных систем-источников @ field_whHc-OoW|риск_появления_дополнительных_систем_источников",
           "values": [
             {
-              "label": "Есть",
+              "label": "Да",
               "coefficient": 0.75
             },
             {
@@ -797,6 +797,10 @@
             {
               "label": "Нестандартное",
               "coefficient": 1.25
+            },
+            {
+              "label": "Не требуется",
+              "coefficient": 0
             },
             {
               "label": "Неизвестно",
@@ -904,27 +908,27 @@
           "paramName": "Количество сущностей (исходных таблиц) @ field_Y_K0Hy0e|количество_сущностей_исходных_таблиц",
           "values": [
             {
-              "label": "Точечное(1-4)",
+              "label": "Точечное (1-4)",
               "coefficient": 0.5
             },
             {
-              "label": "Малое(5-9)",
+              "label": "Малое (5-9)",
               "coefficient": 0.75
             },
             {
-              "label": "Среднее(9-15)",
+              "label": "Среднее (9-15)",
               "coefficient": 1
             },
             {
-              "label": "Крупное(15-20)",
+              "label": "Крупное (15-20)",
               "coefficient": 1.25
             },
             {
-              "label": "Большое(20-25)",
+              "label": "Большое (20-25)",
               "coefficient": 1.5
             },
             {
-              "label": "Масштабное(25+)",
+              "label": "Масштабное (25+)",
               "coefficient": 1.75
             },
             {
@@ -962,7 +966,7 @@
           "paramName": "Риск появления дополнительных систем-источников @ field_whHc-OoW|риск_появления_дополнительных_систем_источников",
           "values": [
             {
-              "label": "Есть",
+              "label": "Да",
               "coefficient": 0.75
             },
             {
@@ -1095,27 +1099,27 @@
           "paramName": "Количество сущностей (исходных таблиц) @ field_Y_K0Hy0e|количество_сущностей_исходных_таблиц",
           "values": [
             {
-              "label": "Точечное(1-4)",
+              "label": "Точечное (1-4)",
               "coefficient": 0.5
             },
             {
-              "label": "Малое(5-9)",
+              "label": "Малое (5-9)",
               "coefficient": 0.75
             },
             {
-              "label": "Среднее(9-15)",
+              "label": "Среднее (9-15)",
               "coefficient": 1
             },
             {
-              "label": "Крупное(15-20)",
+              "label": "Крупное (15-20)",
               "coefficient": 1.25
             },
             {
-              "label": "Большое(20-25)",
+              "label": "Большое (20-25)",
               "coefficient": 1.5
             },
             {
-              "label": "Масштабное(25+)",
+              "label": "Масштабное (25+)",
               "coefficient": 1.75
             },
             {
@@ -1153,7 +1157,7 @@
           "paramName": "Риск появления дополнительных систем-источников @ field_whHc-OoW|риск_появления_дополнительных_систем_источников",
           "values": [
             {
-              "label": "Есть",
+              "label": "Да",
               "coefficient": 0.75
             },
             {
@@ -1197,6 +1201,10 @@
             {
               "label": "Нестандартное",
               "coefficient": 1.25
+            },
+            {
+              "label": "Не требуется",
+              "coefficient": 0
             },
             {
               "label": "Неизвестно",
@@ -1302,27 +1310,27 @@
           "paramName": "Количество сущностей (исходных таблиц) @ field_Y_K0Hy0e|количество_сущностей_исходных_таблиц",
           "values": [
             {
-              "label": "Точечное(1-4)",
+              "label": "Точечное (1-4)",
               "coefficient": 0.5
             },
             {
-              "label": "Малое(5-9)",
+              "label": "Малое (5-9)",
               "coefficient": 0.75
             },
             {
-              "label": "Среднее(9-15)",
+              "label": "Среднее (9-15)",
               "coefficient": 1
             },
             {
-              "label": "Крупное(15-20)",
+              "label": "Крупное (15-20)",
               "coefficient": 1.25
             },
             {
-              "label": "Большое(20-25)",
+              "label": "Большое (20-25)",
               "coefficient": 1.5
             },
             {
-              "label": "Масштабное(25+)",
+              "label": "Масштабное (25+)",
               "coefficient": 1.75
             },
             {
@@ -1343,6 +1351,10 @@
             {
               "label": "Нестандартное",
               "coefficient": 1.25
+            },
+            {
+              "label": "Не требуется",
+              "coefficient": 0
             },
             {
               "label": "Неизвестно",
@@ -1447,27 +1459,27 @@
           "paramName": "Количество сущностей (исходных таблиц) @ field_Y_K0Hy0e|количество_сущностей_исходных_таблиц",
           "values": [
             {
-              "label": "Точечное(1-4)",
+              "label": "Точечное (1-4)",
               "coefficient": 0.5
             },
             {
-              "label": "Малое(5-9)",
+              "label": "Малое (5-9)",
               "coefficient": 0.75
             },
             {
-              "label": "Среднее(9-15)",
+              "label": "Среднее (9-15)",
               "coefficient": 1
             },
             {
-              "label": "Крупное(15-20)",
+              "label": "Крупное (15-20)",
               "coefficient": 1.25
             },
             {
-              "label": "Большое(20-25)",
+              "label": "Большое (20-25)",
               "coefficient": 1.5
             },
             {
-              "label": "Масштабное(25+)",
+              "label": "Масштабное (25+)",
               "coefficient": 1.75
             },
             {
@@ -1573,27 +1585,27 @@
           "paramName": "Количество сущностей (исходных таблиц) @ field_Y_K0Hy0e|количество_сущностей_исходных_таблиц",
           "values": [
             {
-              "label": "Точечное(1-4)",
+              "label": "Точечное (1-4)",
               "coefficient": 0.5
             },
             {
-              "label": "Малое(5-9)",
+              "label": "Малое (5-9)",
               "coefficient": 0.75
             },
             {
-              "label": "Среднее(9-15)",
+              "label": "Среднее (9-15)",
               "coefficient": 1
             },
             {
-              "label": "Крупное(15-20)",
+              "label": "Крупное (15-20)",
               "coefficient": 1.25
             },
             {
-              "label": "Большое(20-25)",
+              "label": "Большое (20-25)",
               "coefficient": 1.5
             },
             {
-              "label": "Масштабное(25+)",
+              "label": "Масштабное (25+)",
               "coefficient": 1.75
             },
             {
@@ -1675,27 +1687,27 @@
           "paramName": "Количество сущностей (исходных таблиц) @ field_Y_K0Hy0e|количество_сущностей_исходных_таблиц",
           "values": [
             {
-              "label": "Точечное(1-4)",
+              "label": "Точечное (1-4)",
               "coefficient": 0.5
             },
             {
-              "label": "Малое(5-9)",
+              "label": "Малое (5-9)",
               "coefficient": 0.75
             },
             {
-              "label": "Среднее(9-15)",
+              "label": "Среднее (9-15)",
               "coefficient": 1
             },
             {
-              "label": "Крупное(15-20)",
+              "label": "Крупное (15-20)",
               "coefficient": 1.25
             },
             {
-              "label": "Большое(20-25)",
+              "label": "Большое (20-25)",
               "coefficient": 1.5
             },
             {
-              "label": "Масштабное(25+)",
+              "label": "Масштабное (25+)",
               "coefficient": 1.75
             },
             {
@@ -1716,6 +1728,10 @@
             {
               "label": "Нестандартное",
               "coefficient": 1.25
+            },
+            {
+              "label": "Не требуется",
+              "coefficient": 0
             },
             {
               "label": "Неизвестно",
@@ -1906,6 +1922,10 @@
             {
               "label": "Нестандартное",
               "coefficient": 1.25
+            },
+            {
+              "label": "Не требуется",
+              "coefficient": 0
             },
             {
               "label": "Неизвестно",
@@ -2190,6 +2210,10 @@
             {
               "label": "Нестандартное",
               "coefficient": 1.25
+            },
+            {
+              "label": "Не требуется",
+              "coefficient": 0
             },
             {
               "label": "Неизвестно",
@@ -2919,6 +2943,10 @@
               "coefficient": 1.25
             },
             {
+              "label": "Не требуется",
+              "coefficient": 0
+            },
+            {
               "label": "Неизвестно",
               "coefficient": 1
             }
@@ -3095,6 +3123,10 @@
             {
               "label": "Нестандартное",
               "coefficient": 1.25
+            },
+            {
+              "label": "Не требуется",
+              "coefficient": 0
             },
             {
               "label": "Неизвестно",
@@ -3517,6 +3549,10 @@
             {
               "label": "Настройка",
               "coefficient": 0.5
+            },
+            {
+              "label": "Неизвестно",
+              "coefficient": 1
             }
           ],
           "paramCode": "field_yJ51GkCR",
@@ -3672,6 +3708,10 @@
             {
               "label": "Настройка",
               "coefficient": 0.5
+            },
+            {
+              "label": "Неизвестно",
+              "coefficient": 1
             }
           ],
           "paramCode": "field_yJ51GkCR",
@@ -3725,6 +3765,10 @@
             {
               "label": "Нестандартное",
               "coefficient": 1.25
+            },
+            {
+              "label": "Не требуется",
+              "coefficient": 0
             },
             {
               "label": "Неизвестно",
@@ -3845,6 +3889,10 @@
             {
               "label": "Настройка",
               "coefficient": 0.5
+            },
+            {
+              "label": "Неизвестно",
+              "coefficient": 1
             }
           ],
           "paramCode": "field_yJ51GkCR",
@@ -4129,6 +4177,10 @@
             {
               "label": "Настройка",
               "coefficient": 0.5
+            },
+            {
+              "label": "Неизвестно",
+              "coefficient": 1
             }
           ],
           "paramCode": "field_yJ51GkCR",
@@ -4207,6 +4259,10 @@
             {
               "label": "Настройка",
               "coefficient": 0.5
+            },
+            {
+              "label": "Неизвестно",
+              "coefficient": 1
             }
           ],
           "paramCode": "field_yJ51GkCR",
@@ -4361,6 +4417,10 @@
             {
               "label": "Настройка",
               "coefficient": 0.5
+            },
+            {
+              "label": "Неизвестно",
+              "coefficient": 1
             }
           ],
           "paramCode": "field_yJ51GkCR",
@@ -4414,6 +4474,10 @@
             {
               "label": "Нестандартное",
               "coefficient": 1.25
+            },
+            {
+              "label": "Не требуется",
+              "coefficient": 0
             },
             {
               "label": "Неизвестно",
@@ -4513,6 +4577,10 @@
             {
               "label": "Настройка",
               "coefficient": 0.5
+            },
+            {
+              "label": "Неизвестно",
+              "coefficient": 1
             }
           ],
           "paramCode": "field_yJ51GkCR",
@@ -4627,6 +4695,10 @@
             {
               "label": "Настройка",
               "coefficient": 0.5
+            },
+            {
+              "label": "Неизвестно",
+              "coefficient": 1
             }
           ],
           "paramCode": "field_yJ51GkCR",
@@ -4739,6 +4811,10 @@
             {
               "label": "Настройка",
               "coefficient": 0.5
+            },
+            {
+              "label": "Неизвестно",
+              "coefficient": 1
             }
           ],
           "paramCode": "field_yJ51GkCR",
@@ -5141,45 +5217,47 @@
         "Необходимость изучения регламентов Банка",
         "Необходимо пересогласование артефакта"
       ],
-      "formulaText": "N * коэф(объем_изменений_в_тис) * коэф(необходимость_изучения_регламентов_банка) * коэф(необходимо_пересогласование_артефакта)",
+      "formulaText": "N × коэф(field_FLO128j-) × коэф(field_P1nnb5h5) × коэф(field_fWcU13WA)",
       "roundingMode": "CEIL",
       "roundingStep": 0.1,
       "laborCoefficients": [
         {
-          "paramName": "Объем изменений в ТИС",
+          "paramName": "Объем изменений в ТИС @ field_FLO128j-|объем_изменений_в_тис",
           "values": [
             {
-              "label": "Точечное(1-4)",
+              "label": "Точечное (1-4)",
               "coefficient": 0.5
             },
             {
-              "label": "Малое(5-9)",
+              "label": "Малое (5-9)",
               "coefficient": 0.75
             },
             {
-              "label": "Среднее(9-15)",
+              "label": "Среднее (9-15)",
               "coefficient": 1
             },
             {
-              "label": "Крупное(15-20)",
+              "label": "Крупное (15-20)",
               "coefficient": 1.25
             },
             {
-              "label": "Большое(20-25)",
+              "label": "Большое (20-25)",
               "coefficient": 1.5
             },
             {
-              "label": "Масштабное(25+)",
+              "label": "Масштабное (25+)",
               "coefficient": 1.75
             },
             {
               "label": "Неизвестно",
               "coefficient": 1.25
             }
-          ]
+          ],
+          "paramCode": "field_FLO128j-",
+          "schemaFieldUid": "field_6b7beaa3-26db-4f1f-bb67-9575205a76ef"
         },
         {
-          "paramName": "Необходимость изучения регламентов Банка",
+          "paramName": "Необходимость изучения регламентов Банка @ field_P1nnb5h5|необходимость_изучения_регламентов_банка",
           "values": [
             {
               "label": "Да",
@@ -5193,10 +5271,12 @@
               "label": "Неизвестно",
               "coefficient": 1
             }
-          ]
+          ],
+          "paramCode": "field_P1nnb5h5",
+          "schemaFieldUid": "field_704369e7-b3c4-47c9-88de-8125a21608db"
         },
         {
-          "paramName": "Необходимо пересогласование артефакта",
+          "paramName": "Необходимо пересогласование артефакта @ field_fWcU13WA|необходимо_пересогласование_артефакта",
           "values": [
             {
               "label": "Да",
@@ -5210,7 +5290,9 @@
               "label": "Неизвестно",
               "coefficient": 1
             }
-          ]
+          ],
+          "paramCode": "field_fWcU13WA",
+          "schemaFieldUid": "field_5bed7080-82fd-4207-a383-07a570e89113"
         }
       ],
       "triggerRules": [
@@ -5250,45 +5332,47 @@
         "Необходимость изучения регламентов Банка",
         "Необходимо пересогласование артефакта"
       ],
-      "formulaText": "N * коэф(объем_изменений_в_тис) * коэф(необходимость_изучения_регламентов_банка) * коэф(необходимо_пересогласование_артефакта)",
+      "formulaText": "N × коэф(field_FLO128j-) × коэф(field_P1nnb5h5) × коэф(field_fWcU13WA)",
       "roundingMode": "CEIL",
       "roundingStep": 0.1,
       "laborCoefficients": [
         {
-          "paramName": "Объем изменений в ТИС",
+          "paramName": "Объем изменений в ТИС @ field_FLO128j-|объем_изменений_в_тис",
           "values": [
             {
-              "label": "Точечное(1-4)",
+              "label": "Точечное (1-4)",
               "coefficient": 0.5
             },
             {
-              "label": "Малое(5-9)",
+              "label": "Малое (5-9)",
               "coefficient": 0.75
             },
             {
-              "label": "Среднее(9-15)",
+              "label": "Среднее (9-15)",
               "coefficient": 1
             },
             {
-              "label": "Крупное(15-20)",
+              "label": "Крупное (15-20)",
               "coefficient": 1.25
             },
             {
-              "label": "Большое(20-25)",
+              "label": "Большое (20-25)",
               "coefficient": 1.5
             },
             {
-              "label": "Масштабное(25+)",
+              "label": "Масштабное (25+)",
               "coefficient": 1.75
             },
             {
               "label": "Неизвестно",
               "coefficient": 1.25
             }
-          ]
+          ],
+          "paramCode": "field_FLO128j-",
+          "schemaFieldUid": "field_6b7beaa3-26db-4f1f-bb67-9575205a76ef"
         },
         {
-          "paramName": "Необходимость изучения регламентов Банка",
+          "paramName": "Необходимость изучения регламентов Банка @ field_P1nnb5h5|необходимость_изучения_регламентов_банка",
           "values": [
             {
               "label": "Да",
@@ -5302,10 +5386,12 @@
               "label": "Неизвестно",
               "coefficient": 1
             }
-          ]
+          ],
+          "paramCode": "field_P1nnb5h5",
+          "schemaFieldUid": "field_704369e7-b3c4-47c9-88de-8125a21608db"
         },
         {
-          "paramName": "Необходимо пересогласование артефакта",
+          "paramName": "Необходимо пересогласование артефакта @ field_fWcU13WA|необходимо_пересогласование_артефакта",
           "values": [
             {
               "label": "Да",
@@ -5319,7 +5405,9 @@
               "label": "Неизвестно",
               "coefficient": 1
             }
-          ]
+          ],
+          "paramCode": "field_fWcU13WA",
+          "schemaFieldUid": "field_5bed7080-82fd-4207-a383-07a570e89113"
         }
       ],
       "triggerRules": [
@@ -5354,45 +5442,47 @@
         "Необходимость изучения регламентов Банка",
         "Необходимо пересогласование артефакта"
       ],
-      "formulaText": "N * коэф(объем_изменений_в_тис) * коэф(необходимость_изучения_регламентов_банка) * коэф(необходимо_пересогласование_артефакта)",
+      "formulaText": "N × коэф(field_FLO128j-) × коэф(field_P1nnb5h5) × коэф(field_fWcU13WA)",
       "roundingMode": "CEIL",
       "roundingStep": 0.1,
       "laborCoefficients": [
         {
-          "paramName": "Объем изменений в ТИС",
+          "paramName": "Объем изменений в ТИС @ field_FLO128j-|объем_изменений_в_тис",
           "values": [
             {
-              "label": "Точечное(1-4)",
+              "label": "Точечное (1-4)",
               "coefficient": 0.5
             },
             {
-              "label": "Малое(5-9)",
+              "label": "Малое (5-9)",
               "coefficient": 0.75
             },
             {
-              "label": "Среднее(9-15)",
+              "label": "Среднее (9-15)",
               "coefficient": 1
             },
             {
-              "label": "Крупное(15-20)",
+              "label": "Крупное (15-20)",
               "coefficient": 1.25
             },
             {
-              "label": "Большое(20-25)",
+              "label": "Большое (20-25)",
               "coefficient": 1.5
             },
             {
-              "label": "Масштабное(25+)",
+              "label": "Масштабное (25+)",
               "coefficient": 1.75
             },
             {
               "label": "Неизвестно",
               "coefficient": 1.25
             }
-          ]
+          ],
+          "paramCode": "field_FLO128j-",
+          "schemaFieldUid": "field_6b7beaa3-26db-4f1f-bb67-9575205a76ef"
         },
         {
-          "paramName": "Необходимость изучения регламентов Банка",
+          "paramName": "Необходимость изучения регламентов Банка @ field_P1nnb5h5|необходимость_изучения_регламентов_банка",
           "values": [
             {
               "label": "Да",
@@ -5406,10 +5496,12 @@
               "label": "Неизвестно",
               "coefficient": 1
             }
-          ]
+          ],
+          "paramCode": "field_P1nnb5h5",
+          "schemaFieldUid": "field_704369e7-b3c4-47c9-88de-8125a21608db"
         },
         {
-          "paramName": "Необходимо пересогласование артефакта",
+          "paramName": "Необходимо пересогласование артефакта @ field_fWcU13WA|необходимо_пересогласование_артефакта",
           "values": [
             {
               "label": "Да",
@@ -5423,7 +5515,9 @@
               "label": "Неизвестно",
               "coefficient": 1
             }
-          ]
+          ],
+          "paramCode": "field_fWcU13WA",
+          "schemaFieldUid": "field_5bed7080-82fd-4207-a383-07a570e89113"
         }
       ],
       "triggerRules": [
@@ -5458,45 +5552,47 @@
         "Необходимость изучения регламентов Банка",
         "Необходимо пересогласование артефакта"
       ],
-      "formulaText": "N * коэф(объем_изменений_в_тис) * коэф(необходимость_изучения_регламентов_банка) * коэф(необходимо_пересогласование_артефакта)",
+      "formulaText": "N × коэф(field_FLO128j-) × коэф(field_P1nnb5h5) × коэф(field_fWcU13WA)",
       "roundingMode": "CEIL",
       "roundingStep": 0.1,
       "laborCoefficients": [
         {
-          "paramName": "Объем изменений в ТИС",
+          "paramName": "Объем изменений в ТИС @ field_FLO128j-|объем_изменений_в_тис",
           "values": [
             {
-              "label": "Точечное(1-4)",
+              "label": "Точечное (1-4)",
               "coefficient": 0.5
             },
             {
-              "label": "Малое(5-9)",
+              "label": "Малое (5-9)",
               "coefficient": 0.75
             },
             {
-              "label": "Среднее(9-15)",
+              "label": "Среднее (9-15)",
               "coefficient": 1
             },
             {
-              "label": "Крупное(15-20)",
+              "label": "Крупное (15-20)",
               "coefficient": 1.25
             },
             {
-              "label": "Большое(20-25)",
+              "label": "Большое (20-25)",
               "coefficient": 1.5
             },
             {
-              "label": "Масштабное(25+)",
+              "label": "Масштабное (25+)",
               "coefficient": 1.75
             },
             {
               "label": "Неизвестно",
               "coefficient": 1.25
             }
-          ]
+          ],
+          "paramCode": "field_FLO128j-",
+          "schemaFieldUid": "field_6b7beaa3-26db-4f1f-bb67-9575205a76ef"
         },
         {
-          "paramName": "Необходимость изучения регламентов Банка",
+          "paramName": "Необходимость изучения регламентов Банка @ field_P1nnb5h5|необходимость_изучения_регламентов_банка",
           "values": [
             {
               "label": "Да",
@@ -5510,10 +5606,12 @@
               "label": "Неизвестно",
               "coefficient": 1
             }
-          ]
+          ],
+          "paramCode": "field_P1nnb5h5",
+          "schemaFieldUid": "field_704369e7-b3c4-47c9-88de-8125a21608db"
         },
         {
-          "paramName": "Необходимо пересогласование артефакта",
+          "paramName": "Необходимо пересогласование артефакта @ field_fWcU13WA|необходимо_пересогласование_артефакта",
           "values": [
             {
               "label": "Да",
@@ -5527,7 +5625,9 @@
               "label": "Неизвестно",
               "coefficient": 1
             }
-          ]
+          ],
+          "paramCode": "field_fWcU13WA",
+          "schemaFieldUid": "field_5bed7080-82fd-4207-a383-07a570e89113"
         }
       ],
       "triggerRules": [
@@ -5562,45 +5662,47 @@
         "Необходимость изучения регламентов Банка",
         "Необходимо пересогласование артефакта"
       ],
-      "formulaText": "N * коэф(объем_изменений_в_тис) * коэф(необходимость_изучения_регламентов_банка) * коэф(необходимо_пересогласование_артефакта)",
+      "formulaText": "N × коэф(field_FLO128j-) × коэф(field_P1nnb5h5) × коэф(field_fWcU13WA)",
       "roundingMode": "CEIL",
       "roundingStep": 0.1,
       "laborCoefficients": [
         {
-          "paramName": "Объем изменений в ТИС",
+          "paramName": "Объем изменений в ТИС @ field_FLO128j-|объем_изменений_в_тис",
           "values": [
             {
-              "label": "Точечное(1-4)",
+              "label": "Точечное (1-4)",
               "coefficient": 0.5
             },
             {
-              "label": "Малое(5-9)",
+              "label": "Малое (5-9)",
               "coefficient": 0.75
             },
             {
-              "label": "Среднее(9-15)",
+              "label": "Среднее (9-15)",
               "coefficient": 1
             },
             {
-              "label": "Крупное(15-20)",
+              "label": "Крупное (15-20)",
               "coefficient": 1.25
             },
             {
-              "label": "Большое(20-25)",
+              "label": "Большое (20-25)",
               "coefficient": 1.5
             },
             {
-              "label": "Масштабное(25+)",
+              "label": "Масштабное (25+)",
               "coefficient": 1.75
             },
             {
               "label": "Неизвестно",
               "coefficient": 1.25
             }
-          ]
+          ],
+          "paramCode": "field_FLO128j-",
+          "schemaFieldUid": "field_6b7beaa3-26db-4f1f-bb67-9575205a76ef"
         },
         {
-          "paramName": "Необходимость изучения регламентов Банка",
+          "paramName": "Необходимость изучения регламентов Банка @ field_P1nnb5h5|необходимость_изучения_регламентов_банка",
           "values": [
             {
               "label": "Да",
@@ -5614,10 +5716,12 @@
               "label": "Неизвестно",
               "coefficient": 1
             }
-          ]
+          ],
+          "paramCode": "field_P1nnb5h5",
+          "schemaFieldUid": "field_704369e7-b3c4-47c9-88de-8125a21608db"
         },
         {
-          "paramName": "Необходимо пересогласование артефакта",
+          "paramName": "Необходимо пересогласование артефакта @ field_fWcU13WA|необходимо_пересогласование_артефакта",
           "values": [
             {
               "label": "Да",
@@ -5631,7 +5735,9 @@
               "label": "Неизвестно",
               "coefficient": 1
             }
-          ]
+          ],
+          "paramCode": "field_fWcU13WA",
+          "schemaFieldUid": "field_5bed7080-82fd-4207-a383-07a570e89113"
         }
       ],
       "triggerRules": [
@@ -5696,6 +5802,10 @@
             {
               "label": "Настройка",
               "coefficient": 0.5
+            },
+            {
+              "label": "Неизвестно",
+              "coefficient": 1
             }
           ],
           "paramCode": "workType",
@@ -5869,32 +5979,32 @@
           "kind": "by_value",
           "values": [
             {
-              "label": "Точечное(1-4)",
+              "label": "Точечное (1-4)",
               "code": "точечное_1_4",
               "coefficient": 0.5
             },
             {
-              "label": "Малое(5-9)",
+              "label": "Малое (5-9)",
               "code": "малое_5_9",
               "coefficient": 0.75
             },
             {
-              "label": "Среднее(9-15)",
+              "label": "Среднее (9-15)",
               "code": "среднее_9_15",
               "coefficient": 1
             },
             {
-              "label": "Крупное(15-20)",
+              "label": "Крупное (15-20)",
               "code": "крупное_15_20",
               "coefficient": 1.25
             },
             {
-              "label": "Большое(20-25)",
+              "label": "Большое (20-25)",
               "code": "большое_20_25",
               "coefficient": 1.5
             },
             {
-              "label": "Масштабное(25+)",
+              "label": "Масштабное (25+)",
               "code": "масштабное_25",
               "coefficient": 1.75
             },
@@ -6043,32 +6153,32 @@
           "kind": "by_value",
           "values": [
             {
-              "label": "Точечное(1-4)",
+              "label": "Точечное (1-4)",
               "code": "точечное_1_4",
               "coefficient": 0.5
             },
             {
-              "label": "Малое(5-9)",
+              "label": "Малое (5-9)",
               "code": "малое_5_9",
               "coefficient": 0.75
             },
             {
-              "label": "Среднее(9-15)",
+              "label": "Среднее (9-15)",
               "code": "среднее_9_15",
               "coefficient": 1
             },
             {
-              "label": "Крупное(15-20)",
+              "label": "Крупное (15-20)",
               "code": "крупное_15_20",
               "coefficient": 1.25
             },
             {
-              "label": "Большое(20-25)",
+              "label": "Большое (20-25)",
               "code": "большое_20_25",
               "coefficient": 1.5
             },
             {
-              "label": "Масштабное(25+)",
+              "label": "Масштабное (25+)",
               "code": "масштабное_25",
               "coefficient": 1.75
             },
@@ -6177,6 +6287,10 @@
             {
               "label": "Настройка",
               "coefficient": 0.5
+            },
+            {
+              "label": "Неизвестно",
+              "coefficient": 1
             }
           ],
           "paramCode": "workType",
@@ -6291,6 +6405,10 @@
             {
               "label": "Настройка",
               "coefficient": 0.5
+            },
+            {
+              "label": "Неизвестно",
+              "coefficient": 1
             }
           ],
           "paramCode": "workType",
@@ -6405,6 +6523,10 @@
             {
               "label": "Настройка",
               "coefficient": 0.5
+            },
+            {
+              "label": "Неизвестно",
+              "coefficient": 1
             }
           ],
           "paramCode": "workType",
@@ -6519,6 +6641,10 @@
             {
               "label": "Настройка",
               "coefficient": 0.5
+            },
+            {
+              "label": "Неизвестно",
+              "coefficient": 1
             }
           ],
           "paramCode": "workType",
@@ -6633,6 +6759,10 @@
             {
               "label": "Настройка",
               "coefficient": 0.5
+            },
+            {
+              "label": "Неизвестно",
+              "coefficient": 1
             }
           ],
           "paramCode": "workType",
@@ -6747,6 +6877,10 @@
             {
               "label": "Настройка",
               "coefficient": 0.5
+            },
+            {
+              "label": "Неизвестно",
+              "coefficient": 1
             }
           ],
           "paramCode": "workType",
@@ -6861,6 +6995,10 @@
             {
               "label": "Настройка",
               "coefficient": 0.5
+            },
+            {
+              "label": "Неизвестно",
+              "coefficient": 1
             }
           ],
           "paramCode": "workType",
@@ -6975,6 +7113,10 @@
             {
               "label": "Настройка",
               "coefficient": 0.5
+            },
+            {
+              "label": "Неизвестно",
+              "coefficient": 1
             }
           ],
           "paramCode": "workType",
@@ -7089,6 +7231,10 @@
             {
               "label": "Настройка",
               "coefficient": 0.5
+            },
+            {
+              "label": "Неизвестно",
+              "coefficient": 1
             }
           ],
           "paramCode": "workType",
@@ -7203,6 +7349,10 @@
             {
               "label": "Настройка",
               "coefficient": 0.5
+            },
+            {
+              "label": "Неизвестно",
+              "coefficient": 1
             }
           ],
           "paramCode": "workType",
@@ -7319,6 +7469,10 @@
             {
               "label": "Настройка",
               "coefficient": 0.5
+            },
+            {
+              "label": "Неизвестно",
+              "coefficient": 1
             }
           ],
           "paramCode": "workType",
@@ -7476,6 +7630,10 @@
             {
               "label": "Настройка",
               "coefficient": 0.5
+            },
+            {
+              "label": "Неизвестно",
+              "coefficient": 1
             }
           ],
           "paramCode": "workType",
@@ -7614,6 +7772,10 @@
             {
               "label": "Настройка",
               "coefficient": 0.5
+            },
+            {
+              "label": "Неизвестно",
+              "coefficient": 1
             }
           ],
           "paramCode": "workType",
@@ -7708,8 +7870,8 @@
       "stream": "mdlctl",
       "component": "Модельный сервис",
       "stage": "",
-      "name": "1. Качество модельных данных [КД]",
-      "originalName": "1. Качество модельных данных [КД]",
+      "name": "Реализация проверок качества модельных данных",
+      "originalName": "Реализация проверок качества модельных данных",
       "workType": "Типовая работа",
       "norm": 10,
       "normRaw": "10",
@@ -7865,8 +8027,8 @@
       "stream": "mdlctl",
       "component": "Модельный сервис",
       "stage": "",
-      "name": "2. Технический контроль [ТМ]",
-      "originalName": "2. Технический контроль [ТМ]",
+      "name": "Реализация технического контроля",
+      "originalName": "Реализация технического контроля",
       "workType": "Типовая работа",
       "norm": 1,
       "normRaw": "1",
@@ -8022,8 +8184,8 @@
       "stream": "mdlctl",
       "component": "Модельный сервис",
       "stage": "",
-      "name": "3. Оперативный контроль [ОК]",
-      "originalName": "3. Оперативный контроль [ОК]",
+      "name": "Реализация оперативного контроля",
+      "originalName": "Реализация оперативного контроля",
       "workType": "Типовая работа",
       "norm": 7,
       "normRaw": "7",
@@ -8327,8 +8489,8 @@
       "stream": "mdlctl",
       "component": "Модельный сервис",
       "stage": "",
-      "name": "4. Аналитический контроль [АК]",
-      "originalName": "4. Аналитический контроль [АК]",
+      "name": "Реализация аналитического контроля",
+      "originalName": "Реализация аналитического контроля",
       "workType": "Типовая работа",
       "norm": 20,
       "normRaw": "20",
@@ -8632,8 +8794,8 @@
       "stream": "mdlctl",
       "component": "Модельный сервис",
       "stage": "",
-      "name": "5. Контроль модельных значений [КМЗ]",
-      "originalName": "5. Контроль модельных значений [КМЗ]",
+      "name": "Реализация контроля модельных значений",
+      "originalName": "Реализация контроля модельных значений",
       "workType": "Типовая работа",
       "norm": 20,
       "normRaw": "20",
@@ -8937,8 +9099,8 @@
       "stream": "mdlctl",
       "component": "Модельный сервис",
       "stage": "",
-      "name": "Оценка влияния моделей [ОВ]",
-      "originalName": "Оценка влияния моделей [ОВ]",
+      "name": "Оценка влияния моделей",
+      "originalName": "Оценка влияния моделей",
       "workType": "Типовая работа",
       "norm": 20,
       "normRaw": "20",
@@ -9088,25 +9250,6 @@
             }
           ]
         }
-      ]
-    },
-    {
-      "stream": "mdlctl",
-      "component": "Модельный сервис",
-      "stage": "",
-      "name": "Разработка интеграционного решения",
-      "originalName": "Разработка интеграционного решения",
-      "workType": "Опциональная",
-      "norm": null,
-      "normRaw": "Да",
-      "triggerParam": "?",
-      "triggerParams": [
-        "?"
-      ],
-      "laborParams": [
-        "Количество интеграционных решений",
-        "Тип источника",
-        "Необходимость подготовки документов"
       ]
     },
     {
@@ -9529,7 +9672,7 @@
           "paramName": "Риск появления дополнительных систем-источников @ field_whHc-OoW|риск_появления_дополнительных_систем_источников",
           "values": [
             {
-              "label": "Есть",
+              "label": "Да",
               "coefficient": 1.5
             },
             {
@@ -9757,6 +9900,10 @@
             },
             {
               "label": "Разработка",
+              "coefficient": 1
+            },
+            {
+              "label": "Неизвестно",
               "coefficient": 1
             }
           ],
@@ -15085,82 +15232,6 @@
           ],
           "valueCode": null,
           "valueLabel": null
-        }
-      ],
-      "laborParams": [],
-      "formulaText": "N",
-      "roundingMode": "CEIL",
-      "roundingStep": 0.1,
-      "triggerArchCount": {
-        "kind": "modelService",
-        "steps": [
-          {
-            "count": 1,
-            "coefficient": 1
-          }
-        ],
-        "combinator": "and"
-      },
-      "triggerMode": "simple",
-      "triggerFormula": null,
-      "laborCoefficients": [],
-      "laborArchCounts": []
-    },
-    {
-      "stream": "mdlctl",
-      "component": "Модельный сервис",
-      "stage": "",
-      "name": "Оценка новых интеграционных решений",
-      "originalName": "Оценка новых интеграционных решений",
-      "workType": "Опциональная",
-      "norm": 20,
-      "normRaw": "20",
-      "triggerParam": "Арх. компонент Модельный сервис",
-      "triggerParams": [],
-      "triggerRules": [],
-      "laborParams": [],
-      "formulaText": "N",
-      "roundingMode": "CEIL",
-      "roundingStep": 0.1,
-      "triggerArchCount": {
-        "kind": "modelService",
-        "steps": [
-          {
-            "count": 1,
-            "coefficient": 1
-          }
-        ],
-        "combinator": "and"
-      },
-      "triggerMode": "simple",
-      "triggerFormula": null,
-      "laborCoefficients": [],
-      "laborArchCounts": []
-    },
-    {
-      "stream": "mdlctl",
-      "component": "Модельный сервис",
-      "stage": "",
-      "name": "Оценка реализации на пре-промышленном контуре (MVP/Прототип)",
-      "originalName": "Оценка реализации на пре-промышленном контуре (MVP/Прототип)",
-      "workType": "Опциональная",
-      "norm": 1,
-      "normRaw": "1",
-      "triggerParam": "Необходимость пилота (MVP) @ field_o_HRj6VO|необходимость_пилота_mvp",
-      "triggerParams": [
-        "Необходимость пилота (MVP) @ field_o_HRj6VO|необходимость_пилота_mvp"
-      ],
-      "triggerRules": [
-        {
-          "paramName": "Необходимость пилота (MVP) @ field_o_HRj6VO|необходимость_пилота_mvp",
-          "paramCode": "field_o_HRj6VO",
-          "schemaFieldUid": "field_eb6300e7-8889-40bf-92a1-0c8a778de8ef",
-          "operator": "=",
-          "values": [
-            "Да"
-          ],
-          "valueCode": "true",
-          "valueLabel": "Да"
         }
       ],
       "laborParams": [],

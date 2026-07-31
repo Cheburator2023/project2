@@ -4,7 +4,10 @@ import type {
 	V2WorkArchCountCoeffStep,
 	V2WorkFormulaArchCountKind,
 } from "./v2-typical-work.types";
-import { readPerInstanceArchCountOverride } from "./v2-typical-work-per-instance.util";
+import {
+	readPerInstanceArchCountOverride,
+	readPerInstanceArchCountShare,
+} from "./v2-typical-work-per-instance.util";
 import { isFilledTypicalWorkSourceRow } from "./v2-typical-works.util";
 
 export const V2_WORK_ARCH_COUNT_LIMITS: Record<
@@ -457,6 +460,13 @@ export function resolveArchCountCoeffFromToken(
 	kind: V2WorkFormulaArchCountKind,
 	steps: readonly V2WorkArchCountCoeffStep[],
 ): number {
+	// Fan-out по этому же компоненту: работа уже повторяется по каждому
+	// экземпляру, поэтому на экземпляр приходится доля общего множителя.
+	const share = readPerInstanceArchCountShare(formData, kind);
+	if (share != null) {
+		const total = lookupArchCountCoefficient(steps, share);
+		return total == null ? 1 : total / share;
+	}
 	const count = resolveWorkArchComponentCount(formData, kind);
 	return lookupArchCountCoefficient(steps, count) ?? 1;
 }

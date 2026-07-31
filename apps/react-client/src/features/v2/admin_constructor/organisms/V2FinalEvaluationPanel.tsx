@@ -26,7 +26,9 @@ import {
 	typicalWorkCoefficientColumnTitle,
 	typicalWorkItemDisplayName,
 } from "@react-client/features/v2/anketaCRUD/utils/anketaModalArrayTableConfig";
+import { Flex } from "@react-client/common/primitives/Flex";
 import {
+	buildAtypicalTotalsByStreamLabel,
 	collectTypicalWorkBlockBindings,
 	dedupeTypicalWorkRowsByWorkId,
 	isModelStreamTypicalWorkVisibleInSummary,
@@ -186,6 +188,15 @@ function resolveTypicalWorkDeviationBases(item: Record<string, unknown>): {
 	return { unitBase, formulaCount, baseTotal, adjustedTotal };
 }
 
+function sumTypicalRowTotals(rows: Record<string, unknown>[]): number {
+	let sum = 0;
+	for (const row of rows) {
+		const total = readTypicalWorkFiniteNumber(row.total);
+		if (total !== null) sum += total;
+	}
+	return sum;
+}
+
 /** Unified-итоги (типовые + нетиповые): показываем, если есть ненулевые значения. */
 function hasNonZeroUnifiedTotals(summary: V2SummaryFormSlice): boolean {
 	return (
@@ -283,6 +294,18 @@ export function V2FinalEvaluationPanel({
 		() => shouldSkipLegacyModelStreamStageSummary(uiSchema),
 		[uiSchema],
 	);
+	const atypicalTotalByStream = useMemo(() => {
+		const totals = new Map<string, number>();
+		if (!uiSchema) return totals;
+		for (const row of buildAtypicalTotalsByStreamLabel(
+			displayFormData,
+			uiSchema,
+			displayLiveFormData,
+		)) {
+			totals.set(row.streamLabel, row.atypicalTotal);
+		}
+		return totals;
+	}, [displayFormData, uiSchema, displayLiveFormData]);
 	const otherStreamCatalogLabels = useMemo(() => {
 		if (!uiSchema) return [] as string[];
 		const labels: string[] = [];
@@ -300,8 +323,13 @@ export function V2FinalEvaluationPanel({
 			if (!label || label === MODEL_STREAM_LABEL) continue;
 			if (!labels.includes(label)) labels.push(label);
 		}
+		// Стримы без типовых работ в каталоге всё равно нужны в подытогах: у них есть нетиповые.
+		for (const label of atypicalTotalByStream.keys()) {
+			if (label === MODEL_STREAM_LABEL) continue;
+			if (!labels.includes(label)) labels.push(label);
+		}
 		return labels;
-	}, [uiSchema]);
+	}, [uiSchema, atypicalTotalByStream]);
 	const modelStreamTypicalRows = useMemo(
 		() =>
 			sortModelStreamTypicalWorkRows(
@@ -436,10 +464,10 @@ export function V2FinalEvaluationPanel({
 								label="Базовая оценка по стриму (СФЕРА):"
 								value={formatNum(effectiveSummary?.baseScoreStream)}
 							/>
-							<Metric
+							{/* <Metric
 								label="Оценка с поправкой на коэффициент сложности:"
 								value={formatNum(effectiveSummary?.scoreWithComplexityCoeff)}
-							/>
+							/> */}
 							<Metric
 								label="Отклонение (с поправкой относительно базы):"
 								value={formatPercent(effectiveSummary?.deviationFromBaseline)}
@@ -508,9 +536,23 @@ export function V2FinalEvaluationPanel({
 
 							{showModelStreamSection ? (
 								<>
-									<Typography variant="h6" fontWeight={700} mb={2}>
-										Модельный стрим
-									</Typography>
+									<Flex
+										justifyContent="space-between"
+										alignItems="baseline"
+										gap={16}
+										wrap="wrap"
+										margin="0 0 16px"
+									>
+										<Typography variant="h6" fontWeight={700}>
+											Модельный стрим
+										</Typography>
+										<StreamSubtotal
+											typicalTotal={sumTypicalRowTotals(modelStreamTypicalRows)}
+											atypicalTotal={
+												atypicalTotalByStream.get(MODEL_STREAM_LABEL) ?? 0
+											}
+										/>
+									</Flex>
 									{modelStreamTypicalRows.length > 0 ? (
 										<TypicalWorksMiniTable
 											rows={modelStreamTypicalRows}
@@ -535,14 +577,29 @@ export function V2FinalEvaluationPanel({
 										{otherTypicalWorkGroups.map((group) => (
 											<Box key={group.path}>
 												{group.streamExecutor ? (
-													<Typography
-														variant="subtitle2"
-														fontWeight={700}
-														color="text.secondary"
-														mb={1.5}
+													<Flex
+														justifyContent="space-between"
+														alignItems="baseline"
+														gap={16}
+														wrap="wrap"
+														margin="0 0 12px"
 													>
-														{group.streamExecutor}
-													</Typography>
+														<Typography
+															variant="subtitle2"
+															fontWeight={700}
+															color="text.secondary"
+														>
+															{group.streamExecutor}
+														</Typography>
+														<StreamSubtotal
+															typicalTotal={sumTypicalRowTotals(group.rows)}
+															atypicalTotal={
+																atypicalTotalByStream.get(
+																	group.streamExecutor,
+																) ?? 0
+															}
+														/>
+													</Flex>
 												) : null}
 												{group.rows.length > 0 ? (
 													<TypicalWorksMiniTable
@@ -597,6 +654,35 @@ function Metric({
 				{value}
 			</Typography>
 		</Box>
+	);
+}
+
+/** Подытог по стриму справа от его заголовка: типовые + нетиповые работы. */
+function StreamSubtotal({
+	typicalTotal,
+	atypicalTotal,
+}: {
+	typicalTotal: number;
+	atypicalTotal: number;
+}) {
+	return (
+		<Typography
+			variant="body2"
+			color="text.secondary"
+			noWrap
+			title="Подытог по стриму: сумма типовых работ + сумма нетиповых работ, включённых в расчёт."
+		>
+			Типовые: {formatNum(typicalTotal)} · Нетиповые: {formatNum(atypicalTotal)}{" "}
+			· Итого:{" "}
+			<Typography
+				component="span"
+				variant="body2"
+				fontWeight={700}
+				color="text.primary"
+			>
+				{formatNum(typicalTotal + atypicalTotal)}
+			</Typography>
+		</Typography>
 	);
 }
 

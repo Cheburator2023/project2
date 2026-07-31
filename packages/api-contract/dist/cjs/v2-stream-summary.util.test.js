@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const vitest_1 = require("vitest");
 const v2_implementation_streams_util_1 = require("./v2-implementation-streams.util");
+const v2_model_stream_typical_works_constants_1 = require("./v2-model-stream-typical-works.constants");
 const v2_stream_summary_util_1 = require("./v2-stream-summary.util");
 const uiSchema = {
     streamDataSources: {
@@ -77,5 +78,56 @@ const uiSchema = {
             adjustedTypicalScore: 10,
             deviationPercent: 25,
         });
+    });
+});
+(0, vitest_1.describe)("buildAtypicalTotalsByStreamLabel", () => {
+    const subtotalUiSchema = {
+        detailInfo: {
+            "ui:options": {
+                streamBlock: true,
+                streamExecutor: [
+                    v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.KMBKCB,
+                    v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.RB,
+                ],
+            },
+            field_atyp: { "ui:options": { archComponent: "atypicalWork" } },
+        },
+        ...uiSchema,
+    };
+    (0, vitest_1.it)("группирует нетиповые под меткой стрима из панели итогов", () => {
+        const totals = (0, v2_stream_summary_util_1.buildAtypicalTotalsByStreamLabel)({
+            detailInfo: { field_atyp: [{ total: 7, includeInCalculation: true }] },
+            field_pirm: { field_atyp: [{ total: 4, includeInCalculation: true }] },
+        }, subtotalUiSchema);
+        // Блок модельных стримов сводится в зонтичный «Модельный стрим», иначе подытог
+        // не сойдётся с таблицей типовых работ, которая группируется так же.
+        (0, vitest_1.expect)(totals.find((row) => row.streamLabel === v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_EXECUTOR)
+            ?.atypicalTotal).toBe(7);
+        (0, vitest_1.expect)(totals.find((row) => row.streamLabel === "ПиРМ")?.atypicalTotal).toBe(4);
+    });
+    (0, vitest_1.it)("возвращает стримы без нетиповых работ с нулём", () => {
+        const totals = (0, v2_stream_summary_util_1.buildAtypicalTotalsByStreamLabel)({}, subtotalUiSchema);
+        // Панель показывает подытог у каждого стрима схемы, даже пустого.
+        (0, vitest_1.expect)(totals.find((row) => row.streamLabel === "Источники данных")
+            ?.atypicalTotal).toBe(0);
+    });
+    (0, vitest_1.it)("не учитывает строки, исключённые из расчёта", () => {
+        const totals = (0, v2_stream_summary_util_1.buildAtypicalTotalsByStreamLabel)({
+            field_pirm: {
+                field_atyp: [
+                    { total: 4, includeInCalculation: true },
+                    { total: 100, includeInCalculation: false },
+                ],
+            },
+        }, subtotalUiSchema);
+        (0, vitest_1.expect)(totals.find((row) => row.streamLabel === "ПиРМ")?.atypicalTotal).toBe(4);
+    });
+    (0, vitest_1.it)("предпочитает свежие данные расчёта сохранённой форме", () => {
+        const totals = (0, v2_stream_summary_util_1.buildAtypicalTotalsByStreamLabel)({
+            field_pirm: { field_atyp: [{ total: 4, includeInCalculation: true }] },
+        }, subtotalUiSchema, {
+            field_pirm: { field_atyp: [{ total: 9, includeInCalculation: true }] },
+        });
+        (0, vitest_1.expect)(totals.find((row) => row.streamLabel === "ПиРМ")?.atypicalTotal).toBe(9);
     });
 });

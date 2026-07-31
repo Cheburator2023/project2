@@ -100,9 +100,9 @@ export function V2AnketaFormWithModals({
 	const anketaFormContext = useMemo((): AnketaFormContextValue => {
 		const uncertaintySlot: ReactNode | undefined = showUncertaintySlot ? (
 			<Flex gap={1.5} alignItems="center" justifyContent="space-between">
-				<Typography variant="body2" color="text.secondary">
+				<Typography variant="body1" color="text.secondary">
 					Общая неопределенность:{" "}
-					{uncertaintySummaryText(engine.displayFormData)}
+					<b>{uncertaintySummaryText(engine.displayFormData)}</b>
 				</Typography>
 				<Box>
 					<Button

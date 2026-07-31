@@ -449,7 +449,9 @@ function evaluateWorkInstance(
 
 /**
  * Per-instance: формула на каждый экземпляр archComponentType работы → сумма.
- * arch_count того же kind принудительно 1 (через formData override / sliced list).
+ * arch_count того же kind принудительно 1 (через formData override / sliced list),
+ * а архкоэф берётся долей `коэф(N) / N` — скидка за объём распределяется по
+ * экземплярам, иначе за N компонентов платятся ровно N нормативов.
  * В сумму попадают только экземпляры, на которых сработал триггер появления работы.
  */
 function evaluateWorkAcrossArchInstances(ctx: RuntimeWorkContext): {
@@ -529,33 +531,43 @@ function evaluateWorkAcrossArchInstances(ctx: RuntimeWorkContext): {
 		};
 	}
 
-	const instanceBreakdown: TypicalWorkInstanceBreakdownLine[] = [];
-	let sum = 0;
-	let lastCoeffs: Record<string, number> = {};
-	let anyOk = false;
+	const useBaseSource = kind == null || kind === "modelService";
+	const matched: Array<{
+		instance: (typeof instances)[number];
+		source: Record<string, unknown>;
+	}> = [];
 	let skippedByTrigger = 0;
 
 	for (const instance of instances) {
-		const useBaseSource = kind == null || kind === "modelService";
 		const source = useBaseSource
 			? ctx.source
 			: mergeArchInstanceTriggerSource(kind, ctx.source, instance.row);
-		const formData = formDataWithSingleArchInstance(
-			ctx.formData,
-			kind,
-			instance,
-		);
 		if (
 			!archInstanceMatchesWorkTrigger({
 				triggerInput,
 				source,
-				formData,
+				formData: formDataWithSingleArchInstance(ctx.formData, kind, instance),
 				matchContext,
 			})
 		) {
 			skippedByTrigger += 1;
 			continue;
 		}
+		matched.push({ instance, source });
+	}
+
+	const instanceBreakdown: TypicalWorkInstanceBreakdownLine[] = [];
+	let sum = 0;
+	let lastCoeffs: Record<string, number> = {};
+	let anyOk = false;
+
+	for (const { instance, source } of matched) {
+		const formData = formDataWithSingleArchInstance(
+			ctx.formData,
+			kind,
+			instance,
+			matched.length,
+		);
 		const evaluated = evaluateWorkInstance(ctx, source, formData);
 		if (evaluated.total == null) continue;
 		anyOk = true;

@@ -3,6 +3,15 @@ import { type TypicalWorkTriggerMatchInput } from "./v2-trigger-formula.util";
 import type { TypicalWorkTriggerMatchContext } from "./v2-typical-works.util";
 /** Маркер в formData: принудительный count для arch_count_coeff в per-instance режиме. */
 export declare const V2_PER_INSTANCE_ARCH_COUNT_OVERRIDE_KEY = "__v2PerInstanceArchCountOverride";
+/**
+ * Маркер в formData: сколько экземпляров арх-компонента входит в сумму работы.
+ *
+ * Архкоэф задаёт множитель для всего набора компонентов (2 модели → 1,75 нормы).
+ * Работа на fan-out компоненте повторяется по каждому экземпляру, поэтому на
+ * экземпляр приходится доля `коэф(N) / N` — иначе скидка за объём теряется
+ * и за 2 модели платятся ровно 2 нормы.
+ */
+export declare const V2_PER_INSTANCE_ARCH_COUNT_SHARE_KEY = "__v2PerInstanceArchCountShare";
 export type ArchComponentInstance = {
     sourceLabel: string;
     row: Record<string, unknown>;
@@ -37,13 +46,16 @@ export declare function listArchComponentInstances(formData: Record<string, unkn
     }>;
 }): ArchComponentInstance[];
 export declare function readPerInstanceArchCountOverride(formData: Record<string, unknown> | null | undefined, kind: V2WorkFormulaArchCountKind): number | null;
+export declare function readPerInstanceArchCountShare(formData: Record<string, unknown> | null | undefined, kind: V2WorkFormulaArchCountKind): number | null;
 /** formData с принудительным arch_count для kind итерации (=1). */
-export declare function withPerInstanceArchCountOverride(formData: Record<string, unknown>, kind: V2WorkFormulaArchCountKind | null, count?: number): Record<string, unknown>;
+export declare function withPerInstanceArchCountOverride(formData: Record<string, unknown>, kind: V2WorkFormulaArchCountKind | null, count?: number, shareOf?: number): Record<string, unknown>;
 /**
  * formData, где массив итерируемого kind содержит только текущий экземпляр —
  * labor deep-lookup не подтягивает соседние экземпляры.
  */
-export declare function formDataWithSingleArchInstance(formData: Record<string, unknown>, kind: V2WorkFormulaArchCountKind | null, instance: ArchComponentInstance): Record<string, unknown>;
+export declare function formDataWithSingleArchInstance(formData: Record<string, unknown>, kind: V2WorkFormulaArchCountKind | null, instance: ArchComponentInstance, 
+/** Сколько экземпляров входит в сумму — для доли архкоэф на экземпляр. */
+instanceCount?: number): Record<string, unknown>;
 export type TypicalWorkInstanceEvalResult = {
     sourceLabel: string;
     index: number;

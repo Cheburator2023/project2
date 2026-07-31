@@ -67,6 +67,21 @@ function textFieldPassthroughOptions(
 	);
 }
 
+/**
+ * RJSF `NumberField` парсит ввод через `Number()`: «1,5» даёт NaN, значение
+ * остаётся строкой и выбрасывается при сохранении как не-число.
+ */
+export function normalizeDecimalSeparatorForSchema(
+	value: string,
+	schema: WidgetProps["schema"] | undefined,
+): string {
+	const types = Array.isArray(schema?.type) ? schema.type : [schema?.type];
+	const isNumeric = types.some(
+		(type) => type === "number" || type === "integer",
+	);
+	return isNumeric ? value.replace(/,/g, ".") : value;
+}
+
 // Вспомогательная функция для преобразования indexes в matches
 const indexesToMatches = (
 	indexes: ReadonlyArray<number>,
@@ -174,7 +189,7 @@ export const TextFieldCustomWidget = (props: WidgetProps) => {
 	});
 
 	const _onChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-		const next = e.target.value;
+		const next = normalizeDecimalSeparatorForSchema(e.target.value, schema);
 		if (debouncePreviewInputs && !isSelect) {
 			debouncedPlainText.onChange(next);
 			return;

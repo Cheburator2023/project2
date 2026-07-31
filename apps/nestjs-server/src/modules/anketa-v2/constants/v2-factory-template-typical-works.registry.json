@@ -6,7 +6,7 @@
     "sourceTemplateId": "424b8ab7-1be4-4d0a-a0a9-05edadd77ff5",
     "sourceTemplateName": "Схема god 29.07.2026 14:13 (export f115dca2)",
     "counts": {
-      "works": 127
+      "works": 125
     }
   },
   "works": [
@@ -108,7 +108,7 @@
     },
     {
       "id": "a440adc7-ef43-4c01-a1c9-6922dec060d9",
-      "name": "1. Качество модельных данных [КД]",
+      "name": "Реализация проверок качества модельных данных",
       "archComponentType": "Модельный сервис",
       "workType": null,
       "streams": [
@@ -120,7 +120,7 @@
     },
     {
       "id": "9c8f0a06-0de9-4889-b30d-7b7d32003d5f",
-      "name": "2. Технический контроль [ТМ]",
+      "name": "Реализация технического контроля",
       "archComponentType": "Модельный сервис",
       "workType": null,
       "streams": [
@@ -132,7 +132,7 @@
     },
     {
       "id": "bf90362d-e4c5-47ad-86e5-07fc3dc25782",
-      "name": "3. Оперативный контроль [ОК]",
+      "name": "Реализация оперативного контроля",
       "archComponentType": "Модельный сервис",
       "workType": null,
       "streams": [
@@ -144,7 +144,7 @@
     },
     {
       "id": "a0a23674-5617-4f63-b2b1-f81d5ff923de",
-      "name": "4. Аналитический контроль [АК]",
+      "name": "Реализация аналитического контроля",
       "archComponentType": "Модельный сервис",
       "workType": null,
       "streams": [
@@ -156,7 +156,7 @@
     },
     {
       "id": "2d6cca37-9f89-4ba9-900a-b420adfa8f8c",
-      "name": "5. Контроль модельных значений [КМЗ]",
+      "name": "Реализация контроля модельных значений",
       "archComponentType": "Модельный сервис",
       "workType": null,
       "streams": [
@@ -300,7 +300,7 @@
     },
     {
       "id": "037cd151-6e77-4186-b6ab-2bf6f451b506",
-      "name": "Оценка влияния моделей [ОВ]",
+      "name": "Оценка влияния моделей",
       "archComponentType": "Модельный сервис",
       "workType": null,
       "streams": [
@@ -308,30 +308,6 @@
       ],
       "normsByStream": {
         "mdlctl": 20
-      }
-    },
-    {
-      "id": "bad775cf-74b5-4db6-a4e2-cfa0acdf8566",
-      "name": "Оценка новых интеграционных решений",
-      "archComponentType": "Модельный сервис",
-      "workType": null,
-      "streams": [
-        "mdlctl"
-      ],
-      "normsByStream": {
-        "mdlctl": 1
-      }
-    },
-    {
-      "id": "34196eab-c470-44bf-8c7f-fd0f4b5f4543",
-      "name": "Оценка реализации на пре-промышленном контуре (MVP/Прототип)",
-      "archComponentType": "Модельный сервис",
-      "workType": null,
-      "streams": [
-        "mdlctl"
-      ],
-      "normsByStream": {
-        "mdlctl": 1
       }
     },
     {

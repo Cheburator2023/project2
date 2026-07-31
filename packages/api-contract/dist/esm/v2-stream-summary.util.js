@@ -1,6 +1,7 @@
 import { collectAtypicalWorkArrayPaths } from "./v2-atypical-works-logic.util";
-import { collectExecutorStreamBlocks, formatV2StreamBlockSectionTitleFromExecutors, } from "./v2-anketa-section-ui.util";
+import { collectExecutorStreamBlocks, formatV2StreamBlockSectionTitleFromExecutors, resolveTypicalWorkCatalogStreamLabel, } from "./v2-anketa-section-ui.util";
 import { resolveGroupIsActive } from "./v2-group-activation.util";
+import { V2_MODEL_IMPLEMENTATION_STREAM_CODES, V2_MODEL_STREAM_EXECUTOR, } from "./v2-model-stream-typical-works.constants";
 import { collectGeneratedTypicalWorkArrayPaths } from "./v2-typical-work-output-paths.util";
 function readRecord(value) {
     return value && typeof value === "object" && !Array.isArray(value)
@@ -102,4 +103,46 @@ export function buildExecutorStreamWorkSummaryRows(data, uiSchema, typicalScoreM
             atypicalScore: atypicalTotal,
         };
     });
+}
+/**
+ * Метка блока-стрима в терминах панели итогов: у блока модельных стримов это зонтичный
+ * «Модельный стрим», у остальных — метка стрима-исполнителя.
+ */
+function resolveStreamBlockSubtotalLabel(uiSchema, block) {
+    const isModelUmbrella = block.streamExecutors.some((code) => V2_MODEL_IMPLEMENTATION_STREAM_CODES.includes(code));
+    if (isModelUmbrella)
+        return V2_MODEL_STREAM_EXECUTOR;
+    return resolveTypicalWorkCatalogStreamLabel(uiSchema, block.blockKey);
+}
+/**
+ * Нетиповые работы каждого блока-стрима под меткой, по которой панель итогов группирует
+ * типовые работы. Возвращает все блоки схемы, включая стримы без нетиповых работ.
+ */
+export function buildAtypicalTotalsByStreamLabel(formData, uiSchema, liveFormData) {
+    const blocks = collectExecutorStreamBlocks(uiSchema);
+    if (blocks.length === 0)
+        return [];
+    const atypicalPaths = collectAtypicalWorkArrayPaths(uiSchema);
+    const readRows = (path) => {
+        const live = liveFormData ? readByDotPath(liveFormData, path) : undefined;
+        if (Array.isArray(live) && live.length > 0)
+            return live;
+        const stored = formData ? readByDotPath(formData, path) : undefined;
+        return Array.isArray(stored) ? stored : [];
+    };
+    const totalsByLabel = new Map();
+    for (const block of blocks) {
+        const label = resolveStreamBlockSubtotalLabel(uiSchema, block);
+        if (!label)
+            continue;
+        let total = totalsByLabel.get(label) ?? 0;
+        for (const path of pathsUnderBlock(atypicalPaths, block.blockKey)) {
+            total += sumAtypicalIncluded(readRows(path));
+        }
+        totalsByLabel.set(label, total);
+    }
+    return [...totalsByLabel].map(([streamLabel, atypicalTotal]) => ({
+        streamLabel,
+        atypicalTotal: roundUp2(atypicalTotal),
+    }));
 }

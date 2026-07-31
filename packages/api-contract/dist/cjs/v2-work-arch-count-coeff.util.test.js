@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const vitest_1 = require("vitest");
 const v2_work_arch_count_coeff_util_1 = require("./v2-work-arch-count-coeff.util");
+const v2_typical_work_per_instance_util_1 = require("./v2-typical-work-per-instance.util");
 (0, vitest_1.describe)("v2-work-arch-count-coeff.util", () => {
     (0, vitest_1.it)("resolves model count from modelsList", () => {
         (0, vitest_1.expect)((0, v2_work_arch_count_coeff_util_1.resolveWorkArchComponentCount)({
@@ -106,6 +107,33 @@ const v2_work_arch_count_coeff_util_1 = require("./v2-work-arch-count-coeff.util
     });
     (0, vitest_1.it)("resolveArchCountCoeffFromToken falls back to 1", () => {
         (0, vitest_1.expect)((0, v2_work_arch_count_coeff_util_1.resolveArchCountCoeffFromToken)({ detailInfo: { modelsList: [{}, {}, {}] } }, "model", [{ count: 1, coefficient: 2 }])).toBe(1);
+    });
+    (0, vitest_1.it)("делит архкоэф на число экземпляров в per-instance режиме", () => {
+        const steps = [
+            { count: 1, coefficient: 1 },
+            { count: 2, coefficient: 1.75 },
+            { count: 3, coefficient: 2.5 },
+        ];
+        const models = [{ name: "M1" }, { name: "M2" }];
+        // Работа на «Модели» повторяется по каждой модели: за 2 модели должно
+        // набежать 1.75 норматива, значит на модель приходится 0.875.
+        const perInstance = (0, v2_typical_work_per_instance_util_1.formDataWithSingleArchInstance)({ detailInfo: { modelsList: models } }, "model", { sourceLabel: "M1", row: models[0], index: 0 }, models.length);
+        (0, vitest_1.expect)((0, v2_work_arch_count_coeff_util_1.resolveArchCountCoeffFromToken)(perInstance, "model", steps)).toBe(0.875);
+        // Один экземпляр — доля равна полному коэффициенту для 1 компонента.
+        (0, vitest_1.expect)((0, v2_work_arch_count_coeff_util_1.resolveArchCountCoeffFromToken)((0, v2_typical_work_per_instance_util_1.formDataWithSingleArchInstance)({ detailInfo: { modelsList: [models[0]] } }, "model", { sourceLabel: "M1", row: models[0], index: 0 }, 1), "model", steps)).toBe(1);
+    });
+    (0, vitest_1.it)("не делит архкоэф другого компонента при fan-out по моделям", () => {
+        const models = [{ name: "M1" }, { name: "M2" }];
+        const perInstance = (0, v2_typical_work_per_instance_util_1.formDataWithSingleArchInstance)({
+            detailInfo: {
+                modelsList: models,
+                sourceSystems: [{ name: "S1" }, { name: "S2" }],
+            },
+        }, "model", { sourceLabel: "M1", row: models[0], index: 0 }, models.length);
+        (0, vitest_1.expect)((0, v2_work_arch_count_coeff_util_1.resolveArchCountCoeffFromToken)(perInstance, "sourceSystem", [
+            { count: 1, coefficient: 1 },
+            { count: 2, coefficient: 1.2 },
+        ])).toBe(1.2);
     });
     (0, vitest_1.it)("validateArchCountCoeffSteps enforces model range 1-99", () => {
         (0, vitest_1.expect)((0, v2_work_arch_count_coeff_util_1.validateArchCountCoeffSteps)("model", [{ count: 100, coefficient: 1 }])).toMatch(/1.*99/);

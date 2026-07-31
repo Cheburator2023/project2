@@ -303,7 +303,8 @@ const SNAPSHOT_ARCH_PRESETS = {
                     "field_4jxR0E0m": {
                         "enum": [
                             "Первичный",
-                            "Повторный"
+                            "Повторный",
+                            "Не требуется"
                         ],
                         "type": "string",
                         "title": "Пилот"
@@ -431,6 +432,7 @@ const SNAPSHOT_ARCH_PRESETS = {
                         "enum": [
                             "Стандартное",
                             "Нестандартное",
+                            "Не требуется",
                             "Неизвестно"
                         ],
                         "type": "string",
@@ -757,7 +759,8 @@ const SNAPSHOT_ARCH_PRESETS = {
                     "enum": [
                         "Разработка",
                         "Доработка",
-                        "Настройка"
+                        "Настройка",
+                        "Неизвестно"
                     ],
                     "type": "string",
                     "title": "Тип работ"
@@ -866,7 +869,8 @@ const SNAPSHOT_ARCH_PRESETS = {
                     "enum": [
                         "Разработка",
                         "Доработка",
-                        "Настройка"
+                        "Настройка",
+                        "Неизвестно"
                     ],
                     "type": "string",
                     "title": "Тип работ"

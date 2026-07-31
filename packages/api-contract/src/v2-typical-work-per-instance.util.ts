@@ -13,6 +13,17 @@ import { isFilledTypicalWorkSourceRow } from "./v2-typical-works.util";
 export const V2_PER_INSTANCE_ARCH_COUNT_OVERRIDE_KEY =
 	"__v2PerInstanceArchCountOverride";
 
+/**
+ * Маркер в formData: сколько экземпляров арх-компонента входит в сумму работы.
+ *
+ * Архкоэф задаёт множитель для всего набора компонентов (2 модели → 1,75 нормы).
+ * Работа на fan-out компоненте повторяется по каждому экземпляру, поэтому на
+ * экземпляр приходится доля `коэф(N) / N` — иначе скидка за объём теряется
+ * и за 2 модели платятся ровно 2 нормы.
+ */
+export const V2_PER_INSTANCE_ARCH_COUNT_SHARE_KEY =
+	"__v2PerInstanceArchCountShare";
+
 export type ArchComponentInstance = {
 	sourceLabel: string;
 	row: Record<string, unknown>;
@@ -366,20 +377,39 @@ export function readPerInstanceArchCountOverride(
 	return value;
 }
 
+export function readPerInstanceArchCountShare(
+	formData: Record<string, unknown> | null | undefined,
+	kind: V2WorkFormulaArchCountKind,
+): number | null {
+	const record = readRecord(formData?.[V2_PER_INSTANCE_ARCH_COUNT_SHARE_KEY]);
+	if (!record) return null;
+	const value = Number(record[kind]);
+	if (!Number.isFinite(value) || value < 1) return null;
+	return value;
+}
+
 /** formData с принудительным arch_count для kind итерации (=1). */
 export function withPerInstanceArchCountOverride(
 	formData: Record<string, unknown>,
 	kind: V2WorkFormulaArchCountKind | null,
 	count = 1,
+	shareOf?: number,
 ): Record<string, unknown> {
 	if (!kind) return formData;
-	return {
+	const next: Record<string, unknown> = {
 		...formData,
 		[V2_PER_INSTANCE_ARCH_COUNT_OVERRIDE_KEY]: {
 			...readRecord(formData[V2_PER_INSTANCE_ARCH_COUNT_OVERRIDE_KEY]),
 			[kind]: count,
 		},
 	};
+	if (shareOf != null && Number.isFinite(shareOf) && shareOf >= 1) {
+		next[V2_PER_INSTANCE_ARCH_COUNT_SHARE_KEY] = {
+			...readRecord(formData[V2_PER_INSTANCE_ARCH_COUNT_SHARE_KEY]),
+			[kind]: shareOf,
+		};
+	}
+	return next;
 }
 
 /**
@@ -390,9 +420,11 @@ export function formDataWithSingleArchInstance(
 	formData: Record<string, unknown>,
 	kind: V2WorkFormulaArchCountKind | null,
 	instance: ArchComponentInstance,
+	/** Сколько экземпляров входит в сумму — для доли архкоэф на экземпляр. */
+	instanceCount?: number,
 ): Record<string, unknown> {
 	if (!kind || kind === "modelService") {
-		return withPerInstanceArchCountOverride(formData, kind, 1);
+		return withPerInstanceArchCountOverride(formData, kind, 1, instanceCount);
 	}
 
 	const detailInfo = { ...readRecord(formData.detailInfo) };
@@ -447,6 +479,7 @@ export function formDataWithSingleArchInstance(
 		},
 		kind,
 		1,
+		instanceCount,
 	);
 }
 

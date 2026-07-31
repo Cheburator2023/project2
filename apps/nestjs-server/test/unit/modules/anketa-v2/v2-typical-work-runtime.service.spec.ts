@@ -886,6 +886,88 @@ describe("V2TypicalWorkRuntimeService", () => {
 		);
 	});
 
+	it("распределяет скидку по числу моделей на per-model работе", async () => {
+		const workId = WORK_WITH_TRIGGER;
+		const buildService = () =>
+			createService({
+				works: [
+					{
+						id: workId,
+						name: "Адаптация и внедрение модели",
+						workType: "Типовая",
+						archComponentType: "Модель",
+					},
+				],
+				rules: [
+					{
+						workId,
+						streamExecutor: STREAM,
+						paramCode: "modelClass",
+						paramName: "Класс модели",
+						operator: "=",
+						valueCode: "A",
+						valueLabel: "A",
+					},
+				],
+				assignments: [
+					{
+						id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+						workId,
+						streamExecutor: STREAM,
+						isActive: true,
+					},
+				],
+				versionConfigs: [
+					{
+						workId,
+						streamExecutor: STREAM,
+						templateVersionId: "tpl-models",
+						formula: [
+							{ kind: "norm" },
+							{ kind: "operator", op: "*" },
+							{
+								kind: "arch_count_coeff",
+								archComponentKind: "model",
+								steps: [
+									{ count: 1, coefficient: 1 },
+									{ count: 2, coefficient: 1.75 },
+									{ count: 3, coefficient: 2.5 },
+								],
+							},
+						],
+						formulaText: null,
+						roundingMode: "none",
+						roundingStep: null,
+						calculationLogic: null,
+					},
+				],
+			});
+
+		const run = (modelsList: Array<Record<string, unknown>>) =>
+			buildService().buildCatalogTasks({
+				archComponentType: "Модель",
+				streamExecutor: STREAM,
+				source: { modelClass: "A" },
+				formData: { detailInfo: { modelsList } },
+				templateVersionId: "tpl-models",
+				atDate: "2025-06-01",
+			});
+
+		const one = await run([{ name: "М1", modelClass: "A" }]);
+		const two = await run([
+			{ name: "М1", modelClass: "A" },
+			{ name: "М2", modelClass: "A" },
+		]);
+
+		// Норматив 2 чд. Архкоэф задаёт множитель на весь набор моделей,
+		// поэтому за 2 модели платится 1.75 норматива, а не 2 полных.
+		expect(one[0]?.total).toBeCloseTo(2, 5);
+		expect(two[0]?.total).toBeCloseTo(3.5, 5);
+		expect(two[0]?.formulaBreakdown?.expanded).toContain(
+			"1.75 (М1) + 1.75 (М2) = 3.5",
+		);
+	});
+
 	it("uses computed overallUncertainty from uncertaintyCalculation in formula total", async () => {
 		const service = createService({
 			rules: [

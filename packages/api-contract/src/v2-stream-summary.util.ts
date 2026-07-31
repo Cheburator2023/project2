@@ -2,8 +2,13 @@ import { collectAtypicalWorkArrayPaths } from "./v2-atypical-works-logic.util";
 import {
 	collectExecutorStreamBlocks,
 	formatV2StreamBlockSectionTitleFromExecutors,
+	resolveTypicalWorkCatalogStreamLabel,
 } from "./v2-anketa-section-ui.util";
 import { resolveGroupIsActive } from "./v2-group-activation.util";
+import {
+	V2_MODEL_IMPLEMENTATION_STREAM_CODES,
+	V2_MODEL_STREAM_EXECUTOR,
+} from "./v2-model-stream-typical-works.constants";
 import { collectGeneratedTypicalWorkArrayPaths } from "./v2-typical-work-output-paths.util";
 
 export type V2StreamWorkSummaryRow = {
@@ -22,7 +27,10 @@ function readRecord(value: unknown): Record<string, unknown> | undefined {
 		: undefined;
 }
 
-function readByDotPath(data: Record<string, unknown>, dotPath: string): unknown {
+function readByDotPath(
+	data: Record<string, unknown>,
+	dotPath: string,
+): unknown {
 	const segments = dotPath.split(".").filter(Boolean);
 	let current: unknown = data;
 	for (const segment of segments) {
@@ -125,11 +133,66 @@ export function buildExecutorStreamWorkSummaryRows(
 				streamExecutor: block.streamExecutor,
 				baseTypicalScore: typicalTotal,
 				adjustedTypicalScore,
-				deviationPercent: percentDeviation(
-					typicalTotal,
-					adjustedTypicalScore,
-				),
+				deviationPercent: percentDeviation(typicalTotal, adjustedTypicalScore),
 				atypicalScore: atypicalTotal,
 			};
 		});
+}
+
+export type V2StreamAtypicalSubtotal = {
+	/** Метка стрима, совпадающая с группировкой типовых работ в панели итогов. */
+	streamLabel: string;
+	atypicalTotal: number;
+};
+
+/**
+ * Метка блока-стрима в терминах панели итогов: у блока модельных стримов это зонтичный
+ * «Модельный стрим», у остальных — метка стрима-исполнителя.
+ */
+function resolveStreamBlockSubtotalLabel(
+	uiSchema: unknown,
+	block: { blockKey: string; streamExecutors: readonly string[] },
+): string | null {
+	const isModelUmbrella = block.streamExecutors.some((code) =>
+		(V2_MODEL_IMPLEMENTATION_STREAM_CODES as readonly string[]).includes(code),
+	);
+	if (isModelUmbrella) return V2_MODEL_STREAM_EXECUTOR;
+	return resolveTypicalWorkCatalogStreamLabel(uiSchema, block.blockKey);
+}
+
+/**
+ * Нетиповые работы каждого блока-стрима под меткой, по которой панель итогов группирует
+ * типовые работы. Возвращает все блоки схемы, включая стримы без нетиповых работ.
+ */
+export function buildAtypicalTotalsByStreamLabel(
+	formData: Record<string, unknown> | null | undefined,
+	uiSchema: unknown,
+	liveFormData?: Record<string, unknown> | null,
+): V2StreamAtypicalSubtotal[] {
+	const blocks = collectExecutorStreamBlocks(uiSchema);
+	if (blocks.length === 0) return [];
+
+	const atypicalPaths = collectAtypicalWorkArrayPaths(uiSchema);
+	const readRows = (path: string): unknown[] => {
+		const live = liveFormData ? readByDotPath(liveFormData, path) : undefined;
+		if (Array.isArray(live) && live.length > 0) return live;
+		const stored = formData ? readByDotPath(formData, path) : undefined;
+		return Array.isArray(stored) ? stored : [];
+	};
+
+	const totalsByLabel = new Map<string, number>();
+	for (const block of blocks) {
+		const label = resolveStreamBlockSubtotalLabel(uiSchema, block);
+		if (!label) continue;
+		let total = totalsByLabel.get(label) ?? 0;
+		for (const path of pathsUnderBlock(atypicalPaths, block.blockKey)) {
+			total += sumAtypicalIncluded(readRows(path));
+		}
+		totalsByLabel.set(label, total);
+	}
+
+	return [...totalsByLabel].map(([streamLabel, atypicalTotal]) => ({
+		streamLabel,
+		atypicalTotal: roundUp2(atypicalTotal),
+	}));
 }

@@ -1,5 +1,5 @@
 import { V2_ARCH_COMPONENT_LABELS } from "./v2-anketa-section-ui.util";
-import { readPerInstanceArchCountOverride } from "./v2-typical-work-per-instance.util";
+import { readPerInstanceArchCountOverride, readPerInstanceArchCountShare, } from "./v2-typical-work-per-instance.util";
 import { isFilledTypicalWorkSourceRow } from "./v2-typical-works.util";
 export const V2_WORK_ARCH_COUNT_LIMITS = {
     model: { min: 1, max: 99 },
@@ -403,6 +403,13 @@ export function resolveWorkArchComponentCount(formData, kind) {
     }
 }
 export function resolveArchCountCoeffFromToken(formData, kind, steps) {
+    // Fan-out по этому же компоненту: работа уже повторяется по каждому
+    // экземпляру, поэтому на экземпляр приходится доля общего множителя.
+    const share = readPerInstanceArchCountShare(formData, kind);
+    if (share != null) {
+        const total = lookupArchCountCoefficient(steps, share);
+        return total == null ? 1 : total / share;
+    }
     const count = resolveWorkArchComponentCount(formData, kind);
     return lookupArchCountCoefficient(steps, count) ?? 1;
 }
