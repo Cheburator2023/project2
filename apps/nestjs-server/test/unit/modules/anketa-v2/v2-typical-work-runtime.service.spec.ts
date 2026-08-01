@@ -36,6 +36,7 @@ function createService({
 	laborRows = [],
 	versionConfigs = [],
 	works,
+	templateVersion = null,
 }: {
 	rules: Array<{
 		workId: string;
@@ -98,6 +99,11 @@ function createService({
 		workType: string;
 		archComponentType: string;
 	}>;
+	templateVersion?: {
+		id: string;
+		jsonSchema?: Record<string, unknown>;
+		uiSchema?: Record<string, unknown>;
+	} | null;
 }) {
 	const workRepository = repo(
 		works ?? [
@@ -137,7 +143,7 @@ function createService({
 	const assignmentRepository = repo(assignments);
 	const versionConfigRepository = repo(versionConfigs);
 	const templateVersionRepository = {
-		findOne: jest.fn(async () => null),
+		findOne: jest.fn(async () => templateVersion),
 	};
 	const paramCatalogService = {
 		listTriggerStatusCatalog: jest.fn(async () => []),
@@ -884,6 +890,145 @@ describe("V2TypicalWorkRuntimeService", () => {
 		expect(tasks[0]?.formulaBreakdown?.expanded).not.toContain(
 			"нет заполненных",
 		);
+	});
+
+	it("empty algorithmType on a model does not inherit sibling model's labor coeff", async () => {
+		const workId = WORK_WITH_TRIGGER;
+		const service = createService({
+			works: [
+				{
+					id: workId,
+					name: "Разработка пилотной модели (MVP)",
+					workType: "Типовая",
+					archComponentType: "Модель",
+				},
+			],
+			rules: [],
+			assignments: [
+				{
+					id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+					workId,
+					streamExecutor: STREAM,
+					isActive: true,
+					triggerArchCountKind: "model",
+					triggerArchCountSteps: [{ count: 1, coefficient: 1 }],
+					triggerArchCountCombinator: "and",
+				},
+			],
+			laborParams: [
+				{
+					workId,
+					streamExecutor: STREAM,
+					paramCode: "algorithmType",
+					paramName: "Сложность алгоритма / тип ML задачи",
+					kind: "by_value",
+					schemaFieldUid: "field_bd100464-101d-4d4e-8096-751dab52e01f",
+				},
+			],
+			laborRows: [
+				{
+					workId,
+					streamExecutor: STREAM,
+					paramCode: "algorithmType",
+					paramName: "Сложность алгоритма / тип ML задачи",
+					valueCode: "Графовая аналитика",
+					valueLabel: "Графовая аналитика",
+					coefficient: "3.5",
+				},
+				{
+					workId,
+					streamExecutor: STREAM,
+					paramCode: "algorithmType",
+					paramName: "Сложность алгоритма / тип ML задачи",
+					valueCode: "Гео-аналитика",
+					valueLabel: "Гео-аналитика",
+					coefficient: "2.5",
+				},
+			],
+			versionConfigs: [
+				{
+					workId,
+					streamExecutor: STREAM,
+					templateVersionId: "tpl-algo",
+					formula: [
+						{ kind: "norm" },
+						{ kind: "operator", op: "*" },
+						{ kind: "param_coeff", paramCode: "algorithmType" },
+					],
+					formulaText: "N × коэф(algorithmType)",
+					roundingMode: "none",
+					roundingStep: null,
+					calculationLogic: null,
+				},
+			],
+			templateVersion: {
+				id: "tpl-algo",
+				jsonSchema: {
+					type: "object",
+					properties: {
+						detailInfo: {
+							type: "object",
+							properties: {
+								modelsList: {
+									type: "array",
+									items: {
+										type: "object",
+										properties: {
+											name: { type: "string", title: "Название" },
+											algorithmType: {
+												type: "string",
+												title: "Сложность алгоритма / тип ML задачи",
+												enum: ["Гео-аналитика", "Графовая аналитика"],
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				uiSchema: {
+					detailInfo: {
+						modelsList: {
+							items: {
+								algorithmType: {
+									"ui:options": {
+										schemaFieldUid:
+											"field_bd100464-101d-4d4e-8096-751dab52e01f",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		});
+
+		// source имитирует flatten last-write (последняя модель = графовая)
+		const tasks = await service.buildCatalogTasks({
+			archComponentType: "Модель",
+			streamExecutor: STREAM,
+			source: { algorithmType: "Графовая аналитика" },
+			formData: {
+				detailInfo: {
+					modelsList: [
+						{ name: "Модели 1", algorithmType: "Гео-аналитика" },
+						{ name: "Модели 2" },
+						{ name: "Модели 3", algorithmType: "Графовая аналитика" },
+					],
+				},
+			},
+			templateVersionId: "tpl-algo",
+			atDate: "2025-06-01",
+		});
+
+		expect(tasks).toHaveLength(1);
+		const breakdown = tasks[0]?.formulaBreakdown?.instanceBreakdown ?? [];
+		expect(breakdown).toHaveLength(3);
+		// Норматив 2: geo → 2*2.5=5; empty → 2*1=2; graph → 2*3.5=7
+		expect(breakdown.map((line) => line.total)).toEqual([5, 2, 7]);
+		expect(tasks[0]?.total).toBeCloseTo(14, 5);
+		expect(breakdown[1]?.expanded).not.toContain("3.5");
 	});
 
 	it("распределяет скидку по числу моделей на per-model работе", async () => {

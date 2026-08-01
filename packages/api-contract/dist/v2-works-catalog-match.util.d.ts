@@ -125,6 +125,12 @@ export declare function coerceNumericLaborActual(actual: unknown): unknown;
 /** Читает значение по schemaPointer (`/generalInfo/field`, `/detailInfo/dataMart/items/field`). */
 export declare function readValueAtSchemaPointer(root: Record<string, unknown>, pointer: string): unknown;
 /**
+ * Есть ли контейнер поля по schemaPointer (родитель последнего сегмента).
+ * Нужен, чтобы отличить «поле на срезе экземпляра пустое» от «pointer не резолвится
+ * в этом formData» — во втором случае нельзя затирать значение из source.
+ */
+export declare function schemaPointerFieldParentExists(root: Record<string, unknown>, pointer: string): boolean;
+/**
  * Поля триггера с другого арх. компонента (напр. readyPromReports на моделях
  * при fan-out по системам-источникам): flatten last-write даёт значение
  * последней модели и ломает «хотя бы одна модель = Нет».

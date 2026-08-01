@@ -310,6 +310,76 @@ describe("numeric labor coefficient ranges", () => {
 		).toEqual({ workType: 1 });
 	});
 
+	it("does not inherit flatten last-write labor value when sliced instance field is empty", () => {
+		// Как в UI: flatten source держит algorithmType последней модели,
+		// а текущий экземпляр (modelsList=[пустая строка]) поле не заполнил.
+		const leakedSource = {
+			algorithmType: "Графовая аналитика",
+			workType: "Разработка",
+		};
+		const emptyModelRow = {
+			"field_atxiq-UM": "Модели 2",
+			workType: "",
+		};
+		const slicedFormData = {
+			detailInfo: { modelsList: [emptyModelRow] },
+		};
+		const schemaParams = [
+			{
+				code: "algorithmType",
+				name: "Сложность алгоритма / тип ML задачи",
+				schemaPointer: "/detailInfo/modelsList/items/algorithmType",
+			},
+		];
+		const laborRows = [
+			{
+				paramCode: "algorithmType",
+				paramName: "Сложность алгоритма / тип ML задачи",
+				valueCode: "Графовая аналитика",
+				valueLabel: "Графовая аналитика",
+				coefficient: 3.5,
+			},
+			{
+				paramCode: "algorithmType",
+				paramName: "Сложность алгоритма / тип ML задачи",
+				valueCode: "Гео-аналитика",
+				valueLabel: "Гео-аналитика",
+				coefficient: 2.5,
+			},
+		];
+
+		const emptyLookup = buildLaborCoefficientLookupSource(
+			leakedSource,
+			slicedFormData,
+			schemaParams,
+			["algorithmType"],
+		);
+		expect(emptyLookup.algorithmType).toBeUndefined();
+		expect(
+			resolveByValueLaborParamCoefficients(emptyLookup, laborRows),
+		).toEqual({});
+
+		const filledLookup = buildLaborCoefficientLookupSource(
+			leakedSource,
+			{
+				detailInfo: {
+					modelsList: [
+						{
+							"field_atxiq-UM": "Модели 1",
+							algorithmType: "Гео-аналитика",
+						},
+					],
+				},
+			},
+			schemaParams,
+			["algorithmType"],
+		);
+		expect(filledLookup.algorithmType).toBe("Гео-аналитика");
+		expect(
+			resolveByValueLaborParamCoefficients(filledLookup, laborRows),
+		).toEqual({ algorithmType: 2.5 });
+	});
+
 	it("uses first matching coefficient for array answers (per-instance uses scalars)", () => {
 		const coeffs = resolveByValueLaborParamCoefficients(
 			{

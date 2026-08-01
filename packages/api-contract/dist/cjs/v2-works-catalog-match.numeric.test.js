@@ -232,6 +232,59 @@ const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
             },
         ])).toEqual({ workType: 1 });
     });
+    (0, vitest_1.it)("does not inherit flatten last-write labor value when sliced instance field is empty", () => {
+        // Как в UI: flatten source держит algorithmType последней модели,
+        // а текущий экземпляр (modelsList=[пустая строка]) поле не заполнил.
+        const leakedSource = {
+            algorithmType: "Графовая аналитика",
+            workType: "Разработка",
+        };
+        const emptyModelRow = {
+            "field_atxiq-UM": "Модели 2",
+            workType: "",
+        };
+        const slicedFormData = {
+            detailInfo: { modelsList: [emptyModelRow] },
+        };
+        const schemaParams = [
+            {
+                code: "algorithmType",
+                name: "Сложность алгоритма / тип ML задачи",
+                schemaPointer: "/detailInfo/modelsList/items/algorithmType",
+            },
+        ];
+        const laborRows = [
+            {
+                paramCode: "algorithmType",
+                paramName: "Сложность алгоритма / тип ML задачи",
+                valueCode: "Графовая аналитика",
+                valueLabel: "Графовая аналитика",
+                coefficient: 3.5,
+            },
+            {
+                paramCode: "algorithmType",
+                paramName: "Сложность алгоритма / тип ML задачи",
+                valueCode: "Гео-аналитика",
+                valueLabel: "Гео-аналитика",
+                coefficient: 2.5,
+            },
+        ];
+        const emptyLookup = (0, v2_works_catalog_match_util_1.buildLaborCoefficientLookupSource)(leakedSource, slicedFormData, schemaParams, ["algorithmType"]);
+        (0, vitest_1.expect)(emptyLookup.algorithmType).toBeUndefined();
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.resolveByValueLaborParamCoefficients)(emptyLookup, laborRows)).toEqual({});
+        const filledLookup = (0, v2_works_catalog_match_util_1.buildLaborCoefficientLookupSource)(leakedSource, {
+            detailInfo: {
+                modelsList: [
+                    {
+                        "field_atxiq-UM": "Модели 1",
+                        algorithmType: "Гео-аналитика",
+                    },
+                ],
+            },
+        }, schemaParams, ["algorithmType"]);
+        (0, vitest_1.expect)(filledLookup.algorithmType).toBe("Гео-аналитика");
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.resolveByValueLaborParamCoefficients)(filledLookup, laborRows)).toEqual({ algorithmType: 2.5 });
+    });
     (0, vitest_1.it)("uses first matching coefficient for array answers (per-instance uses scalars)", () => {
         const coeffs = (0, v2_works_catalog_match_util_1.resolveByValueLaborParamCoefficients)({
             complexity: ["Низкая", "Высокая"],

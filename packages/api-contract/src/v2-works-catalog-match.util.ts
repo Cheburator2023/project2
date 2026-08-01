@@ -538,6 +538,39 @@ export function readValueAtSchemaPointer(
 	return cur;
 }
 
+/**
+ * Есть ли контейнер поля по schemaPointer (родитель последнего сегмента).
+ * Нужен, чтобы отличить «поле на срезе экземпляра пустое» от «pointer не резолвится
+ * в этом formData» — во втором случае нельзя затирать значение из source.
+ */
+export function schemaPointerFieldParentExists(
+	root: Record<string, unknown>,
+	pointer: string,
+): boolean {
+	if (!pointer.startsWith("/")) return false;
+	const segments = pointer.split("/").filter(Boolean);
+	if (segments.length === 0) return false;
+	const parentSegments = segments.slice(0, -1);
+	let cur: unknown = root;
+	for (const segment of parentSegments) {
+		if (segment === "items") {
+			if (!Array.isArray(cur) || cur.length === 0) return false;
+			cur = cur[0];
+			continue;
+		}
+		if (cur == null || typeof cur !== "object") return false;
+		if (Array.isArray(cur)) {
+			if (cur.length === 0) return false;
+			cur = cur[0];
+		}
+		if (cur == null || typeof cur !== "object" || Array.isArray(cur)) {
+			return false;
+		}
+		cur = (cur as Record<string, unknown>)[segment];
+	}
+	return cur != null && typeof cur === "object" && !Array.isArray(cur);
+}
+
 function isPresentLaborLookupValue(value: unknown): boolean {
 	return value !== undefined && value !== null && value !== "";
 }
@@ -737,7 +770,6 @@ export function buildLaborCoefficientLookupSource(
 
 	for (const param of schemaParams) {
 		if (!codes.has(param.code)) continue;
-		if (isPresent(merged[param.code])) continue;
 		// 1) Стабильный uid → pointer из индекса (переживает DnD).
 		const uid = param.schemaFieldUid?.trim();
 		const pointerFromUid =
@@ -746,9 +778,15 @@ export function buildLaborCoefficientLookupSource(
 				: undefined;
 		const pointer = pointerFromUid ?? param.schemaPointer?.trim();
 		if (!pointer) continue;
+		// Срез экземпляра (per-instance formData) — источник истины для поля:
+		// пустое значение на строке НЕ должно наследовать flatten last-write из source
+		// (иначе пустые модели получают коэф. последней заполненной).
+		if (!schemaPointerFieldParentExists(formData, pointer)) continue;
 		const fromForm = readValueAtSchemaPointer(formData, pointer);
 		if (isPresent(fromForm) || typeof fromForm === "boolean") {
-			merged[param.code] = mergeLaborLookupValue(merged[param.code], fromForm);
+			merged[param.code] = fromForm;
+		} else {
+			delete merged[param.code];
 		}
 	}
 
