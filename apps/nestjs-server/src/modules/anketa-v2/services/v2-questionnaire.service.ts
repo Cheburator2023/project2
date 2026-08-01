@@ -2,6 +2,7 @@ import {
 	BadRequestException,
 	ConflictException,
 	Injectable,
+	Logger,
 	NotFoundException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
@@ -9,6 +10,7 @@ import {
 	patchV2TypicalWorksLogicRules,
 	buildV2QuestionnaireRegistryConfig,
 	canUserDeleteV2Questionnaire,
+	collectForbiddenV2AnketaWorkflowChanges,
 	resolveV2QuestionnaireDeleteAction,
 	type BulkDeleteV2QuestionnairesResultDto,
 	type CreateV2QuestionnaireRequestDto,
@@ -57,6 +59,8 @@ type TUserLike = {
 
 @Injectable()
 export class V2QuestionnaireService {
+	private readonly logger = new Logger(V2QuestionnaireService.name);
+
 	constructor(
 		@InjectRepository(V2QuestionnaireEntity)
 		private readonly questionnaireRepository: Repository<V2QuestionnaireEntity>,
@@ -233,11 +237,11 @@ export class V2QuestionnaireService {
 	async update(
 		id: string,
 		dto: UpdateV2QuestionnaireRequestDto,
+		user?: TUserLike | null,
 	): Promise<V2QuestionnaireDto> {
 		const row = await this.loadWithRelations(id);
-		const currentWorkflow = normalizeV2AnketaWorkflow(
-			migrateV2AnketaFormData(row.formData ?? {}).workflow,
-		);
+		const currentFormData = migrateV2AnketaFormData(row.formData ?? {});
+		const currentWorkflow = normalizeV2AnketaWorkflow(currentFormData.workflow);
 		if (
 			currentWorkflow.globalStatus === "Утверждена" &&
 			(dto.formData !== undefined || dto.finalCoefficient !== undefined)
@@ -250,7 +254,15 @@ export class V2QuestionnaireService {
 			row.calcName = dto.calcName.trim() || row.calcName;
 		}
 		if (dto.formData !== undefined) {
-			row.formData = migrateV2AnketaFormData(dto.formData);
+			const nextFormData = migrateV2AnketaFormData(dto.formData);
+			this.logForbiddenWorkflowChanges(
+				id,
+				row,
+				currentFormData.workflow,
+				nextFormData.workflow,
+				user,
+			);
+			row.formData = nextFormData;
 		}
 		if (dto.finalCoefficient !== undefined) {
 			row.finalCoefficient = dto.finalCoefficient;
@@ -260,6 +272,36 @@ export class V2QuestionnaireService {
 		}
 		await this.questionnaireRepository.save(row);
 		return this.findOne(id);
+	}
+
+	/**
+	 * §1–§4: представитель стрима закрывает только раздел своего стрима.
+	 * Первая итерация — наблюдение: нарушение пишем в лог, сохранение не блокируем.
+	 */
+	private logForbiddenWorkflowChanges(
+		id: string,
+		row: V2QuestionnaireEntity,
+		previousWorkflow: unknown,
+		nextWorkflow: unknown,
+		user?: TUserLike | null,
+	): void {
+		const viewer = buildV2AnketaViewerAccessFromUser(user ?? undefined);
+		const bound = row.boundTemplateVersion;
+		if (!viewer || !bound) return;
+
+		const forbidden = collectForbiddenV2AnketaWorkflowChanges(
+			viewer,
+			mapV2TemplateVersionToDto(bound).uiSchema,
+			previousWorkflow,
+			nextWorkflow,
+		);
+		if (forbidden.length === 0) return;
+
+		this.logger.warn(
+			`Анкета ${id}: пользователь (роли ${viewer.roles.join(", ") || "—"}, ` +
+				`стримы ${viewer.streams.join(", ") || "—"}) изменил статусы вне своего стрима: ` +
+				forbidden.map((change) => `${change.path} (${change.reason})`).join(", "),
+		);
 	}
 
 	/** Фиксация среза (§3.13): Заполнено → Утверждена. */

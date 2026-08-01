@@ -5,7 +5,15 @@ import {
 	resolveV2AnketaStreamBlockOptions,
 	collectRequiredWorkflowTargets,
 } from "./v2-anketa-section-ui.util";
-import type { V2AnketaRequiredWorkflowTarget } from "./v2-anketa-workflow.util";
+import {
+	normalizeV2AnketaWorkflow,
+	type V2AnketaRequiredWorkflowTarget,
+} from "./v2-anketa-workflow.util";
+import type {
+	V2AnketaMainSectionId,
+	V2AnketaSectionStatus,
+	V2AnketaWorkflowDto,
+} from "./v2-anketa-workflow.types";
 import {
 	normalizeStreamBlockExecutor,
 	type V2StreamBlockExecutor,
@@ -316,6 +324,173 @@ export function isV2AnketaBlockVisibleForViewer(
 		outputPath,
 	);
 	return isBlockVisibleForUser(viewer, restrictions);
+}
+
+/**
+ * Представитель стрима-не участника ЖЦМ (§F-05): чужие стрим-блоки видит, но
+ * редактирует и подтверждает только свой стрим; анкету целиком не завершает.
+ */
+export const V2_ANKETA_EDIT_ONLY_OWN_STREAM_ROLE_CODES = ["sarep"] as const;
+
+/**
+ * Общие разделы: правит любая роль, но подтверждает только ответственный за анкету.
+ * `detailInfo` помечен стрим-блоком модельных стримов, поэтому нужен явный список.
+ */
+export const V2_ANKETA_SHARED_SECTION_KEYS = [
+	"generalInfo",
+	"detailInfo",
+] as const;
+
+export function userEditsOnlyOwnStreamBlocks(
+	roles: readonly string[],
+): boolean {
+	return roles.some((role) =>
+		(V2_ANKETA_EDIT_ONLY_OWN_STREAM_ROLE_CODES as readonly string[]).includes(
+			role.trim(),
+		),
+	);
+}
+
+export function isSharedAnketaSectionPath(formPath: string): boolean {
+	const root = formPath.trim().split(".")[0]?.trim() ?? "";
+	return (V2_ANKETA_SHARED_SECTION_KEYS as readonly string[]).includes(root);
+}
+
+/** Ограничения корневого стрим-блока, которому принадлежит путь формы. */
+function resolveRootStreamBlockRestrictions(
+	uiSchema: unknown,
+	formPath: string,
+): V2AnketaBlockAccessRestrictions | null {
+	const root = formPath.trim().split(".")[0]?.trim() ?? "";
+	if (!root) return null;
+	if (!shouldApplyV2AnketaBlockAccessAtPath(uiSchema, root)) return null;
+	return resolveV2AnketaBlockAccessRestrictionsForOutputPath(uiSchema, root);
+}
+
+/**
+ * Можно ли редактировать путь формы. Ограничение действует только для ролей
+ * «редактирую свой стрим»; блок без привязки к стриму считается общим.
+ */
+export function isV2AnketaPathEditableForViewer(
+	viewer: V2AnketaViewerAccessContext | undefined,
+	uiSchema: unknown,
+	formPath: string,
+	options?: { applyAccessRules?: boolean },
+): boolean {
+	if (options?.applyAccessRules === false || !viewer) return true;
+	if (!userEditsOnlyOwnStreamBlocks(viewer.roles)) return true;
+	if (isSharedAnketaSectionPath(formPath)) return true;
+
+	const restrictions = resolveRootStreamBlockRestrictions(uiSchema, formPath);
+	if (!restrictions || restrictions.streamExecutors.length === 0) return true;
+	return streamsIntersectViewerAndBlock(
+		viewer.streams,
+		restrictions.streamExecutors,
+	);
+}
+
+/**
+ * Можно ли нажать «Завершить заполнение …» на разделе.
+ * Для представителя стрима — только раздел своего стрима: общие разделы и
+ * разделы без привязки к стриму подтверждает ответственный за анкету.
+ */
+export function canViewerCompleteAnketaSection(
+	viewer: V2AnketaViewerAccessContext | undefined,
+	uiSchema: unknown,
+	sectionPath: string,
+	options?: { applyAccessRules?: boolean },
+): boolean {
+	if (options?.applyAccessRules === false || !viewer) return true;
+	if (!userEditsOnlyOwnStreamBlocks(viewer.roles)) return true;
+	if (isSharedAnketaSectionPath(sectionPath)) return false;
+
+	const restrictions = resolveRootStreamBlockRestrictions(
+		uiSchema,
+		sectionPath,
+	);
+	if (!restrictions || restrictions.streamExecutors.length === 0) return false;
+	return streamsIntersectViewerAndBlock(
+		viewer.streams,
+		restrictions.streamExecutors,
+	);
+}
+
+/** Глобальное «Завершить заполнение анкеты» недоступно представителю стрима (§4). */
+export function canViewerCompleteWholeAnketa(
+	roles: readonly string[],
+): boolean {
+	return !userEditsOnlyOwnStreamBlocks(roles);
+}
+
+export type V2AnketaForbiddenChange = {
+	/** Путь в formData вида `workflow.<раздел>`. */
+	path: string;
+	reason: "foreign_stream" | "foreign_section_complete" | "global_complete";
+};
+
+function readSectionStatus(
+	workflow: V2AnketaWorkflowDto,
+	path: string,
+): V2AnketaSectionStatus {
+	return (
+		workflow.sections[path as V2AnketaMainSectionId] ??
+		workflow.panelSections?.[path] ??
+		"Создано"
+	);
+}
+
+/**
+ * Переходы workflow, недопустимые для зрителя (§1–§4). Пустой список — нарушений нет.
+ * Действует только для ролей «редактирую свой стрим»; остальным ничего не запрещает.
+ */
+export function collectForbiddenV2AnketaWorkflowChanges(
+	viewer: V2AnketaViewerAccessContext | undefined,
+	uiSchema: unknown,
+	previous: unknown,
+	next: unknown,
+): V2AnketaForbiddenChange[] {
+	if (!viewer || !userEditsOnlyOwnStreamBlocks(viewer.roles)) return [];
+
+	const before = normalizeV2AnketaWorkflow(previous);
+	const after = normalizeV2AnketaWorkflow(next);
+	const changes: V2AnketaForbiddenChange[] = [];
+
+	if (
+		before.globalStatus !== after.globalStatus &&
+		!canViewerCompleteWholeAnketa(viewer.roles)
+	) {
+		changes.push({ path: "workflow.globalStatus", reason: "global_complete" });
+	}
+
+	const sectionPaths = new Set([
+		...Object.keys(before.sections),
+		...Object.keys(after.sections),
+		...Object.keys(before.panelSections ?? {}),
+		...Object.keys(after.panelSections ?? {}),
+	]);
+	for (const path of sectionPaths) {
+		const nextStatus = readSectionStatus(after, path);
+		if (readSectionStatus(before, path) === nextStatus) continue;
+		// «В работе» ставится автоматически при первой правке — сверяем с правом на правку.
+		const allowed =
+			nextStatus === "Заполнено"
+				? canViewerCompleteAnketaSection(viewer, uiSchema, path, {
+						applyAccessRules: true,
+					})
+				: isV2AnketaPathEditableForViewer(viewer, uiSchema, path, {
+						applyAccessRules: true,
+					});
+		if (allowed) continue;
+		changes.push({
+			path: `workflow.${path}`,
+			reason:
+				nextStatus === "Заполнено"
+					? "foreign_section_complete"
+					: "foreign_stream",
+		});
+	}
+
+	return changes;
 }
 
 /**

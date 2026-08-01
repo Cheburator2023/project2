@@ -40,6 +40,7 @@ import {
 } from "@react-client/features/v2/anketaCRUD/utils/anketaArchObjectListPaths";
 import {
 	V2_ANKETA_SECTION_COMPLETE_LABELS,
+	canViewerCompleteAnketaSection,
 	isV2AnketaHiddenUiNode,
 	isV2AnketaModalObjectArch,
 	readPanelSectionStatus,
@@ -1028,9 +1029,17 @@ export function V2PreviewObjectFieldTemplate({
 		},
 	);
 	const hasUnfilledRequired = unfilledRequiredLabels.length > 0;
+	/** §1/§3: представитель стрима закрывает только раздел своего стрима. */
+	const viewerMayCompleteSection = canViewerCompleteAnketaSection(
+		anketaCtx.viewerAccess,
+		anketaCtx.previewUiSchema ?? (uiSchema as UiSchema),
+		pathKey,
+		{ applyAccessRules: anketaCtx.viewerAccess?.applyAccessRules },
+	);
 	const canCompleteWorkflow =
 		showWorkflowChrome &&
 		!workflowLocked &&
+		viewerMayCompleteSection &&
 		sectionStatus !== "Заполнено" &&
 		(usesMainSectionWorkflow
 			? Boolean(onCompleteMainSection && workflowSectionIdResolved)

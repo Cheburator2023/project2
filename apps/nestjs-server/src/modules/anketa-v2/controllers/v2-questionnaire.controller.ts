@@ -315,8 +315,9 @@ export class V2QuestionnaireController {
 	async update(
 		@Param("id", ParseUUIDPipe) id: string,
 		@Body() body: UpdateV2QuestionnaireDto,
+		@CurrentUser() user: Record<string, unknown> | undefined,
 	): Promise<V2QuestionnaireDto> {
-		return this.questionnaireService.update(id, body);
+		return this.questionnaireService.update(id, body, user as never);
 	}
 
 	@Post(":id/hold")

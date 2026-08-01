@@ -20,6 +20,7 @@ import {
 import type { V2SchemaBindingDto } from "@smart-anketa/api-contract";
 import {
 	canUserDeleteV2Questionnaire,
+	canViewerCompleteWholeAnketa,
 	resolveV2QuestionnaireDeleteAction,
 	schemaHasUncertaintyModalWidget,
 	userMasksAllWorkEstimates,
@@ -341,6 +342,14 @@ export function AnketaFormShell({
 	}, [completeDialogOpen, completeDialogPhase, onSave, workflow.globalStatus]);
 
 	const hideWorkEstimates = userMasksAllWorkEstimates(viewerAccess.roles);
+	/**
+	 * §4: у представителя стрима глобальная кнопка недоступна всегда.
+	 * Гард на фронте дублирует Keycloak-матрицу: до пересинка право может остаться в токене.
+	 */
+	const mayCompleteWholeAnketa =
+		canCompleteAnketa &&
+		(!viewerAccess.applyAccessRules ||
+			canViewerCompleteWholeAnketa(viewerAccess.roles));
 
 	const confirmHold = useCallback(() => {
 		if (!questionnaireId) return;
@@ -469,7 +478,7 @@ export function AnketaFormShell({
 	const headerActions = useMemo(
 		() => (
 			<>
-				{!globallyLocked && canCompleteAnketa ? (
+				{!globallyLocked && mayCompleteWholeAnketa ? (
 					<IconButton
 						color="primary"
 						disabled={!allSectionsCompleted || effectiveReadOnly}
@@ -565,7 +574,7 @@ export function AnketaFormShell({
 		[
 			canSaveQuestionnaire,
 			canWorkflowApprove,
-			canCompleteAnketa,
+			mayCompleteWholeAnketa,
 			canHoldCalculation,
 			canCreateCalculation,
 			canDeleteCalculation,
@@ -665,6 +674,7 @@ export function AnketaFormShell({
 							liveFormData={engine.calculationLiveFormData}
 							onExportExcel={onExportExcel}
 							hideWorkEstimates={hideWorkEstimates}
+							viewerAccess={viewerAccess}
 						/>
 					)
 				}

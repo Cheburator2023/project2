@@ -127,14 +127,17 @@ export const V2_KEYCLOAK_GROUP_ROLE_TARGET: Record<string, readonly string[]> = 
 		"anketa_export_reports",
 		"anketa_hold",
 	],
-	/** Представитель стрима вне ЖЦМ: без create. */
+	/**
+	 * Представитель стрима вне ЖЦМ: без create и без `anketa_complete_anketa` —
+	 * анкету целиком он не завершает (§4). `anketa_workflow_approve` нужен,
+	 * чтобы закрывать раздел своего стрима (§1).
+	 */
 	"/sarep": [
 		"anketa_view_all_calculations",
 		"anketa_edit_calculation",
 		"anketa_delete_calculation",
 		"anketa_export_reports",
 		"anketa_workflow_approve",
-		"anketa_complete_anketa",
 	],
 	/**
 	 * Bypass разделения реестра по стримам (доменный код `stream_view_all`).

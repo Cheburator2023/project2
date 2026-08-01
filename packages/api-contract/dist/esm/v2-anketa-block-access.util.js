@@ -1,4 +1,5 @@
 import { resolveStreamBlockRolesForTypicalWorkOutputPath, resolveStreamExecutorForTypicalWorkOutputPath, resolveV2AnketaArchComponent, resolveV2AnketaStreamBlockOptions, collectRequiredWorkflowTargets, } from "./v2-anketa-section-ui.util";
+import { normalizeV2AnketaWorkflow, } from "./v2-anketa-workflow.util";
 import { normalizeStreamBlockExecutor, } from "./v2-stream-block-executor.util";
 import { isV2StreamBlockRoleCode, normalizeStreamBlockRole, } from "./v2-stream-block-role.util";
 export const V2_ANKETA_LEAD_ROLE_CODES = [
@@ -207,6 +208,120 @@ export function isV2AnketaBlockVisibleForViewer(viewer, uiSchema, outputPath, op
         return true;
     const restrictions = resolveV2AnketaBlockAccessRestrictionsForOutputPath(uiSchema, outputPath);
     return isBlockVisibleForUser(viewer, restrictions);
+}
+/**
+ * Представитель стрима-не участника ЖЦМ (§F-05): чужие стрим-блоки видит, но
+ * редактирует и подтверждает только свой стрим; анкету целиком не завершает.
+ */
+export const V2_ANKETA_EDIT_ONLY_OWN_STREAM_ROLE_CODES = ["sarep"];
+/**
+ * Общие разделы: правит любая роль, но подтверждает только ответственный за анкету.
+ * `detailInfo` помечен стрим-блоком модельных стримов, поэтому нужен явный список.
+ */
+export const V2_ANKETA_SHARED_SECTION_KEYS = [
+    "generalInfo",
+    "detailInfo",
+];
+export function userEditsOnlyOwnStreamBlocks(roles) {
+    return roles.some((role) => V2_ANKETA_EDIT_ONLY_OWN_STREAM_ROLE_CODES.includes(role.trim()));
+}
+export function isSharedAnketaSectionPath(formPath) {
+    const root = formPath.trim().split(".")[0]?.trim() ?? "";
+    return V2_ANKETA_SHARED_SECTION_KEYS.includes(root);
+}
+/** Ограничения корневого стрим-блока, которому принадлежит путь формы. */
+function resolveRootStreamBlockRestrictions(uiSchema, formPath) {
+    const root = formPath.trim().split(".")[0]?.trim() ?? "";
+    if (!root)
+        return null;
+    if (!shouldApplyV2AnketaBlockAccessAtPath(uiSchema, root))
+        return null;
+    return resolveV2AnketaBlockAccessRestrictionsForOutputPath(uiSchema, root);
+}
+/**
+ * Можно ли редактировать путь формы. Ограничение действует только для ролей
+ * «редактирую свой стрим»; блок без привязки к стриму считается общим.
+ */
+export function isV2AnketaPathEditableForViewer(viewer, uiSchema, formPath, options) {
+    if (options?.applyAccessRules === false || !viewer)
+        return true;
+    if (!userEditsOnlyOwnStreamBlocks(viewer.roles))
+        return true;
+    if (isSharedAnketaSectionPath(formPath))
+        return true;
+    const restrictions = resolveRootStreamBlockRestrictions(uiSchema, formPath);
+    if (!restrictions || restrictions.streamExecutors.length === 0)
+        return true;
+    return streamsIntersectViewerAndBlock(viewer.streams, restrictions.streamExecutors);
+}
+/**
+ * Можно ли нажать «Завершить заполнение …» на разделе.
+ * Для представителя стрима — только раздел своего стрима: общие разделы и
+ * разделы без привязки к стриму подтверждает ответственный за анкету.
+ */
+export function canViewerCompleteAnketaSection(viewer, uiSchema, sectionPath, options) {
+    if (options?.applyAccessRules === false || !viewer)
+        return true;
+    if (!userEditsOnlyOwnStreamBlocks(viewer.roles))
+        return true;
+    if (isSharedAnketaSectionPath(sectionPath))
+        return false;
+    const restrictions = resolveRootStreamBlockRestrictions(uiSchema, sectionPath);
+    if (!restrictions || restrictions.streamExecutors.length === 0)
+        return false;
+    return streamsIntersectViewerAndBlock(viewer.streams, restrictions.streamExecutors);
+}
+/** Глобальное «Завершить заполнение анкеты» недоступно представителю стрима (§4). */
+export function canViewerCompleteWholeAnketa(roles) {
+    return !userEditsOnlyOwnStreamBlocks(roles);
+}
+function readSectionStatus(workflow, path) {
+    return (workflow.sections[path] ??
+        workflow.panelSections?.[path] ??
+        "Создано");
+}
+/**
+ * Переходы workflow, недопустимые для зрителя (§1–§4). Пустой список — нарушений нет.
+ * Действует только для ролей «редактирую свой стрим»; остальным ничего не запрещает.
+ */
+export function collectForbiddenV2AnketaWorkflowChanges(viewer, uiSchema, previous, next) {
+    if (!viewer || !userEditsOnlyOwnStreamBlocks(viewer.roles))
+        return [];
+    const before = normalizeV2AnketaWorkflow(previous);
+    const after = normalizeV2AnketaWorkflow(next);
+    const changes = [];
+    if (before.globalStatus !== after.globalStatus &&
+        !canViewerCompleteWholeAnketa(viewer.roles)) {
+        changes.push({ path: "workflow.globalStatus", reason: "global_complete" });
+    }
+    const sectionPaths = new Set([
+        ...Object.keys(before.sections),
+        ...Object.keys(after.sections),
+        ...Object.keys(before.panelSections ?? {}),
+        ...Object.keys(after.panelSections ?? {}),
+    ]);
+    for (const path of sectionPaths) {
+        const nextStatus = readSectionStatus(after, path);
+        if (readSectionStatus(before, path) === nextStatus)
+            continue;
+        // «В работе» ставится автоматически при первой правке — сверяем с правом на правку.
+        const allowed = nextStatus === "Заполнено"
+            ? canViewerCompleteAnketaSection(viewer, uiSchema, path, {
+                applyAccessRules: true,
+            })
+            : isV2AnketaPathEditableForViewer(viewer, uiSchema, path, {
+                applyAccessRules: true,
+            });
+        if (allowed)
+            continue;
+        changes.push({
+            path: `workflow.${path}`,
+            reason: nextStatus === "Заполнено"
+                ? "foreign_section_complete"
+                : "foreign_stream",
+        });
+    }
+    return changes;
 }
 /**
  * Обязательные цели для «Завершить заполнение анкеты» с учётом ролевой видимости:

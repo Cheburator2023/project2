@@ -130,19 +130,28 @@ export function buildAtypicalTotalsByStreamLabel(formData, uiSchema, liveFormDat
         const stored = formData ? readByDotPath(formData, path) : undefined;
         return Array.isArray(stored) ? stored : [];
     };
-    const totalsByLabel = new Map();
+    const byLabel = new Map();
     for (const block of blocks) {
         const label = resolveStreamBlockSubtotalLabel(uiSchema, block);
         if (!label)
             continue;
-        let total = totalsByLabel.get(label) ?? 0;
-        for (const path of pathsUnderBlock(atypicalPaths, block.blockKey)) {
-            total += sumAtypicalIncluded(readRows(path));
+        const entry = byLabel.get(label) ?? {
+            streamExecutors: [],
+            atypicalTotal: 0,
+        };
+        for (const code of block.streamExecutors) {
+            if (!entry.streamExecutors.includes(code)) {
+                entry.streamExecutors.push(code);
+            }
         }
-        totalsByLabel.set(label, total);
+        for (const path of pathsUnderBlock(atypicalPaths, block.blockKey)) {
+            entry.atypicalTotal += sumAtypicalIncluded(readRows(path));
+        }
+        byLabel.set(label, entry);
     }
-    return [...totalsByLabel].map(([streamLabel, atypicalTotal]) => ({
+    return [...byLabel].map(([streamLabel, entry]) => ({
         streamLabel,
-        atypicalTotal: roundUp2(atypicalTotal),
+        streamExecutors: entry.streamExecutors,
+        atypicalTotal: roundUp2(entry.atypicalTotal),
     }));
 }

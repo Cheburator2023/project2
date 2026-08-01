@@ -1,10 +1,13 @@
 import type { UiSchema } from "@rjsf/utils";
 import {
 	isAnketaGloballyLocked,
+	isV2AnketaPathEditableForViewer,
+	userEditsOnlyOwnStreamBlocks,
 	V2_ANKETA_MAIN_SECTION_IDS,
 	type V2AnketaMainSectionId,
 	type V2AnketaWorkflowDto,
 } from "@smart-anketa/api-contract";
+import type { AnketaViewerAccess } from "./anketaViewerAccess";
 
 const MAIN_SECTION_FIELD: Record<V2AnketaMainSectionId, string> = {
 	generalInfo: "generalInfo",
@@ -77,5 +80,33 @@ export function applySectionLocksToUiSchema(
 		}
 	}
 
+	return next;
+}
+
+/**
+ * Представитель стрима: чужие стрим-блоки доступны только на чтение (§2).
+ * Общие разделы и блок своего стрима остаются редактируемыми.
+ */
+export function applyViewerStreamLocksToUiSchema(
+	uiSchema: UiSchema,
+	viewer: AnketaViewerAccess | undefined,
+): UiSchema {
+	if (!viewer?.applyAccessRules) return uiSchema;
+	if (!userEditsOnlyOwnStreamBlocks(viewer.roles)) return uiSchema;
+
+	const next: UiSchema = { ...uiSchema };
+	for (const key of Object.keys(uiSchema)) {
+		if (key.startsWith("ui:")) continue;
+		const branch = uiSchema[key];
+		if (!branch || typeof branch !== "object") continue;
+		if (
+			isV2AnketaPathEditableForViewer(viewer, uiSchema, key, {
+				applyAccessRules: true,
+			})
+		) {
+			continue;
+		}
+		next[key] = lockUiBranch(next[key] as UiSchema);
+	}
 	return next;
 }

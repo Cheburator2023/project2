@@ -19,7 +19,10 @@ import {
 	resolveAnketaFormModalBindingSets,
 	type AnketaFormModalBindingSets,
 } from "../utils/anketaFormModalPaths";
-import { applySectionLocksToUiSchema } from "../utils/anketaSectionUiSchema";
+import {
+	applySectionLocksToUiSchema,
+	applyViewerStreamLocksToUiSchema,
+} from "../utils/anketaSectionUiSchema";
 import {
 	readWorkflowFromFormData,
 	touchSectionInFormData,
@@ -203,6 +206,7 @@ export function V2AnketaSchemaForm({
 			modalBindings.bindings,
 		);
 		ui = applySectionLocksToUiSchema(ui, workflow);
+		ui = applyViewerStreamLocksToUiSchema(ui, anketaFormContext?.viewerAccess);
 		ui = hideQuestionnaireCalcNameInUiSchema(ui);
 		return {
 			...ui,
@@ -214,6 +218,7 @@ export function V2AnketaSchemaForm({
 		effectiveHiddenRootKeys,
 		modalBindings,
 		workflow,
+		anketaFormContext?.viewerAccess,
 	]);
 
 	const handleToggleGroupActivation = useCallback(

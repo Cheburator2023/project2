@@ -9,6 +9,7 @@ import {
 	V2_MODEL_IMPLEMENTATION_STREAM_CODES,
 	V2_MODEL_STREAM_EXECUTOR,
 } from "./v2-model-stream-typical-works.constants";
+import type { V2StreamBlockExecutor } from "./v2-stream-block-executor.util";
 import { collectGeneratedTypicalWorkArrayPaths } from "./v2-typical-work-output-paths.util";
 
 export type V2StreamWorkSummaryRow = {
@@ -142,6 +143,8 @@ export function buildExecutorStreamWorkSummaryRows(
 export type V2StreamAtypicalSubtotal = {
 	/** Метка стрима, совпадающая с группировкой типовых работ в панели итогов. */
 	streamLabel: string;
+	/** Коды стримов всех блоков под этой меткой — для ролевой маскировки оценок. */
+	streamExecutors: V2StreamBlockExecutor[];
 	atypicalTotal: number;
 };
 
@@ -180,19 +183,31 @@ export function buildAtypicalTotalsByStreamLabel(
 		return Array.isArray(stored) ? stored : [];
 	};
 
-	const totalsByLabel = new Map<string, number>();
+	const byLabel = new Map<
+		string,
+		{ streamExecutors: V2StreamBlockExecutor[]; atypicalTotal: number }
+	>();
 	for (const block of blocks) {
 		const label = resolveStreamBlockSubtotalLabel(uiSchema, block);
 		if (!label) continue;
-		let total = totalsByLabel.get(label) ?? 0;
-		for (const path of pathsUnderBlock(atypicalPaths, block.blockKey)) {
-			total += sumAtypicalIncluded(readRows(path));
+		const entry = byLabel.get(label) ?? {
+			streamExecutors: [],
+			atypicalTotal: 0,
+		};
+		for (const code of block.streamExecutors) {
+			if (!entry.streamExecutors.includes(code)) {
+				entry.streamExecutors.push(code);
+			}
 		}
-		totalsByLabel.set(label, total);
+		for (const path of pathsUnderBlock(atypicalPaths, block.blockKey)) {
+			entry.atypicalTotal += sumAtypicalIncluded(readRows(path));
+		}
+		byLabel.set(label, entry);
 	}
 
-	return [...totalsByLabel].map(([streamLabel, atypicalTotal]) => ({
+	return [...byLabel].map(([streamLabel, entry]) => ({
 		streamLabel,
-		atypicalTotal: roundUp2(atypicalTotal),
+		streamExecutors: entry.streamExecutors,
+		atypicalTotal: roundUp2(entry.atypicalTotal),
 	}));
 }

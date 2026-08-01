@@ -1,4 +1,4 @@
-import type { V2AnketaRequiredWorkflowTarget } from "./v2-anketa-workflow.util";
+import { type V2AnketaRequiredWorkflowTarget } from "./v2-anketa-workflow.util";
 import { type V2StreamBlockExecutor } from "./v2-stream-block-executor.util";
 import { type V2StreamBlockRoleCode } from "./v2-stream-block-role.util";
 export declare const V2_ANKETA_LEAD_ROLE_CODES: readonly ["ds_lead", "de_lead", "modelops_lead"];
@@ -61,6 +61,45 @@ export declare function isBlockVisibleForUser(viewer: V2AnketaViewerAccessContex
 export declare function isV2AnketaBlockVisibleForViewer(viewer: V2AnketaViewerAccessContext | undefined, uiSchema: unknown, outputPath: string, options?: {
     applyAccessRules?: boolean;
 }): boolean;
+/**
+ * Представитель стрима-не участника ЖЦМ (§F-05): чужие стрим-блоки видит, но
+ * редактирует и подтверждает только свой стрим; анкету целиком не завершает.
+ */
+export declare const V2_ANKETA_EDIT_ONLY_OWN_STREAM_ROLE_CODES: readonly ["sarep"];
+/**
+ * Общие разделы: правит любая роль, но подтверждает только ответственный за анкету.
+ * `detailInfo` помечен стрим-блоком модельных стримов, поэтому нужен явный список.
+ */
+export declare const V2_ANKETA_SHARED_SECTION_KEYS: readonly ["generalInfo", "detailInfo"];
+export declare function userEditsOnlyOwnStreamBlocks(roles: readonly string[]): boolean;
+export declare function isSharedAnketaSectionPath(formPath: string): boolean;
+/**
+ * Можно ли редактировать путь формы. Ограничение действует только для ролей
+ * «редактирую свой стрим»; блок без привязки к стриму считается общим.
+ */
+export declare function isV2AnketaPathEditableForViewer(viewer: V2AnketaViewerAccessContext | undefined, uiSchema: unknown, formPath: string, options?: {
+    applyAccessRules?: boolean;
+}): boolean;
+/**
+ * Можно ли нажать «Завершить заполнение …» на разделе.
+ * Для представителя стрима — только раздел своего стрима: общие разделы и
+ * разделы без привязки к стриму подтверждает ответственный за анкету.
+ */
+export declare function canViewerCompleteAnketaSection(viewer: V2AnketaViewerAccessContext | undefined, uiSchema: unknown, sectionPath: string, options?: {
+    applyAccessRules?: boolean;
+}): boolean;
+/** Глобальное «Завершить заполнение анкеты» недоступно представителю стрима (§4). */
+export declare function canViewerCompleteWholeAnketa(roles: readonly string[]): boolean;
+export type V2AnketaForbiddenChange = {
+    /** Путь в formData вида `workflow.<раздел>`. */
+    path: string;
+    reason: "foreign_stream" | "foreign_section_complete" | "global_complete";
+};
+/**
+ * Переходы workflow, недопустимые для зрителя (§1–§4). Пустой список — нарушений нет.
+ * Действует только для ролей «редактирую свой стрим»; остальным ничего не запрещает.
+ */
+export declare function collectForbiddenV2AnketaWorkflowChanges(viewer: V2AnketaViewerAccessContext | undefined, uiSchema: unknown, previous: unknown, next: unknown): V2AnketaForbiddenChange[];
 /**
  * Обязательные цели для «Завершить заполнение анкеты» с учётом ролевой видимости:
  * скрытые стрим-блоки не блокируют кнопку.

@@ -1,3 +1,4 @@
+import type { V2StreamBlockExecutor } from "./v2-stream-block-executor.util";
 export type V2StreamWorkSummaryRow = {
     streamName: string;
     blockKey: string;
@@ -12,6 +13,8 @@ export declare function buildExecutorStreamWorkSummaryRows(data: Record<string, 
 export type V2StreamAtypicalSubtotal = {
     /** Метка стрима, совпадающая с группировкой типовых работ в панели итогов. */
     streamLabel: string;
+    /** Коды стримов всех блоков под этой меткой — для ролевой маскировки оценок. */
+    streamExecutors: V2StreamBlockExecutor[];
     atypicalTotal: number;
 };
 /**

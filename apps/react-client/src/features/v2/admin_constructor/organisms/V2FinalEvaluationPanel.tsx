@@ -27,17 +27,22 @@ import {
 	typicalWorkItemDisplayName,
 } from "@react-client/features/v2/anketaCRUD/utils/anketaModalArrayTableConfig";
 import { Flex } from "@react-client/common/primitives/Flex";
+import type { AnketaViewerAccess } from "@react-client/features/v2/anketaCRUD/utils/anketaViewerAccess";
 import {
 	buildAtypicalTotalsByStreamLabel,
 	collectTypicalWorkBlockBindings,
 	dedupeTypicalWorkRowsByWorkId,
 	isModelStreamTypicalWorkVisibleInSummary,
 	resolveTypicalWorkCatalogStreamLabel,
+	shouldMaskWorkEstimatesForUser,
 	shouldSkipLegacyModelStreamStageSummary,
 	sortModelStreamTypicalWorkRows,
+	userEditsOnlyOwnStreamBlocks,
+	type V2StreamBlockExecutor,
 } from "@smart-anketa/api-contract";
 import {
 	Fragment,
+	useCallback,
 	useEffect,
 	useMemo,
 	useRef,
@@ -63,6 +68,9 @@ const MODEL_STREAM_TYPICAL_WORK_TABLE_COLUMNS = [
 	"Коэфф",
 	"С поправкой",
 ] as const;
+
+/** Чужой стрим: состав работ виден, оценки — нет. */
+const MASKED_TYPICAL_WORK_TABLE_COLUMNS = ["Название"] as const;
 
 export type V2SummaryFormSlice = {
 	total?: number;
@@ -228,6 +236,8 @@ type Props = {
 	liveFormData?: Record<string, unknown> | null;
 	/** Скрыть оценки работ (валидатор и т.п.). */
 	hideDetailedEstimates?: boolean;
+	/** Роли и стримы зрителя: чужие стримы показываем без цифр (§2). */
+	viewerAccess?: AnketaViewerAccess;
 };
 
 export function V2FinalEvaluationPanel({
@@ -241,6 +251,7 @@ export function V2FinalEvaluationPanel({
 	uiSchema,
 	liveFormData,
 	hideDetailedEstimates = false,
+	viewerAccess,
 }: Props) {
 	const lastGoodSummaryRef = useRef<V2SummaryFormSlice | null>(null);
 	const lastGoodLiveFormDataRef = useRef<Record<string, unknown> | null>(null);
@@ -294,18 +305,42 @@ export function V2FinalEvaluationPanel({
 		() => shouldSkipLegacyModelStreamStageSummary(uiSchema),
 		[uiSchema],
 	);
-	const atypicalTotalByStream = useMemo(() => {
-		const totals = new Map<string, number>();
-		if (!uiSchema) return totals;
+	const streamSubtotals = useMemo(() => {
+		const byLabel = new Map<
+			string,
+			{ streamExecutors: V2StreamBlockExecutor[]; atypicalTotal: number }
+		>();
+		if (!uiSchema) return byLabel;
 		for (const row of buildAtypicalTotalsByStreamLabel(
 			displayFormData,
 			uiSchema,
 			displayLiveFormData,
 		)) {
-			totals.set(row.streamLabel, row.atypicalTotal);
+			byLabel.set(row.streamLabel, {
+				streamExecutors: row.streamExecutors,
+				atypicalTotal: row.atypicalTotal,
+			});
 		}
-		return totals;
+		return byLabel;
 	}, [displayFormData, uiSchema, displayLiveFormData]);
+	/**
+	 * §2/§4: представитель стрима видит цифры только по своему стриму —
+	 * ни чужих подытогов, ни сквозного итога по анкете.
+	 */
+	const hideCrossStreamTotals = Boolean(
+		viewerAccess?.applyAccessRules &&
+			userEditsOnlyOwnStreamBlocks(viewerAccess.roles),
+	);
+	const isStreamMasked = useCallback(
+		(streamLabel: string): boolean => {
+			if (!viewerAccess?.applyAccessRules) return false;
+			return shouldMaskWorkEstimatesForUser(
+				viewerAccess,
+				streamSubtotals.get(streamLabel)?.streamExecutors ?? [],
+			);
+		},
+		[streamSubtotals, viewerAccess],
+	);
 	const otherStreamCatalogLabels = useMemo(() => {
 		if (!uiSchema) return [] as string[];
 		const labels: string[] = [];
@@ -324,12 +359,12 @@ export function V2FinalEvaluationPanel({
 			if (!labels.includes(label)) labels.push(label);
 		}
 		// Стримы без типовых работ в каталоге всё равно нужны в подытогах: у них есть нетиповые.
-		for (const label of atypicalTotalByStream.keys()) {
+		for (const label of streamSubtotals.keys()) {
 			if (label === MODEL_STREAM_LABEL) continue;
 			if (!labels.includes(label)) labels.push(label);
 		}
 		return labels;
-	}, [uiSchema, atypicalTotalByStream]);
+	}, [uiSchema, streamSubtotals]);
 	const modelStreamTypicalRows = useMemo(
 		() =>
 			sortModelStreamTypicalWorkRows(
@@ -364,12 +399,14 @@ export function V2FinalEvaluationPanel({
 		hasModelStreamCatalogInSchema || modelStreamTypicalRows.length > 0;
 	const showOtherStreamsSection = otherTypicalWorkGroups.length > 0;
 	const showUnifiedHeadline = Boolean(
-		typicalWorkRowCount > 0 &&
+		!hideCrossStreamTotals &&
+			typicalWorkRowCount > 0 &&
 			effectiveSummary &&
 			hasNonZeroUnifiedTotals(effectiveSummary),
 	);
 	const showLegacyHeadline = Boolean(
-		typicalWorkRowCount > 0 &&
+		!hideCrossStreamTotals &&
+			typicalWorkRowCount > 0 &&
 			effectiveSummary &&
 			hasLegacyHeadline(effectiveSummary),
 	);
@@ -549,14 +586,17 @@ export function V2FinalEvaluationPanel({
 										<StreamSubtotal
 											typicalTotal={sumTypicalRowTotals(modelStreamTypicalRows)}
 											atypicalTotal={
-												atypicalTotalByStream.get(MODEL_STREAM_LABEL) ?? 0
+												streamSubtotals.get(MODEL_STREAM_LABEL)
+													?.atypicalTotal ?? 0
 											}
+											masked={isStreamMasked(MODEL_STREAM_LABEL)}
 										/>
 									</Flex>
 									{modelStreamTypicalRows.length > 0 ? (
 										<TypicalWorksMiniTable
 											rows={modelStreamTypicalRows}
 											showDeviations
+											maskEstimates={isStreamMasked(MODEL_STREAM_LABEL)}
 										/>
 									) : (
 										<Typography variant="body2" color="text.secondary">
@@ -594,10 +634,10 @@ export function V2FinalEvaluationPanel({
 														<StreamSubtotal
 															typicalTotal={sumTypicalRowTotals(group.rows)}
 															atypicalTotal={
-																atypicalTotalByStream.get(
-																	group.streamExecutor,
-																) ?? 0
+																streamSubtotals.get(group.streamExecutor)
+																	?.atypicalTotal ?? 0
 															}
+															masked={isStreamMasked(group.streamExecutor)}
 														/>
 													</Flex>
 												) : null}
@@ -605,6 +645,11 @@ export function V2FinalEvaluationPanel({
 													<TypicalWorksMiniTable
 														rows={group.rows}
 														showDeviations
+														maskEstimates={
+															group.streamExecutor
+																? isStreamMasked(group.streamExecutor)
+																: false
+														}
 													/>
 												) : (
 													<Typography variant="body2" color="text.secondary">
@@ -661,10 +706,25 @@ function Metric({
 function StreamSubtotal({
 	typicalTotal,
 	atypicalTotal,
+	masked = false,
 }: {
 	typicalTotal: number;
 	atypicalTotal: number;
+	/** Чужой стрим: показываем состав работ, но без цифр (§2). */
+	masked?: boolean;
 }) {
+	if (masked) {
+		return (
+			<Typography
+				variant="body2"
+				color="text.disabled"
+				noWrap
+				title="Оценки чужого стрима недоступны для вашей роли."
+			>
+				Оценки скрыты
+			</Typography>
+		);
+	}
 	return (
 		<Typography
 			variant="body2"
@@ -689,20 +749,25 @@ function StreamSubtotal({
 function TypicalWorksMiniTable({
 	rows,
 	showDeviations = false,
+	maskEstimates = false,
 }: {
 	rows: Record<string, unknown>[];
 	/** Модельный стрим: колонка отклонения после базы (база×N формул vs сумма с поправкой). */
 	showDeviations?: boolean;
+	/** Чужой стрим: оставляем только названия работ, без нормативов и итогов (§2). */
+	maskEstimates?: boolean;
 }) {
 	const [openByKey, setOpenByKey] = useState<Record<string, boolean>>({});
 	const [deviationOpenByKey, setDeviationOpenByKey] = useState<
 		Record<string, boolean>
 	>({});
-	const columns = showDeviations
-		? MODEL_STREAM_TYPICAL_WORK_TABLE_COLUMNS
-		: TYPICAL_WORK_TABLE_COLUMNS;
+	const columns = maskEstimates
+		? MASKED_TYPICAL_WORK_TABLE_COLUMNS
+		: showDeviations
+			? MODEL_STREAM_TYPICAL_WORK_TABLE_COLUMNS
+			: TYPICAL_WORK_TABLE_COLUMNS;
 	const deviationRows = useMemo(() => {
-		if (!showDeviations) return null;
+		if (!showDeviations || maskEstimates) return null;
 		return rows.map((item) => {
 			const { unitBase, formulaCount, baseTotal, adjustedTotal } =
 				resolveTypicalWorkDeviationBases(item);
@@ -759,6 +824,15 @@ function TypicalWorksMiniTable({
 				{rows.map((item, index) => {
 					const name = typicalWorkItemDisplayName(item, index);
 					const rowKey = `${String(item.workId ?? name)}-${index}`;
+					if (maskEstimates) {
+						return (
+							<TableRow key={rowKey}>
+								<TableCell>
+									<Typography fontWeight={500}>{name}</Typography>
+								</TableCell>
+							</TableRow>
+						);
+					}
 					const open = Boolean(openByKey[rowKey]);
 					const deviationOpen = Boolean(deviationOpenByKey[rowKey]);
 					const toggle = () =>
