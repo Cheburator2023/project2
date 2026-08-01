@@ -130,18 +130,19 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 					"title": "Требуется расширение инфраструктуры кластера SSDP"
 				},
 				"field_-AZPYdbp": {
+					"type": "string",
+					"title": "SuperSet: сложность развёртывания отдельного инстанса, наличие доп. доработок, способ загрузки данных (вручную / по интеграции)",
 					"enum": [
 						"без интеграций и без Clickhouse",
 						"с интеграцией и Clickhouse",
 						"с интеграцией, Clickhouse и доработкой"
-					],
-					"type": "string",
-					"title": "SuperSet: сложность развёртывания отдельного инстанса, наличие доп. доработок, способ загрузки данных (вручную / по интеграции)"
+					]
 				},
 				"field_IGQX_9FN": {
 					"type": "boolean",
 					"title": "Требуется логирование ПИМ"
-				},}
+				}
+			}
 		},
 		"uiOptions": {
 			"sectionRole": "subsection",
@@ -167,10 +168,10 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				"field_KzzDtkB0",
 				"field_F7nK-We5",
 				"field_4IL7OStC",
-			
 				"field_UNSRK-JY",
 				"field_-AZPYdbp",
-				"field_IGQX_9FN"],
+				"field_IGQX_9FN"
+			],
 			"workType": {
 				"ui:widget": "select",
 				"ui:options": {
@@ -189,7 +190,8 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 			},
 			"prePromEval": {
 				"ui:options": {
-					"schemaFieldUid": "field_7ff20c0a-1cd7-4d66-99ae-b52ed1a9bb3a"
+					"schemaFieldUid": "field_7ff20c0a-1cd7-4d66-99ae-b52ed1a9bb3a",
+					"semanticRole": "prePromEval"
 				},
 				"ui:placeholder": "Необходимость поддержки проведения пилота"
 			},
@@ -273,7 +275,6 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				},
 				"ui:placeholder": "Перекладка артефактов между контурами посредством РЕПО"
 			},
-		
 			"field_UNSRK-JY": {
 				"ui:options": {
 					"schemaFieldUid": "field_9a6e2063-4ec1-4810-980d-9d48b1822cbf"
@@ -292,7 +293,8 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 					"schemaFieldUid": "field_15e8f2e9-0ea8-46f5-a7d3-59abcb82cb12"
 				},
 				"ui:placeholder": "Требуется логирование ПИМ"
-			},}
+			}
+		}
 	},
 	"sourceSystem": {
 		"schema": {
@@ -516,70 +518,71 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 						"title": "Сложность настройки шаблона разметки данных"
 					},
 					"field_LGUdr5mq": {
-					"type": "boolean",
-					"title": "Маркер: требуется разметка данных источника"
-				},
-				"field_eIIWBdCg": {
-					"type": "boolean",
-					"title": "Маркер: требуется новая модель для автоматической разметки данных"
-				},
-				"field_DnB8Ur4I": {
-					"enum": [
-						"норма",
-						"средняя",
-						"высокая"
-					],
-					"type": "string",
-					"title": "Маркер: сложность настройки шаблона разметки данных и подготовки сырых данных для загрузки"
-				},
-				"field_OyRJyJxD": {
-					"enum": [
-						"норма",
-						"средняя",
-						"высокая"
-					],
-					"type": "string",
-					"title": "Маркер: размер новой модели, доп. библиотеки, сложность подключения, конфигурации, тестирования и отладки модели (вкл. Active Learning и сетевые доступы)"
-				},
-				"field_xi0W_vl-": {
-					"type": "boolean",
-					"title": "Маркер: требуется регламентный импорт/экспорт данных или отчетности"
-				},
-				"field__NUAXSNP": {
-					"enum": [
-						"норма",
-						"средняя",
-						"высокая"
-					],
-					"type": "string",
-					"title": "Маркер: сложность реализации интеграции, правил обработки данных (в т.ч. конфиденциальных) и настройки режима обмена данными"
-				},
-				"field_nx1zBg1X": {
-					"type": "boolean",
-					"title": "Маркер: требуются специальные условия хранения и обработки конфиденциальных данных, не поддерживаемые коммунальным сервисом"
-				},
-				"field_wluxUVJ9": {
-					"enum": [
-						"норма",
-						"средняя",
-						"высокая"
-					],
-					"type": "string",
-					"title": "Маркер: правила обработки данных (в т.ч. конфиденциальных), режим обмена данными, сложность развёртывания отдельного инстанса и наличие доп. доработок"
-				},
-				"field_KnIEmMxM": {
-					"type": "boolean",
-					"title": "Маркер: требуется ручная обработка результатов автоматизированной разметки данных"
-				},
-				"field_TrX4G9Gc": {
-					"enum": [
-						"без доработок",
-						"незначительные доработки",
-						"значительные доработки"
-					],
-					"type": "string",
-					"title": "Маркер: сложность развёртывания отдельного инстанса ручной разметки голосов и наличие доп. доработок"
-				},}
+						"type": "boolean",
+						"title": "Маркер: требуется разметка данных источника"
+					},
+					"field_eIIWBdCg": {
+						"type": "boolean",
+						"title": "Маркер: требуется новая модель для автоматической разметки данных"
+					},
+					"field_DnB8Ur4I": {
+						"type": "string",
+						"title": "Маркер: сложность настройки шаблона разметки данных и подготовки сырых данных для загрузки",
+						"enum": [
+							"норма",
+							"средняя",
+							"высокая"
+						]
+					},
+					"field_OyRJyJxD": {
+						"type": "string",
+						"title": "Маркер: размер новой модели, доп. библиотеки, сложность подключения, конфигурации, тестирования и отладки модели (вкл. Active Learning и сетевые доступы)",
+						"enum": [
+							"норма",
+							"средняя",
+							"высокая"
+						]
+					},
+					"field_xi0W_vl-": {
+						"type": "boolean",
+						"title": "Маркер: требуется регламентный импорт/экспорт данных или отчетности"
+					},
+					"field__NUAXSNP": {
+						"type": "string",
+						"title": "Маркер: сложность реализации интеграции, правил обработки данных (в т.ч. конфиденциальных) и настройки режима обмена данными",
+						"enum": [
+							"норма",
+							"средняя",
+							"высокая"
+						]
+					},
+					"field_nx1zBg1X": {
+						"type": "boolean",
+						"title": "Маркер: требуются специальные условия хранения и обработки конфиденциальных данных, не поддерживаемые коммунальным сервисом"
+					},
+					"field_wluxUVJ9": {
+						"type": "string",
+						"title": "Маркер: правила обработки данных (в т.ч. конфиденциальных), режим обмена данными, сложность развёртывания отдельного инстанса и наличие доп. доработок",
+						"enum": [
+							"норма",
+							"средняя",
+							"высокая"
+						]
+					},
+					"field_KnIEmMxM": {
+						"type": "boolean",
+						"title": "Маркер: требуется ручная обработка результатов автоматизированной разметки данных"
+					},
+					"field_TrX4G9Gc": {
+						"type": "string",
+						"title": "Маркер: сложность развёртывания отдельного инстанса ручной разметки голосов и наличие доп. доработок",
+						"enum": [
+							"без доработок",
+							"незначительные доработки",
+							"значительные доработки"
+						]
+					}
+				}
 			},
 			"title": "Системы источники"
 		},
@@ -638,17 +641,17 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 					"field_L1lRlgf1",
 					"field_lDw9gG39",
 					"field_WgK6lIS-",
-				
-				"field_LGUdr5mq",
-				"field_eIIWBdCg",
-				"field_DnB8Ur4I",
-				"field_OyRJyJxD",
-				"field_xi0W_vl-",
-				"field__NUAXSNP",
-				"field_nx1zBg1X",
-				"field_wluxUVJ9",
-				"field_KnIEmMxM",
-				"field_TrX4G9Gc"],
+					"field_LGUdr5mq",
+					"field_eIIWBdCg",
+					"field_DnB8Ur4I",
+					"field_OyRJyJxD",
+					"field_xi0W_vl-",
+					"field__NUAXSNP",
+					"field_nx1zBg1X",
+					"field_wluxUVJ9",
+					"field_KnIEmMxM",
+					"field_TrX4G9Gc"
+				],
 				"field_-EGYyyJF": {
 					"ui:options": {
 						"schemaFieldUid": "field_6676112d-2c43-41a0-8b3c-bd0d492ecd49"
@@ -819,72 +822,72 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 						"schemaFieldUid": "field_d6554cad-b9ca-4b1e-b885-8868f35e60f5"
 					}
 				},
-			
-			"field_LGUdr5mq": {
-				"ui:options": {
-					"schemaFieldUid": "field_232f5368-2469-4105-96a3-cc43c092189c"
+				"field_LGUdr5mq": {
+					"ui:options": {
+						"schemaFieldUid": "field_232f5368-2469-4105-96a3-cc43c092189c"
+					},
+					"ui:placeholder": "Маркер: требуется разметка данных источника"
 				},
-				"ui:placeholder": "Маркер: требуется разметка данных источника"
-			},
-			"field_eIIWBdCg": {
-				"ui:options": {
-					"schemaFieldUid": "field_b0cbc410-e812-44c9-9801-648255e3317b"
+				"field_eIIWBdCg": {
+					"ui:options": {
+						"schemaFieldUid": "field_b0cbc410-e812-44c9-9801-648255e3317b"
+					},
+					"ui:placeholder": "Маркер: требуется новая модель для автоматической разметки данных"
 				},
-				"ui:placeholder": "Маркер: требуется новая модель для автоматической разметки данных"
-			},
-			"field_DnB8Ur4I": {
-				"ui:widget": "select",
-				"ui:options": {
-					"schemaFieldUid": "field_e6e350f4-eb44-4b6e-9746-4732dbd983c7"
+				"field_DnB8Ur4I": {
+					"ui:widget": "select",
+					"ui:options": {
+						"schemaFieldUid": "field_e6e350f4-eb44-4b6e-9746-4732dbd983c7"
+					},
+					"ui:placeholder": "Маркер: сложность настройки шаблона разметки данных и подготовки сырых данных для загрузки"
 				},
-				"ui:placeholder": "Маркер: сложность настройки шаблона разметки данных и подготовки сырых данных для загрузки"
-			},
-			"field_OyRJyJxD": {
-				"ui:widget": "select",
-				"ui:options": {
-					"schemaFieldUid": "field_f79d5c4f-da6a-4806-81a1-70ae2d325714"
+				"field_OyRJyJxD": {
+					"ui:widget": "select",
+					"ui:options": {
+						"schemaFieldUid": "field_f79d5c4f-da6a-4806-81a1-70ae2d325714"
+					},
+					"ui:placeholder": "Маркер: размер новой модели, доп. библиотеки, сложность подключения, конфигурации, тестирования и отладки модели (вкл. Active Learning и сетевые доступы)"
 				},
-				"ui:placeholder": "Маркер: размер новой модели, доп. библиотеки, сложность подключения, конфигурации, тестирования и отладки модели (вкл. Active Learning и сетевые доступы)"
-			},
-			"field_xi0W_vl-": {
-				"ui:options": {
-					"schemaFieldUid": "field_680ef613-2620-42d3-bbb8-78b46d94dd68"
+				"field_xi0W_vl-": {
+					"ui:options": {
+						"schemaFieldUid": "field_680ef613-2620-42d3-bbb8-78b46d94dd68"
+					},
+					"ui:placeholder": "Маркер: требуется регламентный импорт/экспорт данных или отчетности"
 				},
-				"ui:placeholder": "Маркер: требуется регламентный импорт/экспорт данных или отчетности"
-			},
-			"field__NUAXSNP": {
-				"ui:widget": "select",
-				"ui:options": {
-					"schemaFieldUid": "field_5e9523cd-55e1-40b2-a302-921f75e99672"
+				"field__NUAXSNP": {
+					"ui:widget": "select",
+					"ui:options": {
+						"schemaFieldUid": "field_5e9523cd-55e1-40b2-a302-921f75e99672"
+					},
+					"ui:placeholder": "Маркер: сложность реализации интеграции, правил обработки данных (в т.ч. конфиденциальных) и настройки режима обмена данными"
 				},
-				"ui:placeholder": "Маркер: сложность реализации интеграции, правил обработки данных (в т.ч. конфиденциальных) и настройки режима обмена данными"
-			},
-			"field_nx1zBg1X": {
-				"ui:options": {
-					"schemaFieldUid": "field_b0953c62-5d1b-4f2c-999e-0bfea5ca59fe"
+				"field_nx1zBg1X": {
+					"ui:options": {
+						"schemaFieldUid": "field_b0953c62-5d1b-4f2c-999e-0bfea5ca59fe"
+					},
+					"ui:placeholder": "Маркер: требуются специальные условия хранения и обработки конфиденциальных данных, не поддерживаемые коммунальным сервисом"
 				},
-				"ui:placeholder": "Маркер: требуются специальные условия хранения и обработки конфиденциальных данных, не поддерживаемые коммунальным сервисом"
-			},
-			"field_wluxUVJ9": {
-				"ui:widget": "select",
-				"ui:options": {
-					"schemaFieldUid": "field_0e6ceec2-66b6-44d6-92b8-207b263ea571"
+				"field_wluxUVJ9": {
+					"ui:widget": "select",
+					"ui:options": {
+						"schemaFieldUid": "field_0e6ceec2-66b6-44d6-92b8-207b263ea571"
+					},
+					"ui:placeholder": "Маркер: правила обработки данных (в т.ч. конфиденциальных), режим обмена данными, сложность развёртывания отдельного инстанса и наличие доп. доработок"
 				},
-				"ui:placeholder": "Маркер: правила обработки данных (в т.ч. конфиденциальных), режим обмена данными, сложность развёртывания отдельного инстанса и наличие доп. доработок"
-			},
-			"field_KnIEmMxM": {
-				"ui:options": {
-					"schemaFieldUid": "field_2c0a26f3-b379-4c17-b963-a6876808db53"
+				"field_KnIEmMxM": {
+					"ui:options": {
+						"schemaFieldUid": "field_2c0a26f3-b379-4c17-b963-a6876808db53"
+					},
+					"ui:placeholder": "Маркер: требуется ручная обработка результатов автоматизированной разметки данных"
 				},
-				"ui:placeholder": "Маркер: требуется ручная обработка результатов автоматизированной разметки данных"
-			},
-			"field_TrX4G9Gc": {
-				"ui:widget": "select",
-				"ui:options": {
-					"schemaFieldUid": "field_19da4968-280e-43eb-b4c7-7e8d12453bc7"
-				},
-				"ui:placeholder": "Маркер: сложность развёртывания отдельного инстанса ручной разметки голосов и наличие доп. доработок"
-			},}
+				"field_TrX4G9Gc": {
+					"ui:widget": "select",
+					"ui:options": {
+						"schemaFieldUid": "field_19da4968-280e-43eb-b4c7-7e8d12453bc7"
+					},
+					"ui:placeholder": "Маркер: сложность развёртывания отдельного инстанса ручной разметки голосов и наличие доп. доработок"
+				}
+			}
 		}
 	},
 	"dataProcess": {
@@ -1200,8 +1203,8 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				"field_L-WWLDWY",
 				"field_0uV7wafS",
 				"field_N9LFD6Hu",
-			
-				"field__CwXDnEl"],
+				"field__CwXDnEl"
+			],
 			"workType": {
 				"ui:widget": "select",
 				"ui:options": {
@@ -1306,13 +1309,13 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 					"schemaFieldUid": "field_a8c3e1d2-4b5f-6789-a0b1-c2d3e4f50607"
 				}
 			},
-		
 			"field__CwXDnEl": {
 				"ui:options": {
 					"schemaFieldUid": "field_cc39396a-1f17-495e-8492-35c3456b48d7"
 				},
 				"ui:placeholder": "Хранилище признаков: подключение нового источника данных"
-			},}
+			}
+		}
 	},
 	"model": {
 		"schema": {
@@ -1412,7 +1415,8 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 		"uiBranch": {
 			"autoML": {
 				"ui:options": {
-					"schemaFieldUid": "field_8b58cf5d-ea4a-4180-8670-ff2021bcaa9b"
+					"schemaFieldUid": "field_8b58cf5d-ea4a-4180-8670-ff2021bcaa9b",
+					"semanticRole": "autoML"
 				}
 			},
 			"ui:order": [
@@ -1427,8 +1431,8 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				"field_S23CbRXp",
 				"field_CeBkWcQc",
 				"field_58TkWuwu",
-			
-				"field_Ifnu_c_H"],
+				"field_Ifnu_c_H"
+			],
 			"workType": {
 				"ui:widget": "select",
 				"ui:options": {
@@ -1441,7 +1445,8 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				"ui:options": {
 					"tooltip": "По умолчанию применяется один тип алгоритма: >1 возможно для каскада или ансамблей моделей, если в одном решении используется комбинация алгоритмов/типов ML задач (т.е. для всех моделей/подмоделей решения может быть задействован один тип алгоритма). Заполняем вложенный список алгоритмов по типу данных, алгоритмов ML и инфраструктуры, участвующей во внедрении решения:\n\n· Табличные данные — любой ML-алгоритм (в т.ч. без учителя)\n· Текстовая аналитика — Классические модели — алгоритмы для текста (кроме LLM)\n· Текстовая аналитика — LLM — LLM для текста\n· Аудиоаналитика — алгоритмы для звука (аудио, видео)\n· Компьютерное зрение — CV — алгоритмы для изображений (аудио, видео)\n· Оптимизационная задача — модельный оптимизатор или эвристики\n· ГЕОаналитика — требуется платформа геоаналитики\n· Графовая аналитика — требуется графовая платформа",
 					"dictionaryCode": "v2.detailInfo.model.algorithmType",
-					"schemaFieldUid": "field_bd100464-101d-4d4e-8096-751dab52e01f"
+					"schemaFieldUid": "field_bd100464-101d-4d4e-8096-751dab52e01f",
+					"semanticRole": "algorithmType"
 				}
 			},
 			"field_58TkWuwu": {
@@ -1479,7 +1484,8 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 			"readyPromReports": {
 				"ui:widget": "checkbox",
 				"ui:options": {
-					"schemaFieldUid": "field_12d42005-7d15-4d0f-9aa0-2b6eebc596c8"
+					"schemaFieldUid": "field_12d42005-7d15-4d0f-9aa0-2b6eebc596c8",
+					"semanticRole": "readyPromReports"
 				}
 			},
 			"field_jUm5syZf": {
@@ -1492,13 +1498,13 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				},
 				"ui:placeholder": "Каналы внедрения"
 			},
-		
 			"field_Ifnu_c_H": {
 				"ui:options": {
 					"schemaFieldUid": "field_86dd31b1-cec2-41ba-8b04-616f1adc2bad"
 				},
 				"ui:placeholder": "Требуется новая библиотека / базовая модель"
-			},}
+			}
+		}
 	}
 };
 

@@ -105,7 +105,7 @@ export type TypicalWorkFormulaFactorLine = {
     paramName: string;
     value: number;
     valueLabel?: string;
-    aggregation?: "single" | "max";
+    aggregation?: "single" | "sum" | "max";
     parts?: TypicalWorkFormulaFactorPart[];
 };
 export type TypicalWorkInstanceBreakdownLine = {
@@ -116,6 +116,8 @@ export type TypicalWorkInstanceBreakdownLine = {
 };
 /** Разбор формулы типовой работы для «Подробного расчёта». */
 export type TypicalWorkFormulaBreakdownDto = {
+    /** Условия триггера, по которым работа попала в расчёт. */
+    triggerConditions?: string;
     symbolic: string;
     expanded: string;
     factors: TypicalWorkFormulaFactorLine[];
@@ -142,11 +144,12 @@ export declare function buildTypicalWorkFormulaBreakdown(params: {
     total: number;
     paramCoefficientDetails?: Record<string, {
         value: number;
-        aggregation: "single" | "max";
+        aggregation: "single" | "sum" | "max";
         formulaValueLabel: string;
         parts: TypicalWorkFormulaFactorPart[];
     }>;
     instanceBreakdown?: TypicalWorkInstanceBreakdownLine[];
     /** Если задан — подменяет expanded (сумма per-instance). */
     expandedOverride?: string;
+    triggerConditions?: string | null;
 }): TypicalWorkFormulaBreakdownDto;

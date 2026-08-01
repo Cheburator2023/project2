@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const v2_implementation_streams_util_1 = require("./v2-implementation-streams.util");
 const v2_anketa_block_access_util_1 = require("./v2-anketa-block-access.util");
+const v2_user_stream_mapping_util_1 = require("./v2-user-stream-mapping.util");
 const vitest_1 = require("vitest");
 const uiSchema = {
     streamDataSources: {
@@ -218,5 +219,63 @@ const uiSchema = {
             };
             (0, vitest_1.expect)((0, v2_anketa_block_access_util_1.collectForbiddenV2AnketaWorkflowChanges)(lead, schema, empty, globalChange)).toEqual([]);
         });
+    });
+});
+/**
+ * Регресс: viewerAccess собирается из Keycloak groups. Для `sarep` реестр по
+ * стриму не режется, поэтому стрим-резолвер реестра возвращает пусто — свой
+ * стрим-блок становился read-only, без кнопки завершения и с чужими оценками.
+ */
+(0, vitest_1.describe)("представитель стрима: стримы из групп Keycloak", () => {
+    const schema = {
+        generalInfo: { "ui:options": { sectionRole: "main" } },
+        streamDadm: {
+            "ui:options": {
+                streamBlock: true,
+                streamExecutor: v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.DADM,
+            },
+            atypicalTasks: { "ui:options": { archComponent: "atypicalWork" } },
+        },
+        streamPirm: {
+            "ui:options": {
+                streamBlock: true,
+                streamExecutor: v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.PIRM,
+            },
+        },
+    };
+    const rules = { applyAccessRules: true };
+    const groups = ["/sarep/test_sum_sarep_dadm"];
+    const viewer = {
+        roles: ["sarep"],
+        streams: (0, v2_anketa_block_access_util_1.resolveV2AnketaViewerStreamsFromGroups)(groups),
+    };
+    (0, vitest_1.it)("резолвит стрим из AD-группы sum_sarep_<стрим>", () => {
+        (0, vitest_1.expect)((0, v2_user_stream_mapping_util_1.resolveV2UserImplementationStreamsFromGroups)(groups)).toEqual([]);
+        (0, vitest_1.expect)(viewer.streams).toEqual([v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.DADM]);
+    });
+    (0, vitest_1.it)("не подменяет стримы ролям, которые фильтруются реестром", () => {
+        for (const other of [
+            ["/ds/test_sum_ds_kmbkcb"],
+            ["/de/test_sum_de_rb"],
+            ["/architect/test_sum_arch_rb"],
+        ]) {
+            (0, vitest_1.expect)((0, v2_anketa_block_access_util_1.resolveV2AnketaViewerStreamsFromGroups)(other)).toEqual((0, v2_user_stream_mapping_util_1.resolveV2UserImplementationStreamsFromGroups)(other));
+        }
+    });
+    (0, vitest_1.it)("возвращает кнопку «Завершить заполнение» на своём стриме", () => {
+        (0, vitest_1.expect)((0, v2_anketa_block_access_util_1.canViewerCompleteAnketaSection)(viewer, schema, "streamDadm", rules)).toBe(true);
+        (0, vitest_1.expect)((0, v2_anketa_block_access_util_1.canViewerCompleteAnketaSection)(viewer, schema, "streamPirm", rules)).toBe(false);
+    });
+    (0, vitest_1.it)("даёт добавлять и править нетиповые работы своего стрима", () => {
+        (0, vitest_1.expect)((0, v2_anketa_block_access_util_1.isV2AnketaPathEditableForViewer)(viewer, schema, "streamDadm.atypicalTasks", rules)).toBe(true);
+        (0, vitest_1.expect)((0, v2_anketa_block_access_util_1.isV2AnketaPathEditableForViewer)(viewer, schema, "streamDadm.atypicalTasks.0.estimateHoursPerDay", rules)).toBe(true);
+        (0, vitest_1.expect)((0, v2_anketa_block_access_util_1.isV2AnketaPathEditableForViewer)(viewer, schema, "streamPirm.atypicalTasks", rules)).toBe(false);
+    });
+    (0, vitest_1.it)("показывает оценки своего стрима и скрывает чужие", () => {
+        (0, vitest_1.expect)((0, v2_anketa_block_access_util_1.shouldMaskWorkEstimatesForUser)(viewer, [v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.DADM])).toBe(false);
+        (0, vitest_1.expect)((0, v2_anketa_block_access_util_1.shouldMaskWorkEstimatesForUser)(viewer, [v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.PIRM])).toBe(true);
+    });
+    (0, vitest_1.it)("не открывает завершение анкеты целиком", () => {
+        (0, vitest_1.expect)((0, v2_anketa_block_access_util_1.canViewerCompleteWholeAnketa)(viewer.roles)).toBe(false);
     });
 });

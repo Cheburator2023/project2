@@ -672,6 +672,19 @@ export function buildLaborCoefficientLookupSource(source, formData, schemaParams
             }
         }
     }
+    // Массив в lookup имеет два разных смысла. У array-поля схемы это множественный
+    // выбор одного экземпляра (каналы внедрения модели) — его значения складываются
+    // ниже по потоку. У скалярного поля массив собран из нескольких экземпляров
+    // арх-компонента; складывать такие значения нельзя, берём первое, как раньше.
+    const multiSelectCodes = new Set(schemaParams
+        .filter((param) => param.multiSelect)
+        .map((param) => param.code));
+    for (const code of codes) {
+        const value = merged[code];
+        if (!Array.isArray(value) || multiSelectCodes.has(code))
+            continue;
+        merged[code] = value[0];
+    }
     return merged;
 }
 /** Сопоставление значения поля анкеты с кодом/меткой из справочника или схемы. */
@@ -938,6 +951,31 @@ function matchLaborCoefficientRow(actual, paramRows) {
     }
     return null;
 }
+/**
+ * Строки коэффициентов по фактическому ответу, в порядке выбора.
+ * Для multi-select возвращает строку на каждое выбранное значение — их
+ * коэффициенты складываются (напр. «Каналы внедрения»: батч + стриминг).
+ */
+function matchLaborCoefficientRows(actual, paramRows) {
+    if (!Array.isArray(actual)) {
+        const matched = matchLaborCoefficientRow(actual, paramRows);
+        return matched ? [matched] : [];
+    }
+    const matched = [];
+    const seen = new Set();
+    for (const item of actual) {
+        const row = matchLaborCoefficientRow(item, paramRows);
+        if (!row || seen.has(row))
+            continue;
+        seen.add(row);
+        matched.push(row);
+    }
+    return matched;
+}
+function sumLaborCoefficients(rows) {
+    const sum = rows.reduce((acc, row) => acc + row.coefficient, 0);
+    return Math.round(sum * 10000) / 10000;
+}
 function coerceBooleanLaborDefault(actual, paramRows) {
     if (actual !== undefined)
         return actual;
@@ -964,23 +1002,22 @@ export function resolveByValueLaborParamCoefficientDetails(source, rows, _formDa
         const paramRows = rowsByParam.get(paramCode) ?? [];
         const paramName = paramRows[0]?.paramName ?? null;
         const actual = coerceBooleanLaborDefault(readLaborParamAnswer(source, paramCode, paramName), paramRows);
-        const matched = matchLaborCoefficientRow(Array.isArray(actual) ? actual[0] : actual, paramRows);
+        const matched = matchLaborCoefficientRows(actual, paramRows);
+        const parts = matched.map((row) => ({
+            sourceLabel: null,
+            answerLabel: row.valueLabel?.trim() ||
+                row.valueCode?.trim() ||
+                formatLaborAnswerLabel(actual),
+            coefficient: row.coefficient,
+        }));
         details[paramCode] = {
             paramCode,
             value,
-            aggregation: "single",
-            formulaValueLabel: formatLaborCoeffNumber(value),
-            parts: matched
-                ? [
-                    {
-                        sourceLabel: null,
-                        answerLabel: matched.valueLabel?.trim() ||
-                            matched.valueCode?.trim() ||
-                            formatLaborAnswerLabel(Array.isArray(actual) ? actual[0] : actual),
-                        coefficient: value,
-                    },
-                ]
-                : [],
+            aggregation: parts.length > 1 ? "sum" : "single",
+            formulaValueLabel: parts.length > 1
+                ? `(${parts.map((part) => formatLaborCoeffNumber(part.coefficient)).join(" + ")})`
+                : formatLaborCoeffNumber(value),
+            parts,
         };
     }
     return details;
@@ -996,13 +1033,10 @@ export function resolveByValueLaborParamCoefficients(source, rows, _formData) {
     }
     for (const [paramCode, paramRows] of rowsByParam) {
         const paramName = paramRows[0]?.paramName ?? null;
-        let actual = coerceBooleanLaborDefault(readLaborParamAnswer(source, paramCode, paramName), paramRows);
-        if (Array.isArray(actual)) {
-            actual = actual[0];
-        }
-        const matched = matchLaborCoefficientRow(actual, paramRows);
-        if (matched) {
-            paramCoefficients[paramCode] = matched.coefficient;
+        const actual = coerceBooleanLaborDefault(readLaborParamAnswer(source, paramCode, paramName), paramRows);
+        const matched = matchLaborCoefficientRows(actual, paramRows);
+        if (matched.length > 0) {
+            paramCoefficients[paramCode] = sumLaborCoefficients(matched);
         }
     }
     return paramCoefficients;

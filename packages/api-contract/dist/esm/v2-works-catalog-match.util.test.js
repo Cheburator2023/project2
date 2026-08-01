@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildTypicalWorkFactorCoeffResolver, catalogValueMatchesTriggerRule, isBrokenTypicalWorkTriggerRef, isMethodologyPresenceTriggerRule, isSourceTypeTriggerParam, resolveLaborAnyOfCoefficient, resolveByValueLaborParamCoefficients, resolveStreamFromSourceType, resolveStreamsFromSourceSystems, resolveTriggerStatusCatalogParam, triggerRuleCatalogGroupKey, normalizeTypicalWorkTriggerRulesForMatch, typicalWorkRulesMatchSource, V2_SOURCE_STREAM, } from "./v2-works-catalog-match.util";
+import { buildTypicalWorkFactorCoeffResolver, catalogValueMatchesTriggerRule, isBrokenTypicalWorkTriggerRef, isMethodologyPresenceTriggerRule, isSourceTypeTriggerParam, resolveLaborAnyOfCoefficient, resolveByValueLaborParamCoefficientDetails, resolveByValueLaborParamCoefficients, resolveStreamFromSourceType, resolveStreamsFromSourceSystems, resolveTriggerStatusCatalogParam, triggerRuleCatalogGroupKey, normalizeTypicalWorkTriggerRulesForMatch, typicalWorkRulesMatchSource, V2_SOURCE_STREAM, } from "./v2-works-catalog-match.util";
 import { archCountTriggerMatches } from "./v2-work-arch-count-coeff.util";
 import { defaultTriggerArchCount } from "./v2-typical-work.types";
 import { resolveWorkSchemaParamForRule } from "./v2-work-schema-params-match.util";
@@ -213,6 +213,45 @@ describe("v2-works-catalog-match.util", () => {
                 coefficient: 10,
             },
         ])).toEqual({ field_dict: 20 });
+    });
+    it("sums by-value coefficients across all selected multi-select values", () => {
+        const rows = [
+            {
+                paramCode: "field_jUm5syZf",
+                paramName: "Каналы внедрения @ field_jUm5syZf",
+                valueCode: "батч",
+                valueLabel: "Батч",
+                coefficient: 0.5,
+            },
+            {
+                paramCode: "field_jUm5syZf",
+                paramName: "Каналы внедрения @ field_jUm5syZf",
+                valueCode: "стриминг",
+                valueLabel: "Стриминг",
+                coefficient: 1.5,
+            },
+            {
+                paramCode: "field_jUm5syZf",
+                paramName: "Каналы внедрения @ field_jUm5syZf",
+                valueCode: "llm",
+                valueLabel: "LLM",
+                coefficient: 2,
+            },
+        ];
+        expect(resolveByValueLaborParamCoefficients({ field_jUm5syZf: ["Батч", "Стриминг"] }, rows)).toEqual({ field_jUm5syZf: 2 });
+        // Один канал — коэффициент этого канала, без изменений поведения.
+        expect(resolveByValueLaborParamCoefficients({ field_jUm5syZf: ["Батч"] }, rows)).toEqual({ field_jUm5syZf: 0.5 });
+        const details = resolveByValueLaborParamCoefficientDetails({ field_jUm5syZf: ["Батч", "Стриминг", "LLM"] }, rows);
+        expect(details.field_jUm5syZf).toMatchObject({
+            value: 4,
+            aggregation: "sum",
+            formulaValueLabel: "(0.5 + 1.5 + 2)",
+        });
+        expect(details.field_jUm5syZf?.parts).toEqual([
+            { sourceLabel: null, answerLabel: "Батч", coefficient: 0.5 },
+            { sourceLabel: null, answerLabel: "Стриминг", coefficient: 1.5 },
+            { sourceLabel: null, answerLabel: "LLM", coefficient: 2 },
+        ]);
     });
     it("treats an absent by-value boolean checkbox as false", () => {
         expect(resolveByValueLaborParamCoefficients({ name: "Источник", value: "Да" }, [

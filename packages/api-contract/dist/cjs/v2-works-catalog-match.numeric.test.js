@@ -285,10 +285,13 @@ const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
         (0, vitest_1.expect)(filledLookup.algorithmType).toBe("Гео-аналитика");
         (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.resolveByValueLaborParamCoefficients)(filledLookup, laborRows)).toEqual({ algorithmType: 2.5 });
     });
-    (0, vitest_1.it)("uses first matching coefficient for array answers (per-instance uses scalars)", () => {
-        const coeffs = (0, v2_works_catalog_match_util_1.resolveByValueLaborParamCoefficients)({
-            complexity: ["Низкая", "Высокая"],
-        }, [
+    (0, vitest_1.it)("collapses a scalar field gathered across arch instances to the first value", () => {
+        // «Сложность» — скалярное поле; массив здесь означает сборку по нескольким
+        // моделям, а не множественный выбор. Складывать такие значения нельзя,
+        // иначе коэффициент одной модели утечёт в расчёт другой.
+        const lookup = (0, v2_works_catalog_match_util_1.buildLaborCoefficientLookupSource)({ complexity: ["Низкая", "Высокая"] }, {}, [{ code: "complexity", name: "Сложность" }], ["complexity"]);
+        (0, vitest_1.expect)(lookup.complexity).toBe("Низкая");
+        const coeffs = (0, v2_works_catalog_match_util_1.resolveByValueLaborParamCoefficients)(lookup, [
             {
                 paramCode: "complexity",
                 paramName: "Сложность",
@@ -305,6 +308,33 @@ const v2_works_catalog_match_util_1 = require("./v2-works-catalog-match.util");
             },
         ]);
         (0, vitest_1.expect)(coeffs).toEqual({ complexity: 0.8 });
+    });
+    (0, vitest_1.it)("keeps multi-select values intact so their coefficients can be summed", () => {
+        const lookup = (0, v2_works_catalog_match_util_1.buildLaborCoefficientLookupSource)({}, { detailInfo: { model: [{ channels: ["Батч", "Стриминг"] }] } }, [
+            {
+                code: "channels",
+                name: "Каналы внедрения",
+                schemaPointer: "/detailInfo/model/items/channels",
+                multiSelect: true,
+            },
+        ], ["channels"]);
+        (0, vitest_1.expect)(lookup.channels).toEqual(["Батч", "Стриминг"]);
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.resolveByValueLaborParamCoefficients)(lookup, [
+            {
+                paramCode: "channels",
+                paramName: "Каналы внедрения",
+                valueCode: "Батч",
+                valueLabel: "Батч",
+                coefficient: 0.5,
+            },
+            {
+                paramCode: "channels",
+                paramName: "Каналы внедрения",
+                valueCode: "Стриминг",
+                valueLabel: "Стриминг",
+                coefficient: 1.5,
+            },
+        ])).toEqual({ channels: 2 });
     });
     (0, vitest_1.it)("resolves readyPromReports from a single model source context", () => {
         const coeffs = (0, v2_works_catalog_match_util_1.resolveByValueLaborParamCoefficients)({ name: "вава", readyPromReports: true }, [

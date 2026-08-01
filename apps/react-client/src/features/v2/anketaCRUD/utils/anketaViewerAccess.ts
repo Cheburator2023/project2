@@ -2,7 +2,7 @@ import type { V2AnketaViewerAccessContext } from "@smart-anketa/api-contract";
 import {
 	normalizeStreamBlockRole,
 	normalizeV2UserGroups,
-	resolveV2UserImplementationStreamsFromGroups,
+	resolveV2AnketaViewerStreamsFromGroups,
 	V2_ANKETA_VIEWER_ROLE_CODES,
 } from "@smart-anketa/api-contract";
 import { useUserStore } from "@react-client/common/store/userStore";
@@ -30,7 +30,7 @@ export function buildAnketaViewerAccessFromStore(
 ): AnketaViewerAccess {
 	return {
 		roles: resolveViewerRoles(groups, roles),
-		streams: resolveV2UserImplementationStreamsFromGroups(groups),
+		streams: resolveV2AnketaViewerStreamsFromGroups(groups),
 		applyAccessRules,
 	};
 }

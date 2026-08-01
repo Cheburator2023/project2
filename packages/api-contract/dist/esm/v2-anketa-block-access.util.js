@@ -2,6 +2,7 @@ import { resolveStreamBlockRolesForTypicalWorkOutputPath, resolveStreamExecutorF
 import { normalizeV2AnketaWorkflow, } from "./v2-anketa-workflow.util";
 import { normalizeStreamBlockExecutor, } from "./v2-stream-block-executor.util";
 import { isV2StreamBlockRoleCode, normalizeStreamBlockRole, } from "./v2-stream-block-role.util";
+import { normalizeV2UserGroups, resolveV2UserImplementationStreamsFromGroups, resolveV2UserScopedStreamsFromGroups, } from "./v2-user-stream-mapping.util";
 export const V2_ANKETA_LEAD_ROLE_CODES = [
     "ds_lead",
     "de_lead",
@@ -224,6 +225,23 @@ export const V2_ANKETA_SHARED_SECTION_KEYS = [
 ];
 export function userEditsOnlyOwnStreamBlocks(roles) {
     return roles.some((role) => V2_ANKETA_EDIT_ONLY_OWN_STREAM_ROLE_CODES.includes(role.trim()));
+}
+/**
+ * Стримы зрителя для правил доступа к блокам.
+ *
+ * `resolveV2UserImplementationStreamsFromGroups` отвечает на вопрос «резать ли
+ * реестр по стриму» и для `sarep` возвращает пусто — реестр ему не режется.
+ * Для правил блоков нужен сам стрим: без него свой стрим-блок выглядит чужим
+ * (read-only, скрытые оценки, нет кнопки завершения раздела).
+ */
+export function resolveV2AnketaViewerStreamsFromGroups(groups) {
+    const filtered = resolveV2UserImplementationStreamsFromGroups(groups);
+    if (filtered.length > 0)
+        return filtered;
+    const roles = normalizeV2UserGroups(groups).map((group) => normalizeStreamBlockRole(group) ?? group.trim());
+    if (!userEditsOnlyOwnStreamBlocks(roles))
+        return filtered;
+    return resolveV2UserScopedStreamsFromGroups(groups);
 }
 export function isSharedAnketaSectionPath(formPath) {
     const root = formPath.trim().split(".")[0]?.trim() ?? "";

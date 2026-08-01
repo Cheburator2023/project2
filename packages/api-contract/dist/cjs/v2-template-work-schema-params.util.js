@@ -135,6 +135,7 @@ function walkSchemaFields(schema, uiSchema, pointer, segments, out) {
             schemaFieldUid,
             schemaPointer: pointer,
             sourceKeys: [key],
+            multiSelect: fieldType === "array",
             values: valuesFromSchemaNode(enumSource),
             ...(dictionaryCode ? { dictionaryCode } : {}),
         });

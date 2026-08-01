@@ -1,6 +1,7 @@
 import { type V2AnketaRequiredWorkflowTarget } from "./v2-anketa-workflow.util";
 import { type V2StreamBlockExecutor } from "./v2-stream-block-executor.util";
 import { type V2StreamBlockRoleCode } from "./v2-stream-block-role.util";
+import type { V2ImplementationStreamCode } from "./v2-implementation-streams.util";
 export declare const V2_ANKETA_LEAD_ROLE_CODES: readonly ["ds_lead", "de_lead", "modelops_lead"];
 export type V2AnketaLeadRoleCode = (typeof V2_ANKETA_LEAD_ROLE_CODES)[number];
 /**
@@ -72,6 +73,15 @@ export declare const V2_ANKETA_EDIT_ONLY_OWN_STREAM_ROLE_CODES: readonly ["sarep
  */
 export declare const V2_ANKETA_SHARED_SECTION_KEYS: readonly ["generalInfo", "detailInfo"];
 export declare function userEditsOnlyOwnStreamBlocks(roles: readonly string[]): boolean;
+/**
+ * Стримы зрителя для правил доступа к блокам.
+ *
+ * `resolveV2UserImplementationStreamsFromGroups` отвечает на вопрос «резать ли
+ * реестр по стриму» и для `sarep` возвращает пусто — реестр ему не режется.
+ * Для правил блоков нужен сам стрим: без него свой стрим-блок выглядит чужим
+ * (read-only, скрытые оценки, нет кнопки завершения раздела).
+ */
+export declare function resolveV2AnketaViewerStreamsFromGroups(groups: readonly string[]): V2ImplementationStreamCode[];
 export declare function isSharedAnketaSectionPath(formPath: string): boolean;
 /**
  * Можно ли редактировать путь формы. Ограничение действует только для ролей

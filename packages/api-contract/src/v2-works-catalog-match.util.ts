@@ -755,6 +755,7 @@ export function buildLaborCoefficientLookupSource(
 		name?: string | null;
 		schemaPointer?: string | null;
 		schemaFieldUid?: string | null;
+		multiSelect?: boolean;
 	}>,
 	paramCodes: readonly string[],
 	options?: {
@@ -883,6 +884,21 @@ export function buildLaborCoefficientLookupSource(
 				}
 			}
 		}
+	}
+
+	// Массив в lookup имеет два разных смысла. У array-поля схемы это множественный
+	// выбор одного экземпляра (каналы внедрения модели) — его значения складываются
+	// ниже по потоку. У скалярного поля массив собран из нескольких экземпляров
+	// арх-компонента; складывать такие значения нельзя, берём первое, как раньше.
+	const multiSelectCodes = new Set(
+		schemaParams
+			.filter((param) => param.multiSelect)
+			.map((param) => param.code),
+	);
+	for (const code of codes) {
+		const value = merged[code];
+		if (!Array.isArray(value) || multiSelectCodes.has(code)) continue;
+		merged[code] = value[0];
 	}
 
 	return merged;
@@ -1262,8 +1278,8 @@ export type LaborCoefficientAnswerPart = {
 export type LaborCoefficientResolvedDetail = {
 	paramCode: string;
 	value: number;
-	aggregation: "single" | "max";
-	/** Подстановка в разборе формулы: `0.5` или `max(0.5, 1)`. */
+	aggregation: "single" | "sum" | "max";
+	/** Подстановка в разборе формулы: `0.5` или `(0,5 + 1,5)` для multi-select. */
 	formulaValueLabel: string;
 	parts: LaborCoefficientAnswerPart[];
 };
@@ -1295,6 +1311,37 @@ function matchLaborCoefficientRow(
 		}
 	}
 	return null;
+}
+
+/**
+ * Строки коэффициентов по фактическому ответу, в порядке выбора.
+ * Для multi-select возвращает строку на каждое выбранное значение — их
+ * коэффициенты складываются (напр. «Каналы внедрения»: батч + стриминг).
+ */
+function matchLaborCoefficientRows(
+	actual: unknown,
+	paramRows: readonly ByValueLaborCoefficientRow[],
+): ByValueLaborCoefficientRow[] {
+	if (!Array.isArray(actual)) {
+		const matched = matchLaborCoefficientRow(actual, paramRows);
+		return matched ? [matched] : [];
+	}
+	const matched: ByValueLaborCoefficientRow[] = [];
+	const seen = new Set<ByValueLaborCoefficientRow>();
+	for (const item of actual) {
+		const row = matchLaborCoefficientRow(item, paramRows);
+		if (!row || seen.has(row)) continue;
+		seen.add(row);
+		matched.push(row);
+	}
+	return matched;
+}
+
+function sumLaborCoefficients(
+	rows: readonly ByValueLaborCoefficientRow[],
+): number {
+	const sum = rows.reduce((acc, row) => acc + row.coefficient, 0);
+	return Math.round(sum * 10000) / 10000;
 }
 
 function coerceBooleanLaborDefault(
@@ -1338,29 +1385,24 @@ export function resolveByValueLaborParamCoefficientDetails(
 			readLaborParamAnswer(source, paramCode, paramName),
 			paramRows,
 		);
-		const matched = matchLaborCoefficientRow(
-			Array.isArray(actual) ? actual[0] : actual,
-			paramRows,
-		);
+		const matched = matchLaborCoefficientRows(actual, paramRows);
+		const parts = matched.map((row) => ({
+			sourceLabel: null,
+			answerLabel:
+				row.valueLabel?.trim() ||
+				row.valueCode?.trim() ||
+				formatLaborAnswerLabel(actual),
+			coefficient: row.coefficient,
+		}));
 		details[paramCode] = {
 			paramCode,
 			value,
-			aggregation: "single",
-			formulaValueLabel: formatLaborCoeffNumber(value),
-			parts: matched
-				? [
-						{
-							sourceLabel: null,
-							answerLabel:
-								matched.valueLabel?.trim() ||
-								matched.valueCode?.trim() ||
-								formatLaborAnswerLabel(
-									Array.isArray(actual) ? actual[0] : actual,
-								),
-							coefficient: value,
-						},
-					]
-				: [],
+			aggregation: parts.length > 1 ? "sum" : "single",
+			formulaValueLabel:
+				parts.length > 1
+					? `(${parts.map((part) => formatLaborCoeffNumber(part.coefficient)).join(" + ")})`
+					: formatLaborCoeffNumber(value),
+			parts,
 		};
 	}
 	return details;
@@ -1382,16 +1424,13 @@ export function resolveByValueLaborParamCoefficients(
 
 	for (const [paramCode, paramRows] of rowsByParam) {
 		const paramName = paramRows[0]?.paramName ?? null;
-		let actual = coerceBooleanLaborDefault(
+		const actual = coerceBooleanLaborDefault(
 			readLaborParamAnswer(source, paramCode, paramName),
 			paramRows,
 		);
-		if (Array.isArray(actual)) {
-			actual = actual[0];
-		}
-		const matched = matchLaborCoefficientRow(actual, paramRows);
-		if (matched) {
-			paramCoefficients[paramCode] = matched.coefficient;
+		const matched = matchLaborCoefficientRows(actual, paramRows);
+		if (matched.length > 0) {
+			paramCoefficients[paramCode] = sumLaborCoefficients(matched);
 		}
 	}
 	return paramCoefficients;

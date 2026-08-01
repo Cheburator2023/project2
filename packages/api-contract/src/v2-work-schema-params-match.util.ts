@@ -18,6 +18,8 @@ export type WorkSchemaParamDef = {
 	schemaFieldUid?: string | null;
 	schemaPointer?: string | null;
 	sourceKeys?: string[];
+	/** Поле-массив (множественный выбор) — коэффициенты выбранных значений складываются. */
+	multiSelect?: boolean;
 	values?: Array<{ code: string; label: string }>;
 	/** ui:options.dictionaryCode — для сверки значений с живым справочником. */
 	dictionaryCode?: string | null;

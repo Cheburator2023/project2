@@ -159,6 +159,7 @@ export declare function buildLaborCoefficientLookupSource(source: Record<string,
     name?: string | null;
     schemaPointer?: string | null;
     schemaFieldUid?: string | null;
+    multiSelect?: boolean;
 }>, paramCodes: readonly string[], options?: {
     /** Индекс схемы: uid → актуальный pointer (path не SoT). */
     schemaFieldIndex?: import("./v2-schema-field-index.util").V2SchemaFieldIndex | null;
@@ -200,8 +201,8 @@ export type LaborCoefficientAnswerPart = {
 export type LaborCoefficientResolvedDetail = {
     paramCode: string;
     value: number;
-    aggregation: "single" | "max";
-    /** Подстановка в разборе формулы: `0.5` или `max(0.5, 1)`. */
+    aggregation: "single" | "sum" | "max";
+    /** Подстановка в разборе формулы: `0.5` или `(0,5 + 1,5)` для multi-select. */
     formulaValueLabel: string;
     parts: LaborCoefficientAnswerPart[];
 };

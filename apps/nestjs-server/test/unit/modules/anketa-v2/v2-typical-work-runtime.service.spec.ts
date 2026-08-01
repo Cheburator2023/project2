@@ -351,6 +351,9 @@ describe("V2TypicalWorkRuntimeService", () => {
 		});
 
 		expect(matched).toHaveLength(1);
+		expect(matched[0]?.formulaBreakdown?.triggerConditions).toBe(
+			"Регион ∈ {Европа, США}",
+		);
 		expect(excluded).toHaveLength(0);
 	});
 
@@ -892,6 +895,142 @@ describe("V2TypicalWorkRuntimeService", () => {
 		);
 	});
 
+	it("этап 09 (formula-триггер, arch=Модель) считается по каждой подходящей модели", async () => {
+		const workId = WORK_WITH_TRIGGER;
+		// Конфиг как у «09. Адаптация и внедрение модели»: formula-триггер,
+		// triggerArchCount = null, арх. компонент «Модель».
+		const buildService = () =>
+			createService({
+				works: [
+					{
+						id: workId,
+						name: "Адаптация и внедрение модели",
+						workType: "Типовая",
+						archComponentType: "Модель",
+					},
+				],
+				rules: [
+					{
+						workId,
+						streamExecutor: STREAM,
+						paramCode: "workType",
+						paramName: "Тип работ модельного сервиса",
+						operator: "in",
+						valueCode: null,
+						valueLabel: null,
+						valueCodes: [
+							{ code: "Внедрение", label: "Внедрение" },
+							{
+								code: "Разработка и внедрение",
+								label: "Разработка и внедрение",
+							},
+						],
+					},
+					{
+						workId,
+						streamExecutor: STREAM,
+						paramCode: "field_jUm5syZf",
+						paramName: "Каналы внедрения",
+						operator: "=",
+						valueCode: null,
+						valueLabel: null,
+					},
+				],
+				assignments: [
+					{
+						id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+						workId,
+						streamExecutor: STREAM,
+						isActive: true,
+						triggerMode: "formula",
+						triggerFormula: {
+							text: "Тип работ ∈ {Внедрение, Разработка и внедрение} И Каналы внедрения ≠ пусто",
+							tokens: [
+								{
+									kind: "param",
+									paramCode: "workType",
+									paramName: "Тип работ модельного сервиса",
+									operator: "in",
+									values: [
+										{ code: "Внедрение", label: "Внедрение" },
+										{
+											code: "Разработка и внедрение",
+											label: "Разработка и внедрение",
+										},
+									],
+								},
+								{ kind: "logic", op: "and" },
+								{
+									kind: "param",
+									paramCode: "field_jUm5syZf",
+									paramName: "Каналы внедрения",
+									operator: "=",
+									valueCode: null,
+									valueLabel: null,
+								},
+							],
+						},
+					},
+				],
+				versionConfigs: [
+					{
+						workId,
+						streamExecutor: STREAM,
+						templateVersionId: "tpl-09",
+						formula: [{ kind: "norm" }],
+						formulaText: "N",
+						roundingMode: "none",
+						roundingStep: null,
+						calculationLogic: null,
+					},
+				],
+			});
+
+		const run = (modelsList: Array<Record<string, unknown>>) =>
+			buildService().buildCatalogTasks({
+				archComponentType: "Модель",
+				streamExecutor: STREAM,
+				source: { workType: "Разработка и внедрение" },
+				formData: {
+					generalInfo: {
+						modelService: [{ workType: "Разработка и внедрение" }],
+					},
+					detailInfo: { modelsList },
+				},
+				templateVersionId: "tpl-09",
+				atDate: "2025-06-01",
+			});
+
+		const allWithChannels = await run([
+			{ name: "М1", field_jUm5syZf: ["Батч"] },
+			{ name: "М2", field_jUm5syZf: ["Онлайн"] },
+			{ name: "М3", field_jUm5syZf: ["Батч"] },
+		]);
+		expect(
+			allWithChannels[0]?.formulaBreakdown?.instanceBreakdown?.map(
+				(row) => row.sourceLabel,
+			),
+		).toEqual(["М1", "М2", "М3"]);
+		expect(allWithChannels[0]?.total).toBe(6);
+		// «Подробный расчёт» объясняет, по каким условиям работа появилась.
+		expect(allWithChannels[0]?.formulaBreakdown?.triggerConditions).toBe(
+			"Тип работ ∈ {Внедрение, Разработка и внедрение} И Каналы внедрения ≠ пусто",
+		);
+
+		// Модели без каналов внедрения не попадают в сумму (триггер по строке).
+		const partial = await run([
+			{ name: "М1", field_jUm5syZf: ["Батч"] },
+			{ name: "М2" },
+			{ name: "М3", field_jUm5syZf: [] },
+		]);
+		expect(
+			partial[0]?.formulaBreakdown?.instanceBreakdown?.map(
+				(row) => row.sourceLabel,
+			),
+		).toEqual(["М1"]);
+		expect(partial[0]?.total).toBe(2);
+	});
+
 	it("empty algorithmType on a model does not inherit sibling model's labor coeff", async () => {
 		const workId = WORK_WITH_TRIGGER;
 		const service = createService({
@@ -1029,6 +1168,145 @@ describe("V2TypicalWorkRuntimeService", () => {
 		expect(breakdown.map((line) => line.total)).toEqual([5, 2, 7]);
 		expect(tasks[0]?.total).toBeCloseTo(14, 5);
 		expect(breakdown[1]?.expanded).not.toContain("3.5");
+	});
+
+	it("суммирует коэффициенты всех каналов внедрения модели (09 этап)", async () => {
+		const workId = WORK_WITH_TRIGGER;
+		const service = createService({
+			works: [
+				{
+					id: workId,
+					name: "Адаптация и внедрение модели",
+					workType: "Типовая",
+					archComponentType: "Модель",
+				},
+			],
+			rules: [],
+			assignments: [
+				{
+					id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+					workId,
+					streamExecutor: STREAM,
+					isActive: true,
+					triggerArchCountKind: "model",
+					triggerArchCountSteps: [{ count: 1, coefficient: 1 }],
+					triggerArchCountCombinator: "and",
+				},
+			],
+			laborParams: [
+				{
+					workId,
+					streamExecutor: STREAM,
+					paramCode: "channels",
+					paramName: "Каналы внедрения",
+					kind: "by_value",
+					schemaFieldUid: "field_4fb7d302-c5f0-49e6-9cd2-959a1fbe1f4e",
+				},
+			],
+			laborRows: [
+				{
+					workId,
+					streamExecutor: STREAM,
+					paramCode: "channels",
+					paramName: "Каналы внедрения",
+					valueCode: "Батч",
+					valueLabel: "Батч",
+					coefficient: "0.5",
+				},
+				{
+					workId,
+					streamExecutor: STREAM,
+					paramCode: "channels",
+					paramName: "Каналы внедрения",
+					valueCode: "Стриминг",
+					valueLabel: "Стриминг",
+					coefficient: "1.5",
+				},
+			],
+			versionConfigs: [
+				{
+					workId,
+					streamExecutor: STREAM,
+					templateVersionId: "tpl-channels",
+					formula: [
+						{ kind: "norm" },
+						{ kind: "operator", op: "*" },
+						{ kind: "param_coeff", paramCode: "channels" },
+					],
+					formulaText: "N × коэф(channels)",
+					roundingMode: "none",
+					roundingStep: null,
+					calculationLogic: null,
+				},
+			],
+			templateVersion: {
+				id: "tpl-channels",
+				jsonSchema: {
+					type: "object",
+					properties: {
+						detailInfo: {
+							type: "object",
+							properties: {
+								modelsList: {
+									type: "array",
+									items: {
+										type: "object",
+										properties: {
+											name: { type: "string", title: "Название" },
+											channels: {
+												type: "array",
+												title: "Каналы внедрения",
+												items: {
+													type: "string",
+													enum: ["Батч", "Стриминг"],
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				uiSchema: {
+					detailInfo: {
+						modelsList: {
+							items: {
+								channels: {
+									"ui:options": {
+										schemaFieldUid:
+											"field_4fb7d302-c5f0-49e6-9cd2-959a1fbe1f4e",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		});
+
+		const tasks = await service.buildCatalogTasks({
+			archComponentType: "Модель",
+			streamExecutor: STREAM,
+			source: {},
+			formData: {
+				detailInfo: {
+					modelsList: [
+						{ name: "Модель 1", channels: ["Батч", "Стриминг"] },
+						{ name: "Модель 2", channels: ["Батч"] },
+						{ name: "Модель 3" },
+					],
+				},
+			},
+			templateVersionId: "tpl-channels",
+			atDate: "2025-06-01",
+		});
+
+		const breakdown = tasks[0]?.formulaBreakdown?.instanceBreakdown ?? [];
+		// Норматив 2: два канала → 2×(0,5+1,5)=4; один канал → 2×0,5=1;
+		// без каналов → нейтральный коэффициент 2×1=2.
+		expect(breakdown.map((line) => line.total)).toEqual([4, 1, 2]);
+		expect(tasks[0]?.total).toBeCloseTo(7, 5);
 	});
 
 	it("распределяет скидку по числу моделей на per-model работе", async () => {

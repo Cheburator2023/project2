@@ -793,7 +793,7 @@ export type TypicalWorkFormulaFactorLine = {
 	paramName: string;
 	value: number;
 	valueLabel?: string;
-	aggregation?: "single" | "max";
+	aggregation?: "single" | "sum" | "max";
 	parts?: TypicalWorkFormulaFactorPart[];
 };
 
@@ -806,6 +806,8 @@ export type TypicalWorkInstanceBreakdownLine = {
 
 /** Разбор формулы типовой работы для «Подробного расчёта». */
 export type TypicalWorkFormulaBreakdownDto = {
+	/** Условия триггера, по которым работа попала в расчёт. */
+	triggerConditions?: string;
 	symbolic: string;
 	expanded: string;
 	factors: TypicalWorkFormulaFactorLine[];
@@ -836,7 +838,7 @@ function collectFormulaFactorLines(params: {
 		string,
 		{
 			value: number;
-			aggregation: "single" | "max";
+			aggregation: "single" | "sum" | "max";
 			formulaValueLabel: string;
 			parts: TypicalWorkFormulaFactorPart[];
 		}
@@ -949,7 +951,7 @@ export function buildTypicalWorkFormulaBreakdown(params: {
 		string,
 		{
 			value: number;
-			aggregation: "single" | "max";
+			aggregation: "single" | "sum" | "max";
 			formulaValueLabel: string;
 			parts: TypicalWorkFormulaFactorPart[];
 		}
@@ -957,6 +959,7 @@ export function buildTypicalWorkFormulaBreakdown(params: {
 	instanceBreakdown?: TypicalWorkInstanceBreakdownLine[];
 	/** Если задан — подменяет expanded (сумма per-instance). */
 	expandedOverride?: string;
+	triggerConditions?: string | null;
 }): TypicalWorkFormulaBreakdownDto {
 	const tokenFormula = resolveVersionConfigTokenFormula(
 		params.formula,
@@ -996,6 +999,9 @@ export function buildTypicalWorkFormulaBreakdown(params: {
 			: `${formatBreakdownNumber(params.norm)} × ${formatBreakdownNumber(params.coefficient)} = ${totalLabel}`);
 
 	return {
+		...(params.triggerConditions?.trim()
+			? { triggerConditions: params.triggerConditions.trim() }
+			: {}),
 		symbolic,
 		expanded,
 		factors: collectFormulaFactorLines({

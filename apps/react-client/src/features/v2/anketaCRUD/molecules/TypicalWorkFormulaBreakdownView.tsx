@@ -67,8 +67,10 @@ export function readTypicalWorkFormulaBreakdown(
 								? factor.valueLabel
 								: undefined,
 						aggregation:
-							factor.aggregation === "max" || factor.aggregation === "single"
-								? (factor.aggregation as "max" | "single")
+							factor.aggregation === "max" ||
+							factor.aggregation === "sum" ||
+							factor.aggregation === "single"
+								? (factor.aggregation as "max" | "sum" | "single")
 								: undefined,
 						parts: parts?.length ? parts : undefined,
 					};
@@ -96,7 +98,12 @@ export function readTypicalWorkFormulaBreakdown(
 				}))
 				.filter((row) => Number.isFinite(row.total))
 		: undefined;
+	const triggerConditions =
+		typeof record.triggerConditions === "string"
+			? record.triggerConditions.trim()
+			: "";
 	return {
+		...(triggerConditions ? { triggerConditions } : {}),
 		symbolic: symbolic || "N",
 		expanded:
 			expanded ||
@@ -170,6 +177,23 @@ export function TypicalWorkFormulaBreakdownView({
 				bgcolor: "action.hover",
 			}}
 		>
+			{breakdown.triggerConditions ? (
+				<Typography
+					variant="caption"
+					color="text.secondary"
+					display="block"
+					sx={{ mb: 0.75, lineHeight: 1.4, wordBreak: "break-word" }}
+				>
+					<Typography
+						component="span"
+						variant="caption"
+						fontWeight={600}
+					>
+						Условия появления:{" "}
+					</Typography>
+					{breakdown.triggerConditions}
+				</Typography>
+			) : null}
 			{breakdown.symbolic ? (
 				<Typography
 					variant="caption"
@@ -223,6 +247,16 @@ export function TypicalWorkFormulaBreakdownView({
 				{instances.length > 1
 					? `сумма = ${formatTypicalWorkNumberValue(breakdown.total)}`
 					: breakdown.expanded}
+				{instances.length === 1 ? (
+					<Typography
+						component="span"
+						variant="caption"
+						color="text.secondary"
+						sx={{ ml: 0.75 }}
+					>
+						· {instances[0]?.sourceLabel}
+					</Typography>
+				) : null}
 			</Typography>
 		</Box>
 	);

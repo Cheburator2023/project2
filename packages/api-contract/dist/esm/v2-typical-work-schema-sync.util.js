@@ -1,6 +1,6 @@
 import { normalizeStoredValueCode, normalizeStoredValueLabel, slugParamCode, } from "./v2-param-slug.util";
 import { schemaEnumValueMatchesRule } from "./v2-template-work-schema-params.util";
-import { formatParamNameWithSourceKeys, stripParamNameSourceKeys, } from "./v2-work-param-source-keys.util";
+import { formatParamNameWithSourceKeys, parseParamNameSourceKeys, stripParamNameSourceKeys, } from "./v2-work-param-source-keys.util";
 import { isParamToken, markUnknownFormulaLaborParamTokensInvalid, reconcileFormulaLaborParamTokens, tokensToText, } from "./v2-work-formula.util";
 /** Слияние записей об одной работе, затронутой несколькими полями схемы. */
 export function mergeSchemaSyncAffectedWorks(target, incoming) {
@@ -42,12 +42,21 @@ function formatSyncedParamName(request, currentName, nextCode, previousCode) {
     const displayName = stripParamNameSourceKeys(request.field.name ?? currentName ?? "").trim();
     if (!displayName)
         return currentName ?? null;
+    /**
+     * Уже накопленные алиасы переносим, а слаг прежнего имени добавляем только при
+     * реальном переименовании. Иначе каждый прогон подменяет слаг на текущее имя,
+     * реконсиляция не сходится и bulk dryRun вечно рапортует «схема изменилась».
+     */
+    const current = parseParamNameSourceKeys(currentName);
     const aliasCodes = [
         nextCode,
         previousCode,
         request.field.previousCode,
         ...(request.field.aliasCodes ?? []),
-        currentName ? slugParamCode(stripParamNameSourceKeys(currentName)) : null,
+        ...current.sourceKeys,
+        current.displayName && current.displayName !== displayName
+            ? slugParamCode(current.displayName)
+            : null,
     ].filter((code) => Boolean(code?.trim()));
     return formatParamNameWithSourceKeys(displayName, [...new Set(aliasCodes)]);
 }
@@ -328,10 +337,16 @@ export function reconcileTypicalWorkCardWithSchemaField(card, request) {
     if (formulaSanitized.invalidated) {
         formulasInvalidated = 1;
     }
-    const changed = matchingRules.length > 0 ||
-        matchingLabor.length > 0 ||
-        formulaReconciled.invalidated ||
+    /**
+     * «Изменено» — только когда результат реконсиляции реально отличается от карточки.
+     * Совпадения по полю (`matchingRules`/`matchingLabor`) недостаточно: bulk dryRun
+     * идёт по всем полям схемы и иначе помечает как «затронутые» все работы с любой
+     * привязкой — на нетронутой схеме это даёт ложное предложение синхронизации.
+     */
+    const changed = formulaReconciled.invalidated ||
         formulaSanitized.invalidated ||
+        JSON.stringify(rules) !== JSON.stringify(card.rules) ||
+        JSON.stringify(laborParams) !== JSON.stringify(card.laborParams) ||
         JSON.stringify(formulaTokens) !== JSON.stringify(card.formula.tokens);
     return {
         card: {

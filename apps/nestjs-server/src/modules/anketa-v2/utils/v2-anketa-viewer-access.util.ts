@@ -1,7 +1,7 @@
 import {
 	normalizeStreamBlockRole,
 	normalizeV2UserGroups,
-	resolveV2UserImplementationStreamsFromGroups,
+	resolveV2AnketaViewerStreamsFromGroups,
 	V2_ANKETA_VIEWER_ROLE_CODES,
 	type V2AnketaViewerAccessContext,
 } from "@smart-anketa/api-contract";
@@ -28,6 +28,6 @@ export function buildV2AnketaViewerAccessFromUser(
 	];
 	return {
 		roles,
-		streams: resolveV2UserImplementationStreamsFromGroups(groups),
+		streams: resolveV2AnketaViewerStreamsFromGroups(groups),
 	};
 }

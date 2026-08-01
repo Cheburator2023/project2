@@ -216,6 +216,45 @@ const v2_work_schema_params_match_util_1 = require("./v2-work-schema-params-matc
             },
         ])).toEqual({ field_dict: 20 });
     });
+    (0, vitest_1.it)("sums by-value coefficients across all selected multi-select values", () => {
+        const rows = [
+            {
+                paramCode: "field_jUm5syZf",
+                paramName: "Каналы внедрения @ field_jUm5syZf",
+                valueCode: "батч",
+                valueLabel: "Батч",
+                coefficient: 0.5,
+            },
+            {
+                paramCode: "field_jUm5syZf",
+                paramName: "Каналы внедрения @ field_jUm5syZf",
+                valueCode: "стриминг",
+                valueLabel: "Стриминг",
+                coefficient: 1.5,
+            },
+            {
+                paramCode: "field_jUm5syZf",
+                paramName: "Каналы внедрения @ field_jUm5syZf",
+                valueCode: "llm",
+                valueLabel: "LLM",
+                coefficient: 2,
+            },
+        ];
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.resolveByValueLaborParamCoefficients)({ field_jUm5syZf: ["Батч", "Стриминг"] }, rows)).toEqual({ field_jUm5syZf: 2 });
+        // Один канал — коэффициент этого канала, без изменений поведения.
+        (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.resolveByValueLaborParamCoefficients)({ field_jUm5syZf: ["Батч"] }, rows)).toEqual({ field_jUm5syZf: 0.5 });
+        const details = (0, v2_works_catalog_match_util_1.resolveByValueLaborParamCoefficientDetails)({ field_jUm5syZf: ["Батч", "Стриминг", "LLM"] }, rows);
+        (0, vitest_1.expect)(details.field_jUm5syZf).toMatchObject({
+            value: 4,
+            aggregation: "sum",
+            formulaValueLabel: "(0.5 + 1.5 + 2)",
+        });
+        (0, vitest_1.expect)(details.field_jUm5syZf?.parts).toEqual([
+            { sourceLabel: null, answerLabel: "Батч", coefficient: 0.5 },
+            { sourceLabel: null, answerLabel: "Стриминг", coefficient: 1.5 },
+            { sourceLabel: null, answerLabel: "LLM", coefficient: 2 },
+        ]);
+    });
     (0, vitest_1.it)("treats an absent by-value boolean checkbox as false", () => {
         (0, vitest_1.expect)((0, v2_works_catalog_match_util_1.resolveByValueLaborParamCoefficients)({ name: "Источник", value: "Да" }, [
             {

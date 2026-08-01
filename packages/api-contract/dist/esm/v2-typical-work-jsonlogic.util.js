@@ -656,6 +656,9 @@ export function buildTypicalWorkFormulaBreakdown(params) {
             ? `${valuesFormula} = ${totalLabel}`
             : `${formatBreakdownNumber(params.norm)} × ${formatBreakdownNumber(params.coefficient)} = ${totalLabel}`);
     return {
+        ...(params.triggerConditions?.trim()
+            ? { triggerConditions: params.triggerConditions.trim() }
+            : {}),
         symbolic,
         expanded,
         factors: collectFormulaFactorLines({

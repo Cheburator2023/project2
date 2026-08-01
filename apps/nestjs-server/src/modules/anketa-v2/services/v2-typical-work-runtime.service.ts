@@ -10,6 +10,7 @@ import {
 	buildWorkCoefficientCatalog,
 	computeTypicalWorkFormulaTotal,
 	defaultWorkRounding,
+	describeTypicalWorkTriggerConditions,
 	formDataWithSingleArchInstance,
 	formatEmptyArchInstanceBreakdown,
 	formatNoTriggerMatchingArchInstanceBreakdown,
@@ -133,6 +134,26 @@ type RuntimeWorkContext = {
 	uncertaintyConfig?: import("@smart-anketa/api-contract").V2OverallUncertaintyConfig;
 	schemaFieldIndex?: import("@smart-anketa/api-contract").V2SchemaFieldIndex | null;
 };
+
+/**
+ * Условия триггера для «Подробного расчёта». Только для работ, которые попали
+ * в расчёт по триггеру: у alwaysShown-работ условия не сработали, и показывать
+ * их как причину появления было бы неверно.
+ */
+function describeWorkTriggerConditions(ctx: RuntimeWorkContext): string | null {
+	if (!ctx.triggersMatch) return null;
+	const assignment = ctx.assignmentByWorkId.get(ctx.work.id);
+	return describeTypicalWorkTriggerConditions({
+		mode:
+			(assignment?.triggerMode as TypicalWorkTriggerMatchInput["mode"]) ??
+			"simple",
+		rules: ctx.rules,
+		triggerArchCount: mapTriggerArchCountFromAssignment(assignment),
+		triggerFormula:
+			(assignment?.triggerFormula as TypicalWorkTriggerMatchInput["triggerFormula"]) ??
+			null,
+	});
+}
 
 function decimalToNumber(value: string | number | null | undefined): number {
 	if (value === null || value === undefined) return 0;
@@ -967,6 +988,7 @@ export class V2TypicalWorkRuntimeService {
 				total,
 				instanceBreakdown: evaluated.instanceBreakdown,
 				expandedOverride: evaluated.expandedOverride,
+				triggerConditions: describeWorkTriggerConditions(ctx),
 			});
 
 			tasks.push({

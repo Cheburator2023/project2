@@ -7,10 +7,12 @@ import {
 	isBlockVisibleForUser,
 	isV2AnketaPathEditableForViewer,
 	resolveV2AnketaBlockAccessRestrictionsForOutputPath,
+	resolveV2AnketaViewerStreamsFromGroups,
 	shouldApplyV2AnketaBlockAccessAtPath,
 	shouldMaskWorkEstimatesForUser,
 	type V2AnketaViewerAccessContext,
 } from "./v2-anketa-block-access.util";
+import { resolveV2UserImplementationStreamsFromGroups } from "./v2-user-stream-mapping.util";
 import { describe, expect, it } from "vitest";
 
 const uiSchema = {
@@ -363,5 +365,101 @@ describe("представитель стрима: правка и подтве�
 				collectForbiddenV2AnketaWorkflowChanges(lead, schema, empty, globalChange),
 			).toEqual([]);
 		});
+	});
+});
+
+/**
+ * Регресс: viewerAccess собирается из Keycloak groups. Для `sarep` реестр по
+ * стриму не режется, поэтому стрим-резолвер реестра возвращает пусто — свой
+ * стрим-блок становился read-only, без кнопки завершения и с чужими оценками.
+ */
+describe("представитель стрима: стримы из групп Keycloak", () => {
+	const schema = {
+		generalInfo: { "ui:options": { sectionRole: "main" } },
+		streamDadm: {
+			"ui:options": {
+				streamBlock: true,
+				streamExecutor: V2_IMPLEMENTATION_STREAM.DADM,
+			},
+			atypicalTasks: { "ui:options": { archComponent: "atypicalWork" } },
+		},
+		streamPirm: {
+			"ui:options": {
+				streamBlock: true,
+				streamExecutor: V2_IMPLEMENTATION_STREAM.PIRM,
+			},
+		},
+	};
+	const rules = { applyAccessRules: true };
+	const groups = ["/sarep/test_sum_sarep_dadm"];
+	const viewer: V2AnketaViewerAccessContext = {
+		roles: ["sarep"],
+		streams: resolveV2AnketaViewerStreamsFromGroups(groups),
+	};
+
+	it("резолвит стрим из AD-группы sum_sarep_<стрим>", () => {
+		expect(resolveV2UserImplementationStreamsFromGroups(groups)).toEqual([]);
+		expect(viewer.streams).toEqual([V2_IMPLEMENTATION_STREAM.DADM]);
+	});
+
+	it("не подменяет стримы ролям, которые фильтруются реестром", () => {
+		for (const other of [
+			["/ds/test_sum_ds_kmbkcb"],
+			["/de/test_sum_de_rb"],
+			["/architect/test_sum_arch_rb"],
+		]) {
+			expect(resolveV2AnketaViewerStreamsFromGroups(other)).toEqual(
+				resolveV2UserImplementationStreamsFromGroups(other),
+			);
+		}
+	});
+
+	it("возвращает кнопку «Завершить заполнение» на своём стриме", () => {
+		expect(
+			canViewerCompleteAnketaSection(viewer, schema, "streamDadm", rules),
+		).toBe(true);
+		expect(
+			canViewerCompleteAnketaSection(viewer, schema, "streamPirm", rules),
+		).toBe(false);
+	});
+
+	it("даёт добавлять и править нетиповые работы своего стрима", () => {
+		expect(
+			isV2AnketaPathEditableForViewer(
+				viewer,
+				schema,
+				"streamDadm.atypicalTasks",
+				rules,
+			),
+		).toBe(true);
+		expect(
+			isV2AnketaPathEditableForViewer(
+				viewer,
+				schema,
+				"streamDadm.atypicalTasks.0.estimateHoursPerDay",
+				rules,
+			),
+		).toBe(true);
+		expect(
+			isV2AnketaPathEditableForViewer(
+				viewer,
+				schema,
+				"streamPirm.atypicalTasks",
+				rules,
+			),
+		).toBe(false);
+	});
+
+	it("показывает оценки своего стрима и скрывает чужие", () => {
+		expect(
+			shouldMaskWorkEstimatesForUser(viewer, [V2_IMPLEMENTATION_STREAM.DADM]),
+		).toBe(false);
+		expect(
+			shouldMaskWorkEstimatesForUser(viewer, [V2_IMPLEMENTATION_STREAM.PIRM]),
+		).toBe(true);
+	});
+
+	it("не открывает завершение анкеты целиком", () => {
+		expect(canViewerCompleteWholeAnketa(viewer.roles)).toBe(false);
 	});
 });

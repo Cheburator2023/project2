@@ -16,6 +16,7 @@ exports.isBlockInViewerOwnStreamScope = isBlockInViewerOwnStreamScope;
 exports.isBlockVisibleForUser = isBlockVisibleForUser;
 exports.isV2AnketaBlockVisibleForViewer = isV2AnketaBlockVisibleForViewer;
 exports.userEditsOnlyOwnStreamBlocks = userEditsOnlyOwnStreamBlocks;
+exports.resolveV2AnketaViewerStreamsFromGroups = resolveV2AnketaViewerStreamsFromGroups;
 exports.isSharedAnketaSectionPath = isSharedAnketaSectionPath;
 exports.isV2AnketaPathEditableForViewer = isV2AnketaPathEditableForViewer;
 exports.canViewerCompleteAnketaSection = canViewerCompleteAnketaSection;
@@ -30,6 +31,7 @@ const v2_anketa_section_ui_util_1 = require("./v2-anketa-section-ui.util");
 const v2_anketa_workflow_util_1 = require("./v2-anketa-workflow.util");
 const v2_stream_block_executor_util_1 = require("./v2-stream-block-executor.util");
 const v2_stream_block_role_util_1 = require("./v2-stream-block-role.util");
+const v2_user_stream_mapping_util_1 = require("./v2-user-stream-mapping.util");
 exports.V2_ANKETA_LEAD_ROLE_CODES = [
     "ds_lead",
     "de_lead",
@@ -252,6 +254,23 @@ exports.V2_ANKETA_SHARED_SECTION_KEYS = [
 ];
 function userEditsOnlyOwnStreamBlocks(roles) {
     return roles.some((role) => exports.V2_ANKETA_EDIT_ONLY_OWN_STREAM_ROLE_CODES.includes(role.trim()));
+}
+/**
+ * Стримы зрителя для правил доступа к блокам.
+ *
+ * `resolveV2UserImplementationStreamsFromGroups` отвечает на вопрос «резать ли
+ * реестр по стриму» и для `sarep` возвращает пусто — реестр ему не режется.
+ * Для правил блоков нужен сам стрим: без него свой стрим-блок выглядит чужим
+ * (read-only, скрытые оценки, нет кнопки завершения раздела).
+ */
+function resolveV2AnketaViewerStreamsFromGroups(groups) {
+    const filtered = (0, v2_user_stream_mapping_util_1.resolveV2UserImplementationStreamsFromGroups)(groups);
+    if (filtered.length > 0)
+        return filtered;
+    const roles = (0, v2_user_stream_mapping_util_1.normalizeV2UserGroups)(groups).map((group) => (0, v2_stream_block_role_util_1.normalizeStreamBlockRole)(group) ?? group.trim());
+    if (!userEditsOnlyOwnStreamBlocks(roles))
+        return filtered;
+    return (0, v2_user_stream_mapping_util_1.resolveV2UserScopedStreamsFromGroups)(groups);
 }
 function isSharedAnketaSectionPath(formPath) {
     const root = formPath.trim().split(".")[0]?.trim() ?? "";

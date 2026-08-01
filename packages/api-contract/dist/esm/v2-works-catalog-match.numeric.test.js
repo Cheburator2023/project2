@@ -283,10 +283,13 @@ describe("numeric labor coefficient ranges", () => {
         expect(filledLookup.algorithmType).toBe("Гео-аналитика");
         expect(resolveByValueLaborParamCoefficients(filledLookup, laborRows)).toEqual({ algorithmType: 2.5 });
     });
-    it("uses first matching coefficient for array answers (per-instance uses scalars)", () => {
-        const coeffs = resolveByValueLaborParamCoefficients({
-            complexity: ["Низкая", "Высокая"],
-        }, [
+    it("collapses a scalar field gathered across arch instances to the first value", () => {
+        // «Сложность» — скалярное поле; массив здесь означает сборку по нескольким
+        // моделям, а не множественный выбор. Складывать такие значения нельзя,
+        // иначе коэффициент одной модели утечёт в расчёт другой.
+        const lookup = buildLaborCoefficientLookupSource({ complexity: ["Низкая", "Высокая"] }, {}, [{ code: "complexity", name: "Сложность" }], ["complexity"]);
+        expect(lookup.complexity).toBe("Низкая");
+        const coeffs = resolveByValueLaborParamCoefficients(lookup, [
             {
                 paramCode: "complexity",
                 paramName: "Сложность",
@@ -303,6 +306,33 @@ describe("numeric labor coefficient ranges", () => {
             },
         ]);
         expect(coeffs).toEqual({ complexity: 0.8 });
+    });
+    it("keeps multi-select values intact so their coefficients can be summed", () => {
+        const lookup = buildLaborCoefficientLookupSource({}, { detailInfo: { model: [{ channels: ["Батч", "Стриминг"] }] } }, [
+            {
+                code: "channels",
+                name: "Каналы внедрения",
+                schemaPointer: "/detailInfo/model/items/channels",
+                multiSelect: true,
+            },
+        ], ["channels"]);
+        expect(lookup.channels).toEqual(["Батч", "Стриминг"]);
+        expect(resolveByValueLaborParamCoefficients(lookup, [
+            {
+                paramCode: "channels",
+                paramName: "Каналы внедрения",
+                valueCode: "Батч",
+                valueLabel: "Батч",
+                coefficient: 0.5,
+            },
+            {
+                paramCode: "channels",
+                paramName: "Каналы внедрения",
+                valueCode: "Стриминг",
+                valueLabel: "Стриминг",
+                coefficient: 1.5,
+            },
+        ])).toEqual({ channels: 2 });
     });
     it("resolves readyPromReports from a single model source context", () => {
         const coeffs = resolveByValueLaborParamCoefficients({ name: "вава", readyPromReports: true }, [

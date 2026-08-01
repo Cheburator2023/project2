@@ -58,6 +58,30 @@ function card() {
     };
 }
 (0, vitest_1.describe)("reconcileTypicalWorkCardWithSchemaField", () => {
+    /**
+     * Bulk dryRun прогоняет все поля схемы при первом открытии редактора. Если
+     * повторная реконсиляция уже синхронной карточки возвращает `changed`, админу
+     * предлагают обновить работы на нетронутой схеме.
+     */
+    (0, vitest_1.it)("идемпотентна: повторная синхронизация не помечает карточку изменённой", () => {
+        const request = {
+            templateVersionId: "version-1",
+            mode: "dryRun",
+            operation: "upsert",
+            field: {
+                schemaFieldUid: "field-1",
+                previousCode: "old_code",
+                code: "new_code",
+                name: "Новое имя",
+                values: [{ code: "keep", label: "Новое значение" }],
+            },
+        };
+        const first = (0, v2_typical_work_schema_sync_util_1.reconcileTypicalWorkCardWithSchemaField)(card(), request);
+        (0, vitest_1.expect)(first.changed).toBe(true);
+        const second = (0, v2_typical_work_schema_sync_util_1.reconcileTypicalWorkCardWithSchemaField)(first.card, request);
+        (0, vitest_1.expect)(second.changed).toBe(false);
+        (0, vitest_1.expect)(second.card).toEqual(first.card);
+    });
     (0, vitest_1.it)("preserves matching dictionary values and refreshes names and codes", () => {
         const result = (0, v2_typical_work_schema_sync_util_1.reconcileTypicalWorkCardWithSchemaField)(card(), {
             templateVersionId: "version-1",
