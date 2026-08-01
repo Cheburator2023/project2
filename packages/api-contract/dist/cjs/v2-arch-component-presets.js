@@ -66,11 +66,11 @@ const SNAPSHOT_ARCH_PRESETS = {
                 },
                 "field_JcKtx9Mg": {
                     "type": "boolean",
-                    "title": "Требуется оркестратор"
+                    "title": "Требуется оркестратор ПИМ"
                 },
                 "field_KzzDtkB0": {
                     "type": "boolean",
-                    "title": "Требуется визуализация результатов работы модельного сервиса"
+                    "title": "Требуется визуализация результатов работы модельного сервиса в SuperSet"
                 },
                 "field_SvNx6iEq": {
                     "type": "array",
@@ -880,7 +880,7 @@ const SNAPSHOT_ARCH_PRESETS = {
                 },
                 "metricsCount": {
                     "type": "number",
-                    "title": "Количество признаков"
+                    "title": "Количество признаков в Наборе признаков"
                 },
                 "field_0uV7wafS": {
                     "enum": [
@@ -903,7 +903,7 @@ const SNAPSHOT_ARCH_PRESETS = {
                         "Неизвестно"
                     ],
                     "type": "string",
-                    "title": "Сложность реализации"
+                    "title": "Сложность реализации Набора признаков"
                 },
                 "field_L-WWLDWY": {
                     "enum": [
@@ -960,7 +960,7 @@ const SNAPSHOT_ARCH_PRESETS = {
                 },
                 "field_w_EN6lWe": {
                     "type": "boolean",
-                    "title": "Требуется парсинг сырых данных"
+                    "title": "Требуется парсинг сырых данных в Хранилище признаков"
                 },
                 "field_x-1d7wUh": {
                     "type": "boolean",

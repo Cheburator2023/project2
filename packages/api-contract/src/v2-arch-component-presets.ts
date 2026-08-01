@@ -79,11 +79,11 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				},
 				"field_JcKtx9Mg": {
 					"type": "boolean",
-					"title": "Требуется оркестратор"
+					"title": "Требуется оркестратор ПИМ"
 				},
 				"field_KzzDtkB0": {
 					"type": "boolean",
-					"title": "Требуется визуализация результатов работы модельного сервиса"
+					"title": "Требуется визуализация результатов работы модельного сервиса в SuperSet"
 				},
 				"field_SvNx6iEq": {
 					"type": "array",
@@ -124,8 +124,24 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				"field_r66ph-79": {
 					"type": "boolean",
 					"title": "Перекладка артефактов между контурами посредством РЕПО"
-				}
-			}
+				},
+				"field_UNSRK-JY": {
+					"type": "boolean",
+					"title": "Требуется расширение инфраструктуры кластера SSDP"
+				},
+				"field_-AZPYdbp": {
+					"enum": [
+						"без интеграций и без Clickhouse",
+						"с интеграцией и Clickhouse",
+						"с интеграцией, Clickhouse и доработкой"
+					],
+					"type": "string",
+					"title": "SuperSet: сложность развёртывания отдельного инстанса, наличие доп. доработок, способ загрузки данных (вручную / по интеграции)"
+				},
+				"field_IGQX_9FN": {
+					"type": "boolean",
+					"title": "Требуется логирование ПИМ"
+				},}
 		},
 		"uiOptions": {
 			"sectionRole": "subsection",
@@ -150,8 +166,11 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				"field_JcKtx9Mg",
 				"field_KzzDtkB0",
 				"field_F7nK-We5",
-				"field_4IL7OStC"
-			],
+				"field_4IL7OStC",
+			
+				"field_UNSRK-JY",
+				"field_-AZPYdbp",
+				"field_IGQX_9FN"],
 			"workType": {
 				"ui:widget": "select",
 				"ui:options": {
@@ -253,8 +272,27 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 					"schemaFieldUid": "field_40c7febb-4936-4cb9-9a83-3f95bbf28754"
 				},
 				"ui:placeholder": "Перекладка артефактов между контурами посредством РЕПО"
-			}
-		}
+			},
+		
+			"field_UNSRK-JY": {
+				"ui:options": {
+					"schemaFieldUid": "field_9a6e2063-4ec1-4810-980d-9d48b1822cbf"
+				},
+				"ui:placeholder": "Требуется расширение инфраструктуры кластера SSDP"
+			},
+			"field_-AZPYdbp": {
+				"ui:widget": "select",
+				"ui:options": {
+					"schemaFieldUid": "field_b15470f9-ea74-45c8-ba3a-76581097b33c"
+				},
+				"ui:placeholder": "SuperSet: сложность развёртывания отдельного инстанса, наличие доп. доработок, способ загрузки данных (вручную / по интеграции)"
+			},
+			"field_IGQX_9FN": {
+				"ui:options": {
+					"schemaFieldUid": "field_15e8f2e9-0ea8-46f5-a7d3-59abcb82cb12"
+				},
+				"ui:placeholder": "Требуется логирование ПИМ"
+			},}
 	},
 	"sourceSystem": {
 		"schema": {
@@ -476,8 +514,72 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 						],
 						"type": "string",
 						"title": "Сложность настройки шаблона разметки данных"
-					}
-				}
+					},
+					"field_LGUdr5mq": {
+					"type": "boolean",
+					"title": "Маркер: требуется разметка данных источника"
+				},
+				"field_eIIWBdCg": {
+					"type": "boolean",
+					"title": "Маркер: требуется новая модель для автоматической разметки данных"
+				},
+				"field_DnB8Ur4I": {
+					"enum": [
+						"норма",
+						"средняя",
+						"высокая"
+					],
+					"type": "string",
+					"title": "Маркер: сложность настройки шаблона разметки данных и подготовки сырых данных для загрузки"
+				},
+				"field_OyRJyJxD": {
+					"enum": [
+						"норма",
+						"средняя",
+						"высокая"
+					],
+					"type": "string",
+					"title": "Маркер: размер новой модели, доп. библиотеки, сложность подключения, конфигурации, тестирования и отладки модели (вкл. Active Learning и сетевые доступы)"
+				},
+				"field_xi0W_vl-": {
+					"type": "boolean",
+					"title": "Маркер: требуется регламентный импорт/экспорт данных или отчетности"
+				},
+				"field__NUAXSNP": {
+					"enum": [
+						"норма",
+						"средняя",
+						"высокая"
+					],
+					"type": "string",
+					"title": "Маркер: сложность реализации интеграции, правил обработки данных (в т.ч. конфиденциальных) и настройки режима обмена данными"
+				},
+				"field_nx1zBg1X": {
+					"type": "boolean",
+					"title": "Маркер: требуются специальные условия хранения и обработки конфиденциальных данных, не поддерживаемые коммунальным сервисом"
+				},
+				"field_wluxUVJ9": {
+					"enum": [
+						"норма",
+						"средняя",
+						"высокая"
+					],
+					"type": "string",
+					"title": "Маркер: правила обработки данных (в т.ч. конфиденциальных), режим обмена данными, сложность развёртывания отдельного инстанса и наличие доп. доработок"
+				},
+				"field_KnIEmMxM": {
+					"type": "boolean",
+					"title": "Маркер: требуется ручная обработка результатов автоматизированной разметки данных"
+				},
+				"field_TrX4G9Gc": {
+					"enum": [
+						"без доработок",
+						"незначительные доработки",
+						"значительные доработки"
+					],
+					"type": "string",
+					"title": "Маркер: сложность развёртывания отдельного инстанса ручной разметки голосов и наличие доп. доработок"
+				},}
 			},
 			"title": "Системы источники"
 		},
@@ -535,8 +637,18 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 					"field_61bkBs0m",
 					"field_L1lRlgf1",
 					"field_lDw9gG39",
-					"field_WgK6lIS-"
-				],
+					"field_WgK6lIS-",
+				
+				"field_LGUdr5mq",
+				"field_eIIWBdCg",
+				"field_DnB8Ur4I",
+				"field_OyRJyJxD",
+				"field_xi0W_vl-",
+				"field__NUAXSNP",
+				"field_nx1zBg1X",
+				"field_wluxUVJ9",
+				"field_KnIEmMxM",
+				"field_TrX4G9Gc"],
 				"field_-EGYyyJF": {
 					"ui:options": {
 						"schemaFieldUid": "field_6676112d-2c43-41a0-8b3c-bd0d492ecd49"
@@ -706,8 +818,73 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 						"dictionaryCode": "v2.detailInfo.sourceSystems.items.field_wuYlhnu0",
 						"schemaFieldUid": "field_d6554cad-b9ca-4b1e-b885-8868f35e60f5"
 					}
-				}
-			}
+				},
+			
+			"field_LGUdr5mq": {
+				"ui:options": {
+					"schemaFieldUid": "field_232f5368-2469-4105-96a3-cc43c092189c"
+				},
+				"ui:placeholder": "Маркер: требуется разметка данных источника"
+			},
+			"field_eIIWBdCg": {
+				"ui:options": {
+					"schemaFieldUid": "field_b0cbc410-e812-44c9-9801-648255e3317b"
+				},
+				"ui:placeholder": "Маркер: требуется новая модель для автоматической разметки данных"
+			},
+			"field_DnB8Ur4I": {
+				"ui:widget": "select",
+				"ui:options": {
+					"schemaFieldUid": "field_e6e350f4-eb44-4b6e-9746-4732dbd983c7"
+				},
+				"ui:placeholder": "Маркер: сложность настройки шаблона разметки данных и подготовки сырых данных для загрузки"
+			},
+			"field_OyRJyJxD": {
+				"ui:widget": "select",
+				"ui:options": {
+					"schemaFieldUid": "field_f79d5c4f-da6a-4806-81a1-70ae2d325714"
+				},
+				"ui:placeholder": "Маркер: размер новой модели, доп. библиотеки, сложность подключения, конфигурации, тестирования и отладки модели (вкл. Active Learning и сетевые доступы)"
+			},
+			"field_xi0W_vl-": {
+				"ui:options": {
+					"schemaFieldUid": "field_680ef613-2620-42d3-bbb8-78b46d94dd68"
+				},
+				"ui:placeholder": "Маркер: требуется регламентный импорт/экспорт данных или отчетности"
+			},
+			"field__NUAXSNP": {
+				"ui:widget": "select",
+				"ui:options": {
+					"schemaFieldUid": "field_5e9523cd-55e1-40b2-a302-921f75e99672"
+				},
+				"ui:placeholder": "Маркер: сложность реализации интеграции, правил обработки данных (в т.ч. конфиденциальных) и настройки режима обмена данными"
+			},
+			"field_nx1zBg1X": {
+				"ui:options": {
+					"schemaFieldUid": "field_b0953c62-5d1b-4f2c-999e-0bfea5ca59fe"
+				},
+				"ui:placeholder": "Маркер: требуются специальные условия хранения и обработки конфиденциальных данных, не поддерживаемые коммунальным сервисом"
+			},
+			"field_wluxUVJ9": {
+				"ui:widget": "select",
+				"ui:options": {
+					"schemaFieldUid": "field_0e6ceec2-66b6-44d6-92b8-207b263ea571"
+				},
+				"ui:placeholder": "Маркер: правила обработки данных (в т.ч. конфиденциальных), режим обмена данными, сложность развёртывания отдельного инстанса и наличие доп. доработок"
+			},
+			"field_KnIEmMxM": {
+				"ui:options": {
+					"schemaFieldUid": "field_2c0a26f3-b379-4c17-b963-a6876808db53"
+				},
+				"ui:placeholder": "Маркер: требуется ручная обработка результатов автоматизированной разметки данных"
+			},
+			"field_TrX4G9Gc": {
+				"ui:widget": "select",
+				"ui:options": {
+					"schemaFieldUid": "field_19da4968-280e-43eb-b4c7-7e8d12453bc7"
+				},
+				"ui:placeholder": "Маркер: сложность развёртывания отдельного инстанса ручной разметки голосов и наличие доп. доработок"
+			},}
 		}
 	},
 	"dataProcess": {
@@ -893,7 +1070,7 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				},
 				"metricsCount": {
 					"type": "number",
-					"title": "Количество признаков"
+					"title": "Количество признаков в Наборе признаков"
 				},
 				"field_0uV7wafS": {
 					"enum": [
@@ -916,7 +1093,7 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 						"Неизвестно"
 					],
 					"type": "string",
-					"title": "Сложность реализации"
+					"title": "Сложность реализации Набора признаков"
 				},
 				"field_L-WWLDWY": {
 					"enum": [
@@ -973,7 +1150,7 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				},
 				"field_w_EN6lWe": {
 					"type": "boolean",
-					"title": "Требуется парсинг сырых данных"
+					"title": "Требуется парсинг сырых данных в Хранилище признаков"
 				},
 				"field_x-1d7wUh": {
 					"type": "boolean",
@@ -990,6 +1167,10 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				"field_saveRawFs": {
 					"type": "boolean",
 					"title": "Требуется сохранять сырые данные в Хранилище признаков"
+				},
+				"field__CwXDnEl": {
+					"type": "boolean",
+					"title": "Хранилище признаков: подключение нового источника данных"
 				}
 			}
 		},
@@ -1018,8 +1199,9 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				"field_fRuMuWtn",
 				"field_L-WWLDWY",
 				"field_0uV7wafS",
-				"field_N9LFD6Hu"
-			],
+				"field_N9LFD6Hu",
+			
+				"field__CwXDnEl"],
 			"workType": {
 				"ui:widget": "select",
 				"ui:options": {
@@ -1123,8 +1305,14 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				"ui:options": {
 					"schemaFieldUid": "field_a8c3e1d2-4b5f-6789-a0b1-c2d3e4f50607"
 				}
-			}
-		}
+			},
+		
+			"field__CwXDnEl": {
+				"ui:options": {
+					"schemaFieldUid": "field_cc39396a-1f17-495e-8492-35c3456b48d7"
+				},
+				"ui:placeholder": "Хранилище признаков: подключение нового источника данных"
+			},}
 	},
 	"model": {
 		"schema": {
@@ -1213,6 +1401,10 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 					},
 					"title": "Каналы внедрения",
 					"uniqueItems": true
+				},
+				"field_Ifnu_c_H": {
+					"type": "boolean",
+					"title": "Требуется новая библиотека / базовая модель"
 				}
 			}
 		},
@@ -1234,8 +1426,9 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				"field_S41Rqt5E",
 				"field_S23CbRXp",
 				"field_CeBkWcQc",
-				"field_58TkWuwu"
-			],
+				"field_58TkWuwu",
+			
+				"field_Ifnu_c_H"],
 			"workType": {
 				"ui:widget": "select",
 				"ui:options": {
@@ -1298,8 +1491,14 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 					"semanticRole": "deploymentChannels"
 				},
 				"ui:placeholder": "Каналы внедрения"
-			}
-		}
+			},
+		
+			"field_Ifnu_c_H": {
+				"ui:options": {
+					"schemaFieldUid": "field_86dd31b1-cec2-41ba-8b04-616f1adc2bad"
+				},
+				"ui:placeholder": "Требуется новая библиотека / базовая модель"
+			},}
 	}
 };
 

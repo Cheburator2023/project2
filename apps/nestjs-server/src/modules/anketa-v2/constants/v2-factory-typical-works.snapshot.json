@@ -4,13 +4,13 @@
     "factoryBundle": true,
     "description": "Заводской снимок каталога типовых работ и методологических параметров. Редактируется в репозитории; не генерируется из внешних CSV.",
     "counts": {
-      "typicalWorks": 152,
-      "typicalWorksWithNorm": 148,
+      "typicalWorks": 150,
+      "typicalWorksWithNorm": 150,
+      "dictionaries": 48,
       "streams": 6,
       "components": 6,
-      "stages": 20,
-      "typicalWorksWithFormula": 130,
-      "dictionaries": 48
+      "stages": 31,
+      "typicalWorksWithFormula": 128
     },
     "streams": [
       "mdlctl",
@@ -13940,8 +13940,8 @@
         "Роль модели @ field_VbI-0aiT|роль_модели"
       ],
       "formulaText": "N × коэф(field_VbI-0aiT)",
-      "roundingMode": "CEIL",
-      "roundingStep": 0.1,
+      "roundingMode": "ceil",
+      "roundingStep": 0.01,
       "triggerRules": [],
       "triggerMode": "simple",
       "triggerFormula": null,
@@ -13953,19 +13953,14 @@
           "kind": "by_value",
           "values": [
             {
-              "label": "Основная",
-              "code": "основная",
+              "label": "Обычная",
+              "code": "обычная",
               "coefficient": 1
             },
             {
-              "label": "Вспомогательная",
-              "code": "вспомогательная",
-              "coefficient": 0.5
-            },
-            {
-              "label": "Ансамбль",
-              "code": "ансамбль",
-              "coefficient": 1.5
+              "label": "Оркестратор",
+              "code": "оркестратор",
+              "coefficient": 1.75
             }
           ]
         }
@@ -14216,16 +14211,17 @@
     },
     {
       "stream": "ПиРМ",
-      "component": "Процесс обработки данных",
+      "component": "Объект данных",
       "stage": "3813 Feature Store",
       "name": "Подключение источника данных",
       "originalName": "Подключение источника данных",
       "workType": "Опциональная",
       "norm": 20,
       "normRaw": "20",
-      "triggerParam": "Реализуется в Хранилище признаков @ field_lovKvLZc|реализуется_в_хранилище_признаков",
+      "triggerParam": "Реализуется в Хранилище признаков @ field_lovKvLZc|реализуется_в_хранилище_признаков И Хранилище признаков: подключение нового источника данных @ field__CwXDnEl|хранилище_признаков_подключение_нового_источника",
       "triggerParams": [
-        "Реализуется в Хранилище признаков @ field_lovKvLZc|реализуется_в_хранилище_признаков"
+        "Реализуется в Хранилище признаков @ field_lovKvLZc|реализуется_в_хранилище_признаков",
+        "Хранилище признаков: подключение нового источника данных @ field__CwXDnEl|хранилище_признаков_подключение_нового_источника"
       ],
       "triggerRules": [
         {
@@ -14238,14 +14234,25 @@
           ],
           "valueCode": "true",
           "valueLabel": "Да"
+        },
+        {
+          "paramName": "Хранилище признаков: подключение нового источника данных @ field__CwXDnEl|хранилище_признаков_подключение_нового_источника",
+          "paramCode": "field__CwXDnEl",
+          "schemaFieldUid": "field_cc39396a-1f17-495e-8492-35c3456b48d7",
+          "operator": "=",
+          "values": [
+            "Да"
+          ],
+          "valueCode": "true",
+          "valueLabel": "Да"
         }
       ],
       "laborParams": [
         "Тип процесса обработки данных @ field_HgUCNn6E|тип_процесса_обработки_данных"
       ],
       "formulaText": "N × коэф(field_HgUCNn6E)",
-      "roundingMode": "CEIL",
-      "roundingStep": 0.1,
+      "roundingMode": "ceil",
+      "roundingStep": 0.01,
       "triggerArchCount": null,
       "triggerMode": "simple",
       "triggerFormula": null,
@@ -14264,7 +14271,7 @@
             {
               "label": "Потоковый",
               "code": "потоковый",
-              "coefficient": 1.5
+              "coefficient": 1.25
             }
           ]
         }
@@ -14280,7 +14287,7 @@
       "workType": "Опциональная",
       "norm": 3,
       "normRaw": "3",
-      "triggerParam": "Необходимость AutoML @ autoML|необходимость_automl",
+      "triggerParam": "Необходимость AutoML @ autoML|необходимость_automl И AutoML: встраивание внешнего кода @ field_58TkWuwu|automl_встраивание_внешнего_кода",
       "triggerParams": [
         "Необходимость AutoML @ autoML|необходимость_automl",
         "AutoML: встраивание внешнего кода @ field_58TkWuwu|automl_встраивание_внешнего_кода"
@@ -14328,7 +14335,7 @@
       "workType": "Опциональная",
       "norm": 2,
       "normRaw": "2",
-      "triggerParam": "Необходимость AutoML @ autoML|необходимость_automl",
+      "triggerParam": "Необходимость AutoML @ autoML|необходимость_automl И AutoML: требуется преобразование данных @ field_CeBkWcQc|automl_требуется_преобразование_данных",
       "triggerParams": [
         "Необходимость AutoML @ autoML|необходимость_automl",
         "AutoML: требуется преобразование данных @ field_CeBkWcQc|automl_требуется_преобразование_данных"
@@ -14376,7 +14383,7 @@
       "workType": "Опциональная",
       "norm": 2,
       "normRaw": "2",
-      "triggerParam": "Необходимость AutoML @ autoML|необходимость_automl",
+      "triggerParam": "Необходимость AutoML @ autoML|необходимость_automl И AutoML: требуется постановка на регламент @ field_S23CbRXp|automl_требуется_постановка_на_регламент",
       "triggerParams": [
         "Необходимость AutoML @ autoML|необходимость_automl",
         "AutoML: требуется постановка на регламент @ field_S23CbRXp|automl_требуется_постановка_на_регламент"
@@ -14424,7 +14431,7 @@
       "workType": "Опциональная",
       "norm": 4,
       "normRaw": "4",
-      "triggerParam": "Необходимость AutoML @ autoML|необходимость_automl",
+      "triggerParam": "Необходимость AutoML @ autoML|необходимость_automl И AutoML: требуется новая библиотека @ field_S41Rqt5E|automl_требуется_новая_библиотека",
       "triggerParams": [
         "Необходимость AutoML @ autoML|необходимость_automl",
         "AutoML: требуется новая библиотека @ field_S41Rqt5E|automl_требуется_новая_библиотека"
@@ -14503,7 +14510,7 @@
       "workType": "Опциональная",
       "norm": 3,
       "normRaw": "3",
-      "triggerParam": "Реализуется в Хранилище признаков @ field_lovKvLZc|реализуется_в_хранилище_признаков",
+      "triggerParam": "Реализуется в Хранилище признаков @ field_lovKvLZc|реализуется_в_хранилище_признаков И Требуется сохранять сырые данные в Хранилище признаков @ field_saveRawFs|требуется_сохранять_сырые_данные",
       "triggerParams": [
         "Реализуется в Хранилище признаков @ field_lovKvLZc|реализуется_в_хранилище_признаков",
         "Требуется сохранять сырые данные в Хранилище признаков @ field_saveRawFs|требуется_сохранять_сырые_данные"
@@ -14533,30 +14540,30 @@
         }
       ],
       "laborParams": [
-        "Требуется парсинг сырых данных @ field_w_EN6lWe|требуется_парсинг_сырых_данных"
+        "Требуется парсинг сырых данных в Хранилище признаков @ field_w_EN6lWe|требуется_парсинг_сырых_данных"
       ],
       "formulaText": "N × коэф(field_w_EN6lWe)",
-      "roundingMode": "CEIL",
-      "roundingStep": 0.1,
+      "roundingMode": "ceil",
+      "roundingStep": 0.01,
       "triggerArchCount": null,
       "triggerMode": "simple",
       "triggerFormula": null,
       "laborCoefficients": [
         {
-          "paramName": "Требуется парсинг сырых данных @ field_w_EN6lWe|требуется_парсинг_сырых_данных",
+          "paramName": "Требуется парсинг сырых данных в Хранилище признаков @ field_w_EN6lWe|требуется_парсинг_сырых_данных",
           "paramCode": "field_w_EN6lWe",
           "schemaFieldUid": "field_5525d556-6cd1-4efa-b10b-0f24ea6c1d96",
           "kind": "by_value",
           "values": [
             {
-              "label": "Да",
-              "code": "true",
-              "coefficient": 1.5
-            },
-            {
               "label": "Нет",
               "code": "false",
               "coefficient": 1
+            },
+            {
+              "label": "Да",
+              "code": "true",
+              "coefficient": 3
             }
           ]
         }
@@ -14590,25 +14597,1039 @@
         }
       ],
       "laborParams": [
-        "Сложность реализации @ field_46LCnfWo|сложность_реализации"
+        "Количество признаков в Наборе признаков @ metricsCount|количество_признаков",
+        "Сложность реализации Набора признаков @ field_46LCnfWo|сложность_реализации"
       ],
-      "formulaText": "N × коэф(field_46LCnfWo)",
-      "roundingMode": "CEIL",
-      "roundingStep": 0.1,
+      "formulaText": "N × коэф(metricsCount) × коэф(field_46LCnfWo)",
+      "roundingMode": "ceil",
+      "roundingStep": 0.01,
       "triggerArchCount": null,
       "triggerMode": "simple",
       "triggerFormula": null,
       "laborCoefficients": [
         {
-          "paramName": "Сложность реализации @ field_46LCnfWo|сложность_реализации",
+          "paramName": "Количество признаков в Наборе признаков @ metricsCount|количество_признаков",
+          "paramCode": "metricsCount",
+          "schemaFieldUid": "field_77f9732b-b562-4e32-b8ff-67d106f17fcf",
+          "kind": "by_value",
+          "values": [
+            {
+              "label": "1",
+              "code": "1",
+              "coefficient": 1
+            },
+            {
+              "label": "2",
+              "code": "2",
+              "coefficient": 2
+            },
+            {
+              "label": "3",
+              "code": "3",
+              "coefficient": 3
+            },
+            {
+              "label": "4",
+              "code": "4",
+              "coefficient": 4
+            },
+            {
+              "label": "5",
+              "code": "5",
+              "coefficient": 5
+            },
+            {
+              "label": "6",
+              "code": "6",
+              "coefficient": 6
+            },
+            {
+              "label": "7",
+              "code": "7",
+              "coefficient": 7
+            },
+            {
+              "label": "8",
+              "code": "8",
+              "coefficient": 8
+            },
+            {
+              "label": "9",
+              "code": "9",
+              "coefficient": 9
+            },
+            {
+              "label": "10",
+              "code": "10",
+              "coefficient": 10
+            },
+            {
+              "label": "11",
+              "code": "11",
+              "coefficient": 11
+            },
+            {
+              "label": "12",
+              "code": "12",
+              "coefficient": 12
+            },
+            {
+              "label": "13",
+              "code": "13",
+              "coefficient": 13
+            },
+            {
+              "label": "14",
+              "code": "14",
+              "coefficient": 14
+            },
+            {
+              "label": "15",
+              "code": "15",
+              "coefficient": 15
+            },
+            {
+              "label": "16",
+              "code": "16",
+              "coefficient": 16
+            },
+            {
+              "label": "17",
+              "code": "17",
+              "coefficient": 17
+            },
+            {
+              "label": "18",
+              "code": "18",
+              "coefficient": 18
+            },
+            {
+              "label": "19",
+              "code": "19",
+              "coefficient": 19
+            },
+            {
+              "label": "20",
+              "code": "20",
+              "coefficient": 20
+            },
+            {
+              "label": "21",
+              "code": "21",
+              "coefficient": 14.7
+            },
+            {
+              "label": "22",
+              "code": "22",
+              "coefficient": 15.4
+            },
+            {
+              "label": "23",
+              "code": "23",
+              "coefficient": 16.1
+            },
+            {
+              "label": "24",
+              "code": "24",
+              "coefficient": 16.8
+            },
+            {
+              "label": "25",
+              "code": "25",
+              "coefficient": 17.5
+            },
+            {
+              "label": "26",
+              "code": "26",
+              "coefficient": 18.2
+            },
+            {
+              "label": "27",
+              "code": "27",
+              "coefficient": 18.9
+            },
+            {
+              "label": "28",
+              "code": "28",
+              "coefficient": 19.6
+            },
+            {
+              "label": "29",
+              "code": "29",
+              "coefficient": 20.3
+            },
+            {
+              "label": "30",
+              "code": "30",
+              "coefficient": 21
+            },
+            {
+              "label": "31",
+              "code": "31",
+              "coefficient": 21.7
+            },
+            {
+              "label": "32",
+              "code": "32",
+              "coefficient": 22.4
+            },
+            {
+              "label": "33",
+              "code": "33",
+              "coefficient": 23.1
+            },
+            {
+              "label": "34",
+              "code": "34",
+              "coefficient": 23.8
+            },
+            {
+              "label": "35",
+              "code": "35",
+              "coefficient": 24.5
+            },
+            {
+              "label": "36",
+              "code": "36",
+              "coefficient": 25.2
+            },
+            {
+              "label": "37",
+              "code": "37",
+              "coefficient": 25.9
+            },
+            {
+              "label": "38",
+              "code": "38",
+              "coefficient": 26.6
+            },
+            {
+              "label": "39",
+              "code": "39",
+              "coefficient": 27.3
+            },
+            {
+              "label": "40",
+              "code": "40",
+              "coefficient": 28
+            },
+            {
+              "label": "41",
+              "code": "41",
+              "coefficient": 28.7
+            },
+            {
+              "label": "42",
+              "code": "42",
+              "coefficient": 29.4
+            },
+            {
+              "label": "43",
+              "code": "43",
+              "coefficient": 30.1
+            },
+            {
+              "label": "44",
+              "code": "44",
+              "coefficient": 30.8
+            },
+            {
+              "label": "45",
+              "code": "45",
+              "coefficient": 31.5
+            },
+            {
+              "label": "46",
+              "code": "46",
+              "coefficient": 32.2
+            },
+            {
+              "label": "47",
+              "code": "47",
+              "coefficient": 32.9
+            },
+            {
+              "label": "48",
+              "code": "48",
+              "coefficient": 33.6
+            },
+            {
+              "label": "49",
+              "code": "49",
+              "coefficient": 34.3
+            },
+            {
+              "label": "50",
+              "code": "50",
+              "coefficient": 35
+            },
+            {
+              "label": "51",
+              "code": "51",
+              "coefficient": 25.5
+            },
+            {
+              "label": "52",
+              "code": "52",
+              "coefficient": 26
+            },
+            {
+              "label": "53",
+              "code": "53",
+              "coefficient": 26.5
+            },
+            {
+              "label": "54",
+              "code": "54",
+              "coefficient": 27
+            },
+            {
+              "label": "55",
+              "code": "55",
+              "coefficient": 27.5
+            },
+            {
+              "label": "56",
+              "code": "56",
+              "coefficient": 28
+            },
+            {
+              "label": "57",
+              "code": "57",
+              "coefficient": 28.5
+            },
+            {
+              "label": "58",
+              "code": "58",
+              "coefficient": 29
+            },
+            {
+              "label": "59",
+              "code": "59",
+              "coefficient": 29.5
+            },
+            {
+              "label": "60",
+              "code": "60",
+              "coefficient": 30
+            },
+            {
+              "label": "61",
+              "code": "61",
+              "coefficient": 30.5
+            },
+            {
+              "label": "62",
+              "code": "62",
+              "coefficient": 31
+            },
+            {
+              "label": "63",
+              "code": "63",
+              "coefficient": 31.5
+            },
+            {
+              "label": "64",
+              "code": "64",
+              "coefficient": 32
+            },
+            {
+              "label": "65",
+              "code": "65",
+              "coefficient": 32.5
+            },
+            {
+              "label": "66",
+              "code": "66",
+              "coefficient": 33
+            },
+            {
+              "label": "67",
+              "code": "67",
+              "coefficient": 33.5
+            },
+            {
+              "label": "68",
+              "code": "68",
+              "coefficient": 34
+            },
+            {
+              "label": "69",
+              "code": "69",
+              "coefficient": 34.5
+            },
+            {
+              "label": "70",
+              "code": "70",
+              "coefficient": 35
+            },
+            {
+              "label": "71",
+              "code": "71",
+              "coefficient": 35.5
+            },
+            {
+              "label": "72",
+              "code": "72",
+              "coefficient": 36
+            },
+            {
+              "label": "73",
+              "code": "73",
+              "coefficient": 36.5
+            },
+            {
+              "label": "74",
+              "code": "74",
+              "coefficient": 37
+            },
+            {
+              "label": "75",
+              "code": "75",
+              "coefficient": 37.5
+            },
+            {
+              "label": "76",
+              "code": "76",
+              "coefficient": 38
+            },
+            {
+              "label": "77",
+              "code": "77",
+              "coefficient": 38.5
+            },
+            {
+              "label": "78",
+              "code": "78",
+              "coefficient": 39
+            },
+            {
+              "label": "79",
+              "code": "79",
+              "coefficient": 39.5
+            },
+            {
+              "label": "80",
+              "code": "80",
+              "coefficient": 40
+            },
+            {
+              "label": "81",
+              "code": "81",
+              "coefficient": 40.5
+            },
+            {
+              "label": "82",
+              "code": "82",
+              "coefficient": 41
+            },
+            {
+              "label": "83",
+              "code": "83",
+              "coefficient": 41.5
+            },
+            {
+              "label": "84",
+              "code": "84",
+              "coefficient": 42
+            },
+            {
+              "label": "85",
+              "code": "85",
+              "coefficient": 42.5
+            },
+            {
+              "label": "86",
+              "code": "86",
+              "coefficient": 43
+            },
+            {
+              "label": "87",
+              "code": "87",
+              "coefficient": 43.5
+            },
+            {
+              "label": "88",
+              "code": "88",
+              "coefficient": 44
+            },
+            {
+              "label": "89",
+              "code": "89",
+              "coefficient": 44.5
+            },
+            {
+              "label": "90",
+              "code": "90",
+              "coefficient": 45
+            },
+            {
+              "label": "91",
+              "code": "91",
+              "coefficient": 45.5
+            },
+            {
+              "label": "92",
+              "code": "92",
+              "coefficient": 46
+            },
+            {
+              "label": "93",
+              "code": "93",
+              "coefficient": 46.5
+            },
+            {
+              "label": "94",
+              "code": "94",
+              "coefficient": 47
+            },
+            {
+              "label": "95",
+              "code": "95",
+              "coefficient": 47.5
+            },
+            {
+              "label": "96",
+              "code": "96",
+              "coefficient": 48
+            },
+            {
+              "label": "97",
+              "code": "97",
+              "coefficient": 48.5
+            },
+            {
+              "label": "98",
+              "code": "98",
+              "coefficient": 49
+            },
+            {
+              "label": "99",
+              "code": "99",
+              "coefficient": 49.5
+            },
+            {
+              "label": "100",
+              "code": "100",
+              "coefficient": 50
+            },
+            {
+              "label": "101",
+              "code": "101",
+              "coefficient": 40.4
+            },
+            {
+              "label": "102",
+              "code": "102",
+              "coefficient": 40.8
+            },
+            {
+              "label": "103",
+              "code": "103",
+              "coefficient": 41.2
+            },
+            {
+              "label": "104",
+              "code": "104",
+              "coefficient": 41.6
+            },
+            {
+              "label": "105",
+              "code": "105",
+              "coefficient": 42
+            },
+            {
+              "label": "106",
+              "code": "106",
+              "coefficient": 42.4
+            },
+            {
+              "label": "107",
+              "code": "107",
+              "coefficient": 42.8
+            },
+            {
+              "label": "108",
+              "code": "108",
+              "coefficient": 43.2
+            },
+            {
+              "label": "109",
+              "code": "109",
+              "coefficient": 43.6
+            },
+            {
+              "label": "110",
+              "code": "110",
+              "coefficient": 44
+            },
+            {
+              "label": "111",
+              "code": "111",
+              "coefficient": 44.4
+            },
+            {
+              "label": "112",
+              "code": "112",
+              "coefficient": 44.8
+            },
+            {
+              "label": "113",
+              "code": "113",
+              "coefficient": 45.2
+            },
+            {
+              "label": "114",
+              "code": "114",
+              "coefficient": 45.6
+            },
+            {
+              "label": "115",
+              "code": "115",
+              "coefficient": 46
+            },
+            {
+              "label": "116",
+              "code": "116",
+              "coefficient": 46.4
+            },
+            {
+              "label": "117",
+              "code": "117",
+              "coefficient": 46.8
+            },
+            {
+              "label": "118",
+              "code": "118",
+              "coefficient": 47.2
+            },
+            {
+              "label": "119",
+              "code": "119",
+              "coefficient": 47.6
+            },
+            {
+              "label": "120",
+              "code": "120",
+              "coefficient": 48
+            },
+            {
+              "label": "121",
+              "code": "121",
+              "coefficient": 48.4
+            },
+            {
+              "label": "122",
+              "code": "122",
+              "coefficient": 48.8
+            },
+            {
+              "label": "123",
+              "code": "123",
+              "coefficient": 49.2
+            },
+            {
+              "label": "124",
+              "code": "124",
+              "coefficient": 49.6
+            },
+            {
+              "label": "125",
+              "code": "125",
+              "coefficient": 50
+            },
+            {
+              "label": "126",
+              "code": "126",
+              "coefficient": 50.4
+            },
+            {
+              "label": "127",
+              "code": "127",
+              "coefficient": 50.8
+            },
+            {
+              "label": "128",
+              "code": "128",
+              "coefficient": 51.2
+            },
+            {
+              "label": "129",
+              "code": "129",
+              "coefficient": 51.6
+            },
+            {
+              "label": "130",
+              "code": "130",
+              "coefficient": 52
+            },
+            {
+              "label": "131",
+              "code": "131",
+              "coefficient": 52.4
+            },
+            {
+              "label": "132",
+              "code": "132",
+              "coefficient": 52.8
+            },
+            {
+              "label": "133",
+              "code": "133",
+              "coefficient": 53.2
+            },
+            {
+              "label": "134",
+              "code": "134",
+              "coefficient": 53.6
+            },
+            {
+              "label": "135",
+              "code": "135",
+              "coefficient": 54
+            },
+            {
+              "label": "136",
+              "code": "136",
+              "coefficient": 54.4
+            },
+            {
+              "label": "137",
+              "code": "137",
+              "coefficient": 54.8
+            },
+            {
+              "label": "138",
+              "code": "138",
+              "coefficient": 55.2
+            },
+            {
+              "label": "139",
+              "code": "139",
+              "coefficient": 55.6
+            },
+            {
+              "label": "140",
+              "code": "140",
+              "coefficient": 56
+            },
+            {
+              "label": "141",
+              "code": "141",
+              "coefficient": 56.4
+            },
+            {
+              "label": "142",
+              "code": "142",
+              "coefficient": 56.8
+            },
+            {
+              "label": "143",
+              "code": "143",
+              "coefficient": 57.2
+            },
+            {
+              "label": "144",
+              "code": "144",
+              "coefficient": 57.6
+            },
+            {
+              "label": "145",
+              "code": "145",
+              "coefficient": 58
+            },
+            {
+              "label": "146",
+              "code": "146",
+              "coefficient": 58.4
+            },
+            {
+              "label": "147",
+              "code": "147",
+              "coefficient": 58.8
+            },
+            {
+              "label": "148",
+              "code": "148",
+              "coefficient": 59.2
+            },
+            {
+              "label": "149",
+              "code": "149",
+              "coefficient": 59.6
+            },
+            {
+              "label": "150",
+              "code": "150",
+              "coefficient": 60
+            },
+            {
+              "label": "151",
+              "code": "151",
+              "coefficient": 60.4
+            },
+            {
+              "label": "152",
+              "code": "152",
+              "coefficient": 60.8
+            },
+            {
+              "label": "153",
+              "code": "153",
+              "coefficient": 61.2
+            },
+            {
+              "label": "154",
+              "code": "154",
+              "coefficient": 61.6
+            },
+            {
+              "label": "155",
+              "code": "155",
+              "coefficient": 62
+            },
+            {
+              "label": "156",
+              "code": "156",
+              "coefficient": 62.4
+            },
+            {
+              "label": "157",
+              "code": "157",
+              "coefficient": 62.8
+            },
+            {
+              "label": "158",
+              "code": "158",
+              "coefficient": 63.2
+            },
+            {
+              "label": "159",
+              "code": "159",
+              "coefficient": 63.6
+            },
+            {
+              "label": "160",
+              "code": "160",
+              "coefficient": 64
+            },
+            {
+              "label": "161",
+              "code": "161",
+              "coefficient": 64.4
+            },
+            {
+              "label": "162",
+              "code": "162",
+              "coefficient": 64.8
+            },
+            {
+              "label": "163",
+              "code": "163",
+              "coefficient": 65.2
+            },
+            {
+              "label": "164",
+              "code": "164",
+              "coefficient": 65.6
+            },
+            {
+              "label": "165",
+              "code": "165",
+              "coefficient": 66
+            },
+            {
+              "label": "166",
+              "code": "166",
+              "coefficient": 66.4
+            },
+            {
+              "label": "167",
+              "code": "167",
+              "coefficient": 66.8
+            },
+            {
+              "label": "168",
+              "code": "168",
+              "coefficient": 67.2
+            },
+            {
+              "label": "169",
+              "code": "169",
+              "coefficient": 67.6
+            },
+            {
+              "label": "170",
+              "code": "170",
+              "coefficient": 68
+            },
+            {
+              "label": "171",
+              "code": "171",
+              "coefficient": 68.4
+            },
+            {
+              "label": "172",
+              "code": "172",
+              "coefficient": 68.8
+            },
+            {
+              "label": "173",
+              "code": "173",
+              "coefficient": 69.2
+            },
+            {
+              "label": "174",
+              "code": "174",
+              "coefficient": 69.6
+            },
+            {
+              "label": "175",
+              "code": "175",
+              "coefficient": 70
+            },
+            {
+              "label": "176",
+              "code": "176",
+              "coefficient": 70.4
+            },
+            {
+              "label": "177",
+              "code": "177",
+              "coefficient": 70.8
+            },
+            {
+              "label": "178",
+              "code": "178",
+              "coefficient": 71.2
+            },
+            {
+              "label": "179",
+              "code": "179",
+              "coefficient": 71.6
+            },
+            {
+              "label": "180",
+              "code": "180",
+              "coefficient": 72
+            },
+            {
+              "label": "181",
+              "code": "181",
+              "coefficient": 72.4
+            },
+            {
+              "label": "182",
+              "code": "182",
+              "coefficient": 72.8
+            },
+            {
+              "label": "183",
+              "code": "183",
+              "coefficient": 73.2
+            },
+            {
+              "label": "184",
+              "code": "184",
+              "coefficient": 73.6
+            },
+            {
+              "label": "185",
+              "code": "185",
+              "coefficient": 74
+            },
+            {
+              "label": "186",
+              "code": "186",
+              "coefficient": 74.4
+            },
+            {
+              "label": "187",
+              "code": "187",
+              "coefficient": 74.8
+            },
+            {
+              "label": "188",
+              "code": "188",
+              "coefficient": 75.2
+            },
+            {
+              "label": "189",
+              "code": "189",
+              "coefficient": 75.6
+            },
+            {
+              "label": "190",
+              "code": "190",
+              "coefficient": 76
+            },
+            {
+              "label": "191",
+              "code": "191",
+              "coefficient": 76.4
+            },
+            {
+              "label": "192",
+              "code": "192",
+              "coefficient": 76.8
+            },
+            {
+              "label": "193",
+              "code": "193",
+              "coefficient": 77.2
+            },
+            {
+              "label": "194",
+              "code": "194",
+              "coefficient": 77.6
+            },
+            {
+              "label": "195",
+              "code": "195",
+              "coefficient": 78
+            },
+            {
+              "label": "196",
+              "code": "196",
+              "coefficient": 78.4
+            },
+            {
+              "label": "197",
+              "code": "197",
+              "coefficient": 78.8
+            },
+            {
+              "label": "198",
+              "code": "198",
+              "coefficient": 79.2
+            },
+            {
+              "label": "199",
+              "code": "199",
+              "coefficient": 79.6
+            },
+            {
+              "label": "200",
+              "code": "200",
+              "coefficient": 80
+            }
+          ]
+        },
+        {
+          "paramName": "Сложность реализации Набора признаков @ field_46LCnfWo|сложность_реализации",
           "paramCode": "field_46LCnfWo",
           "schemaFieldUid": "field_9aaf1e8d-e27c-4f48-a631-9f690ea03a07",
           "kind": "by_value",
           "values": [
             {
-              "label": "Низкая",
-              "code": "низкая",
-              "coefficient": 0.5
+              "label": "Неизвестно",
+              "code": "неизвестно",
+              "coefficient": 1.15
+            },
+            {
+              "label": "Высокая",
+              "code": "высокая",
+              "coefficient": 1.25
             },
             {
               "label": "Средняя",
@@ -14616,9 +15637,9 @@
               "coefficient": 1
             },
             {
-              "label": "Высокая",
-              "code": "высокая",
-              "coefficient": 1.5
+              "label": "Низкая",
+              "code": "низкая",
+              "coefficient": 0.75
             }
           ]
         }
@@ -14627,7 +15648,7 @@
     },
     {
       "stream": "ПиРМ",
-      "component": "Модельный сервис",
+      "component": "Объект / Витрина данных",
       "stage": "3813 Feature Store",
       "name": "Регистрация Признака в Хранилище признаков",
       "originalName": "Регистрация Признака в Хранилище признаков",
@@ -14652,35 +15673,1020 @@
         }
       ],
       "laborParams": [
-        "Количество признаков @ metricsCount|количество_признаков"
+        "Количество признаков в Наборе признаков @ metricsCount|количество_признаков"
       ],
       "formulaText": "N × коэф(metricsCount)",
-      "roundingMode": "CEIL",
-      "roundingStep": 0.1,
+      "roundingMode": "ceil",
+      "roundingStep": 0.01,
       "triggerArchCount": null,
       "triggerMode": "simple",
       "triggerFormula": null,
       "laborCoefficients": [
         {
-          "paramName": "Количество признаков @ metricsCount|количество_признаков",
+          "paramName": "Количество признаков в Наборе признаков @ metricsCount|количество_признаков",
           "paramCode": "metricsCount",
           "schemaFieldUid": "field_77f9732b-b562-4e32-b8ff-67d106f17fcf",
           "kind": "by_value",
           "values": [
             {
-              "label": "до 20",
-              "code": "до_20",
+              "label": "1",
+              "code": "1",
               "coefficient": 1
             },
             {
-              "label": "20–50",
-              "code": "20_50",
+              "label": "2",
+              "code": "2",
               "coefficient": 2
             },
             {
-              "label": ">50",
-              "code": "50",
+              "label": "3",
+              "code": "3",
               "coefficient": 3
+            },
+            {
+              "label": "4",
+              "code": "4",
+              "coefficient": 4
+            },
+            {
+              "label": "5",
+              "code": "5",
+              "coefficient": 5
+            },
+            {
+              "label": "6",
+              "code": "6",
+              "coefficient": 6
+            },
+            {
+              "label": "7",
+              "code": "7",
+              "coefficient": 7
+            },
+            {
+              "label": "8",
+              "code": "8",
+              "coefficient": 8
+            },
+            {
+              "label": "9",
+              "code": "9",
+              "coefficient": 9
+            },
+            {
+              "label": "10",
+              "code": "10",
+              "coefficient": 10
+            },
+            {
+              "label": "11",
+              "code": "11",
+              "coefficient": 11
+            },
+            {
+              "label": "12",
+              "code": "12",
+              "coefficient": 12
+            },
+            {
+              "label": "13",
+              "code": "13",
+              "coefficient": 13
+            },
+            {
+              "label": "14",
+              "code": "14",
+              "coefficient": 14
+            },
+            {
+              "label": "15",
+              "code": "15",
+              "coefficient": 15
+            },
+            {
+              "label": "16",
+              "code": "16",
+              "coefficient": 16
+            },
+            {
+              "label": "17",
+              "code": "17",
+              "coefficient": 17
+            },
+            {
+              "label": "18",
+              "code": "18",
+              "coefficient": 18
+            },
+            {
+              "label": "19",
+              "code": "19",
+              "coefficient": 19
+            },
+            {
+              "label": "20",
+              "code": "20",
+              "coefficient": 20
+            },
+            {
+              "label": "21",
+              "code": "21",
+              "coefficient": 14.7
+            },
+            {
+              "label": "22",
+              "code": "22",
+              "coefficient": 15.4
+            },
+            {
+              "label": "23",
+              "code": "23",
+              "coefficient": 16.1
+            },
+            {
+              "label": "24",
+              "code": "24",
+              "coefficient": 16.8
+            },
+            {
+              "label": "25",
+              "code": "25",
+              "coefficient": 17.5
+            },
+            {
+              "label": "26",
+              "code": "26",
+              "coefficient": 18.2
+            },
+            {
+              "label": "27",
+              "code": "27",
+              "coefficient": 18.9
+            },
+            {
+              "label": "28",
+              "code": "28",
+              "coefficient": 19.6
+            },
+            {
+              "label": "29",
+              "code": "29",
+              "coefficient": 20.3
+            },
+            {
+              "label": "30",
+              "code": "30",
+              "coefficient": 21
+            },
+            {
+              "label": "31",
+              "code": "31",
+              "coefficient": 21.7
+            },
+            {
+              "label": "32",
+              "code": "32",
+              "coefficient": 22.4
+            },
+            {
+              "label": "33",
+              "code": "33",
+              "coefficient": 23.1
+            },
+            {
+              "label": "34",
+              "code": "34",
+              "coefficient": 23.8
+            },
+            {
+              "label": "35",
+              "code": "35",
+              "coefficient": 24.5
+            },
+            {
+              "label": "36",
+              "code": "36",
+              "coefficient": 25.2
+            },
+            {
+              "label": "37",
+              "code": "37",
+              "coefficient": 25.9
+            },
+            {
+              "label": "38",
+              "code": "38",
+              "coefficient": 26.6
+            },
+            {
+              "label": "39",
+              "code": "39",
+              "coefficient": 27.3
+            },
+            {
+              "label": "40",
+              "code": "40",
+              "coefficient": 28
+            },
+            {
+              "label": "41",
+              "code": "41",
+              "coefficient": 28.7
+            },
+            {
+              "label": "42",
+              "code": "42",
+              "coefficient": 29.4
+            },
+            {
+              "label": "43",
+              "code": "43",
+              "coefficient": 30.1
+            },
+            {
+              "label": "44",
+              "code": "44",
+              "coefficient": 30.8
+            },
+            {
+              "label": "45",
+              "code": "45",
+              "coefficient": 31.5
+            },
+            {
+              "label": "46",
+              "code": "46",
+              "coefficient": 32.2
+            },
+            {
+              "label": "47",
+              "code": "47",
+              "coefficient": 32.9
+            },
+            {
+              "label": "48",
+              "code": "48",
+              "coefficient": 33.6
+            },
+            {
+              "label": "49",
+              "code": "49",
+              "coefficient": 34.3
+            },
+            {
+              "label": "50",
+              "code": "50",
+              "coefficient": 35
+            },
+            {
+              "label": "51",
+              "code": "51",
+              "coefficient": 25.5
+            },
+            {
+              "label": "52",
+              "code": "52",
+              "coefficient": 26
+            },
+            {
+              "label": "53",
+              "code": "53",
+              "coefficient": 26.5
+            },
+            {
+              "label": "54",
+              "code": "54",
+              "coefficient": 27
+            },
+            {
+              "label": "55",
+              "code": "55",
+              "coefficient": 27.5
+            },
+            {
+              "label": "56",
+              "code": "56",
+              "coefficient": 28
+            },
+            {
+              "label": "57",
+              "code": "57",
+              "coefficient": 28.5
+            },
+            {
+              "label": "58",
+              "code": "58",
+              "coefficient": 29
+            },
+            {
+              "label": "59",
+              "code": "59",
+              "coefficient": 29.5
+            },
+            {
+              "label": "60",
+              "code": "60",
+              "coefficient": 30
+            },
+            {
+              "label": "61",
+              "code": "61",
+              "coefficient": 30.5
+            },
+            {
+              "label": "62",
+              "code": "62",
+              "coefficient": 31
+            },
+            {
+              "label": "63",
+              "code": "63",
+              "coefficient": 31.5
+            },
+            {
+              "label": "64",
+              "code": "64",
+              "coefficient": 32
+            },
+            {
+              "label": "65",
+              "code": "65",
+              "coefficient": 32.5
+            },
+            {
+              "label": "66",
+              "code": "66",
+              "coefficient": 33
+            },
+            {
+              "label": "67",
+              "code": "67",
+              "coefficient": 33.5
+            },
+            {
+              "label": "68",
+              "code": "68",
+              "coefficient": 34
+            },
+            {
+              "label": "69",
+              "code": "69",
+              "coefficient": 34.5
+            },
+            {
+              "label": "70",
+              "code": "70",
+              "coefficient": 35
+            },
+            {
+              "label": "71",
+              "code": "71",
+              "coefficient": 35.5
+            },
+            {
+              "label": "72",
+              "code": "72",
+              "coefficient": 36
+            },
+            {
+              "label": "73",
+              "code": "73",
+              "coefficient": 36.5
+            },
+            {
+              "label": "74",
+              "code": "74",
+              "coefficient": 37
+            },
+            {
+              "label": "75",
+              "code": "75",
+              "coefficient": 37.5
+            },
+            {
+              "label": "76",
+              "code": "76",
+              "coefficient": 38
+            },
+            {
+              "label": "77",
+              "code": "77",
+              "coefficient": 38.5
+            },
+            {
+              "label": "78",
+              "code": "78",
+              "coefficient": 39
+            },
+            {
+              "label": "79",
+              "code": "79",
+              "coefficient": 39.5
+            },
+            {
+              "label": "80",
+              "code": "80",
+              "coefficient": 40
+            },
+            {
+              "label": "81",
+              "code": "81",
+              "coefficient": 40.5
+            },
+            {
+              "label": "82",
+              "code": "82",
+              "coefficient": 41
+            },
+            {
+              "label": "83",
+              "code": "83",
+              "coefficient": 41.5
+            },
+            {
+              "label": "84",
+              "code": "84",
+              "coefficient": 42
+            },
+            {
+              "label": "85",
+              "code": "85",
+              "coefficient": 42.5
+            },
+            {
+              "label": "86",
+              "code": "86",
+              "coefficient": 43
+            },
+            {
+              "label": "87",
+              "code": "87",
+              "coefficient": 43.5
+            },
+            {
+              "label": "88",
+              "code": "88",
+              "coefficient": 44
+            },
+            {
+              "label": "89",
+              "code": "89",
+              "coefficient": 44.5
+            },
+            {
+              "label": "90",
+              "code": "90",
+              "coefficient": 45
+            },
+            {
+              "label": "91",
+              "code": "91",
+              "coefficient": 45.5
+            },
+            {
+              "label": "92",
+              "code": "92",
+              "coefficient": 46
+            },
+            {
+              "label": "93",
+              "code": "93",
+              "coefficient": 46.5
+            },
+            {
+              "label": "94",
+              "code": "94",
+              "coefficient": 47
+            },
+            {
+              "label": "95",
+              "code": "95",
+              "coefficient": 47.5
+            },
+            {
+              "label": "96",
+              "code": "96",
+              "coefficient": 48
+            },
+            {
+              "label": "97",
+              "code": "97",
+              "coefficient": 48.5
+            },
+            {
+              "label": "98",
+              "code": "98",
+              "coefficient": 49
+            },
+            {
+              "label": "99",
+              "code": "99",
+              "coefficient": 49.5
+            },
+            {
+              "label": "100",
+              "code": "100",
+              "coefficient": 50
+            },
+            {
+              "label": "101",
+              "code": "101",
+              "coefficient": 40.4
+            },
+            {
+              "label": "102",
+              "code": "102",
+              "coefficient": 40.8
+            },
+            {
+              "label": "103",
+              "code": "103",
+              "coefficient": 41.2
+            },
+            {
+              "label": "104",
+              "code": "104",
+              "coefficient": 41.6
+            },
+            {
+              "label": "105",
+              "code": "105",
+              "coefficient": 42
+            },
+            {
+              "label": "106",
+              "code": "106",
+              "coefficient": 42.4
+            },
+            {
+              "label": "107",
+              "code": "107",
+              "coefficient": 42.8
+            },
+            {
+              "label": "108",
+              "code": "108",
+              "coefficient": 43.2
+            },
+            {
+              "label": "109",
+              "code": "109",
+              "coefficient": 43.6
+            },
+            {
+              "label": "110",
+              "code": "110",
+              "coefficient": 44
+            },
+            {
+              "label": "111",
+              "code": "111",
+              "coefficient": 44.4
+            },
+            {
+              "label": "112",
+              "code": "112",
+              "coefficient": 44.8
+            },
+            {
+              "label": "113",
+              "code": "113",
+              "coefficient": 45.2
+            },
+            {
+              "label": "114",
+              "code": "114",
+              "coefficient": 45.6
+            },
+            {
+              "label": "115",
+              "code": "115",
+              "coefficient": 46
+            },
+            {
+              "label": "116",
+              "code": "116",
+              "coefficient": 46.4
+            },
+            {
+              "label": "117",
+              "code": "117",
+              "coefficient": 46.8
+            },
+            {
+              "label": "118",
+              "code": "118",
+              "coefficient": 47.2
+            },
+            {
+              "label": "119",
+              "code": "119",
+              "coefficient": 47.6
+            },
+            {
+              "label": "120",
+              "code": "120",
+              "coefficient": 48
+            },
+            {
+              "label": "121",
+              "code": "121",
+              "coefficient": 48.4
+            },
+            {
+              "label": "122",
+              "code": "122",
+              "coefficient": 48.8
+            },
+            {
+              "label": "123",
+              "code": "123",
+              "coefficient": 49.2
+            },
+            {
+              "label": "124",
+              "code": "124",
+              "coefficient": 49.6
+            },
+            {
+              "label": "125",
+              "code": "125",
+              "coefficient": 50
+            },
+            {
+              "label": "126",
+              "code": "126",
+              "coefficient": 50.4
+            },
+            {
+              "label": "127",
+              "code": "127",
+              "coefficient": 50.8
+            },
+            {
+              "label": "128",
+              "code": "128",
+              "coefficient": 51.2
+            },
+            {
+              "label": "129",
+              "code": "129",
+              "coefficient": 51.6
+            },
+            {
+              "label": "130",
+              "code": "130",
+              "coefficient": 52
+            },
+            {
+              "label": "131",
+              "code": "131",
+              "coefficient": 52.4
+            },
+            {
+              "label": "132",
+              "code": "132",
+              "coefficient": 52.8
+            },
+            {
+              "label": "133",
+              "code": "133",
+              "coefficient": 53.2
+            },
+            {
+              "label": "134",
+              "code": "134",
+              "coefficient": 53.6
+            },
+            {
+              "label": "135",
+              "code": "135",
+              "coefficient": 54
+            },
+            {
+              "label": "136",
+              "code": "136",
+              "coefficient": 54.4
+            },
+            {
+              "label": "137",
+              "code": "137",
+              "coefficient": 54.8
+            },
+            {
+              "label": "138",
+              "code": "138",
+              "coefficient": 55.2
+            },
+            {
+              "label": "139",
+              "code": "139",
+              "coefficient": 55.6
+            },
+            {
+              "label": "140",
+              "code": "140",
+              "coefficient": 56
+            },
+            {
+              "label": "141",
+              "code": "141",
+              "coefficient": 56.4
+            },
+            {
+              "label": "142",
+              "code": "142",
+              "coefficient": 56.8
+            },
+            {
+              "label": "143",
+              "code": "143",
+              "coefficient": 57.2
+            },
+            {
+              "label": "144",
+              "code": "144",
+              "coefficient": 57.6
+            },
+            {
+              "label": "145",
+              "code": "145",
+              "coefficient": 58
+            },
+            {
+              "label": "146",
+              "code": "146",
+              "coefficient": 58.4
+            },
+            {
+              "label": "147",
+              "code": "147",
+              "coefficient": 58.8
+            },
+            {
+              "label": "148",
+              "code": "148",
+              "coefficient": 59.2
+            },
+            {
+              "label": "149",
+              "code": "149",
+              "coefficient": 59.6
+            },
+            {
+              "label": "150",
+              "code": "150",
+              "coefficient": 60
+            },
+            {
+              "label": "151",
+              "code": "151",
+              "coefficient": 60.4
+            },
+            {
+              "label": "152",
+              "code": "152",
+              "coefficient": 60.8
+            },
+            {
+              "label": "153",
+              "code": "153",
+              "coefficient": 61.2
+            },
+            {
+              "label": "154",
+              "code": "154",
+              "coefficient": 61.6
+            },
+            {
+              "label": "155",
+              "code": "155",
+              "coefficient": 62
+            },
+            {
+              "label": "156",
+              "code": "156",
+              "coefficient": 62.4
+            },
+            {
+              "label": "157",
+              "code": "157",
+              "coefficient": 62.8
+            },
+            {
+              "label": "158",
+              "code": "158",
+              "coefficient": 63.2
+            },
+            {
+              "label": "159",
+              "code": "159",
+              "coefficient": 63.6
+            },
+            {
+              "label": "160",
+              "code": "160",
+              "coefficient": 64
+            },
+            {
+              "label": "161",
+              "code": "161",
+              "coefficient": 64.4
+            },
+            {
+              "label": "162",
+              "code": "162",
+              "coefficient": 64.8
+            },
+            {
+              "label": "163",
+              "code": "163",
+              "coefficient": 65.2
+            },
+            {
+              "label": "164",
+              "code": "164",
+              "coefficient": 65.6
+            },
+            {
+              "label": "165",
+              "code": "165",
+              "coefficient": 66
+            },
+            {
+              "label": "166",
+              "code": "166",
+              "coefficient": 66.4
+            },
+            {
+              "label": "167",
+              "code": "167",
+              "coefficient": 66.8
+            },
+            {
+              "label": "168",
+              "code": "168",
+              "coefficient": 67.2
+            },
+            {
+              "label": "169",
+              "code": "169",
+              "coefficient": 67.6
+            },
+            {
+              "label": "170",
+              "code": "170",
+              "coefficient": 68
+            },
+            {
+              "label": "171",
+              "code": "171",
+              "coefficient": 68.4
+            },
+            {
+              "label": "172",
+              "code": "172",
+              "coefficient": 68.8
+            },
+            {
+              "label": "173",
+              "code": "173",
+              "coefficient": 69.2
+            },
+            {
+              "label": "174",
+              "code": "174",
+              "coefficient": 69.6
+            },
+            {
+              "label": "175",
+              "code": "175",
+              "coefficient": 70
+            },
+            {
+              "label": "176",
+              "code": "176",
+              "coefficient": 70.4
+            },
+            {
+              "label": "177",
+              "code": "177",
+              "coefficient": 70.8
+            },
+            {
+              "label": "178",
+              "code": "178",
+              "coefficient": 71.2
+            },
+            {
+              "label": "179",
+              "code": "179",
+              "coefficient": 71.6
+            },
+            {
+              "label": "180",
+              "code": "180",
+              "coefficient": 72
+            },
+            {
+              "label": "181",
+              "code": "181",
+              "coefficient": 72.4
+            },
+            {
+              "label": "182",
+              "code": "182",
+              "coefficient": 72.8
+            },
+            {
+              "label": "183",
+              "code": "183",
+              "coefficient": 73.2
+            },
+            {
+              "label": "184",
+              "code": "184",
+              "coefficient": 73.6
+            },
+            {
+              "label": "185",
+              "code": "185",
+              "coefficient": 74
+            },
+            {
+              "label": "186",
+              "code": "186",
+              "coefficient": 74.4
+            },
+            {
+              "label": "187",
+              "code": "187",
+              "coefficient": 74.8
+            },
+            {
+              "label": "188",
+              "code": "188",
+              "coefficient": 75.2
+            },
+            {
+              "label": "189",
+              "code": "189",
+              "coefficient": 75.6
+            },
+            {
+              "label": "190",
+              "code": "190",
+              "coefficient": 76
+            },
+            {
+              "label": "191",
+              "code": "191",
+              "coefficient": 76.4
+            },
+            {
+              "label": "192",
+              "code": "192",
+              "coefficient": 76.8
+            },
+            {
+              "label": "193",
+              "code": "193",
+              "coefficient": 77.2
+            },
+            {
+              "label": "194",
+              "code": "194",
+              "coefficient": 77.6
+            },
+            {
+              "label": "195",
+              "code": "195",
+              "coefficient": 78
+            },
+            {
+              "label": "196",
+              "code": "196",
+              "coefficient": 78.4
+            },
+            {
+              "label": "197",
+              "code": "197",
+              "coefficient": 78.8
+            },
+            {
+              "label": "198",
+              "code": "198",
+              "coefficient": 79.2
+            },
+            {
+              "label": "199",
+              "code": "199",
+              "coefficient": 79.6
+            },
+            {
+              "label": "200",
+              "code": "200",
+              "coefficient": 80
             }
           ]
         }
@@ -14696,7 +16702,7 @@
       "workType": "Опциональная",
       "norm": 10,
       "normRaw": "10",
-      "triggerParam": "Реализуется в Хранилище признаков @ field_lovKvLZc|реализуется_в_хранилище_признаков",
+      "triggerParam": "Реализуется в Хранилище признаков @ field_lovKvLZc|реализуется_в_хранилище_признаков И Требуется контроль качества Признаков @ field_rZeUo8a_|требуется_контроль_качества_признаков",
       "triggerParams": [
         "Реализуется в Хранилище признаков @ field_lovKvLZc|реализуется_в_хранилище_признаков",
         "Требуется контроль качества Признаков @ field_rZeUo8a_|требуется_контроль_качества_признаков"
@@ -14725,40 +16731,14 @@
           "valueLabel": "Да"
         }
       ],
-      "laborParams": [
-        "Количество контролей качества признаков @ field_Q8DGJNTn|количество_контролей_качества_признаков"
-      ],
-      "formulaText": "N × коэф(field_Q8DGJNTn)",
-      "roundingMode": "CEIL",
-      "roundingStep": 0.1,
+      "laborParams": [],
+      "formulaText": "N",
+      "roundingMode": "ceil",
+      "roundingStep": 0.01,
       "triggerArchCount": null,
       "triggerMode": "simple",
       "triggerFormula": null,
-      "laborCoefficients": [
-        {
-          "paramName": "Количество контролей качества признаков @ field_Q8DGJNTn|количество_контролей_качества_признаков",
-          "paramCode": "field_Q8DGJNTn",
-          "schemaFieldUid": "field_e48e94c0-465e-47de-8a9c-ae8d95ca8d6c",
-          "kind": "by_value",
-          "values": [
-            {
-              "label": "1",
-              "code": "1",
-              "coefficient": 1
-            },
-            {
-              "label": "2",
-              "code": "2",
-              "coefficient": 2
-            },
-            {
-              "label": "3+",
-              "code": "3",
-              "coefficient": 3
-            }
-          ]
-        }
-      ],
+      "laborCoefficients": [],
       "laborArchCounts": []
     },
     {
@@ -14770,15 +16750,15 @@
       "workType": "Опциональная",
       "norm": 11,
       "normRaw": "11",
-      "triggerParam": "Требуется разметка данных источника @ field_DJJtx7nX|требуется_разметка_данных_источника",
+      "triggerParam": "Маркер: требуется разметка данных источника @ field_LGUdr5mq|маркер_требуется_разметка_данных_источника",
       "triggerParams": [
-        "Требуется разметка данных источника @ field_DJJtx7nX|требуется_разметка_данных_источника"
+        "Маркер: требуется разметка данных источника @ field_LGUdr5mq|маркер_требуется_разметка_данных_источника"
       ],
       "triggerRules": [
         {
-          "paramName": "Требуется разметка данных источника @ field_DJJtx7nX|требуется_разметка_данных_источника",
-          "paramCode": "field_DJJtx7nX",
-          "schemaFieldUid": "field_8d2fadfa-bffc-48fc-ae01-2e8295462beb",
+          "paramName": "Маркер: требуется разметка данных источника @ field_LGUdr5mq|маркер_требуется_разметка_данных_источника",
+          "paramCode": "field_LGUdr5mq",
+          "schemaFieldUid": "field_232f5368-2469-4105-96a3-cc43c092189c",
           "operator": "=",
           "values": [
             "Да"
@@ -14788,35 +16768,35 @@
         }
       ],
       "laborParams": [
-        "Сложность настройки шаблона разметки данных @ field_wuYlhnu0|сложность_настройки_шаблона_разметки"
+        "Маркер: сложность настройки шаблона разметки данных и подготовки сырых данных для загрузки @ field_DnB8Ur4I|маркер_сложность_настройки_шаблона_разметки_данн"
       ],
-      "formulaText": "N × коэф(field_wuYlhnu0)",
-      "roundingMode": "CEIL",
-      "roundingStep": 0.1,
+      "formulaText": "N × коэф(field_DnB8Ur4I)",
+      "roundingMode": "ceil",
+      "roundingStep": 0.01,
       "triggerArchCount": null,
       "triggerMode": "simple",
       "triggerFormula": null,
       "laborCoefficients": [
         {
-          "paramName": "Сложность настройки шаблона разметки данных @ field_wuYlhnu0|сложность_настройки_шаблона_разметки",
-          "paramCode": "field_wuYlhnu0",
-          "schemaFieldUid": "field_d6554cad-b9ca-4b1e-b885-8868f35e60f5",
+          "paramName": "Маркер: сложность настройки шаблона разметки данных и подготовки сырых данных для загрузки @ field_DnB8Ur4I|маркер_сложность_настройки_шаблона_разметки_данн",
+          "paramCode": "field_DnB8Ur4I",
+          "schemaFieldUid": "field_e6e350f4-eb44-4b6e-9746-4732dbd983c7",
           "kind": "by_value",
           "values": [
             {
-              "label": "Низкая",
-              "code": "низкая",
-              "coefficient": 0.5
-            },
-            {
-              "label": "Средняя",
-              "code": "средняя",
+              "label": "норма",
+              "code": "норма",
               "coefficient": 1
             },
             {
-              "label": "Высокая",
-              "code": "высокая",
+              "label": "средняя",
+              "code": "средняя",
               "coefficient": 1.5
+            },
+            {
+              "label": "высокая",
+              "code": "высокая",
+              "coefficient": 2
             }
           ]
         }
@@ -14832,16 +16812,16 @@
       "workType": "Опциональная",
       "norm": 130,
       "normRaw": "130",
-      "triggerParam": "Требуется разметка данных источника @ field_DJJtx7nX|требуется_разметка_данных_источника",
+      "triggerParam": "Маркер: требуется разметка данных источника @ field_LGUdr5mq|маркер_требуется_разметка_данных_источника И Маркер: требуется новая модель для автоматической разметки данных @ field_eIIWBdCg|маркер_требуется_новая_модель_для_автоматической",
       "triggerParams": [
-        "Требуется разметка данных источника @ field_DJJtx7nX|требуется_разметка_данных_источника",
-        "Требуется новая модель для автоматической разметки данных @ field_1bl3dfSX|требуется_новая_модель_разметки"
+        "Маркер: требуется разметка данных источника @ field_LGUdr5mq|маркер_требуется_разметка_данных_источника",
+        "Маркер: требуется новая модель для автоматической разметки данных @ field_eIIWBdCg|маркер_требуется_новая_модель_для_автоматической"
       ],
       "triggerRules": [
         {
-          "paramName": "Требуется разметка данных источника @ field_DJJtx7nX|требуется_разметка_данных_источника",
-          "paramCode": "field_DJJtx7nX",
-          "schemaFieldUid": "field_8d2fadfa-bffc-48fc-ae01-2e8295462beb",
+          "paramName": "Маркер: требуется разметка данных источника @ field_LGUdr5mq|маркер_требуется_разметка_данных_источника",
+          "paramCode": "field_LGUdr5mq",
+          "schemaFieldUid": "field_232f5368-2469-4105-96a3-cc43c092189c",
           "operator": "=",
           "values": [
             "Да"
@@ -14850,9 +16830,9 @@
           "valueLabel": "Да"
         },
         {
-          "paramName": "Требуется новая модель для автоматической разметки данных @ field_1bl3dfSX|требуется_новая_модель_разметки",
-          "paramCode": "field_1bl3dfSX",
-          "schemaFieldUid": "field_9278382f-a3b6-4c1f-88e0-ef31ac39e54b",
+          "paramName": "Маркер: требуется новая модель для автоматической разметки данных @ field_eIIWBdCg|маркер_требуется_новая_модель_для_автоматической",
+          "paramCode": "field_eIIWBdCg",
+          "schemaFieldUid": "field_b0cbc410-e812-44c9-9801-648255e3317b",
           "operator": "=",
           "values": [
             "Да"
@@ -14862,59 +16842,35 @@
         }
       ],
       "laborParams": [
-        "Размер модели разметки данных @ field_F8GPVM7R|размер_модели_разметки",
-        "Сложность конфигурации модели разметки данных @ field_VX7y3PsB|сложность_конфигурации_модели_разметки"
+        "Маркер: размер новой модели, доп. библиотеки, сложность подключения, конфигурации, тестирования и отладки модели (вкл. Active Learning и сетевые доступы) @ field_OyRJyJxD|маркер_размер_новой_модели_доп_библиотеки_сложно"
       ],
-      "formulaText": "N × коэф(field_F8GPVM7R) × коэф(field_VX7y3PsB)",
-      "roundingMode": "CEIL",
-      "roundingStep": 0.1,
+      "formulaText": "N × коэф(field_OyRJyJxD)",
+      "roundingMode": "ceil",
+      "roundingStep": 0.01,
       "triggerArchCount": null,
       "triggerMode": "simple",
       "triggerFormula": null,
       "laborCoefficients": [
         {
-          "paramName": "Размер модели разметки данных @ field_F8GPVM7R|размер_модели_разметки",
-          "paramCode": "field_F8GPVM7R",
-          "schemaFieldUid": "field_ee81cbee-281b-4d15-b478-9b5dffac47aa",
+          "paramName": "Маркер: размер новой модели, доп. библиотеки, сложность подключения, конфигурации, тестирования и отладки модели (вкл. Active Learning и сетевые доступы) @ field_OyRJyJxD|маркер_размер_новой_модели_доп_библиотеки_сложно",
+          "paramCode": "field_OyRJyJxD",
+          "schemaFieldUid": "field_f79d5c4f-da6a-4806-81a1-70ae2d325714",
           "kind": "by_value",
           "values": [
             {
-              "label": "Маленькая",
-              "code": "маленькая",
-              "coefficient": 0.5
-            },
-            {
-              "label": "Средняя",
-              "code": "средняя",
+              "label": "норма",
+              "code": "норма",
               "coefficient": 1
             },
             {
-              "label": "Большая",
-              "code": "большая",
+              "label": "средняя",
+              "code": "средняя",
               "coefficient": 1.5
-            }
-          ]
-        },
-        {
-          "paramName": "Сложность конфигурации модели разметки данных @ field_VX7y3PsB|сложность_конфигурации_модели_разметки",
-          "paramCode": "field_VX7y3PsB",
-          "schemaFieldUid": "field_58353db5-247f-465a-8250-97b4693839bb",
-          "kind": "by_value",
-          "values": [
-            {
-              "label": "Низкая",
-              "code": "низкая",
-              "coefficient": 0.5
             },
             {
-              "label": "Средняя",
-              "code": "средняя",
-              "coefficient": 1
-            },
-            {
-              "label": "Высокая",
+              "label": "высокая",
               "code": "высокая",
-              "coefficient": 1.5
+              "coefficient": 2
             }
           ]
         }
@@ -14930,16 +16886,16 @@
       "workType": "Опциональная",
       "norm": 91,
       "normRaw": "91",
-      "triggerParam": "Требуется разметка данных источника @ field_DJJtx7nX|требуется_разметка_данных_источника",
+      "triggerParam": "Маркер: требуется разметка данных источника @ field_LGUdr5mq|маркер_требуется_разметка_данных_источника И Маркер: требуется регламентный импорт/экспорт данных или отчетности @ field_xi0W_vl-|маркер_требуется_регламентный_импорт_экспорт_дан",
       "triggerParams": [
-        "Требуется разметка данных источника @ field_DJJtx7nX|требуется_разметка_данных_источника",
-        "Требуется регламентный импорт/экспорт данных или отчетности в/из ИС 1860 @ field_61bkBs0m|регламентный_импорт_экспорт_1860"
+        "Маркер: требуется разметка данных источника @ field_LGUdr5mq|маркер_требуется_разметка_данных_источника",
+        "Маркер: требуется регламентный импорт/экспорт данных или отчетности @ field_xi0W_vl-|маркер_требуется_регламентный_импорт_экспорт_дан"
       ],
       "triggerRules": [
         {
-          "paramName": "Требуется разметка данных источника @ field_DJJtx7nX|требуется_разметка_данных_источника",
-          "paramCode": "field_DJJtx7nX",
-          "schemaFieldUid": "field_8d2fadfa-bffc-48fc-ae01-2e8295462beb",
+          "paramName": "Маркер: требуется разметка данных источника @ field_LGUdr5mq|маркер_требуется_разметка_данных_источника",
+          "paramCode": "field_LGUdr5mq",
+          "schemaFieldUid": "field_232f5368-2469-4105-96a3-cc43c092189c",
           "operator": "=",
           "values": [
             "Да"
@@ -14948,9 +16904,9 @@
           "valueLabel": "Да"
         },
         {
-          "paramName": "Требуется регламентный импорт/экспорт данных или отчетности в/из ИС 1860 @ field_61bkBs0m|регламентный_импорт_экспорт_1860",
-          "paramCode": "field_61bkBs0m",
-          "schemaFieldUid": "field_00e91b78-dcc7-4457-9fc0-f1a45a643c32",
+          "paramName": "Маркер: требуется регламентный импорт/экспорт данных или отчетности @ field_xi0W_vl-|маркер_требуется_регламентный_импорт_экспорт_дан",
+          "paramCode": "field_xi0W_vl-",
+          "schemaFieldUid": "field_680ef613-2620-42d3-bbb8-78b46d94dd68",
           "operator": "=",
           "values": [
             "Да"
@@ -14959,14 +16915,40 @@
           "valueLabel": "Да"
         }
       ],
-      "laborParams": [],
-      "formulaText": "N",
-      "roundingMode": "CEIL",
-      "roundingStep": 0.1,
+      "laborParams": [
+        "Маркер: сложность реализации интеграции, правил обработки данных (в т.ч. конфиденциальных) и настройки режима обмена данными @ field__NUAXSNP|маркер_сложность_реализации_интеграции_правил_об"
+      ],
+      "formulaText": "N × коэф(field__NUAXSNP)",
+      "roundingMode": "ceil",
+      "roundingStep": 0.01,
       "triggerArchCount": null,
       "triggerMode": "simple",
       "triggerFormula": null,
-      "laborCoefficients": [],
+      "laborCoefficients": [
+        {
+          "paramName": "Маркер: сложность реализации интеграции, правил обработки данных (в т.ч. конфиденциальных) и настройки режима обмена данными @ field__NUAXSNP|маркер_сложность_реализации_интеграции_правил_об",
+          "paramCode": "field__NUAXSNP",
+          "schemaFieldUid": "field_5e9523cd-55e1-40b2-a302-921f75e99672",
+          "kind": "by_value",
+          "values": [
+            {
+              "label": "норма",
+              "code": "норма",
+              "coefficient": 1
+            },
+            {
+              "label": "средняя",
+              "code": "средняя",
+              "coefficient": 1.25
+            },
+            {
+              "label": "высокая",
+              "code": "высокая",
+              "coefficient": 1.5
+            }
+          ]
+        }
+      ],
       "laborArchCounts": []
     },
     {
@@ -14978,15 +16960,15 @@
       "workType": "Опциональная",
       "norm": 251,
       "normRaw": "251",
-      "triggerParam": "Требуются специальные условия хранения и обработки конфиденциальных данных @ field_lDw9gG39|спецусловия_конфиденциальных_данных",
+      "triggerParam": "Маркер: требуются специальные условия хранения и обработки конфиденциальных данных, не поддерживаемые коммунальным сервисом @ field_nx1zBg1X|маркер_требуются_специальные_условия_хранения_и_",
       "triggerParams": [
-        "Требуются специальные условия хранения и обработки конфиденциальных данных @ field_lDw9gG39|спецусловия_конфиденциальных_данных"
+        "Маркер: требуются специальные условия хранения и обработки конфиденциальных данных, не поддерживаемые коммунальным сервисом @ field_nx1zBg1X|маркер_требуются_специальные_условия_хранения_и_"
       ],
       "triggerRules": [
         {
-          "paramName": "Требуются специальные условия хранения и обработки конфиденциальных данных @ field_lDw9gG39|спецусловия_конфиденциальных_данных",
-          "paramCode": "field_lDw9gG39",
-          "schemaFieldUid": "field_7d161d75-68cc-45be-92d2-2991928b567b",
+          "paramName": "Маркер: требуются специальные условия хранения и обработки конфиденциальных данных, не поддерживаемые коммунальным сервисом @ field_nx1zBg1X|маркер_требуются_специальные_условия_хранения_и_",
+          "paramCode": "field_nx1zBg1X",
+          "schemaFieldUid": "field_b0953c62-5d1b-4f2c-999e-0bfea5ca59fe",
           "operator": "=",
           "values": [
             "Да"
@@ -14995,14 +16977,40 @@
           "valueLabel": "Да"
         }
       ],
-      "laborParams": [],
-      "formulaText": "N",
-      "roundingMode": "CEIL",
-      "roundingStep": 0.1,
+      "laborParams": [
+        "Маркер: правила обработки данных (в т.ч. конфиденциальных), режим обмена данными, сложность развёртывания отдельного инстанса и наличие доп. доработок @ field_wluxUVJ9|маркер_правила_обработки_данных_в_т_ч_конфиденци"
+      ],
+      "formulaText": "N × коэф(field_wluxUVJ9)",
+      "roundingMode": "ceil",
+      "roundingStep": 0.01,
       "triggerArchCount": null,
       "triggerMode": "simple",
       "triggerFormula": null,
-      "laborCoefficients": [],
+      "laborCoefficients": [
+        {
+          "paramName": "Маркер: правила обработки данных (в т.ч. конфиденциальных), режим обмена данными, сложность развёртывания отдельного инстанса и наличие доп. доработок @ field_wluxUVJ9|маркер_правила_обработки_данных_в_т_ч_конфиденци",
+          "paramCode": "field_wluxUVJ9",
+          "schemaFieldUid": "field_0e6ceec2-66b6-44d6-92b8-207b263ea571",
+          "kind": "by_value",
+          "values": [
+            {
+              "label": "норма",
+              "code": "норма",
+              "coefficient": 1
+            },
+            {
+              "label": "средняя",
+              "code": "средняя",
+              "coefficient": 1.5
+            },
+            {
+              "label": "высокая",
+              "code": "высокая",
+              "coefficient": 1.75
+            }
+          ]
+        }
+      ],
       "laborArchCounts": []
     },
     {
@@ -15014,15 +17022,15 @@
       "workType": "Опциональная",
       "norm": 103,
       "normRaw": "103",
-      "triggerParam": "Требуется ручная обработка результатов автоматизированной разметки данных @ field_WgK6lIS-|ручная_обработка_разметки",
+      "triggerParam": "Маркер: требуется ручная обработка результатов автоматизированной разметки данных @ field_KnIEmMxM|маркер_требуется_ручная_обработка_результатов_ав",
       "triggerParams": [
-        "Требуется ручная обработка результатов автоматизированной разметки данных @ field_WgK6lIS-|ручная_обработка_разметки"
+        "Маркер: требуется ручная обработка результатов автоматизированной разметки данных @ field_KnIEmMxM|маркер_требуется_ручная_обработка_результатов_ав"
       ],
       "triggerRules": [
         {
-          "paramName": "Требуется ручная обработка результатов автоматизированной разметки данных @ field_WgK6lIS-|ручная_обработка_разметки",
-          "paramCode": "field_WgK6lIS-",
-          "schemaFieldUid": "field_83980706-189a-43ac-a9a3-ebb355fbcf01",
+          "paramName": "Маркер: требуется ручная обработка результатов автоматизированной разметки данных @ field_KnIEmMxM|маркер_требуется_ручная_обработка_результатов_ав",
+          "paramCode": "field_KnIEmMxM",
+          "schemaFieldUid": "field_2c0a26f3-b379-4c17-b963-a6876808db53",
           "operator": "=",
           "values": [
             "Да"
@@ -15031,14 +17039,40 @@
           "valueLabel": "Да"
         }
       ],
-      "laborParams": [],
-      "formulaText": "N",
-      "roundingMode": "CEIL",
-      "roundingStep": 0.1,
+      "laborParams": [
+        "Маркер: сложность развёртывания отдельного инстанса ручной разметки голосов и наличие доп. доработок @ field_TrX4G9Gc|маркер_сложность_развёртывания_отдельного_инстан"
+      ],
+      "formulaText": "N × коэф(field_TrX4G9Gc)",
+      "roundingMode": "ceil",
+      "roundingStep": 0.01,
       "triggerArchCount": null,
       "triggerMode": "simple",
       "triggerFormula": null,
-      "laborCoefficients": [],
+      "laborCoefficients": [
+        {
+          "paramName": "Маркер: сложность развёртывания отдельного инстанса ручной разметки голосов и наличие доп. доработок @ field_TrX4G9Gc|маркер_сложность_развёртывания_отдельного_инстан",
+          "paramCode": "field_TrX4G9Gc",
+          "schemaFieldUid": "field_19da4968-280e-43eb-b4c7-7e8d12453bc7",
+          "kind": "by_value",
+          "values": [
+            {
+              "label": "без доработок",
+              "code": "без доработок",
+              "coefficient": 1
+            },
+            {
+              "label": "незначительные доработки",
+              "code": "незначительные доработки",
+              "coefficient": 1.25
+            },
+            {
+              "label": "значительные доработки",
+              "code": "значительные доработки",
+              "coefficient": 1.5
+            }
+          ]
+        }
+      ],
       "laborArchCounts": []
     },
     {
@@ -15050,13 +17084,13 @@
       "workType": "Опциональная",
       "norm": 289,
       "normRaw": "289",
-      "triggerParam": "Требуется визуализация результатов работы модельного сервиса @ field_KzzDtkB0|требуется_визуализация",
+      "triggerParam": "Требуется визуализация результатов работы модельного сервиса в SuperSet @ field_KzzDtkB0|требуется_визуализация_результатов_работы_модель",
       "triggerParams": [
-        "Требуется визуализация результатов работы модельного сервиса @ field_KzzDtkB0|требуется_визуализация"
+        "Требуется визуализация результатов работы модельного сервиса в SuperSet @ field_KzzDtkB0|требуется_визуализация_результатов_работы_модель"
       ],
       "triggerRules": [
         {
-          "paramName": "Требуется визуализация результатов работы модельного сервиса @ field_KzzDtkB0|требуется_визуализация",
+          "paramName": "Требуется визуализация результатов работы модельного сервиса в SuperSet @ field_KzzDtkB0|требуется_визуализация_результатов_работы_модель",
           "paramCode": "field_KzzDtkB0",
           "schemaFieldUid": "field_031c725e-0b8d-49bb-a44c-61606b62fe4e",
           "operator": "=",
@@ -15068,48 +17102,34 @@
         }
       ],
       "laborParams": [
-        "Тип БД для BI-системы @ field_F7nK-We5|тип_бд_для_bi",
-        "Способ загрузки данных в BI-систему @ field_4IL7OStC|способ_загрузки_в_bi"
+        "SuperSet: сложность развёртывания отдельного инстанса, наличие доп. доработок, способ загрузки данных (вручную / по интеграции) @ field_-AZPYdbp|superset_сложность_развёртывания_отдельного_инст"
       ],
-      "formulaText": "N × коэф(field_F7nK-We5) × коэф(field_4IL7OStC)",
-      "roundingMode": "CEIL",
-      "roundingStep": 0.1,
+      "formulaText": "N × коэф(field_-AZPYdbp)",
+      "roundingMode": "ceil",
+      "roundingStep": 0.01,
       "triggerArchCount": null,
       "triggerMode": "simple",
       "triggerFormula": null,
       "laborCoefficients": [
         {
-          "paramName": "Тип БД для BI-системы @ field_F7nK-We5|тип_бд_для_bi",
-          "paramCode": "field_F7nK-We5",
-          "schemaFieldUid": "field_f1d16b7e-c700-40fc-abee-8c7dbad9e6ac",
+          "paramName": "SuperSet: сложность развёртывания отдельного инстанса, наличие доп. доработок, способ загрузки данных (вручную / по интеграции) @ field_-AZPYdbp|superset_сложность_развёртывания_отдельного_инст",
+          "paramCode": "field_-AZPYdbp",
+          "schemaFieldUid": "field_b15470f9-ea74-45c8-ba3a-76581097b33c",
           "kind": "by_value",
           "values": [
             {
-              "label": "PostgreSQL",
-              "code": "postgresql",
+              "label": "без интеграций и без Clickhouse",
+              "code": "без интеграций и без Clickhouse",
+              "coefficient": 0.65
+            },
+            {
+              "label": "с интеграцией и Clickhouse",
+              "code": "с интеграцией и Clickhouse",
               "coefficient": 1
             },
             {
-              "label": "ClickHouse",
-              "code": "clickhouse",
-              "coefficient": 1.3
-            }
-          ]
-        },
-        {
-          "paramName": "Способ загрузки данных в BI-систему @ field_4IL7OStC|способ_загрузки_в_bi",
-          "paramCode": "field_4IL7OStC",
-          "schemaFieldUid": "field_2ceb3182-537b-4ffb-80e7-03ff397d61f2",
-          "kind": "by_value",
-          "values": [
-            {
-              "label": "Вручную",
-              "code": "вручную",
-              "coefficient": 1
-            },
-            {
-              "label": "По интеграции",
-              "code": "по_интеграции",
+              "label": "с интеграцией, Clickhouse и доработкой",
+              "code": "с интеграцией, Clickhouse и доработкой",
               "coefficient": 1.2
             }
           ]
@@ -15124,8 +17144,8 @@
       "name": "Настройка публикаций и бэкендов модельных сервисов на коммунальных HAPROXY балансировщиках",
       "originalName": "Настройка публикаций и бэкендов модельных сервисов на коммунальных HAPROXY балансировщиках",
       "workType": "Опциональная",
-      "norm": 2,
-      "normRaw": "2",
+      "norm": 5,
+      "normRaw": "5",
       "triggerParam": "Тип работ модельного сервиса @ workType|тип_работ",
       "triggerParams": [
         "Тип работ модельного сервиса @ workType|тип_работ"
@@ -15137,7 +17157,9 @@
           "schemaFieldUid": "field_22ae6d02-b421-41ee-ba8a-5b3153f0f040",
           "operator": "in",
           "values": [
-            "Разработка"
+            "Разработка",
+            "Доработка",
+            "Разработка и внедрение"
           ],
           "valueCode": null,
           "valueLabel": null
@@ -15169,8 +17191,8 @@
       "name": "Выделение ресурсного пула под обучение и исполнение модели",
       "originalName": "Выделение ресурсного пула под обучение и исполнение модели",
       "workType": "Опциональная",
-      "norm": 3,
-      "normRaw": "3",
+      "norm": 5,
+      "normRaw": "5",
       "triggerParam": "Тип работ модельного сервиса @ workType|тип_работ",
       "triggerParams": [
         "Тип работ модельного сервиса @ workType|тип_работ"
@@ -15182,7 +17204,9 @@
           "schemaFieldUid": "field_22ae6d02-b421-41ee-ba8a-5b3153f0f040",
           "operator": "in",
           "values": [
-            "Разработка"
+            "Разработка",
+            "Доработка",
+            "Разработка и внедрение"
           ],
           "valueCode": null,
           "valueLabel": null
@@ -15211,11 +17235,11 @@
       "stream": "ПиРМ",
       "component": "Модельный сервис",
       "stage": "ИС 1655",
-      "name": "Контроль соблюдение архитектурных требований ПИМ и использования коммунальных ресурсов",
-      "originalName": "Контроль соблюдение архитектурных требований ПИМ и использования коммунальных ресурсов",
+      "name": "Контроль соблюдения архитектурных требований ПИМ и использования коммунальных ресурсов",
+      "originalName": "Контроль соблюдения архитектурных требований ПИМ и использования коммунальных ресурсов",
       "workType": "Опциональная",
-      "norm": 2,
-      "normRaw": "2",
+      "norm": 5,
+      "normRaw": "5",
       "triggerParam": "Тип работ модельного сервиса @ workType|тип_работ",
       "triggerParams": [
         "Тип работ модельного сервиса @ workType|тип_работ"
@@ -15228,7 +17252,8 @@
           "operator": "in",
           "values": [
             "Разработка",
-            "Доработка"
+            "Доработка",
+            "Разработка и внедрение"
           ],
           "valueCode": null,
           "valueLabel": null
@@ -15260,17 +17285,17 @@
       "name": "Загрузка моделей или библиотек в контур банка",
       "originalName": "Загрузка моделей или библиотек в контур банка",
       "workType": "Опциональная",
-      "norm": 1,
-      "normRaw": "Да",
-      "triggerParam": "AutoML: требуется новая библиотека @ field_S41Rqt5E|automl_требуется_новая_библиотека",
+      "norm": 10,
+      "normRaw": "10",
+      "triggerParam": "Требуется новая библиотека / базовая модель @ field_Ifnu_c_H|требуется_новая_библиотека_базовая_модель",
       "triggerParams": [
-        "AutoML: требуется новая библиотека @ field_S41Rqt5E|automl_требуется_новая_библиотека"
+        "Требуется новая библиотека / базовая модель @ field_Ifnu_c_H|требуется_новая_библиотека_базовая_модель"
       ],
       "triggerRules": [
         {
-          "paramName": "AutoML: требуется новая библиотека @ field_S41Rqt5E|automl_требуется_новая_библиотека",
-          "paramCode": "field_S41Rqt5E",
-          "schemaFieldUid": "field_278b61ee-774f-4e84-9a41-e9ce26c5319f",
+          "paramName": "Требуется новая библиотека / базовая модель @ field_Ifnu_c_H|требуется_новая_библиотека_базовая_модель",
+          "paramCode": "field_Ifnu_c_H",
+          "schemaFieldUid": "field_86dd31b1-cec2-41ba-8b04-616f1adc2bad",
           "operator": "=",
           "values": [
             "Да"
@@ -15282,38 +17307,12 @@
       "triggerArchCount": null,
       "triggerMode": "simple",
       "triggerFormula": null,
-      "laborParams": [
-        "Размер модели разметки данных @ field_F8GPVM7R|размер_модели_разметки"
-      ],
-      "laborCoefficients": [
-        {
-          "paramName": "Размер модели разметки данных @ field_F8GPVM7R|размер_модели_разметки",
-          "paramCode": "field_F8GPVM7R",
-          "schemaFieldUid": "field_ee81cbee-281b-4d15-b478-9b5dffac47aa",
-          "kind": "by_value",
-          "values": [
-            {
-              "label": "Маленькая",
-              "code": "маленькая",
-              "coefficient": 0.5
-            },
-            {
-              "label": "Средняя",
-              "code": "средняя",
-              "coefficient": 1
-            },
-            {
-              "label": "Большая",
-              "code": "большая",
-              "coefficient": 1.5
-            }
-          ]
-        }
-      ],
+      "laborParams": [],
+      "laborCoefficients": [],
       "laborArchCounts": [],
-      "formulaText": "N × коэф(field_F8GPVM7R)",
-      "roundingMode": "CEIL",
-      "roundingStep": 0.1
+      "formulaText": "N",
+      "roundingMode": "ceil",
+      "roundingStep": 0.01
     },
     {
       "stream": "ПиРМ",
@@ -15322,48 +17321,17 @@
       "name": "Добавление оборудования в кластер SSDP",
       "originalName": "Добавление оборудования в кластер SSDP",
       "workType": "Опциональная",
-      "norm": 1,
-      "normRaw": "Да",
-      "triggerParam": "",
-      "triggerParams": [],
-      "triggerRules": [],
-      "triggerArchCount": {
-        "kind": "modelService",
-        "steps": [
-          {
-            "count": 1,
-            "coefficient": 1
-          }
-        ],
-        "combinator": "and"
-      },
-      "triggerMode": "simple",
-      "triggerFormula": null,
-      "laborParams": [],
-      "laborCoefficients": [],
-      "laborArchCounts": [],
-      "formulaText": "N",
-      "roundingMode": "CEIL",
-      "roundingStep": 0.1
-    },
-    {
-      "stream": "ПиРМ",
-      "component": "Модельный сервис",
-      "stage": "ИС 1655_1",
-      "name": "Консультации по разворачиванию оркестратора",
-      "originalName": "Консультации по разворачиванию оркестратора",
-      "workType": "Опциональная",
-      "norm": null,
-      "normRaw": "",
-      "triggerParam": "Требуется оркестратор @ field_JcKtx9Mg|требуется_оркестратор",
+      "norm": 10,
+      "normRaw": "10",
+      "triggerParam": "Требуется расширение инфраструктуры кластера SSDP @ field_UNSRK-JY|требуется_расширение_инфраструктуры_кластера_ssd",
       "triggerParams": [
-        "Требуется оркестратор @ field_JcKtx9Mg|требуется_оркестратор"
+        "Требуется расширение инфраструктуры кластера SSDP @ field_UNSRK-JY|требуется_расширение_инфраструктуры_кластера_ssd"
       ],
       "triggerRules": [
         {
-          "paramName": "Требуется оркестратор @ field_JcKtx9Mg|требуется_оркестратор",
-          "paramCode": "field_JcKtx9Mg",
-          "schemaFieldUid": "field_9c96b450-48ee-4284-b8ea-0419b45812f8",
+          "paramName": "Требуется расширение инфраструктуры кластера SSDP @ field_UNSRK-JY|требуется_расширение_инфраструктуры_кластера_ssd",
+          "paramCode": "field_UNSRK-JY",
+          "schemaFieldUid": "field_9a6e2063-4ec1-4810-980d-9d48b1822cbf",
           "operator": "=",
           "values": [
             "Да"
@@ -15379,8 +17347,8 @@
       "laborCoefficients": [],
       "laborArchCounts": [],
       "formulaText": "N",
-      "roundingMode": "CEIL",
-      "roundingStep": 0.1
+      "roundingMode": "ceil",
+      "roundingStep": 0.01
     },
     {
       "stream": "ПиРМ",
@@ -15389,15 +17357,15 @@
       "name": "Кастомизация конфигурации оркестратора",
       "originalName": "Кастомизация конфигурации оркестратора",
       "workType": "Опциональная",
-      "norm": null,
-      "normRaw": "",
-      "triggerParam": "Требуется оркестратор @ field_JcKtx9Mg|требуется_оркестратор",
+      "norm": 20,
+      "normRaw": "20",
+      "triggerParam": "Требуется оркестратор ПИМ @ field_JcKtx9Mg|требуется_оркестратор",
       "triggerParams": [
-        "Требуется оркестратор @ field_JcKtx9Mg|требуется_оркестратор"
+        "Требуется оркестратор ПИМ @ field_JcKtx9Mg|требуется_оркестратор"
       ],
       "triggerRules": [
         {
-          "paramName": "Требуется оркестратор @ field_JcKtx9Mg|требуется_оркестратор",
+          "paramName": "Требуется оркестратор ПИМ @ field_JcKtx9Mg|требуется_оркестратор",
           "paramCode": "field_JcKtx9Mg",
           "schemaFieldUid": "field_9c96b450-48ee-4284-b8ea-0419b45812f8",
           "operator": "=",
@@ -15409,37 +17377,6 @@
         }
       ],
       "triggerArchCount": null,
-      "triggerMode": "simple",
-      "triggerFormula": null,
-      "laborParams": [],
-      "laborCoefficients": [],
-      "laborArchCounts": [],
-      "formulaText": "N",
-      "roundingMode": "CEIL",
-      "roundingStep": 0.1
-    },
-    {
-      "stream": "ПиРМ",
-      "component": "Модельный сервис",
-      "stage": "ИС 1655_1",
-      "name": "Консультация по подключению к тракту логированию моделей",
-      "originalName": "Консультация по подключению к тракту логированию моделей",
-      "workType": "Обязательная",
-      "norm": null,
-      "normRaw": "",
-      "triggerParam": "",
-      "triggerParams": [],
-      "triggerRules": [],
-      "triggerArchCount": {
-        "kind": "modelService",
-        "steps": [
-          {
-            "count": 1,
-            "coefficient": 1
-          }
-        ],
-        "combinator": "and"
-      },
       "triggerMode": "simple",
       "triggerFormula": null,
       "laborParams": [],
@@ -15456,15 +17393,15 @@
       "name": "Настройка kafka и тракта логирования для нового потребителя",
       "originalName": "Настройка kafka и тракта логирования для нового потребителя",
       "workType": "Обязательная",
-      "norm": null,
-      "normRaw": "",
-      "triggerParam": "Требуется проработка структуры логов @ field_IGQX_9FN|требуется_проработка_структуры_логов",
+      "norm": 12,
+      "normRaw": "12",
+      "triggerParam": "Требуется логирование ПИМ @ field_IGQX_9FN|требуется_логирование_пим",
       "triggerParams": [
-        "Требуется проработка структуры логов @ field_IGQX_9FN|требуется_проработка_структуры_логов"
+        "Требуется логирование ПИМ @ field_IGQX_9FN|требуется_логирование_пим"
       ],
       "triggerRules": [
         {
-          "paramName": "Требуется проработка структуры логов @ field_IGQX_9FN|требуется_проработка_структуры_логов",
+          "paramName": "Требуется логирование ПИМ @ field_IGQX_9FN|требуется_логирование_пим",
           "paramCode": "field_IGQX_9FN",
           "schemaFieldUid": "field_15e8f2e9-0ea8-46f5-a7d3-59abcb82cb12",
           "operator": "=",
@@ -15482,8 +17419,8 @@
       "laborCoefficients": [],
       "laborArchCounts": [],
       "formulaText": "N",
-      "roundingMode": "CEIL",
-      "roundingStep": 0.1
+      "roundingMode": "ceil",
+      "roundingStep": 0.01
     },
     {
       "stream": "ПиРМ",
