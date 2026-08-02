@@ -175,8 +175,10 @@ function writeByDotPath(
 	for (let i = 0; i < parts.length - 1; i++) {
 		const k = parts[i] as string;
 		const child = cur[k];
+		// Pseudo-array арх. блоков (modelService и т.п.) нельзя подменять на {}.
+		if (Array.isArray(child)) return data;
 		const cloned =
-			child && typeof child === "object" && !Array.isArray(child)
+			child && typeof child === "object"
 				? { ...(child as Record<string, unknown>) }
 				: {};
 		cur[k] = cloned;

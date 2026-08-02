@@ -54,7 +54,16 @@ function writeAtDotPath(
 	let cur: Record<string, unknown> = next;
 	for (let i = 0; i < parts.length - 1; i++) {
 		const key = parts[i];
-		const child = readRecord(cur[key]) ?? {};
+		const existing = cur[key];
+		/**
+		 * modelService/dataMart и т.п. в анкете хранятся как pseudo-array
+		 * (список экземпляров), хотя в jsonSchema — object. Нельзя подменять
+		 * массив на `{}` при записи вложенного legacy-пути вроде
+		 * `generalInfo.modelService.controlTypicalTasks` — иначе теряются
+		 * ответы пользователя и последующие триггеры типовых работ (ПиРМ и др.).
+		 */
+		if (Array.isArray(existing)) return data;
+		const child = readRecord(existing) ?? {};
 		cur[key] = { ...child };
 		cur = cur[key] as Record<string, unknown>;
 	}

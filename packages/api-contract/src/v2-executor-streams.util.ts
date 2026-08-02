@@ -109,11 +109,20 @@ export function resolveExecutorScopeDbStreams(
 		if (trimmed === V2_MODEL_STREAM_EXECUTOR && catalog?.length) {
 			return resolveModelStreamCatalogScopeFromEntries(catalog);
 		}
-		const mapped = EXECUTOR_SCOPE_DB_STREAMS[trimmed];
-		if (mapped?.length) return mapped;
-		// Подпись области UI без явной карты → scope через код стрима
-		// (иначе «Контроль моделей» не находит назначения со streamExecutor=mdlctl).
-		return resolveStreamBlockExecutorScopeStreams(trimmed, catalog);
+		/**
+		 * Статическая карта — только legacy DB-имена заводских работ. Назначения,
+		 * созданные из конструктора, пишутся каноническим именем из каталога
+		 * `v2_stream` (код `pirm` / подпись стрима), поэтому scope — объединение:
+		 * иначе новые работы стрима не находятся в блоке с legacy-подписью.
+		 */
+		const scope = [...(EXECUTOR_SCOPE_DB_STREAMS[trimmed] ?? [])];
+		for (const stream of resolveStreamBlockExecutorScopeStreams(
+			trimmed,
+			catalog,
+		)) {
+			if (!scope.includes(stream)) scope.push(stream);
+		}
+		return scope.length > 0 ? scope : [trimmed];
 	}
 
 	// Код / DB-имя модельного стрима → его scope (+ legacy umbrella).

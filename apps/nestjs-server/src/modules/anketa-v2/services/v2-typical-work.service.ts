@@ -32,6 +32,7 @@ import {
 	needsCalculationLogicBackfill,
 	parseStoredTypicalWorkCalculationLogic,
 	backfillTypicalWorkBoundWorkIdsInUiSchema,
+	collectTypicalWorkBlockBindings,
 	remapBoundWorkIdsInUiSchema,
 	syncTypicalWorksCatalogLogicSnapshot,
 	resolveActiveNormOnDate,
@@ -1012,12 +1013,37 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 			version.uiSchema as Record<string, unknown>,
 		);
 		const uiSchema = cleaned.uiSchema;
+		/**
+		 * Работы получают новые uuid при пересиде каталога, а привязки блоков
+		 * остаются со старыми. Такой блок отдаёт часть работ стрима или не отдаёт
+		 * ничего, поэтому привязку с несуществующими id перевыставляем по
+		 * назначениям. Проверяем по всему каталогу, а не по работам шаблона:
+		 * блок может ссылаться и на глобальную работу.
+		 */
+		const boundWorkIdsInSchema = [
+			...new Set(
+				collectTypicalWorkBlockBindings(uiSchema).flatMap(
+					(binding) => binding.boundWorkIds ?? [],
+				),
+			),
+		];
+		const existingBoundWorkIds = new Set(
+			boundWorkIdsInSchema.length > 0
+				? (
+						await this.workRepository.find({
+							where: { id: In(boundWorkIdsInSchema) },
+							select: { id: true },
+						})
+					).map((work) => work.id)
+				: [],
+		);
 		const next = backfillTypicalWorkBoundWorkIdsInUiSchema(uiSchema, catalog, {
 			replaceExisting: (boundWorkIds) =>
-				boundWorkIds.length === LEGACY_FACTORY_BOUND_WORK_NAMES.size &&
-				boundWorkIds.every((id) =>
-					LEGACY_FACTORY_BOUND_WORK_NAMES.has(workNameById.get(id) ?? ""),
-				),
+				(boundWorkIds.length === LEGACY_FACTORY_BOUND_WORK_NAMES.size &&
+					boundWorkIds.every((id) =>
+						LEGACY_FACTORY_BOUND_WORK_NAMES.has(workNameById.get(id) ?? ""),
+					)) ||
+				boundWorkIds.some((id) => !existingBoundWorkIds.has(id)),
 		});
 		if (!cleaned.changed && JSON.stringify(next) === JSON.stringify(uiSchema)) {
 			const syncedLogic = syncTypicalWorksCatalogLogicSnapshot(

@@ -182,6 +182,38 @@ const v2_model_stream_typical_works_constants_1 = require("./v2-model-stream-typ
         (0, vitest_1.expect)((0, v2_executor_streams_util_1.resolveExecutorScopeDbStreams)("mdlctl")).toEqual(vitest_1.expect.arrayContaining(["mdlctl", "Контроль моделей"]));
         (0, vitest_1.expect)((0, v2_executor_streams_util_1.typicalWorkAssignedToExecutorStream)(["mdlctl"], "Контроль моделей")).toBe(true);
     });
+    /**
+     * Заводские блоки ПиРМ/КМ хранят в `worksCatalogStream` legacy-подпись, а
+     * назначения новых работ пишутся каноническим именем из каталога `v2_stream`
+     * (кодом стрима либо его подписью). Без объединения scope такие работы
+     * не попадают в каталог блока — «добавление работ не работает».
+     */
+    (0, vitest_1.it)("includes stream code and catalog labels in legacy executor label scope", () => {
+        const catalog = [
+            {
+                code: v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.PIRM,
+                label: "Платформы и Решения для моделирования",
+                isActive: true,
+                order: 1,
+                payload: {
+                    dbNames: ["ПиРМ (правила и развитие модели)"],
+                    legacyLabels: ["ПиРМ"],
+                    v1Labels: [],
+                    keycloakAliases: [],
+                },
+            },
+        ];
+        const scope = (0, v2_executor_streams_util_1.resolveExecutorScopeDbStreams)("ПиРМ", catalog);
+        (0, vitest_1.expect)(scope).toEqual(vitest_1.expect.arrayContaining([
+            "ПиРМ",
+            "ПиРМ (правила и развитие модели)",
+            v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.PIRM,
+            "Платформы и Решения для моделирования",
+        ]));
+        (0, vitest_1.expect)((0, v2_executor_streams_util_1.typicalWorkAssignedToExecutorStream)([v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.PIRM], "ПиРМ", catalog)).toBe(true);
+        // Без каталога код стрима тоже должен попадать в scope legacy-подписи.
+        (0, vitest_1.expect)((0, v2_executor_streams_util_1.resolveExecutorScopeDbStreams)("ПиРМ")).toEqual(vitest_1.expect.arrayContaining(["ПиРМ", v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.PIRM]));
+    });
     (0, vitest_1.it)("expands legacy «Модельный стрим» catalog scope to five model DB streams", () => {
         const scope = (0, v2_executor_streams_util_1.resolveExecutorScopeDbStreams)(v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_EXECUTOR);
         (0, vitest_1.expect)(scope).toEqual(vitest_1.expect.arrayContaining([

@@ -180,6 +180,38 @@ describe("collectExecutorStreamBlocks", () => {
         expect(resolveExecutorScopeDbStreams("mdlctl")).toEqual(expect.arrayContaining(["mdlctl", "Контроль моделей"]));
         expect(typicalWorkAssignedToExecutorStream(["mdlctl"], "Контроль моделей")).toBe(true);
     });
+    /**
+     * Заводские блоки ПиРМ/КМ хранят в `worksCatalogStream` legacy-подпись, а
+     * назначения новых работ пишутся каноническим именем из каталога `v2_stream`
+     * (кодом стрима либо его подписью). Без объединения scope такие работы
+     * не попадают в каталог блока — «добавление работ не работает».
+     */
+    it("includes stream code and catalog labels in legacy executor label scope", () => {
+        const catalog = [
+            {
+                code: V2_IMPLEMENTATION_STREAM.PIRM,
+                label: "Платформы и Решения для моделирования",
+                isActive: true,
+                order: 1,
+                payload: {
+                    dbNames: ["ПиРМ (правила и развитие модели)"],
+                    legacyLabels: ["ПиРМ"],
+                    v1Labels: [],
+                    keycloakAliases: [],
+                },
+            },
+        ];
+        const scope = resolveExecutorScopeDbStreams("ПиРМ", catalog);
+        expect(scope).toEqual(expect.arrayContaining([
+            "ПиРМ",
+            "ПиРМ (правила и развитие модели)",
+            V2_IMPLEMENTATION_STREAM.PIRM,
+            "Платформы и Решения для моделирования",
+        ]));
+        expect(typicalWorkAssignedToExecutorStream([V2_IMPLEMENTATION_STREAM.PIRM], "ПиРМ", catalog)).toBe(true);
+        // Без каталога код стрима тоже должен попадать в scope legacy-подписи.
+        expect(resolveExecutorScopeDbStreams("ПиРМ")).toEqual(expect.arrayContaining(["ПиРМ", V2_IMPLEMENTATION_STREAM.PIRM]));
+    });
     it("expands legacy «Модельный стрим» catalog scope to five model DB streams", () => {
         const scope = resolveExecutorScopeDbStreams(V2_MODEL_STREAM_EXECUTOR);
         expect(scope).toEqual(expect.arrayContaining([

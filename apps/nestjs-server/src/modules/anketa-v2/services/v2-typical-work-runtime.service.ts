@@ -1075,11 +1075,31 @@ export class V2TypicalWorkRuntimeService {
 						name: work.name,
 					})),
 				).filter((id) => assignedWorkIds.has(id));
-				if (remapped.length > 0) return remapped;
+				// Ремап покрыл весь список — привязка восстановлена полностью.
+				// Частичный результат означает, что часть id восстановить не удалось,
+				// поэтому решение принимает общая проверка на протухание ниже.
+				if (remapped.length === allowedWorkIds.length) return remapped;
 			}
 		}
 
-		if (directAssigned.length > 0) return directAssigned;
+		if (directAssigned.length > 0) {
+			// Часть id вне назначений — это либо снятое назначение (легитимное
+			// сужение блока), либо протухший id после пересида каталога с новыми
+			// uuid. Отличаем по факту существования работы: если id вообще нет в
+			// каталоге, урезанному allow-list доверять нельзя — иначе работы
+			// стрима молча пропадают из блока.
+			const missing = allowedWorkIds.filter((id) => !assignedWorkIds.has(id));
+			const existing = await this.workRepository.find({
+				where: { id: In([...missing]) },
+				select: { id: true },
+			});
+			const staleCount = missing.length - existing.length;
+			if (staleCount === 0) return directAssigned;
+			runtimeLogger.warn(
+				`Привязка блока частично устарела: ${staleCount} из ${allowedWorkIds.length} id не найдены в каталоге работ. Фильтр по id отключён, используются назначения стрима.`,
+			);
+			return undefined;
+		}
 
 		// Allow-list устарел (id нет среди назначений стрима). Вернуть его как есть
 		// обнулит каталог; `undefined` = без фильтра по id (остаётся filter по assignment).

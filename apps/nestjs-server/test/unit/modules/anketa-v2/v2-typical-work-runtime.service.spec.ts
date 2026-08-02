@@ -36,6 +36,7 @@ function createService({
 	laborRows = [],
 	versionConfigs = [],
 	works,
+	norms,
 	templateVersion = null,
 }: {
 	rules: Array<{
@@ -99,6 +100,13 @@ function createService({
 		workType: string;
 		archComponentType: string;
 	}>;
+	norms?: Array<{
+		workId: string;
+		streamExecutor: string;
+		normValue: string;
+		validFrom: string;
+		validTo: string | null;
+	}>;
 	templateVersion?: {
 		id: string;
 		jsonSchema?: Record<string, unknown>;
@@ -121,22 +129,24 @@ function createService({
 			},
 		],
 	);
-	const normRepository = repo([
-		{
-			workId: WORK_WITH_TRIGGER,
-			streamExecutor: STREAM,
-			normValue: "2",
-			validFrom: "2025-01-01",
-			validTo: null,
-		},
-		{
-			workId: WORK_WITHOUT_TRIGGERS,
-			streamExecutor: STREAM,
-			normValue: "3",
-			validFrom: "2025-01-01",
-			validTo: null,
-		},
-	]);
+	const normRepository = repo(
+		norms ?? [
+			{
+				workId: WORK_WITH_TRIGGER,
+				streamExecutor: STREAM,
+				normValue: "2",
+				validFrom: "2025-01-01",
+				validTo: null,
+			},
+			{
+				workId: WORK_WITHOUT_TRIGGERS,
+				streamExecutor: STREAM,
+				normValue: "3",
+				validFrom: "2025-01-01",
+				validTo: null,
+			},
+		],
+	);
 	const ruleRepository = repo(rules);
 	const laborRepository = repo(laborRows);
 	const laborParamRepository = repo(laborParams);
@@ -1487,5 +1497,180 @@ describe("V2TypicalWorkRuntimeService", () => {
 		expect(withoutUncertainty[0]?.coefficient).toBe(1);
 		expect(withUncertainty[0]?.total).toBeCloseTo(2 * 1.15, 5);
 		expect(withUncertainty[0]?.coefficient).toBeCloseTo(1.15, 5);
+	});
+
+	/**
+	 * Заводской блок ПиРМ ищет работы по legacy-подписи «ПиРМ», а назначение
+	 * работы, созданной из конструктора, пишется кодом стрима из каталога.
+	 * Если scope блока не покрывает код, добавленная работа не выводится.
+	 */
+	it("finds work assigned by stream code when block uses legacy stream label", async () => {
+		const workId = WORK_WITH_TRIGGER;
+		const modelServiceField = "field_o_HRj6VO";
+		const service = createService({
+			works: [
+				{
+					id: workId,
+					name: "Работа на модельный сервис",
+					workType: "Типовая",
+					archComponentType: "Модельный сервис",
+				},
+			],
+			rules: [
+				{
+					workId,
+					streamExecutor: "pirm",
+					paramCode: modelServiceField,
+					paramName: "Необходимость пилота (MVP)",
+					operator: "=",
+					valueCode: "true",
+					valueLabel: "Да",
+				},
+			],
+			assignments: [
+				{
+					id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+					workId,
+					streamExecutor: "pirm",
+					isActive: true,
+				},
+			],
+			norms: [
+				{
+					workId,
+					streamExecutor: "pirm",
+					normValue: "5",
+					validFrom: "2025-01-01",
+					validTo: null,
+				},
+			],
+		});
+
+		const tasks = await service.buildCatalogTasks({
+			archComponentType: "Система-источник",
+			streamExecutor: "ПиРМ",
+			source: { [modelServiceField]: true },
+			formData: {
+				generalInfo: { modelService: [{ [modelServiceField]: true }] },
+			},
+			templateVersionId: null,
+			atDate: "2026-08-01",
+			allowedWorkIds: [workId],
+			worksCatalogAllArchComponents: true,
+		});
+
+		expect(tasks.map((task) => task.workId)).toEqual([workId]);
+		expect(tasks[0]?.total).toBe(5);
+	});
+});
+
+describe("устаревшая привязка блока (boundWorkIds)", () => {
+	const BOUND_STREAM = "pirm";
+	const TRIGGER_FIELD = "field_trigger";
+	const LIVE_IDS = [
+		"aaaaaaaa-1111-1111-1111-111111111111",
+		"bbbbbbbb-2222-2222-2222-222222222222",
+		"cccccccc-3333-3333-3333-333333333333",
+	];
+	const STALE_IDS = [
+		"dddddddd-4444-4444-4444-444444444444",
+		"eeeeeeee-5555-5555-5555-555555555555",
+	];
+
+	const workRows = LIVE_IDS.map((id) => ({
+		id,
+		name: `Работа ${id.slice(0, 4)}`,
+		workType: "Типовая",
+		archComponentType: "Модельный сервис",
+		templateId: null,
+	}));
+
+	/**
+	 * Отличить протухший id от снятого назначения можно только через
+	 * существование работы, поэтому мок обязан уважать where.id = In([...]).
+	 */
+	function workRepo() {
+		return {
+			find: jest.fn(async (options?: { where?: Record<string, unknown> }) => {
+				const wanted = (options?.where?.id as { _value?: string[] } | undefined)
+					?._value;
+				return wanted
+					? workRows.filter((row) => wanted.includes(row.id))
+					: workRows;
+			}),
+		};
+	}
+
+	function buildService() {
+		return new V2TypicalWorkRuntimeService(
+			workRepo() as never,
+			repo(
+				LIVE_IDS.map((id) => ({
+					workId: id,
+					streamExecutor: BOUND_STREAM,
+					normValue: "5",
+					validFrom: "2025-01-01",
+					validTo: null,
+				})),
+			) as never,
+			repo(
+				LIVE_IDS.map((id) => ({
+					workId: id,
+					streamExecutor: BOUND_STREAM,
+					paramCode: TRIGGER_FIELD,
+					paramName: "Триггер",
+					operator: "=",
+					valueCode: "true",
+					valueLabel: "Да",
+				})),
+			) as never,
+			repo([]) as never,
+			repo([]) as never,
+			repo(
+				LIVE_IDS.map((id, index) => ({
+					id: `assignment-${index}`,
+					workId: id,
+					streamExecutor: BOUND_STREAM,
+					isActive: true,
+				})),
+			) as never,
+			repo([]) as never,
+			{ findOne: jest.fn(async () => null) } as never,
+			{ listTriggerStatusCatalog: jest.fn(async () => []) } as never,
+			{
+				getCatalog: jest.fn(async () => []),
+				getCachedCatalog: jest.fn(() => []),
+			} as never,
+		);
+	}
+
+	const buildTasks = (allowedWorkIds: string[] | undefined) =>
+		buildService().buildCatalogTasks({
+			archComponentType: "Система-источник",
+			streamExecutor: "ПиРМ",
+			source: { [TRIGGER_FIELD]: true },
+			formData: { [TRIGGER_FIELD]: true },
+			templateVersionId: null,
+			atDate: "2026-08-01",
+			allowedWorkIds,
+			worksCatalogAllArchComponents: true,
+		});
+
+	it("сохраняет намеренно суженную привязку, когда все id живы", async () => {
+		const tasks = await buildTasks([LIVE_IDS[0] as string]);
+		expect(tasks.map((task) => task.workId)).toEqual([LIVE_IDS[0]]);
+	});
+
+	it("не теряет работы стрима, когда привязка протухла частично", async () => {
+		// Пересид каталога выдаёт работам новые uuid. Если довериться уцелевшему
+		// хвосту привязки, остальные назначенные работы молча пропадут из блока —
+		// это и есть баг «заводская работа не появляется в блоке стрима».
+		const tasks = await buildTasks([LIVE_IDS[0] as string, ...STALE_IDS]);
+		expect(tasks.map((task) => task.workId).sort()).toEqual([...LIVE_IDS].sort());
+	});
+
+	it("не теряет работы стрима, когда привязка протухла полностью", async () => {
+		const tasks = await buildTasks([...STALE_IDS]);
+		expect(tasks.map((task) => task.workId).sort()).toEqual([...LIVE_IDS].sort());
 	});
 });

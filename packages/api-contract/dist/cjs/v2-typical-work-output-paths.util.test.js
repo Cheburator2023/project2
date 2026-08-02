@@ -122,3 +122,26 @@ const v2_model_stream_typical_works_constants_1 = require("./v2-model-stream-typ
         (0, vitest_1.expect)(opts.boundWorkIds).toEqual(["new-a", "new-b"]);
     });
 });
+(0, vitest_1.describe)("clearStaleGeneratedTypicalWorkPaths", () => {
+    (0, vitest_1.it)("не затирает modelService-pseudo-array при очистке legacy controlTypicalTasks", () => {
+        // Регресс: очистка generalInfo.modelService.controlTypicalTasks подменяла
+        // массив модельного сервиса на { controlTypicalTasks: [] }. После этого
+        // блок ПиРМ терял триггер field_imxB4YEd и работа не появлялась.
+        const modelService = [
+            {
+                field_dEVFQVQn: "МС-1",
+                field_imxB4YEd: true,
+            },
+        ];
+        const data = {
+            generalInfo: { modelService },
+            detailInfo: { detailTypicalTasks: [{ name: "model-stream-work" }] },
+            field_aJEu5ziT: { sourceTypicalTasks: [] },
+        };
+        const next = (0, v2_typical_work_output_paths_util_1.clearStaleGeneratedTypicalWorkPaths)(data, "detailInfo.detailTypicalTasks");
+        (0, vitest_1.expect)(next.generalInfo).toEqual({ modelService });
+        (0, vitest_1.expect)(next.generalInfo).not.toEqual({
+            modelService: { controlTypicalTasks: [] },
+        });
+    });
+});

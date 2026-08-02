@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	backfillTypicalWorkBoundWorkIdsInUiSchema,
 	buildTypicalWorkIdToCatalogStreamLabelMap,
+	clearStaleGeneratedTypicalWorkPaths,
 	remapBoundWorkIdsInUiSchema,
 } from "./v2-typical-work-output-paths.util";
 import { V2_MODEL_STREAM_EXECUTOR } from "./v2-model-stream-typical-works.constants";
@@ -144,5 +145,34 @@ describe("remapBoundWorkIdsInUiSchema", () => {
 				.sourceTypicalTasks as Record<string, unknown>
 		)["ui:options"] as { boundWorkIds: string[] };
 		expect(opts.boundWorkIds).toEqual(["new-a", "new-b"]);
+	});
+});
+
+describe("clearStaleGeneratedTypicalWorkPaths", () => {
+	it("не затирает modelService-pseudo-array при очистке legacy controlTypicalTasks", () => {
+		// Регресс: очистка generalInfo.modelService.controlTypicalTasks подменяла
+		// массив модельного сервиса на { controlTypicalTasks: [] }. После этого
+		// блок ПиРМ терял триггер field_imxB4YEd и работа не появлялась.
+		const modelService = [
+			{
+				field_dEVFQVQn: "МС-1",
+				field_imxB4YEd: true,
+			},
+		];
+		const data = {
+			generalInfo: { modelService },
+			detailInfo: { detailTypicalTasks: [{ name: "model-stream-work" }] },
+			field_aJEu5ziT: { sourceTypicalTasks: [] },
+		};
+
+		const next = clearStaleGeneratedTypicalWorkPaths(
+			data,
+			"detailInfo.detailTypicalTasks",
+		);
+
+		expect(next.generalInfo).toEqual({ modelService });
+		expect(next.generalInfo).not.toEqual({
+			modelService: { controlTypicalTasks: [] },
+		});
 	});
 });

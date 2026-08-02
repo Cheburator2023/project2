@@ -80,12 +80,18 @@ function resolveExecutorScopeDbStreams(executorStream, catalog) {
         if (trimmed === v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_EXECUTOR && catalog?.length) {
             return (0, v2_implementation_stream_catalog_util_1.resolveModelStreamCatalogScopeFromEntries)(catalog);
         }
-        const mapped = EXECUTOR_SCOPE_DB_STREAMS[trimmed];
-        if (mapped?.length)
-            return mapped;
-        // Подпись области UI без явной карты → scope через код стрима
-        // (иначе «Контроль моделей» не находит назначения со streamExecutor=mdlctl).
-        return (0, v2_stream_block_executor_util_1.resolveStreamBlockExecutorScopeStreams)(trimmed, catalog);
+        /**
+         * Статическая карта — только legacy DB-имена заводских работ. Назначения,
+         * созданные из конструктора, пишутся каноническим именем из каталога
+         * `v2_stream` (код `pirm` / подпись стрима), поэтому scope — объединение:
+         * иначе новые работы стрима не находятся в блоке с legacy-подписью.
+         */
+        const scope = [...(EXECUTOR_SCOPE_DB_STREAMS[trimmed] ?? [])];
+        for (const stream of (0, v2_stream_block_executor_util_1.resolveStreamBlockExecutorScopeStreams)(trimmed, catalog)) {
+            if (!scope.includes(stream))
+                scope.push(stream);
+        }
+        return scope.length > 0 ? scope : [trimmed];
     }
     // Код / DB-имя модельного стрима → его scope (+ legacy umbrella).
     const asCode = ((0, v2_implementation_streams_util_1.isV2ImplementationStreamCode)(trimmed) ? trimmed : null) ??
