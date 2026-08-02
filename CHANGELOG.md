@@ -1,5 +1,17 @@
 # Semantic Versioning Changelog
 
+# [1.53.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.52.0...v1.53.0) (2026-08-02)
+
+
+### Features
+
+* add trigger conditions to typical work calculations and enhance viewer access utilities ([28ba6e8](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/28ba6e8802ea0c0183bad1de7152225cd0911549))
+* enhance handling of legacy bindings and improve data integrity in typical work services ([5e8178c](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/5e8178cf5267bf43d9afd471f89bf1f97afec709))
+* enhance labor coefficient handling and schema pointer validation ([8826cf3](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/8826cf312f3c7516625cd286e96792d27b2c8925))
+* enhance typical work schema and improve readonly fields ([66f9681](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/66f96817aa0195edaec46886519a816178a0497f))
+* enhance viewer access controls and update evaluation logic ([4c40b7c](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/4c40b7c6542ac631bb9893075900655f04d6e3fd))
+* improve schema field binding logic and enhance bulk dryRun handling ([9bb2794](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/9bb2794352312ad781298d803a9411353a85ae47))
+
 # [1.52.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.51.0...v1.52.0) (2026-07-31)
 
 
