@@ -5,14 +5,16 @@ exports.parseParamNameSourceKeys = parseParamNameSourceKeys;
 exports.stripParamNameSourceKeys = stripParamNameSourceKeys;
 /** Суффикс в `paramName` правила: «Название @ field_a|field_b» — альтернативные ключи в данных анкеты. */
 const PARAM_SOURCE_KEYS_SUFFIX_RE = /\s+@\s+([\p{L}\p{N}_|,-]+)$/u;
+/**
+ * Раньше имя резали под varchar(255); при длинных alias суффикс съедал весь
+ * displayName → `" @ field|…"` и bulk dryRun вечно «чинил» paramName.
+ * Колонки расширены (param_name 1000 / formula_text text) — не обрезаем.
+ */
 function formatParamNameWithSourceKeys(name, sourceKeys) {
     const uniqueKeys = [...new Set((sourceKeys ?? []).filter(Boolean))];
     if (uniqueKeys.length === 0)
         return name;
-    const suffix = uniqueKeys.join("|");
-    const maxNameLen = Math.max(0, 255 - 3 - suffix.length);
-    const trimmedName = name.length > maxNameLen ? name.slice(0, maxNameLen) : name;
-    return `${trimmedName} @ ${suffix}`;
+    return `${name} @ ${uniqueKeys.join("|")}`;
 }
 function parseParamNameSourceKeys(paramName) {
     if (!paramName)

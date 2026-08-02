@@ -108,8 +108,8 @@ describe("v2-typical-work-per-instance", () => {
         const formData = {
             generalInfo: {
                 modelService: [
-                    { name: "A", field_dEVFQVQn: "Сервис 1" },
-                    { name: "B", field_dEVFQVQn: "Сервис 2" },
+                    { field_dEVFQVQn: "Сервис 1", workType: "Разработка" },
+                    { field_dEVFQVQn: "Сервис 2", workType: "Разработка" },
                 ],
             },
         };

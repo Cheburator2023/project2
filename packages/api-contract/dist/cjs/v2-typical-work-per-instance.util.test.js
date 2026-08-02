@@ -110,8 +110,8 @@ const v2_work_arch_count_coeff_util_1 = require("./v2-work-arch-count-coeff.util
         const formData = {
             generalInfo: {
                 modelService: [
-                    { name: "A", field_dEVFQVQn: "Сервис 1" },
-                    { name: "B", field_dEVFQVQn: "Сервис 2" },
+                    { field_dEVFQVQn: "Сервис 1", workType: "Разработка" },
+                    { field_dEVFQVQn: "Сервис 2", workType: "Разработка" },
                 ],
             },
         };

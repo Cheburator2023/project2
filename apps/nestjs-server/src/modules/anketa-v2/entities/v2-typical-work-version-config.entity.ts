@@ -25,7 +25,7 @@ export class V2TypicalWorkVersionConfigEntity {
 	@Column({ type: "jsonb", default: [] })
 	formula: unknown;
 
-	@Column({ name: "formula_text", type: "varchar", length: 500, nullable: true })
+	@Column({ name: "formula_text", type: "text", nullable: true })
 	formulaText: string | null;
 
 	@Column({ name: "rounding_mode", type: "varchar", length: 20, default: "CEIL" })

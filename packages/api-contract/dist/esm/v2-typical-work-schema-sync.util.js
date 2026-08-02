@@ -39,6 +39,17 @@ function collectFieldAliasCodes(request) {
     return aliases;
 }
 /**
+ * Сравниваем подписи полей без декоративного префикса «Маркер:» и регистра.
+ * Иначе после правок CSV/factory bulk dryRun на проде вечно предлагает
+ * «обновить типовые работы», хотя смысл привязки не менялся.
+ */
+function normalizeSchemaFieldDisplayName(name) {
+    return stripParamNameSourceKeys(name)
+        .replace(/^Маркер:\s*/i, "")
+        .trim()
+        .toLocaleLowerCase("ru");
+}
+/**
  * Привязка уже соответствует полю схемы: тот же uid, код и отображаемое имя.
  * В этом случае нельзя переписывать `paramName` (добавлять `@ field_xxx` / алиасы) —
  * иначе bulk dryRun на нетронутой схеме вечно предлагает «обновить типовые работы».
@@ -48,9 +59,15 @@ function isSchemaFieldBindingCurrent(ref, request, nextCode) {
         return false;
     if (ref.paramCode !== nextCode)
         return false;
-    const currentDisplay = stripParamNameSourceKeys(ref.paramName).trim();
-    const nextDisplay = stripParamNameSourceKeys(request.field.name ?? ref.paramName ?? "").trim();
-    return Boolean(currentDisplay) && currentDisplay === nextDisplay;
+    const currentDisplay = normalizeSchemaFieldDisplayName(ref.paramName);
+    const nextDisplay = normalizeSchemaFieldDisplayName(request.field.name ?? ref.paramName ?? "");
+    if (!nextDisplay)
+        return true;
+    // Пустой/битый display (`" @ field|…"` после старого truncate) или
+    // реальное переименование / обрезка varchar — один rewrite, затем equal.
+    if (!currentDisplay)
+        return false;
+    return currentDisplay === nextDisplay;
 }
 function formatSyncedParamName(request, currentName, nextCode, previousCode) {
     const displayName = stripParamNameSourceKeys(request.field.name ?? currentName ?? "").trim();
@@ -62,19 +79,28 @@ function formatSyncedParamName(request, currentName, nextCode, previousCode) {
      * реконсиляция не сходится и bulk dryRun вечно рапортует «схема изменилась».
      */
     const current = parseParamNameSourceKeys(currentName);
-    if (current.displayName.trim() === displayName &&
+    const currentNorm = normalizeSchemaFieldDisplayName(current.displayName);
+    const nextNorm = normalizeSchemaFieldDisplayName(displayName);
+    if (currentNorm === nextNorm &&
         (previousCode ?? nextCode) === nextCode &&
         (current.sourceKeys.length === 0 || current.sourceKeys.includes(nextCode))) {
-        // Код и имя не менялись — не дописываем декоративный `@ code` и лишние алиасы.
+        // Код и имя не менялись (в т.ч. только «Маркер:» / регистр) —
+        // не дописываем декоративный `@ code` и лишние алиасы.
         return currentName ?? null;
     }
+    const truncationArtifact = Boolean(currentNorm) &&
+        Boolean(nextNorm) &&
+        (nextNorm.startsWith(currentNorm) || currentNorm.startsWith(nextNorm));
     const aliasCodes = [
         nextCode,
         previousCode,
         request.field.previousCode,
         ...(request.field.aliasCodes ?? []),
         ...current.sourceKeys,
-        current.displayName && current.displayName !== displayName
+        // Слаг от обрезанного displayName только размножает мусорные алиасы.
+        !truncationArtifact &&
+            current.displayName &&
+            currentNorm !== nextNorm
             ? slugParamCode(current.displayName)
             : null,
     ].filter((code) => Boolean(code?.trim()));
@@ -94,11 +120,9 @@ function matchesField(ref, request) {
     if (aliases.has(ref.paramCode))
         return true;
     if (request.field.name?.trim() && ref.paramName?.trim()) {
-        const fieldName = stripParamNameSourceKeys(request.field.name)
-            .trim()
-            .toLowerCase();
-        const refName = stripParamNameSourceKeys(ref.paramName).trim().toLowerCase();
-        if (fieldName === refName)
+        const fieldName = normalizeSchemaFieldDisplayName(request.field.name);
+        const refName = normalizeSchemaFieldDisplayName(ref.paramName);
+        if (fieldName && fieldName === refName)
             return true;
     }
     return false;
@@ -352,6 +376,45 @@ function sanitizeFormulaAgainstLaborParams(tokens, laborParams) {
 export function reconcileTypicalWorkCardWithSchemaField(card, request) {
     const matchingRules = card.rules.filter((rule) => matchesField(rule, request));
     const matchingLabor = card.laborParams.filter((group) => matchesField(group, request));
+    /** Поле схемы не ссылается на эту карточку — не гонять merge/formula. */
+    if (matchingRules.length === 0 && matchingLabor.length === 0) {
+        return {
+            card,
+            changed: false,
+            impact: {
+                rulesUpdated: 0,
+                rulesRemoved: 0,
+                laborParamsUpdated: 0,
+                laborParamsRemoved: 0,
+                formulasInvalidated: 0,
+            },
+        };
+    }
+    /**
+     * Bulk dryRun идёт по каждому полю схемы (в т.ч. десятки дублей workType).
+     * Если uid+code+имя уже совпадают — не трогаем карточку: иначе
+     * formatSyncedParamName / mergeLaborParamGroups переписывают aliases и
+     * формулу на каждом заходе, и редактор вечно предлагает синхронизацию
+     * даже на только что созданной схеме.
+     */
+    const bindingsAlreadyCurrent = request.operation === "upsert" &&
+        request.field.values === undefined &&
+        (matchingRules.length > 0 || matchingLabor.length > 0) &&
+        matchingRules.every((rule) => isSchemaFieldBindingCurrent(rule, request, request.field.code ?? rule.paramCode)) &&
+        matchingLabor.every((group) => isSchemaFieldBindingCurrent(group, request, request.field.code ?? group.paramCode));
+    if (bindingsAlreadyCurrent) {
+        return {
+            card,
+            changed: false,
+            impact: {
+                rulesUpdated: 0,
+                rulesRemoved: 0,
+                laborParamsUpdated: 0,
+                laborParamsRemoved: 0,
+                formulasInvalidated: 0,
+            },
+        };
+    }
     const rules = card.rules
         .map((rule) => reconcileRule(rule, request))
         .filter((rule) => rule != null);

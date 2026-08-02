@@ -146,6 +146,139 @@ describe("reconcileTypicalWorkCardWithSchemaField", () => {
         expect(result.card.rules[0]?.paramName).toBe("Необходимо подтвердить возможность интеграции");
         expect(result.card.laborParams[0]?.paramName).toBe("Необходимо подтвердить возможность интеграции");
     });
+    it("bulk dryRun: уже актуальная привязка с @-алиасами не трогает формулу", () => {
+        const bound = card();
+        bound.rules = [];
+        bound.laborParams = [
+            {
+                schemaFieldUid: "field-1",
+                paramCode: "workType",
+                paramName: "Тип работ @ workType|тип_работ",
+                kind: "by_value",
+                coefficients: [
+                    {
+                        id: "c1",
+                        streamExecutor: "mdlctl",
+                        paramCode: "workType",
+                        paramName: "Тип работ @ workType|тип_работ",
+                        valueCode: "dev",
+                        valueLabel: "Разработка",
+                        coefficient: 1,
+                    },
+                ],
+            },
+        ];
+        bound.formula = {
+            tokens: [
+                { kind: "norm" },
+                { kind: "operator", op: "*" },
+                {
+                    kind: "param_coeff",
+                    paramCode: "workType",
+                    paramName: "Тип работ @ workType|тип_работ",
+                },
+            ],
+            text: "N * коэф(workType)",
+        };
+        const result = reconcileTypicalWorkCardWithSchemaField(bound, {
+            templateVersionId: "version-1",
+            mode: "dryRun",
+            operation: "upsert",
+            field: {
+                schemaFieldUid: "field-1",
+                previousCode: "workType",
+                aliasCodes: ["тип_работ", "work_type_legacy"],
+                code: "workType",
+                name: "Тип работ",
+            },
+        });
+        expect(result.changed).toBe(false);
+        expect(result.card).toEqual(bound);
+    });
+    it("восстанавливает обрезанный paramName и дальше идемпотентна", () => {
+        const bound = card();
+        bound.rules = [];
+        bound.laborParams = [
+            {
+                schemaFieldUid: "field-long",
+                paramCode: "field_OrZLpCID",
+                paramName: "Применение модельного сервиса в разных ко @ field_OrZLpCID|применение_модельного_сервиса_в_разных_контурах",
+                kind: "by_value",
+                coefficients: [
+                    {
+                        id: "c1",
+                        streamExecutor: "mdlctl",
+                        paramCode: "field_OrZLpCID",
+                        paramName: "Применение модельного сервиса в разных ко @ field_OrZLpCID|применение_модельного_сервиса_в_разных_контурах",
+                        valueCode: "yes",
+                        valueLabel: "Да",
+                        coefficient: 1,
+                    },
+                ],
+            },
+        ];
+        bound.formula = {
+            tokens: [
+                { kind: "norm" },
+                { kind: "operator", op: "*" },
+                {
+                    kind: "param_coeff",
+                    paramCode: "field_OrZLpCID",
+                    paramName: "Применение модельного сервиса в разных ко @ field_OrZLpCID|применение_модельного_сервиса_в_разных_контурах",
+                },
+            ],
+            text: "N * коэф(field_OrZLpCID)",
+        };
+        const request = {
+            templateVersionId: "version-1",
+            mode: "dryRun",
+            operation: "upsert",
+            field: {
+                schemaFieldUid: "field-long",
+                previousCode: "field_OrZLpCID",
+                code: "field_OrZLpCID",
+                name: "Применение модельного сервиса в разных контурах (region и inno.local)",
+            },
+        };
+        const first = reconcileTypicalWorkCardWithSchemaField(bound, request);
+        expect(first.changed).toBe(true);
+        const repairedName = first.card.laborParams[0]?.paramName ?? "";
+        expect(repairedName).toContain("Применение модельного сервиса в разных контурах (region и inno.local)");
+        expect(repairedName.startsWith(" @ ")).toBe(false);
+        const second = reconcileTypicalWorkCardWithSchemaField(first.card, request);
+        expect(second.changed).toBe(false);
+        expect(second.card).toEqual(first.card);
+    });
+    it("bulk binding sync: префикс «Маркер:» / регистр не считаются изменением схемы", () => {
+        const bound = card();
+        bound.rules = [
+            {
+                id: "rule-marker",
+                streamExecutor: "ПиРМ",
+                schemaFieldUid: "field-marker",
+                paramCode: "field_LGUdr5mq",
+                paramName: "Требуется разметка данных источника",
+                operator: "=",
+                valueCode: "true",
+                valueLabel: "Да",
+            },
+        ];
+        bound.laborParams = [];
+        bound.formula = { tokens: [{ kind: "norm" }], text: "N" };
+        const result = reconcileTypicalWorkCardWithSchemaField(bound, {
+            templateVersionId: "version-1",
+            mode: "dryRun",
+            operation: "upsert",
+            field: {
+                schemaFieldUid: "field-marker",
+                previousCode: "field_LGUdr5mq",
+                code: "field_LGUdr5mq",
+                name: "Маркер: требуется разметка данных источника",
+            },
+        });
+        expect(result.changed).toBe(false);
+        expect(result.card.rules[0]?.paramName).toBe("Требуется разметка данных источника");
+    });
     it("preserves matching dictionary values and refreshes names and codes", () => {
         const result = reconcileTypicalWorkCardWithSchemaField(card(), {
             templateVersionId: "version-1",
@@ -365,9 +498,18 @@ describe("reconcileTypicalWorkCardWithSchemaField", () => {
         });
         expect(result.card.formula.tokens[2]).not.toHaveProperty("invalid", true);
     });
-    it("marks orphan formula tokens invalid when labor param is absent", () => {
+    it("marks formula tokens invalid when matching labor param is deleted", () => {
         const legacy = card();
-        legacy.laborParams = [];
+        legacy.rules = [];
+        legacy.laborParams = [
+            {
+                schemaFieldUid: "field_HuOLfL4K",
+                paramCode: "field_HuOLfL4K",
+                paramName: "Поле",
+                kind: "by_value",
+                coefficients: [],
+            },
+        ];
         legacy.formula.tokens[2] = {
             kind: "param_coeff",
             paramCode: "field_HuOLfL4K",
@@ -376,14 +518,15 @@ describe("reconcileTypicalWorkCardWithSchemaField", () => {
         const result = reconcileTypicalWorkCardWithSchemaField(legacy, {
             templateVersionId: "version-1",
             mode: "apply",
-            operation: "upsert",
+            operation: "delete",
             field: {
-                schemaFieldUid: "field-other",
-                previousCode: "other_code",
-                code: "other_code",
-                name: "Другое поле",
+                schemaFieldUid: "field_HuOLfL4K",
+                previousCode: "field_HuOLfL4K",
+                code: "field_HuOLfL4K",
+                name: "Поле",
             },
         });
+        expect(result.card.laborParams).toEqual([]);
         expect(result.card.formula.tokens[2]).toMatchObject({
             kind: "param_coeff",
             paramCode: "field_HuOLfL4K",
@@ -394,8 +537,10 @@ describe("reconcileTypicalWorkCardWithSchemaField", () => {
     it("stores short valueCode for long schema enum labels", () => {
         const longValue = "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели";
         const legacy = card();
+        legacy.rules = [];
         legacy.laborParams[0] = {
             ...legacy.laborParams[0],
+            schemaFieldUid: "field_61a51b98-b6a8-47c9-aa27-74ff2219513f",
             paramCode: "complexity",
             paramName: "Сложность постановки",
             coefficients: [
@@ -410,6 +555,7 @@ describe("reconcileTypicalWorkCardWithSchemaField", () => {
                 },
             ],
         };
+        legacy.formula = { tokens: [{ kind: "norm" }], text: "N" };
         const result = reconcileTypicalWorkCardWithSchemaField(legacy, {
             templateVersionId: "version-1",
             mode: "apply",
