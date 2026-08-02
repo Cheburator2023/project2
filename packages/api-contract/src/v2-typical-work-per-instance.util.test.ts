@@ -153,15 +153,24 @@ describe("v2-typical-work-per-instance", () => {
 		).toEqual(["ETL-1"]);
 	});
 
-	it("does not fan-out modelService", () => {
+	it("does not fan-out modelService and uses its name as label", () => {
 		const formData = {
 			generalInfo: {
-				modelService: [{ name: "A" }, { name: "B" }],
+				modelService: [
+					{ field_dEVFQVQn: "Сервис 1", workType: "Разработка" },
+					{ field_dEVFQVQn: "Сервис 2", workType: "Разработка" },
+				],
 			},
 		};
 		const instances = listArchComponentInstances(formData, "Модельный сервис");
 		expect(instances).toHaveLength(1);
-		expect(instances[0]?.sourceLabel).toBe("Контекст");
+		expect(instances[0]?.sourceLabel).toBe("Сервис 1");
+	});
+
+	it("falls back to Контекст when modelService is empty", () => {
+		expect(
+			listArchComponentInstances({}, "Модельный сервис")[0]?.sourceLabel,
+		).toBe("Контекст");
 	});
 
 	it("returns empty list when models are missing", () => {

@@ -106,15 +106,21 @@ const v2_work_arch_count_coeff_util_1 = require("./v2-work-arch-count-coeff.util
             },
         }, "Процесс обработки данных").map((row) => row.sourceLabel)).toEqual(["ETL-1"]);
     });
-    (0, vitest_1.it)("does not fan-out modelService", () => {
+    (0, vitest_1.it)("does not fan-out modelService and uses its name as label", () => {
         const formData = {
             generalInfo: {
-                modelService: [{ name: "A" }, { name: "B" }],
+                modelService: [
+                    { name: "A", field_dEVFQVQn: "Сервис 1" },
+                    { name: "B", field_dEVFQVQn: "Сервис 2" },
+                ],
             },
         };
         const instances = (0, v2_typical_work_per_instance_util_1.listArchComponentInstances)(formData, "Модельный сервис");
         (0, vitest_1.expect)(instances).toHaveLength(1);
-        (0, vitest_1.expect)(instances[0]?.sourceLabel).toBe("Контекст");
+        (0, vitest_1.expect)(instances[0]?.sourceLabel).toBe("Сервис 1");
+    });
+    (0, vitest_1.it)("falls back to Контекст when modelService is empty", () => {
+        (0, vitest_1.expect)((0, v2_typical_work_per_instance_util_1.listArchComponentInstances)({}, "Модельный сервис")[0]?.sourceLabel).toBe("Контекст");
     });
     (0, vitest_1.it)("returns empty list when models are missing", () => {
         (0, vitest_1.expect)((0, v2_typical_work_per_instance_util_1.listArchComponentInstances)({}, "Модель")).toEqual([]);

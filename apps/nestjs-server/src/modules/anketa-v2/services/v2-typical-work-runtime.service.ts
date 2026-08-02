@@ -18,6 +18,7 @@ import {
 	formatTypicalWorkCoefficientDisplay,
 	isWorkCoefficientValueAvailable,
 	listArchComponentInstances,
+	resolveModelServiceSourceLabel,
 	mergeArchInstanceTriggerSource,
 	normalizeStoredFormula,
 	buildLaborCoefficientLookupSource,
@@ -542,7 +543,9 @@ function evaluateWorkAcrossArchInstances(ctx: RuntimeWorkContext): {
 			paramCoefficients: evaluated.paramCoefficients,
 			instanceBreakdown: [
 				{
-					sourceLabel: "Контекст",
+					sourceLabel: resolveModelServiceSourceLabel(ctx.formData, {
+						schemaParams: ctx.schemaParams,
+					}),
 					index: 0,
 					expanded: evaluated.breakdown.expanded,
 					total: evaluated.total,

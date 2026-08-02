@@ -47,16 +47,16 @@ const KEPT = [
     const worksSnap = JSON.parse((0, node_fs_1.readFileSync)(WORKS, "utf8"));
     const props = anketa.jsonSchema.properties.detailInfo.properties.sourceSystems.items
         .properties;
-    (0, vitest_1.it)("orphans удалены, префикс Маркер: снят с titles", () => {
+    (0, vitest_1.it)("orphans удалены, у оставшихся titles есть префикс Маркер:", () => {
         for (const key of ORPHANS) {
             (0, vitest_1.expect)(props[key]).toBeUndefined();
         }
         for (const key of KEPT) {
             (0, vitest_1.expect)(props[key]?.title).toBeTruthy();
-            (0, vitest_1.expect)(props[key]?.title).not.toMatch(/^Маркер:/i);
+            (0, vitest_1.expect)(props[key]?.title).toMatch(/^Маркер:/i);
         }
     });
-    (0, vitest_1.it)("работы ПиРМ матчятся по оставшимся paramCode без префикса в paramName", () => {
+    (0, vitest_1.it)("работы ПиРМ матчятся по оставшимся paramCode с префиксом Маркер: в paramName", () => {
         const pirmWorks = worksSnap.typicalWorks.filter((w) => w.stream === "ПиРМ" &&
             (w.triggerRules ?? []).some((r) => KEPT.includes(r.paramCode)));
         (0, vitest_1.expect)(pirmWorks.length).toBeGreaterThanOrEqual(5);
@@ -68,7 +68,9 @@ const KEPT = [
                 valueCode: r.valueCode ?? "true",
                 valueLabel: r.valueLabel ?? "Да",
             }));
-            (0, vitest_1.expect)(rules.every((r) => !/^Маркер:/i.test(r.paramName))).toBe(true);
+            (0, vitest_1.expect)(rules
+                .filter((r) => KEPT.includes(r.paramCode))
+                .every((r) => /^Маркер:/i.test(r.paramName))).toBe(true);
             const source = {};
             for (const rule of rules) {
                 if (rule.paramCode)

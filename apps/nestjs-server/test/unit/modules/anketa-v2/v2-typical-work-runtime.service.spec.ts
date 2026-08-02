@@ -932,6 +932,11 @@ describe("V2TypicalWorkRuntimeService", () => {
 		expect(tasks[0]?.formulaBreakdown?.expanded).not.toContain(
 			"нет заполненных",
 		);
+		expect(
+			tasks[0]?.formulaBreakdown?.instanceBreakdown?.map(
+				(row) => row.sourceLabel,
+			),
+		).toEqual(["мс1"]);
 	});
 
 	it("этап 09 (formula-триггер, arch=Модель) считается по каждой подходящей модели", async () => {

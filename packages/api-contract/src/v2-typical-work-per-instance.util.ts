@@ -140,16 +140,14 @@ export function resolveArchInstanceNameFieldKeys(
 	}>,
 	kind: V2WorkFormulaArchCountKind | null,
 ): string[] {
-	if (!kind || kind === "modelService") return [];
+	if (!kind) return [];
 	const label = V2_ARCH_COMPONENT_LABELS[kind];
-	const titleHintByKind: Record<
-		Exclude<V2WorkFormulaArchCountKind, "modelService">,
-		RegExp
-	> = {
+	const titleHintByKind: Record<V2WorkFormulaArchCountKind, RegExp> = {
 		model: /Название модели/i,
 		sourceSystem: /Название источника/i,
 		dataMart: /Название (объекта|витрины)/i,
 		dataProcess: /Название процесса/i,
+		modelService: /Название модельного сервиса/i,
 	};
 	const titleHint = titleHintByKind[kind];
 	const keys: string[] = [];
@@ -298,31 +296,74 @@ function listDataProcessRows(
 	return [];
 }
 
+/** Первая заполненная строка модельного сервиса (массив или объект). */
+function readModelServiceRow(
+	formData: Record<string, unknown>,
+): Record<string, unknown> | undefined {
+	const generalInfo = readRecord(formData.generalInfo);
+	const raw = generalInfo?.modelService;
+	if (Array.isArray(raw)) {
+		const rows = raw.filter(
+			(item): item is Record<string, unknown> =>
+				item != null &&
+				typeof item === "object" &&
+				!Array.isArray(item) &&
+				isFilledTypicalWorkSourceRow(item),
+		);
+		return rows[0];
+	}
+	const asRecord = readRecord(raw);
+	if (asRecord && isFilledTypicalWorkSourceRow(asRecord)) return asRecord;
+	return undefined;
+}
+
+export type ArchInstanceLabelOptions = {
+	preferredNameKeys?: readonly string[];
+	schemaParams?: ReadonlyArray<{
+		code: string;
+		name: string;
+		archComponent?: string | null;
+		values?: ReadonlyArray<unknown>;
+	}>;
+};
+
+/**
+ * Подпись модельного сервиса для подробного расчёта.
+ * Fallback «Контекст», если сервис в formData ещё не заполнен.
+ */
+export function resolveModelServiceSourceLabel(
+	formData: Record<string, unknown>,
+	options?: ArchInstanceLabelOptions,
+): string {
+	const row = readModelServiceRow(formData);
+	if (!row) return "Контекст";
+	const preferredNameKeys = [
+		...(options?.preferredNameKeys ?? []),
+		...(options?.schemaParams
+			? resolveArchInstanceNameFieldKeys(options.schemaParams, "modelService")
+			: []),
+	];
+	return instanceLabel(row, 0, "Модельный сервис", preferredNameKeys);
+}
+
 /**
  * Экземпляры арх-компонента для per-instance расчёта.
- * `modelService` — без fan-out (один синтетический контекст).
+ * `modelService` — без fan-out (один контекст = название модельного сервиса).
  * Пустой список (кроме modelService) → [] (вклад работы = 0).
  */
 export function listArchComponentInstances(
 	formData: Record<string, unknown>,
 	archComponentType: string | null | undefined,
-	options?: {
-		preferredNameKeys?: readonly string[];
-		schemaParams?: ReadonlyArray<{
-			code: string;
-			name: string;
-			archComponent?: string | null;
-			values?: ReadonlyArray<unknown>;
-		}>;
-	},
+	options?: ArchInstanceLabelOptions,
 ): ArchComponentInstance[] {
 	const kind = resolveArchComponentKindFromType(archComponentType);
 
 	if (kind === "modelService" || kind == null) {
+		const row = readModelServiceRow(formData) ?? {};
 		return [
 			{
-				sourceLabel: "Контекст",
-				row: {},
+				sourceLabel: resolveModelServiceSourceLabel(formData, options),
+				row,
 				index: 0,
 			},
 		];

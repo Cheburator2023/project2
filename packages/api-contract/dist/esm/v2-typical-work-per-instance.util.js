@@ -107,7 +107,7 @@ function instanceLabel(row, index, fallbackPrefix, preferredNameKeys = []) {
  * Коды полей «Название …» из параметров схемы для данного arch-компонента.
  */
 export function resolveArchInstanceNameFieldKeys(schemaParams, kind) {
-    if (!kind || kind === "modelService")
+    if (!kind)
         return [];
     const label = V2_ARCH_COMPONENT_LABELS[kind];
     const titleHintByKind = {
@@ -115,6 +115,7 @@ export function resolveArchInstanceNameFieldKeys(schemaParams, kind) {
         sourceSystem: /Название источника/i,
         dataMart: /Название (объекта|витрины)/i,
         dataProcess: /Название процесса/i,
+        modelService: /Название модельного сервиса/i,
     };
     const titleHint = titleHintByKind[kind];
     const keys = [];
@@ -248,18 +249,51 @@ function listDataProcessRows(formData) {
     }
     return [];
 }
+/** Первая заполненная строка модельного сервиса (массив или объект). */
+function readModelServiceRow(formData) {
+    const generalInfo = readRecord(formData.generalInfo);
+    const raw = generalInfo?.modelService;
+    if (Array.isArray(raw)) {
+        const rows = raw.filter((item) => item != null &&
+            typeof item === "object" &&
+            !Array.isArray(item) &&
+            isFilledTypicalWorkSourceRow(item));
+        return rows[0];
+    }
+    const asRecord = readRecord(raw);
+    if (asRecord && isFilledTypicalWorkSourceRow(asRecord))
+        return asRecord;
+    return undefined;
+}
+/**
+ * Подпись модельного сервиса для подробного расчёта.
+ * Fallback «Контекст», если сервис в formData ещё не заполнен.
+ */
+export function resolveModelServiceSourceLabel(formData, options) {
+    const row = readModelServiceRow(formData);
+    if (!row)
+        return "Контекст";
+    const preferredNameKeys = [
+        ...(options?.preferredNameKeys ?? []),
+        ...(options?.schemaParams
+            ? resolveArchInstanceNameFieldKeys(options.schemaParams, "modelService")
+            : []),
+    ];
+    return instanceLabel(row, 0, "Модельный сервис", preferredNameKeys);
+}
 /**
  * Экземпляры арх-компонента для per-instance расчёта.
- * `modelService` — без fan-out (один синтетический контекст).
+ * `modelService` — без fan-out (один контекст = название модельного сервиса).
  * Пустой список (кроме modelService) → [] (вклад работы = 0).
  */
 export function listArchComponentInstances(formData, archComponentType, options) {
     const kind = resolveArchComponentKindFromType(archComponentType);
     if (kind === "modelService" || kind == null) {
+        const row = readModelServiceRow(formData) ?? {};
         return [
             {
-                sourceLabel: "Контекст",
-                row: {},
+                sourceLabel: resolveModelServiceSourceLabel(formData, options),
+                row,
                 index: 0,
             },
         ];

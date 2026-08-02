@@ -31,12 +31,7 @@ export declare function resolveArchInstanceNameFieldKeys(schemaParams: ReadonlyA
  * → kind для arch_count / списка экземпляров.
  */
 export declare function resolveArchComponentKindFromType(archComponentType: string | null | undefined): V2WorkFormulaArchCountKind | null;
-/**
- * Экземпляры арх-компонента для per-instance расчёта.
- * `modelService` — без fan-out (один синтетический контекст).
- * Пустой список (кроме modelService) → [] (вклад работы = 0).
- */
-export declare function listArchComponentInstances(formData: Record<string, unknown>, archComponentType: string | null | undefined, options?: {
+export type ArchInstanceLabelOptions = {
     preferredNameKeys?: readonly string[];
     schemaParams?: ReadonlyArray<{
         code: string;
@@ -44,7 +39,18 @@ export declare function listArchComponentInstances(formData: Record<string, unkn
         archComponent?: string | null;
         values?: ReadonlyArray<unknown>;
     }>;
-}): ArchComponentInstance[];
+};
+/**
+ * Подпись модельного сервиса для подробного расчёта.
+ * Fallback «Контекст», если сервис в formData ещё не заполнен.
+ */
+export declare function resolveModelServiceSourceLabel(formData: Record<string, unknown>, options?: ArchInstanceLabelOptions): string;
+/**
+ * Экземпляры арх-компонента для per-instance расчёта.
+ * `modelService` — без fan-out (один контекст = название модельного сервиса).
+ * Пустой список (кроме modelService) → [] (вклад работы = 0).
+ */
+export declare function listArchComponentInstances(formData: Record<string, unknown>, archComponentType: string | null | undefined, options?: ArchInstanceLabelOptions): ArchComponentInstance[];
 export declare function readPerInstanceArchCountOverride(formData: Record<string, unknown> | null | undefined, kind: V2WorkFormulaArchCountKind): number | null;
 export declare function readPerInstanceArchCountShare(formData: Record<string, unknown> | null | undefined, kind: V2WorkFormulaArchCountKind): number | null;
 /** formData с принудительным arch_count для kind итерации (=1). */
