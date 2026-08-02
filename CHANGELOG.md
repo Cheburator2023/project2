@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+# [1.54.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.53.0...v1.54.0) (2026-08-02)
+
+
+### Features
+
+* implement cleanup script for orphan marker field duplicates ([52682f6](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/52682f687c1954e2f9c6fa0fa7eec768c3111152))
+
 # [1.53.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.52.0...v1.53.0) (2026-08-02)
 
 
