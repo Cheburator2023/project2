@@ -177,6 +177,11 @@ const v2_model_stream_typical_works_constants_1 = require("./v2-model-stream-typ
         (0, vitest_1.expect)((0, v2_executor_streams_util_1.typicalWorkAssignedToExecutorStream)(["ИД. Внутренний"], v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.IDSRC)).toBe(true);
         (0, vitest_1.expect)((0, v2_executor_streams_util_1.typicalWorkAssignedToExecutorStream)(["Контроль моделей"], v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.IDSRC)).toBe(false);
     });
+    (0, vitest_1.it)("includes mdlctl DB stream in «Контроль моделей» catalog scope", () => {
+        (0, vitest_1.expect)((0, v2_executor_streams_util_1.resolveExecutorScopeDbStreams)("Контроль моделей")).toEqual(vitest_1.expect.arrayContaining(["mdlctl", "Контроль моделей"]));
+        (0, vitest_1.expect)((0, v2_executor_streams_util_1.resolveExecutorScopeDbStreams)("mdlctl")).toEqual(vitest_1.expect.arrayContaining(["mdlctl", "Контроль моделей"]));
+        (0, vitest_1.expect)((0, v2_executor_streams_util_1.typicalWorkAssignedToExecutorStream)(["mdlctl"], "Контроль моделей")).toBe(true);
+    });
     (0, vitest_1.it)("expands legacy «Модельный стрим» catalog scope to five model DB streams", () => {
         const scope = (0, v2_executor_streams_util_1.resolveExecutorScopeDbStreams)(v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_EXECUTOR);
         (0, vitest_1.expect)(scope).toEqual(vitest_1.expect.arrayContaining([

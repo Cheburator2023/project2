@@ -1062,28 +1062,28 @@ export class V2TypicalWorkRuntimeService {
 			return [...allowedWorkIds];
 		}
 
-		if (!templateId?.trim()) {
-			return directAssigned.length > 0 ? directAssigned : [...allowedWorkIds];
+		if (templateId?.trim()) {
+			const templateWorks = await this.workRepository.find({
+				where: { templateId: templateId.trim() },
+			});
+			if (templateWorks.length > 0) {
+				const remapped = remapFactoryAllowedWorkIdsToTemplateWorks(
+					allowedWorkIds,
+					templateWorks.map((work) => ({ id: work.id, name: work.name })),
+					V2_FACTORY_TEMPLATE_TYPICAL_WORKS_REGISTRY.works.map((work) => ({
+						id: work.id,
+						name: work.name,
+					})),
+				).filter((id) => assignedWorkIds.has(id));
+				if (remapped.length > 0) return remapped;
+			}
 		}
 
-		const templateWorks = await this.workRepository.find({
-			where: { templateId: templateId.trim() },
-		});
-		if (templateWorks.length === 0) {
-			return directAssigned.length > 0 ? directAssigned : [...allowedWorkIds];
-		}
+		if (directAssigned.length > 0) return directAssigned;
 
-		const remapped = remapFactoryAllowedWorkIdsToTemplateWorks(
-			allowedWorkIds,
-			templateWorks.map((work) => ({ id: work.id, name: work.name })),
-			V2_FACTORY_TEMPLATE_TYPICAL_WORKS_REGISTRY.works.map((work) => ({
-				id: work.id,
-				name: work.name,
-			})),
-		).filter((id) => assignedWorkIds.has(id));
-
-		if (remapped.length > 0) return remapped;
-		return directAssigned.length > 0 ? directAssigned : [...allowedWorkIds];
+		// Allow-list устарел (id нет среди назначений стрима). Вернуть его как есть
+		// обнулит каталог; `undefined` = без фильтра по id (остаётся filter по assignment).
+		return undefined;
 	}
 }
 

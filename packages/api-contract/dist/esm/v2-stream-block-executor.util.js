@@ -29,7 +29,7 @@ const IMPLEMENTATION_STREAM_DB_SCOPE = {
         "Источники данных",
     ],
     [V2_IMPLEMENTATION_STREAM.PIRM]: ["ПиРМ", "ПиРМ (правила и развитие модели)"],
-    [V2_IMPLEMENTATION_STREAM.MDLCTL]: ["Контроль моделей"],
+    [V2_IMPLEMENTATION_STREAM.MDLCTL]: ["mdlctl", "Контроль моделей"],
     [V2_IMPLEMENTATION_STREAM.DADM]: [
         "ДАДМ",
         "Витрины данных",

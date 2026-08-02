@@ -825,7 +825,8 @@
                 "coefficient": {
                   "type": "number",
                   "title": "Коэффициент",
-                  "default": 1.5
+                  "default": 1.5,
+                  "readOnly": true
                 },
                 "estimateHoursPerDay": {
                   "type": "number",
@@ -1032,11 +1033,6 @@
           "createService": {
             "type": "boolean",
             "title": "Требуется создание сервиса"
-          },
-          "field_GWL5PLfS": {
-            "type": "string",
-            "title": "Комментарий",
-            "description": "Комментарий"
           },
           "field__iu-GEg1": {
             "type": "string",
@@ -1324,7 +1320,8 @@
                 "coefficient": {
                   "type": "number",
                   "title": "Коэффициент",
-                  "default": 1.5
+                  "default": 1.5,
+                  "readOnly": true
                 },
                 "estimateHoursPerDay": {
                   "type": "number",
@@ -1418,7 +1415,8 @@
                 "coefficient": {
                   "type": "number",
                   "title": "Коэффициент",
-                  "default": 1.5
+                  "default": 1.5,
+                  "readOnly": true
                 },
                 "estimateHoursPerDay": {
                   "type": "number",
@@ -1638,7 +1636,8 @@
                 },
                 "coefficient": {
                   "type": "number",
-                  "title": "Коэф."
+                  "title": "Коэф.",
+                  "readOnly": true
                 },
                 "estimateHoursPerDay": {
                   "type": "number",
@@ -1699,7 +1698,8 @@
                 },
                 "coefficient": {
                   "type": "number",
-                  "title": "Коэф."
+                  "title": "Коэф.",
+                  "readOnly": true
                 },
                 "estimateHoursPerDay": {
                   "type": "number",
@@ -1760,7 +1760,8 @@
                 },
                 "coefficient": {
                   "type": "number",
-                  "title": "Коэф."
+                  "title": "Коэф.",
+                  "readOnly": true
                 },
                 "estimateHoursPerDay": {
                   "type": "number",
@@ -3082,7 +3083,8 @@
             "ui:widget": "text",
             "ui:options": {
               "schemaFieldUid": "field_1c464eec-e770-4f6d-b527-63d0da2acd78"
-            }
+            },
+            "ui:readonly": true
           },
           "estimateHoursPerDay": {
             "ui:widget": "text",
@@ -3179,7 +3181,6 @@
         "complexity",
         "createIS",
         "createService",
-        "field_GWL5PLfS",
         "assessedInitiativesCount",
         "productionAdditionalReports",
         "overallUncertaintyModal",
@@ -3358,13 +3359,6 @@
         },
         "ui:placeholder": "Создание сервиса"
       },
-      "field_GWL5PLfS": {
-        "ui:widget": "textarea",
-        "ui:options": {
-          "schemaFieldUid": "field_339ec533-a27b-4093-8aa6-e66260b20a8e"
-        },
-        "ui:placeholder": "Комментарий"
-      },
       "field__iu-GEg1": {
         "ui:options": {
           "schemaFieldUid": "field_c24dc59d-78de-4490-a4d0-f77773efdd28"
@@ -3485,7 +3479,8 @@
             "ui:widget": "text",
             "ui:options": {
               "schemaFieldUid": "field_33551654-a6e1-4e04-8550-5808114214f2"
-            }
+            },
+            "ui:readonly": true
           },
           "estimateHoursPerDay": {
             "ui:widget": "text",
@@ -3655,7 +3650,8 @@
             "ui:widget": "text",
             "ui:options": {
               "schemaFieldUid": "field_001b6c1f-3027-4121-944a-6580e967024e"
-            }
+            },
+            "ui:readonly": true
           },
           "estimateHoursPerDay": {
             "ui:widget": "text",
@@ -3984,17 +3980,16 @@
           "orderable": false,
           "removable": false,
           "boundWorkIds": [
-            "6fb0b803-5466-4b9a-9961-ed3a617d88c1",
-            "b5033791-054f-4ab4-89d1-1102d10c3085",
-            "f20fea29-44ea-49e4-aba8-538460b3ae80",
-            "a15267b0-5b87-4653-8008-b9e47175145e",
-            "5f428aa7-3ae8-4e97-b468-59c0f9547ac5",
-            "f03437a1-cc7a-46df-9418-1df92467daaf",
-            "019240ea-de39-471a-bd5e-0c190fef339e",
-            "642d88fe-bbfc-4901-9558-7ab80892ec81"
+            "a440adc7-ef43-4c01-a1c9-6922dec060d9",
+            "9c8f0a06-0de9-4889-b30d-7b7d32003d5f",
+            "bf90362d-e4c5-47ad-86e5-07fc3dc25782",
+            "a0a23674-5617-4f63-b2b1-f81d5ff923de",
+            "2d6cca37-9f89-4ba9-900a-b420adfa8f8c",
+            "037cd151-6e77-4186-b6ab-2bf6f451b506"
           ],
           "archComponent": "typicalWork",
-          "schemaFieldUid": "field_3e1d8681-5311-43fa-9710-5b3c3ee5e301"
+          "schemaFieldUid": "field_3e1d8681-5311-43fa-9710-5b3c3ee5e301",
+          "streamExecutor": "Контроль моделей"
         },
         "ui:description": "Список заполняется автоматически при срабатывании триггеров типовых работ.\n\nПоля: Название типовой работы · Базовая оценка · Коэффициент · Итог\nСуммарный итог — при нескольких работах"
       },
@@ -4032,7 +4027,8 @@
             "ui:widget": "text",
             "ui:options": {
               "schemaFieldUid": "field_fce8094b-e3f9-47eb-b5d4-29e5f48b97ab"
-            }
+            },
+            "ui:readonly": true
           },
           "estimateHoursPerDay": {
             "ui:widget": "text",
@@ -4118,7 +4114,8 @@
             "ui:widget": "text",
             "ui:options": {
               "schemaFieldUid": "field_43031966-56aa-4fd8-b5ec-472f89cbe5b0"
-            }
+            },
+            "ui:readonly": true
           },
           "estimateHoursPerDay": {
             "ui:widget": "text",
@@ -4204,7 +4201,8 @@
             "ui:widget": "text",
             "ui:options": {
               "schemaFieldUid": "field_aa3477bd-9ce4-4eb1-81ce-4ba3f52cee83"
-            }
+            },
+            "ui:readonly": true
           },
           "estimateHoursPerDay": {
             "ui:widget": "text",
@@ -5050,36 +5048,40 @@
           "calcModel": "unified",
           "worksCatalog": true,
           "allowedWorkIds": [
-            "47677456-1b9f-438c-a2e5-e9791b613284",
-            "e4f6d13c-4bd5-4598-813e-5600e7f9a602",
+            "eeea39dc-f40c-4d39-8243-06026dcef124",
+            "850be3c4-f6d5-49f4-b04b-70997ef6727a",
+            "24776d59-096d-44b3-8ade-989638ee6520",
+            "bf62b7ee-555d-4071-a4cc-1e91c3514b0e",
+            "370c9261-e018-424a-bddd-f493ebf055ad",
+            "2337f8f8-af92-41f6-be17-fcbad93db834",
+            "03c0c089-1bfd-469d-89db-2ba77c3c658e",
+            "8f376072-a563-4922-9287-f2018649d680",
+            "12b4d99f-98b0-42af-aaac-34bc448ae9a2",
+            "9516a8d1-08ce-4751-8f1e-976a5d0b5cf4",
+            "14072945-99ef-458c-a999-c4380a6555c6",
+            "0d79094d-ea6d-4434-a8fc-5b418fa157d4",
+            "47ae25cc-bdd0-47dd-945f-31cd4f2e68b1",
+            "e1d88de8-683e-44c1-9ea2-67262da0ada4",
+            "7e96f1f7-5f28-42e3-a2b9-2a5beeb09700",
+            "30cda680-2e77-448c-91af-90dec89da7d4",
+            "f4b87ee4-b6d7-466e-8592-41113e1adc12",
+            "7df0a5fa-8df3-44ba-a5b2-bcbad564b770",
+            "51b042f2-cf8b-4c2d-97ed-45d8572af6ca",
+            "dda1a510-41ff-43c6-9c47-69e0a17fc1d5",
             "9e59e524-19c3-45b3-855c-cf7516d64dbe",
+            "e4f6d13c-4bd5-4598-813e-5600e7f9a602",
+            "47677456-1b9f-438c-a2e5-e9791b613284",
+            "c3cd34b0-9487-4393-af9c-50d2f4f7547d",
+            "928d5a15-3be5-4e79-98f6-93aabf0402c8",
             "edfd98a4-edbc-4692-861f-0c30fded05ab",
             "f37a3640-f9df-46a9-8d34-66450f987296",
-            "0d79094d-ea6d-4434-a8fc-5b418fa157d4",
-            "14072945-99ef-458c-a999-c4380a6555c6",
-            "9516a8d1-08ce-4751-8f1e-976a5d0b5cf4",
-            "30cda680-2e77-448c-91af-90dec89da7d4",
-            "bf62b7ee-555d-4071-a4cc-1e91c3514b0e",
-            "fc947d2a-35a4-4248-b8e0-b9792cd5a00b",
-            "850be3c4-f6d5-49f4-b04b-70997ef6727a",
-            "51b042f2-cf8b-4c2d-97ed-45d8572af6ca",
-            "7e96f1f7-5f28-42e3-a2b9-2a5beeb09700",
-            "2337f8f8-af92-41f6-be17-fcbad93db834",
-            "e903feea-b18f-4ae5-b117-488ce8be9af6",
-            "47ae25cc-bdd0-47dd-945f-31cd4f2e68b1",
-            "693dbad0-b478-424d-8428-3e465a0abc76",
-            "7df0a5fa-8df3-44ba-a5b2-bcbad564b770",
-            "c3cd34b0-9487-4393-af9c-50d2f4f7547d",
             "dca027fc-2640-432b-bd9c-5cfc88697690",
-            "8f376072-a563-4922-9287-f2018649d680",
-            "370c9261-e018-424a-bddd-f493ebf055ad",
-            "dda1a510-41ff-43c6-9c47-69e0a17fc1d5",
-            "f4b87ee4-b6d7-466e-8592-41113e1adc12",
-            "928d5a15-3be5-4e79-98f6-93aabf0402c8",
-            "eeea39dc-f40c-4d39-8243-06026dcef124",
-            "12b4d99f-98b0-42af-aaac-34bc448ae9a2",
-            "24776d59-096d-44b3-8ade-989638ee6520",
-            "03c0c089-1bfd-469d-89db-2ba77c3c658e"
+            "693dbad0-b478-424d-8428-3e465a0abc76",
+            "e903feea-b18f-4ae5-b117-488ce8be9af6",
+            "45bffbba-dccc-4dc2-bb39-4074ae3ce278",
+            "5667871c-40f4-4c90-aba3-ef4f2c96b20c",
+            "05a35e60-24be-43c9-b2aa-9c1c066a649f",
+            "27215355-3c1d-4c09-b703-3e99311dbcf3"
           ],
           "outputArrayPath": "field_aJEu5ziT.sourceTypicalTasks",
           "sourceContextPaths": [
@@ -5209,14 +5211,12 @@
           "calcModel": "unified",
           "worksCatalog": true,
           "allowedWorkIds": [
-            "6fb0b803-5466-4b9a-9961-ed3a617d88c1",
-            "b5033791-054f-4ab4-89d1-1102d10c3085",
-            "f20fea29-44ea-49e4-aba8-538460b3ae80",
-            "a15267b0-5b87-4653-8008-b9e47175145e",
-            "5f428aa7-3ae8-4e97-b468-59c0f9547ac5",
-            "f03437a1-cc7a-46df-9418-1df92467daaf",
-            "019240ea-de39-471a-bd5e-0c190fef339e",
-            "642d88fe-bbfc-4901-9558-7ab80892ec81"
+            "a440adc7-ef43-4c01-a1c9-6922dec060d9",
+            "9c8f0a06-0de9-4889-b30d-7b7d32003d5f",
+            "bf90362d-e4c5-47ad-86e5-07fc3dc25782",
+            "a0a23674-5617-4f63-b2b1-f81d5ff923de",
+            "2d6cca37-9f89-4ba9-900a-b420adfa8f8c",
+            "037cd151-6e77-4186-b6ab-2bf6f451b506"
           ],
           "outputArrayPath": "streamModelControl.field_G0AoYAl8",
           "sourceContextPaths": [

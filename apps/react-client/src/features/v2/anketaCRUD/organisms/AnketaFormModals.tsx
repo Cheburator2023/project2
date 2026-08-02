@@ -402,22 +402,27 @@ export function AnketaFormModals({
 					: ((items?.[activeModal.editIndex] as
 							| Record<string, unknown>
 							| undefined) ?? {});
-			const values =
+			const isAtypical =
 				resolveV2AnketaArchComponent(
 					getObjectUiSlice(previewUiSchema, activeModal.path),
-				) === "atypicalWork"
-					? withComputedAtypicalWorkRowTotal(rawValues)
-					: rawValues;
+				) === "atypicalWork";
+			const values = isAtypical
+				? withComputedAtypicalWorkRowTotal(rawValues)
+				: rawValues;
+			const lockedSlice = isAtypical
+				? lockAtypicalWorkCoefficientFields(slice)
+				: slice;
 			const parentNode = resolveSchemaNodeTitle(
 				previewSchema,
 				activeModal.path,
 			);
 			return {
-				...slice,
+				...lockedSlice,
 				values,
 				title:
-					typeof slice.schema.title === "string" && slice.schema.title.trim()
-						? slice.schema.title
+					typeof lockedSlice.schema.title === "string" &&
+					lockedSlice.schema.title.trim()
+						? lockedSlice.schema.title
 						: (parentNode ?? "Элемент"),
 				isArrayModal: true,
 			};
@@ -621,6 +626,37 @@ export function AnketaFormModals({
 			) : null}
 		</>
 	);
+}
+
+/** Коэффициент нетиповой = общая неопределённость; в модалке только просмотр. */
+function lockAtypicalWorkCoefficientFields<
+	T extends { schema: RJSFSchema; uiSchema: UiSchema },
+>(slice: T): T {
+	const schema = structuredClone(slice.schema);
+	const uiSchema = structuredClone(slice.uiSchema) as UiSchema;
+	const properties =
+		schema.properties &&
+		typeof schema.properties === "object" &&
+		!Array.isArray(schema.properties)
+			? (schema.properties as Record<string, RJSFSchema>)
+			: undefined;
+	if (properties?.coefficient) {
+		properties.coefficient = {
+			...properties.coefficient,
+			readOnly: true,
+		};
+	}
+	const coeffUi =
+		uiSchema.coefficient &&
+		typeof uiSchema.coefficient === "object" &&
+		!Array.isArray(uiSchema.coefficient)
+			? (uiSchema.coefficient as UiSchema)
+			: {};
+	uiSchema.coefficient = {
+		...coeffUi,
+		"ui:readonly": true,
+	};
+	return { ...slice, schema, uiSchema };
 }
 
 function newArrayRowDefaults(

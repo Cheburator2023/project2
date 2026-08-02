@@ -40,6 +40,7 @@ exports.V2_DB_STREAM_TO_EXECUTOR_AREA = {
     "ИД. Внутренний": "Источники данных",
     "ИД. Внешний": "Источники данных",
     "ПиРМ (правила и развитие модели)": "ПиРМ",
+    mdlctl: "Контроль моделей",
     "Витрины данных": "ДАДМ",
     Интеграции: "ДАДМ",
     "Модельный сервис": "ДАДМ",
@@ -60,6 +61,7 @@ function resolveExecutorStreamAreaLabel(stream) {
 const EXECUTOR_SCOPE_DB_STREAMS = {
     "Источники данных": ["ИД. Внутренний", "ИД. Внешний", "Источники данных"],
     ПиРМ: ["ПиРМ", "ПиРМ (правила и развитие модели)"],
+    "Контроль моделей": ["mdlctl", "Контроль моделей"],
     "Модельный стрим": (0, v2_model_stream_typical_works_constants_1.resolveModelStreamCatalogScopeDbStreams)(),
 };
 /** Стримы БД/области UI, в которых ищется назначение работы для блока typicalWork. */
@@ -78,7 +80,12 @@ function resolveExecutorScopeDbStreams(executorStream, catalog) {
         if (trimmed === v2_model_stream_typical_works_constants_1.V2_MODEL_STREAM_EXECUTOR && catalog?.length) {
             return (0, v2_implementation_stream_catalog_util_1.resolveModelStreamCatalogScopeFromEntries)(catalog);
         }
-        return EXECUTOR_SCOPE_DB_STREAMS[trimmed] ?? [trimmed];
+        const mapped = EXECUTOR_SCOPE_DB_STREAMS[trimmed];
+        if (mapped?.length)
+            return mapped;
+        // Подпись области UI без явной карты → scope через код стрима
+        // (иначе «Контроль моделей» не находит назначения со streamExecutor=mdlctl).
+        return (0, v2_stream_block_executor_util_1.resolveStreamBlockExecutorScopeStreams)(trimmed, catalog);
     }
     // Код / DB-имя модельного стрима → его scope (+ legacy umbrella).
     const asCode = ((0, v2_implementation_streams_util_1.isV2ImplementationStreamCode)(trimmed) ? trimmed : null) ??

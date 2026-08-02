@@ -52,6 +52,7 @@ export const V2_DB_STREAM_TO_EXECUTOR_AREA: Record<string, V2ExecutorStreamLabel
 		"ИД. Внутренний": "Источники данных",
 		"ИД. Внешний": "Источники данных",
 		"ПиРМ (правила и развитие модели)": "ПиРМ",
+		mdlctl: "Контроль моделей",
 		"Витрины данных": "ДАДМ",
 		Интеграции: "ДАДМ",
 		"Модельный сервис": "ДАДМ",
@@ -82,6 +83,7 @@ const EXECUTOR_SCOPE_DB_STREAMS: Partial<
 > = {
 	"Источники данных": ["ИД. Внутренний", "ИД. Внешний", "Источники данных"],
 	ПиРМ: ["ПиРМ", "ПиРМ (правила и развитие модели)"],
+	"Контроль моделей": ["mdlctl", "Контроль моделей"],
 	"Модельный стрим": resolveModelStreamCatalogScopeDbStreams(),
 };
 
@@ -107,7 +109,11 @@ export function resolveExecutorScopeDbStreams(
 		if (trimmed === V2_MODEL_STREAM_EXECUTOR && catalog?.length) {
 			return resolveModelStreamCatalogScopeFromEntries(catalog);
 		}
-		return EXECUTOR_SCOPE_DB_STREAMS[trimmed] ?? [trimmed];
+		const mapped = EXECUTOR_SCOPE_DB_STREAMS[trimmed];
+		if (mapped?.length) return mapped;
+		// Подпись области UI без явной карты → scope через код стрима
+		// (иначе «Контроль моделей» не находит назначения со streamExecutor=mdlctl).
+		return resolveStreamBlockExecutorScopeStreams(trimmed, catalog);
 	}
 
 	// Код / DB-имя модельного стрима → его scope (+ legacy umbrella).

@@ -175,6 +175,11 @@ describe("collectExecutorStreamBlocks", () => {
         expect(typicalWorkAssignedToExecutorStream(["ИД. Внутренний"], V2_IMPLEMENTATION_STREAM.IDSRC)).toBe(true);
         expect(typicalWorkAssignedToExecutorStream(["Контроль моделей"], V2_IMPLEMENTATION_STREAM.IDSRC)).toBe(false);
     });
+    it("includes mdlctl DB stream in «Контроль моделей» catalog scope", () => {
+        expect(resolveExecutorScopeDbStreams("Контроль моделей")).toEqual(expect.arrayContaining(["mdlctl", "Контроль моделей"]));
+        expect(resolveExecutorScopeDbStreams("mdlctl")).toEqual(expect.arrayContaining(["mdlctl", "Контроль моделей"]));
+        expect(typicalWorkAssignedToExecutorStream(["mdlctl"], "Контроль моделей")).toBe(true);
+    });
     it("expands legacy «Модельный стрим» catalog scope to five model DB streams", () => {
         const scope = resolveExecutorScopeDbStreams(V2_MODEL_STREAM_EXECUTOR);
         expect(scope).toEqual(expect.arrayContaining([

@@ -37,7 +37,7 @@ const ATYPICAL_WORK_ITEM_PROPERTIES: RJSFSchema["properties"] = {
 	name: { type: "string", title: "Задача" },
 	workType: { type: "string", title: "Тип работ" },
 	estimateHoursPerDay: { type: "number", title: "Оценка ч/д" },
-	coefficient: { type: "number", title: "Коэф." },
+	coefficient: { type: "number", title: "Коэффициент", readOnly: true },
 	total: { type: "number", title: "Итог", readOnly: true },
 	includeInCalculation: {
 		type: "boolean",

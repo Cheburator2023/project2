@@ -255,6 +255,35 @@ describe("V2TypicalWorkRuntimeService", () => {
 		expect(allowedWhere).not.toHaveProperty("archComponentType");
 	});
 
+	it("ignores stale allowedWorkIds that miss all stream assignments", async () => {
+		const service = createService({
+			rules: [
+				{
+					workId: WORK_WITH_TRIGGER,
+					streamExecutor: STREAM,
+					paramCode: "type",
+					paramName: "Тип источника",
+					operator: "=",
+					valueCode: "internal",
+					valueLabel: "Внутренний",
+				},
+			],
+		});
+
+		const tasks = await service.buildCatalogTasks({
+			archComponentType: "Система-источник",
+			streamExecutor: STREAM,
+			source: { type: "Внутренний" },
+			templateVersionId: null,
+			atDate: "2025-06-01",
+			// Устаревшие id из старого snapshot — ни одного нет среди назначений.
+			allowedWorkIds: ["00000000-0000-4000-8000-000000000099"],
+			worksCatalogAllArchComponents: true,
+		});
+
+		expect(tasks.map((task) => task.workId)).toEqual([WORK_WITH_TRIGGER]);
+	});
+
 	it("returns empty when work is not assigned to stream", async () => {
 		const service = createService({
 			rules: [
