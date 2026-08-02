@@ -326,10 +326,6 @@ const SNAPSHOT_ARCH_PRESETS = {
                         "type": "string",
                         "title": "Тип загрузки данных"
                     },
-                    "field_1bl3dfSX": {
-                        "type": "boolean",
-                        "title": "Требуется новая модель для автоматической разметки данных"
-                    },
                     "field_3a0vme2u": {
                         "enum": [
                             "Да",
@@ -339,10 +335,6 @@ const SNAPSHOT_ARCH_PRESETS = {
                         "type": "string",
                         "title": "Предусмотрено проведение конкурса"
                     },
-                    "field_4Gff93vI": {
-                        "type": "boolean",
-                        "title": "Требуется подготовка сырых данных для загрузки в ИС 1860"
-                    },
                     "field_4jxR0E0m": {
                         "enum": [
                             "Первичный",
@@ -351,10 +343,6 @@ const SNAPSHOT_ARCH_PRESETS = {
                         ],
                         "type": "string",
                         "title": "Пилот"
-                    },
-                    "field_61bkBs0m": {
-                        "type": "boolean",
-                        "title": "Требуется регламентный импорт/экспорт данных или отчетности в/из ИС 1860"
                     },
                     "field_8pFvwc-v": {
                         "type": "boolean",
@@ -387,21 +375,6 @@ const SNAPSHOT_ARCH_PRESETS = {
                         "type": "string",
                         "title": "Наличие юридического основания для пилота"
                     },
-                    "field_DJJtx7nX": {
-                        "type": "boolean",
-                        "title": "Требуется разметка данных источника"
-                    },
-                    "field_F8GPVM7R": {
-                        "enum": [
-                            "Точечное",
-                            "Малое",
-                            "Среднее",
-                            "Большое",
-                            "Масштабное"
-                        ],
-                        "type": "string",
-                        "title": "Размер модели разметки данных"
-                    },
                     "field_L1lRlgf1": {
                         "enum": [
                             "Высокая",
@@ -411,24 +384,6 @@ const SNAPSHOT_ARCH_PRESETS = {
                         ],
                         "type": "string",
                         "title": "Сложность реализации"
-                    },
-                    "field_TvqjyIO-": {
-                        "type": "boolean",
-                        "title": "Требуется донастройка ИС 1860 под выбранную модель разметки данных"
-                    },
-                    "field_VX7y3PsB": {
-                        "enum": [
-                            "Высокая",
-                            "Средняя",
-                            "Низкая",
-                            "Неизвестно"
-                        ],
-                        "type": "string",
-                        "title": "Сложность конфигурации модели разметки данных"
-                    },
-                    "field_WgK6lIS-": {
-                        "type": "boolean",
-                        "title": "Требуется ручная обработка результатов автоматизированной разметки данных"
                     },
                     "field_Y_K0Hy0e": {
                         "enum": [
@@ -456,10 +411,6 @@ const SNAPSHOT_ARCH_PRESETS = {
                     "field_fJ_7OdE7": {
                         "type": "boolean",
                         "title": "Необходимо подтвердить возможность интеграции"
-                    },
-                    "field_lDw9gG39": {
-                        "type": "boolean",
-                        "title": "Требуются специальные условия хранения и обработки конфиденциальных данных, не поддерживаемые коммунальным сервисом"
                     },
                     "field_nE73kPQl": {
                         "enum": [
@@ -494,27 +445,17 @@ const SNAPSHOT_ARCH_PRESETS = {
                         "type": "boolean",
                         "title": "Риск появления дополнительных систем-источников"
                     },
-                    "field_wuYlhnu0": {
-                        "enum": [
-                            "Высокая",
-                            "Средняя",
-                            "Низкая",
-                            "Неизвестно"
-                        ],
-                        "type": "string",
-                        "title": "Сложность настройки шаблона разметки данных"
-                    },
                     "field_LGUdr5mq": {
                         "type": "boolean",
-                        "title": "Маркер: требуется разметка данных источника"
+                        "title": "Требуется разметка данных источника"
                     },
                     "field_eIIWBdCg": {
                         "type": "boolean",
-                        "title": "Маркер: требуется новая модель для автоматической разметки данных"
+                        "title": "Требуется новая модель для автоматической разметки данных"
                     },
                     "field_DnB8Ur4I": {
                         "type": "string",
-                        "title": "Маркер: сложность настройки шаблона разметки данных и подготовки сырых данных для загрузки",
+                        "title": "Сложность настройки шаблона разметки данных и подготовки сырых данных для загрузки",
                         "enum": [
                             "норма",
                             "средняя",
@@ -523,7 +464,7 @@ const SNAPSHOT_ARCH_PRESETS = {
                     },
                     "field_OyRJyJxD": {
                         "type": "string",
-                        "title": "Маркер: размер новой модели, доп. библиотеки, сложность подключения, конфигурации, тестирования и отладки модели (вкл. Active Learning и сетевые доступы)",
+                        "title": "Размер новой модели, доп. библиотеки, сложность подключения, конфигурации, тестирования и отладки модели (вкл. Active Learning и сетевые доступы)",
                         "enum": [
                             "норма",
                             "средняя",
@@ -532,11 +473,11 @@ const SNAPSHOT_ARCH_PRESETS = {
                     },
                     "field_xi0W_vl-": {
                         "type": "boolean",
-                        "title": "Маркер: требуется регламентный импорт/экспорт данных или отчетности"
+                        "title": "Требуется регламентный импорт/экспорт данных или отчетности"
                     },
                     "field__NUAXSNP": {
                         "type": "string",
-                        "title": "Маркер: сложность реализации интеграции, правил обработки данных (в т.ч. конфиденциальных) и настройки режима обмена данными",
+                        "title": "Сложность реализации интеграции, правил обработки данных (в т.ч. конфиденциальных) и настройки режима обмена данными",
                         "enum": [
                             "норма",
                             "средняя",
@@ -545,11 +486,11 @@ const SNAPSHOT_ARCH_PRESETS = {
                     },
                     "field_nx1zBg1X": {
                         "type": "boolean",
-                        "title": "Маркер: требуются специальные условия хранения и обработки конфиденциальных данных, не поддерживаемые коммунальным сервисом"
+                        "title": "Требуются специальные условия хранения и обработки конфиденциальных данных, не поддерживаемые коммунальным сервисом"
                     },
                     "field_wluxUVJ9": {
                         "type": "string",
-                        "title": "Маркер: правила обработки данных (в т.ч. конфиденциальных), режим обмена данными, сложность развёртывания отдельного инстанса и наличие доп. доработок",
+                        "title": "Правила обработки данных (в т.ч. конфиденциальных), режим обмена данными, сложность развёртывания отдельного инстанса и наличие доп. доработок",
                         "enum": [
                             "норма",
                             "средняя",
@@ -558,11 +499,11 @@ const SNAPSHOT_ARCH_PRESETS = {
                     },
                     "field_KnIEmMxM": {
                         "type": "boolean",
-                        "title": "Маркер: требуется ручная обработка результатов автоматизированной разметки данных"
+                        "title": "Требуется ручная обработка результатов автоматизированной разметки данных"
                     },
                     "field_TrX4G9Gc": {
                         "type": "string",
-                        "title": "Маркер: сложность развёртывания отдельного инстанса ручной разметки голосов и наличие доп. доработок",
+                        "title": "Сложность развёртывания отдельного инстанса ручной разметки голосов и наличие доп. доработок",
                         "enum": [
                             "без доработок",
                             "незначительные доработки",
@@ -617,17 +558,7 @@ const SNAPSHOT_ARCH_PRESETS = {
                     "field_1ANadh7U",
                     "field_3a0vme2u",
                     "field_-t8JSf3p",
-                    "field_DJJtx7nX",
-                    "field_F8GPVM7R",
-                    "field_1bl3dfSX",
-                    "field_wuYlhnu0",
-                    "field_4Gff93vI",
-                    "field_TvqjyIO-",
-                    "field_VX7y3PsB",
-                    "field_61bkBs0m",
                     "field_L1lRlgf1",
-                    "field_lDw9gG39",
-                    "field_WgK6lIS-",
                     "field_LGUdr5mq",
                     "field_eIIWBdCg",
                     "field_DnB8Ur4I",
@@ -659,11 +590,6 @@ const SNAPSHOT_ARCH_PRESETS = {
                         "schemaFieldUid": "field_f80e7284-6d7b-48be-87b4-31d898e8ba33"
                     }
                 },
-                "field_1bl3dfSX": {
-                    "ui:options": {
-                        "schemaFieldUid": "field_9278382f-a3b6-4c1f-88e0-ef31ac39e54b"
-                    }
-                },
                 "field_3a0vme2u": {
                     "ui:widget": "select",
                     "ui:options": {
@@ -671,21 +597,11 @@ const SNAPSHOT_ARCH_PRESETS = {
                         "schemaFieldUid": "field_057938c2-0209-4665-be31-2adca840940f"
                     }
                 },
-                "field_4Gff93vI": {
-                    "ui:options": {
-                        "schemaFieldUid": "field_7ec2be63-0014-4dd4-966d-44404aaad910"
-                    }
-                },
                 "field_4jxR0E0m": {
                     "ui:widget": "select",
                     "ui:options": {
                         "dictionaryCode": "v2.detailInfo.sourceSystems.items.field_4jxR0E0m",
                         "schemaFieldUid": "field_32d71261-cc35-4a8e-97cd-21e5fd21f199"
-                    }
-                },
-                "field_61bkBs0m": {
-                    "ui:options": {
-                        "schemaFieldUid": "field_00e91b78-dcc7-4457-9fc0-f1a45a643c32"
                     }
                 },
                 "field_8pFvwc-v": {
@@ -715,38 +631,11 @@ const SNAPSHOT_ARCH_PRESETS = {
                         "schemaFieldUid": "field_c5eb01d6-6ed6-45c5-8e44-521568e0b7ac"
                     }
                 },
-                "field_DJJtx7nX": {
-                    "ui:options": {
-                        "schemaFieldUid": "field_8d2fadfa-bffc-48fc-ae01-2e8295462beb"
-                    }
-                },
-                "field_F8GPVM7R": {
-                    "ui:options": {
-                        "schemaFieldUid": "field_ee81cbee-281b-4d15-b478-9b5dffac47aa"
-                    }
-                },
                 "field_L1lRlgf1": {
                     "ui:widget": "select",
                     "ui:options": {
                         "dictionaryCode": "v2.detailInfo.sourceSystems.items.field_L1lRlgf1",
                         "schemaFieldUid": "field_8cc4ea6a-62b9-410e-b56f-dda6755e65ff"
-                    }
-                },
-                "field_TvqjyIO-": {
-                    "ui:options": {
-                        "schemaFieldUid": "field_1a58b817-eb43-451c-a592-500b96998076"
-                    }
-                },
-                "field_VX7y3PsB": {
-                    "ui:widget": "select",
-                    "ui:options": {
-                        "dictionaryCode": "v2.detailInfo.sourceSystems.items.field_VX7y3PsB",
-                        "schemaFieldUid": "field_58353db5-247f-465a-8250-97b4693839bb"
-                    }
-                },
-                "field_WgK6lIS-": {
-                    "ui:options": {
-                        "schemaFieldUid": "field_83980706-189a-43ac-a9a3-ebb355fbcf01"
                     }
                 },
                 "field_Y_K0Hy0e": {
@@ -768,11 +657,6 @@ const SNAPSHOT_ARCH_PRESETS = {
                         "schemaFieldUid": "field_8a8bbc10-ade4-41c0-bc37-6f1eadb99723"
                     },
                     "ui:placeholder": "Необходимо подтвердить возможность интеграции"
-                },
-                "field_lDw9gG39": {
-                    "ui:options": {
-                        "schemaFieldUid": "field_7d161d75-68cc-45be-92d2-2991928b567b"
-                    }
                 },
                 "field_nE73kPQl": {
                     "ui:widget": "select",
@@ -802,77 +686,70 @@ const SNAPSHOT_ARCH_PRESETS = {
                     },
                     "ui:placeholder": "Риск появления дополнительных систем-источников"
                 },
-                "field_wuYlhnu0": {
-                    "ui:widget": "select",
-                    "ui:options": {
-                        "dictionaryCode": "v2.detailInfo.sourceSystems.items.field_wuYlhnu0",
-                        "schemaFieldUid": "field_d6554cad-b9ca-4b1e-b885-8868f35e60f5"
-                    }
-                },
                 "field_LGUdr5mq": {
                     "ui:options": {
                         "schemaFieldUid": "field_232f5368-2469-4105-96a3-cc43c092189c"
                     },
-                    "ui:placeholder": "Маркер: требуется разметка данных источника"
+                    "ui:placeholder": "Требуется разметка данных источника"
                 },
                 "field_eIIWBdCg": {
                     "ui:options": {
                         "schemaFieldUid": "field_b0cbc410-e812-44c9-9801-648255e3317b"
                     },
-                    "ui:placeholder": "Маркер: требуется новая модель для автоматической разметки данных"
+                    "ui:placeholder": "Требуется новая модель для автоматической разметки данных"
                 },
                 "field_DnB8Ur4I": {
                     "ui:widget": "select",
                     "ui:options": {
                         "schemaFieldUid": "field_e6e350f4-eb44-4b6e-9746-4732dbd983c7"
                     },
-                    "ui:placeholder": "Маркер: сложность настройки шаблона разметки данных и подготовки сырых данных для загрузки"
+                    "ui:placeholder": "Сложность настройки шаблона разметки данных и подготовки сырых данных для загрузки"
                 },
                 "field_OyRJyJxD": {
                     "ui:widget": "select",
                     "ui:options": {
                         "schemaFieldUid": "field_f79d5c4f-da6a-4806-81a1-70ae2d325714"
                     },
-                    "ui:placeholder": "Маркер: размер новой модели, доп. библиотеки, сложность подключения, конфигурации, тестирования и отладки модели (вкл. Active Learning и сетевые доступы)"
+                    "ui:placeholder": "Размер новой модели, доп. библиотеки, сложность подключения, конфигурации, тестирования и отладки модели (вкл. Active Learning и сетевые доступы)"
                 },
                 "field_xi0W_vl-": {
                     "ui:options": {
                         "schemaFieldUid": "field_680ef613-2620-42d3-bbb8-78b46d94dd68"
                     },
-                    "ui:placeholder": "Маркер: требуется регламентный импорт/экспорт данных или отчетности"
+                    "ui:placeholder": "Требуется регламентный импорт/экспорт данных или отчетности"
                 },
                 "field__NUAXSNP": {
                     "ui:widget": "select",
                     "ui:options": {
                         "schemaFieldUid": "field_5e9523cd-55e1-40b2-a302-921f75e99672"
                     },
-                    "ui:placeholder": "Маркер: сложность реализации интеграции, правил обработки данных (в т.ч. конфиденциальных) и настройки режима обмена данными"
+                    "ui:placeholder": "Сложность реализации интеграции, правил обработки данных (в т.ч. конфиденциальных) и настройки режима обмена данными"
                 },
                 "field_nx1zBg1X": {
                     "ui:options": {
                         "schemaFieldUid": "field_b0953c62-5d1b-4f2c-999e-0bfea5ca59fe"
                     },
-                    "ui:placeholder": "Маркер: требуются специальные условия хранения и обработки конфиденциальных данных, не поддерживаемые коммунальным сервисом"
+                    "ui:placeholder": "Требуются специальные условия хранения и обработки конфиденциальных данных, не поддерживаемые коммунальным сервисом"
                 },
                 "field_wluxUVJ9": {
                     "ui:widget": "select",
                     "ui:options": {
                         "schemaFieldUid": "field_0e6ceec2-66b6-44d6-92b8-207b263ea571"
                     },
-                    "ui:placeholder": "Маркер: правила обработки данных (в т.ч. конфиденциальных), режим обмена данными, сложность развёртывания отдельного инстанса и наличие доп. доработок"
+                    "ui:placeholder": "Правила обработки данных (в т.ч. конфиденциальных), режим обмена данными, сложность развёртывания отдельного инстанса и наличие доп. доработок"
                 },
                 "field_KnIEmMxM": {
                     "ui:options": {
                         "schemaFieldUid": "field_2c0a26f3-b379-4c17-b963-a6876808db53"
                     },
-                    "ui:placeholder": "Маркер: требуется ручная обработка результатов автоматизированной разметки данных"
+                    "ui:placeholder": "Требуется ручная обработка результатов автоматизированной разметки данных"
                 },
                 "field_TrX4G9Gc": {
                     "ui:widget": "select",
                     "ui:options": {
                         "schemaFieldUid": "field_19da4968-280e-43eb-b4c7-7e8d12453bc7"
                     },
-                    "ui:placeholder": "Маркер: сложность развёртывания отдельного инстанса ручной разметки голосов и наличие доп. доработок"
+                    "ui:placeholder": "Сложность развёртывания отдельного инстанса ручной разметки голосов и наличие доп. доработок"
                 }
             }
         }
