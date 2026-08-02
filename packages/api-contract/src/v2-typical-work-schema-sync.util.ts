@@ -118,6 +118,29 @@ function collectFieldAliasCodes(
 	return aliases;
 }
 
+/**
+ * Привязка уже соответствует полю схемы: тот же uid, код и отображаемое имя.
+ * В этом случае нельзя переписывать `paramName` (добавлять `@ field_xxx` / алиасы) —
+ * иначе bulk dryRun на нетронутой схеме вечно предлагает «обновить типовые работы».
+ */
+function isSchemaFieldBindingCurrent(
+	ref: {
+		schemaFieldUid?: string | null;
+		paramCode: string;
+		paramName?: string | null;
+	},
+	request: V2TypicalWorkSchemaFieldSyncRequestDto,
+	nextCode: string,
+): boolean {
+	if (ref.schemaFieldUid !== request.field.schemaFieldUid) return false;
+	if (ref.paramCode !== nextCode) return false;
+	const currentDisplay = stripParamNameSourceKeys(ref.paramName).trim();
+	const nextDisplay = stripParamNameSourceKeys(
+		request.field.name ?? ref.paramName ?? "",
+	).trim();
+	return Boolean(currentDisplay) && currentDisplay === nextDisplay;
+}
+
 function formatSyncedParamName(
 	request: V2TypicalWorkSchemaFieldSyncRequestDto,
 	currentName: string | null | undefined,
@@ -134,6 +157,14 @@ function formatSyncedParamName(
 	 * реконсиляция не сходится и bulk dryRun вечно рапортует «схема изменилась».
 	 */
 	const current = parseParamNameSourceKeys(currentName);
+	if (
+		current.displayName.trim() === displayName &&
+		(previousCode ?? nextCode) === nextCode &&
+		(current.sourceKeys.length === 0 || current.sourceKeys.includes(nextCode))
+	) {
+		// Код и имя не менялись — не дописываем декоративный `@ code` и лишние алиасы.
+		return currentName ?? null;
+	}
 	const aliasCodes = [
 		nextCode,
 		previousCode,
@@ -192,6 +223,9 @@ function reconcileRule(
 	const values = request.field.values;
 	if (values === undefined) {
 		const nextCode = request.field.code ?? rule.paramCode;
+		if (isSchemaFieldBindingCurrent(rule, request, nextCode)) {
+			return rule;
+		}
 		return {
 			...rule,
 			schemaFieldUid: request.field.schemaFieldUid,
@@ -389,15 +423,19 @@ function reconcileLaborParam(
 	if (request.operation === "delete") return null;
 
 	const values = request.field.values;
+	const nextCode = request.field.code ?? group.paramCode;
+	if (values === undefined && isSchemaFieldBindingCurrent(group, request, nextCode)) {
+		return group;
+	}
 	const nextBase = {
 		...group,
 		schemaFieldUid: request.field.schemaFieldUid,
-		paramCode: request.field.code ?? group.paramCode,
+		paramCode: nextCode,
 		paramName:
 			formatSyncedParamName(
 				request,
 				group.paramName,
-				request.field.code ?? group.paramCode,
+				nextCode,
 				group.paramCode,
 			) ?? group.paramName,
 	};
@@ -483,17 +521,26 @@ function reconcileFormulaTokensForField(
 				invalidated = true;
 				return { ...token, invalid: true };
 			}
+			const nextCode = request.field.code ?? token.paramCode;
+			const nextName =
+				formatSyncedParamName(
+					request,
+					token.paramName,
+					nextCode,
+					token.paramCode,
+				) ?? token.paramName;
+			if (
+				token.paramCode === nextCode &&
+				token.paramName === nextName &&
+				!token.invalid
+			) {
+				return token;
+			}
+			const { invalid: _invalid, ...rest } = token;
 			return {
-				...token,
-				paramCode: request.field.code ?? token.paramCode,
-				paramName:
-					formatSyncedParamName(
-						request,
-						token.paramName,
-						request.field.code ?? token.paramCode,
-						token.paramCode,
-					) ?? token.paramName,
-				invalid: false,
+				...rest,
+				paramCode: nextCode,
+				paramName: nextName,
 			};
 		}),
 		invalidated,

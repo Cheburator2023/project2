@@ -82,6 +82,72 @@ function card() {
         (0, vitest_1.expect)(second.changed).toBe(false);
         (0, vitest_1.expect)(second.card).toEqual(first.card);
     });
+    /**
+     * Bulk dryRun не передаёт values и не должен дописывать `@ field_xxx` к уже
+     * корректным привязкам — иначе при первом открытии редактора схемы админу
+     * предлагают «обновить типовые работы», хотя схему никто не менял.
+     */
+    (0, vitest_1.it)("bulk binding sync: уже привязанное поле без @-суффикса не считается изменённым", () => {
+        const bound = card();
+        bound.rules = [
+            {
+                id: "rule-bound",
+                streamExecutor: "Источник",
+                schemaFieldUid: "field-1",
+                paramCode: "field_abc",
+                paramName: "Необходимо подтвердить возможность интеграции",
+                operator: "=",
+                valueCode: "yes",
+                valueLabel: "Да",
+            },
+        ];
+        bound.laborParams = [
+            {
+                schemaFieldUid: "field-1",
+                paramCode: "field_abc",
+                paramName: "Необходимо подтвердить возможность интеграции",
+                kind: "by_value",
+                coefficients: [
+                    {
+                        id: "c1",
+                        streamExecutor: "Источники данных",
+                        paramCode: "field_abc",
+                        paramName: "Необходимо подтвердить возможность интеграции",
+                        valueCode: "yes",
+                        valueLabel: "Да",
+                        coefficient: 1.2,
+                    },
+                ],
+            },
+        ];
+        bound.formula = {
+            tokens: [
+                { kind: "norm" },
+                { kind: "operator", op: "*" },
+                {
+                    kind: "param_coeff",
+                    paramCode: "field_abc",
+                    paramName: "Необходимо подтвердить возможность интеграции",
+                },
+            ],
+            text: "N * коэф(field_abc)",
+        };
+        const result = (0, v2_typical_work_schema_sync_util_1.reconcileTypicalWorkCardWithSchemaField)(bound, {
+            templateVersionId: "version-1",
+            mode: "dryRun",
+            operation: "upsert",
+            field: {
+                schemaFieldUid: "field-1",
+                previousCode: "field_abc",
+                aliasCodes: ["необходимость_подтвердить"],
+                code: "field_abc",
+                name: "Необходимо подтвердить возможность интеграции",
+            },
+        });
+        (0, vitest_1.expect)(result.changed).toBe(false);
+        (0, vitest_1.expect)(result.card.rules[0]?.paramName).toBe("Необходимо подтвердить возможность интеграции");
+        (0, vitest_1.expect)(result.card.laborParams[0]?.paramName).toBe("Необходимо подтвердить возможность интеграции");
+    });
     (0, vitest_1.it)("preserves matching dictionary values and refreshes names and codes", () => {
         const result = (0, v2_typical_work_schema_sync_util_1.reconcileTypicalWorkCardWithSchemaField)(card(), {
             templateVersionId: "version-1",
