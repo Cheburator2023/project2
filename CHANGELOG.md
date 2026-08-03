@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+# [1.57.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.56.0...v1.57.0) (2026-08-03)
+
+
+### Features
+
+* add work estimates stream filter functionality ([5bb939c](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/5bb939c4086747bc92c46fb2f42d0eee44299ef3))
+
 # [1.56.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.55.0...v1.56.0) (2026-08-03)
 
 
