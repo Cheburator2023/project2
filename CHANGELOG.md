@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+# [1.55.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.54.0...v1.55.0) (2026-08-02)
+
+
+### Features
+
+* add migration to widen typical work formula text and param name fields ([3e852cc](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/3e852cce60808bebad57d0733cb52cdb4722ef5c))
+
 # [1.54.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.53.0...v1.54.0) (2026-08-02)
 
 
