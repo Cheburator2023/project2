@@ -1461,6 +1461,52 @@
             },
             "title": "Типовые работы",
             "readOnly": true
+          },
+          "field_eCyDEFw3": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "Нетиповая задача",
+              "required": [
+                "name"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "title": "Задача"
+                },
+                "total": {
+                  "type": "number",
+                  "title": "Итог",
+                  "readOnly": true
+                },
+                "workType": {
+                  "enum": [
+                    "Архитектурная задача",
+                    "Линейная деятельность",
+                    "Новая функциональность",
+                    "Сопровождение",
+                    "Технический долг"
+                  ],
+                  "type": "string",
+                  "title": "Тип работ"
+                },
+                "coefficient": {
+                  "type": "number",
+                  "title": "Коэф.",
+                  "readOnly": true
+                },
+                "estimateHoursPerDay": {
+                  "type": "number",
+                  "title": "Оценка ч/д"
+                },
+                "includeInCalculation": {
+                  "type": "boolean",
+                  "title": "Включить в расчёт"
+                }
+              }
+            },
+            "title": "Нетиповые работы"
           }
         }
       },
@@ -3561,7 +3607,8 @@
     "streamDataSources": {
       "ui:order": [
         "localParams",
-        "field_u-7AkDrP"
+        "field_u-7AkDrP",
+        "field_eCyDEFw3"
       ],
       "ui:options": {
         "groupActive": false,
@@ -3738,6 +3785,64 @@
           "streamExecutor": "Источники данных"
         },
         "ui:description": "Список заполняется автоматически при срабатывании триггеров типовых работ.\n\nПоля: Название типовой работы · Базовая оценка · Коэффициент · Итог\nСуммарный итог — при нескольких работах"
+      },
+      "field_eCyDEFw3": {
+        "items": {
+          "name": {
+            "ui:widget": "text",
+            "ui:options": {
+              "schemaFieldUid": "field_ce20771d-b7b2-4b93-80ca-012865b19c21"
+            }
+          },
+          "total": {
+            "ui:widget": "text",
+            "ui:options": {
+              "schemaFieldUid": "field_9080f38a-b6da-43dc-ac61-283f81de975d"
+            },
+            "ui:readonly": true
+          },
+          "ui:order": [
+            "name",
+            "workType",
+            "estimateHoursPerDay",
+            "coefficient",
+            "total",
+            "includeInCalculation"
+          ],
+          "workType": {
+            "ui:widget": "select",
+            "ui:options": {
+              "dictionaryCode": "v2.method.14.тип_работ_для_нетиповой_работы_пропро",
+              "schemaFieldUid": "field_ba052aa5-2d49-4408-b440-46ad5854bf5d"
+            }
+          },
+          "coefficient": {
+            "ui:widget": "text",
+            "ui:options": {
+              "schemaFieldUid": "field_7db4ec82-8323-4b1e-932a-4665e3531772"
+            },
+            "ui:readonly": true
+          },
+          "estimateHoursPerDay": {
+            "ui:widget": "text",
+            "ui:options": {
+              "schemaFieldUid": "field_8f51c6ad-bc85-4038-9ae5-2162e79f07b9"
+            }
+          },
+          "includeInCalculation": {
+            "ui:widget": "checkbox",
+            "ui:options": {
+              "schemaFieldUid": "field_5bf63a55-2ff2-4983-8e96-3f3af1be0cde"
+            }
+          }
+        },
+        "ui:options": {
+          "addable": true,
+          "orderable": false,
+          "removable": true,
+          "archComponent": "atypicalWork",
+          "schemaFieldUid": "field_eab70004-ad59-480e-b7f5-db3d02b70143"
+        }
       }
     },
     "streamModelControl": {
@@ -4495,385 +4600,6 @@
         "targetPath": "/",
         "dependencies": [
           "/generalInfo/modelService/prePromEval"
-        ]
-      },
-      {
-        "id": "unified-atypical-row-total:detailInfo_field_npwqpBHt",
-        "kind": "row_computed",
-        "payload": {
-          "label": "Per-row итог нетиповой работы",
-          "fieldVar": "total",
-          "arrayPath": "detailInfo.field_npwqpBHt",
-          "formulaHint": "row.total = оценка (ч/д) × коэффициент"
-        },
-        "condition": {
-          "*": [
-            {
-              "var": "estimateHoursPerDay"
-            },
-            {
-              "var": "coefficient"
-            }
-          ]
-        },
-        "targetPath": "/detailInfo/field_npwqpBHt",
-        "description": "ФТ-026: итог строки нетиповой работы.",
-        "dependencies": []
-      },
-      {
-        "id": "unified-atypical-row-total:field_aJEu5ziT_field_eCyDEFw3",
-        "kind": "row_computed",
-        "payload": {
-          "label": "Per-row итог нетиповой работы",
-          "fieldVar": "total",
-          "arrayPath": "field_aJEu5ziT.field_eCyDEFw3",
-          "formulaHint": "row.total = оценка (ч/д) × коэффициент"
-        },
-        "condition": {
-          "*": [
-            {
-              "var": "estimateHoursPerDay"
-            },
-            {
-              "var": "coefficient"
-            }
-          ]
-        },
-        "targetPath": "/field_aJEu5ziT/field_eCyDEFw3",
-        "description": "ФТ-026: итог строки нетиповой работы.",
-        "dependencies": []
-      },
-      {
-        "id": "unified-atypical-row-total:field_i8dL7QZa_field_eCyDEFw3",
-        "kind": "row_computed",
-        "payload": {
-          "label": "Per-row итог нетиповой работы",
-          "fieldVar": "total",
-          "arrayPath": "field_i8dL7QZa.field_eCyDEFw3",
-          "formulaHint": "row.total = оценка (ч/д) × коэффициент"
-        },
-        "condition": {
-          "*": [
-            {
-              "var": "estimateHoursPerDay"
-            },
-            {
-              "var": "coefficient"
-            }
-          ]
-        },
-        "targetPath": "/field_i8dL7QZa/field_eCyDEFw3",
-        "description": "ФТ-026: итог строки нетиповой работы.",
-        "dependencies": []
-      },
-      {
-        "id": "unified-atypical-row-total:streamModelControl_field_hQeUoQl4",
-        "kind": "row_computed",
-        "payload": {
-          "label": "Per-row итог нетиповой работы",
-          "fieldVar": "total",
-          "arrayPath": "streamModelControl.field_hQeUoQl4",
-          "formulaHint": "row.total = оценка (ч/д) × коэффициент"
-        },
-        "condition": {
-          "*": [
-            {
-              "var": "estimateHoursPerDay"
-            },
-            {
-              "var": "coefficient"
-            }
-          ]
-        },
-        "targetPath": "/streamModelControl/field_hQeUoQl4",
-        "description": "ФТ-026: итог строки нетиповой работы.",
-        "dependencies": []
-      },
-      {
-        "id": "unified-atypical-row-total:streamDigitalAgents_field_AuPTJbZa",
-        "kind": "row_computed",
-        "payload": {
-          "label": "Per-row итог нетиповой работы",
-          "fieldVar": "total",
-          "arrayPath": "streamDigitalAgents.field_AuPTJbZa",
-          "formulaHint": "row.total = оценка (ч/д) × коэффициент"
-        },
-        "condition": {
-          "*": [
-            {
-              "var": "estimateHoursPerDay"
-            },
-            {
-              "var": "coefficient"
-            }
-          ]
-        },
-        "targetPath": "/streamDigitalAgents/field_AuPTJbZa",
-        "description": "ФТ-026: итог строки нетиповой работы.",
-        "dependencies": []
-      },
-      {
-        "id": "unified-atypical-row-total:streamStreamingData_field_xzzoJBAc",
-        "kind": "row_computed",
-        "payload": {
-          "label": "Per-row итог нетиповой работы",
-          "fieldVar": "total",
-          "arrayPath": "streamStreamingData.field_xzzoJBAc",
-          "formulaHint": "row.total = оценка (ч/д) × коэффициент"
-        },
-        "condition": {
-          "*": [
-            {
-              "var": "estimateHoursPerDay"
-            },
-            {
-              "var": "coefficient"
-            }
-          ]
-        },
-        "targetPath": "/streamStreamingData/field_xzzoJBAc",
-        "description": "ФТ-026: итог строки нетиповой работы.",
-        "dependencies": []
-      },
-      {
-        "id": "unified-atypical-total",
-        "kind": "computed",
-        "payload": {
-          "mode": "expert",
-          "role": "atypical_total",
-          "label": "Сумма по нетиповым работам",
-          "calcModel": "unified",
-          "formulaHint": "Σ нетиповые работы по всем arch-блокам atypicalWork (includeInCalculation ≠ false)."
-        },
-        "condition": {
-          "+": [
-            {
-              "reduce": [
-                {
-                  "var": "detailInfo.field_npwqpBHt"
-                },
-                {
-                  "+": [
-                    {
-                      "var": "accumulator"
-                    },
-                    {
-                      "if": [
-                        {
-                          "==": [
-                            {
-                              "var": "current.includeInCalculation"
-                            },
-                            false
-                          ]
-                        },
-                        0,
-                        {
-                          "max": [
-                            0,
-                            {
-                              "var": "current.total"
-                            }
-                          ]
-                        }
-                      ]
-                    }
-                  ]
-                },
-                0
-              ]
-            },
-            {
-              "reduce": [
-                {
-                  "var": "field_aJEu5ziT.field_eCyDEFw3"
-                },
-                {
-                  "+": [
-                    {
-                      "var": "accumulator"
-                    },
-                    {
-                      "if": [
-                        {
-                          "==": [
-                            {
-                              "var": "current.includeInCalculation"
-                            },
-                            false
-                          ]
-                        },
-                        0,
-                        {
-                          "max": [
-                            0,
-                            {
-                              "var": "current.total"
-                            }
-                          ]
-                        }
-                      ]
-                    }
-                  ]
-                },
-                0
-              ]
-            },
-            {
-              "reduce": [
-                {
-                  "var": "field_i8dL7QZa.field_eCyDEFw3"
-                },
-                {
-                  "+": [
-                    {
-                      "var": "accumulator"
-                    },
-                    {
-                      "if": [
-                        {
-                          "==": [
-                            {
-                              "var": "current.includeInCalculation"
-                            },
-                            false
-                          ]
-                        },
-                        0,
-                        {
-                          "max": [
-                            0,
-                            {
-                              "var": "current.total"
-                            }
-                          ]
-                        }
-                      ]
-                    }
-                  ]
-                },
-                0
-              ]
-            },
-            {
-              "reduce": [
-                {
-                  "var": "streamModelControl.field_hQeUoQl4"
-                },
-                {
-                  "+": [
-                    {
-                      "var": "accumulator"
-                    },
-                    {
-                      "if": [
-                        {
-                          "==": [
-                            {
-                              "var": "current.includeInCalculation"
-                            },
-                            false
-                          ]
-                        },
-                        0,
-                        {
-                          "max": [
-                            0,
-                            {
-                              "var": "current.total"
-                            }
-                          ]
-                        }
-                      ]
-                    }
-                  ]
-                },
-                0
-              ]
-            },
-            {
-              "reduce": [
-                {
-                  "var": "streamDigitalAgents.field_AuPTJbZa"
-                },
-                {
-                  "+": [
-                    {
-                      "var": "accumulator"
-                    },
-                    {
-                      "if": [
-                        {
-                          "==": [
-                            {
-                              "var": "current.includeInCalculation"
-                            },
-                            false
-                          ]
-                        },
-                        0,
-                        {
-                          "max": [
-                            0,
-                            {
-                              "var": "current.total"
-                            }
-                          ]
-                        }
-                      ]
-                    }
-                  ]
-                },
-                0
-              ]
-            },
-            {
-              "reduce": [
-                {
-                  "var": "streamStreamingData.field_xzzoJBAc"
-                },
-                {
-                  "+": [
-                    {
-                      "var": "accumulator"
-                    },
-                    {
-                      "if": [
-                        {
-                          "==": [
-                            {
-                              "var": "current.includeInCalculation"
-                            },
-                            false
-                          ]
-                        },
-                        0,
-                        {
-                          "max": [
-                            0,
-                            {
-                              "var": "current.total"
-                            }
-                          ]
-                        }
-                      ]
-                    }
-                  ]
-                },
-                0
-              ]
-            }
-          ]
-        },
-        "targetPath": "/summary/atypicalTotal",
-        "description": "ФТ-026: сумма итоговых оценок нетиповых работ.",
-        "dependencies": [
-          "/detailInfo/field_npwqpBHt",
-          "/field_aJEu5ziT/field_eCyDEFw3",
-          "/field_i8dL7QZa/field_eCyDEFw3",
-          "/streamModelControl/field_hQeUoQl4",
-          "/streamDigitalAgents/field_AuPTJbZa",
-          "/streamStreamingData/field_xzzoJBAc"
         ]
       },
       {
@@ -5685,6 +5411,445 @@
         "targetPath": "/uncertaintyCalculation",
         "description": "Конфигурация модуля «Общая неопределённость» (шкалы, группы, матрица, калькулятор).",
         "dependencies": []
+      },
+      {
+        "id": "unified-atypical-row-total:detailInfo_field_npwqpBHt",
+        "kind": "row_computed",
+        "payload": {
+          "label": "Per-row итог нетиповой работы",
+          "fieldVar": "total",
+          "arrayPath": "detailInfo.field_npwqpBHt",
+          "formulaHint": "row.total = оценка (ч/д) × коэффициент"
+        },
+        "condition": {
+          "*": [
+            {
+              "var": "estimateHoursPerDay"
+            },
+            {
+              "var": "coefficient"
+            }
+          ]
+        },
+        "targetPath": "/detailInfo/field_npwqpBHt",
+        "description": "ФТ-026: итог строки нетиповой работы.",
+        "dependencies": []
+      },
+      {
+        "id": "unified-atypical-row-total:field_aJEu5ziT_field_eCyDEFw3",
+        "kind": "row_computed",
+        "payload": {
+          "label": "Per-row итог нетиповой работы",
+          "fieldVar": "total",
+          "arrayPath": "field_aJEu5ziT.field_eCyDEFw3",
+          "formulaHint": "row.total = оценка (ч/д) × коэффициент"
+        },
+        "condition": {
+          "*": [
+            {
+              "var": "estimateHoursPerDay"
+            },
+            {
+              "var": "coefficient"
+            }
+          ]
+        },
+        "targetPath": "/field_aJEu5ziT/field_eCyDEFw3",
+        "description": "ФТ-026: итог строки нетиповой работы.",
+        "dependencies": []
+      },
+      {
+        "id": "unified-atypical-row-total:field_i8dL7QZa_field_eCyDEFw3",
+        "kind": "row_computed",
+        "payload": {
+          "label": "Per-row итог нетиповой работы",
+          "fieldVar": "total",
+          "arrayPath": "field_i8dL7QZa.field_eCyDEFw3",
+          "formulaHint": "row.total = оценка (ч/д) × коэффициент"
+        },
+        "condition": {
+          "*": [
+            {
+              "var": "estimateHoursPerDay"
+            },
+            {
+              "var": "coefficient"
+            }
+          ]
+        },
+        "targetPath": "/field_i8dL7QZa/field_eCyDEFw3",
+        "description": "ФТ-026: итог строки нетиповой работы.",
+        "dependencies": []
+      },
+      {
+        "id": "unified-atypical-row-total:streamDataSources_field_eCyDEFw3",
+        "kind": "row_computed",
+        "payload": {
+          "label": "Per-row итог нетиповой работы",
+          "fieldVar": "total",
+          "arrayPath": "streamDataSources.field_eCyDEFw3",
+          "formulaHint": "row.total = оценка (ч/д) × коэффициент"
+        },
+        "condition": {
+          "*": [
+            {
+              "var": "estimateHoursPerDay"
+            },
+            {
+              "var": "coefficient"
+            }
+          ]
+        },
+        "targetPath": "/streamDataSources/field_eCyDEFw3",
+        "description": "ФТ-026: итог строки нетиповой работы.",
+        "dependencies": []
+      },
+      {
+        "id": "unified-atypical-row-total:streamModelControl_field_hQeUoQl4",
+        "kind": "row_computed",
+        "payload": {
+          "label": "Per-row итог нетиповой работы",
+          "fieldVar": "total",
+          "arrayPath": "streamModelControl.field_hQeUoQl4",
+          "formulaHint": "row.total = оценка (ч/д) × коэффициент"
+        },
+        "condition": {
+          "*": [
+            {
+              "var": "estimateHoursPerDay"
+            },
+            {
+              "var": "coefficient"
+            }
+          ]
+        },
+        "targetPath": "/streamModelControl/field_hQeUoQl4",
+        "description": "ФТ-026: итог строки нетиповой работы.",
+        "dependencies": []
+      },
+      {
+        "id": "unified-atypical-row-total:streamDigitalAgents_field_AuPTJbZa",
+        "kind": "row_computed",
+        "payload": {
+          "label": "Per-row итог нетиповой работы",
+          "fieldVar": "total",
+          "arrayPath": "streamDigitalAgents.field_AuPTJbZa",
+          "formulaHint": "row.total = оценка (ч/д) × коэффициент"
+        },
+        "condition": {
+          "*": [
+            {
+              "var": "estimateHoursPerDay"
+            },
+            {
+              "var": "coefficient"
+            }
+          ]
+        },
+        "targetPath": "/streamDigitalAgents/field_AuPTJbZa",
+        "description": "ФТ-026: итог строки нетиповой работы.",
+        "dependencies": []
+      },
+      {
+        "id": "unified-atypical-row-total:streamStreamingData_field_xzzoJBAc",
+        "kind": "row_computed",
+        "payload": {
+          "label": "Per-row итог нетиповой работы",
+          "fieldVar": "total",
+          "arrayPath": "streamStreamingData.field_xzzoJBAc",
+          "formulaHint": "row.total = оценка (ч/д) × коэффициент"
+        },
+        "condition": {
+          "*": [
+            {
+              "var": "estimateHoursPerDay"
+            },
+            {
+              "var": "coefficient"
+            }
+          ]
+        },
+        "targetPath": "/streamStreamingData/field_xzzoJBAc",
+        "description": "ФТ-026: итог строки нетиповой работы.",
+        "dependencies": []
+      },
+      {
+        "id": "unified-atypical-total",
+        "kind": "computed",
+        "payload": {
+          "mode": "expert",
+          "role": "atypical_total",
+          "label": "Сумма по нетиповым работам",
+          "calcModel": "unified",
+          "formulaHint": "Σ нетиповые работы по всем arch-блокам atypicalWork (includeInCalculation ≠ false)."
+        },
+        "condition": {
+          "+": [
+            {
+              "reduce": [
+                {
+                  "var": "detailInfo.field_npwqpBHt"
+                },
+                {
+                  "+": [
+                    {
+                      "var": "accumulator"
+                    },
+                    {
+                      "if": [
+                        {
+                          "==": [
+                            {
+                              "var": "current.includeInCalculation"
+                            },
+                            false
+                          ]
+                        },
+                        0,
+                        {
+                          "max": [
+                            0,
+                            {
+                              "var": "current.total"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                0
+              ]
+            },
+            {
+              "reduce": [
+                {
+                  "var": "field_aJEu5ziT.field_eCyDEFw3"
+                },
+                {
+                  "+": [
+                    {
+                      "var": "accumulator"
+                    },
+                    {
+                      "if": [
+                        {
+                          "==": [
+                            {
+                              "var": "current.includeInCalculation"
+                            },
+                            false
+                          ]
+                        },
+                        0,
+                        {
+                          "max": [
+                            0,
+                            {
+                              "var": "current.total"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                0
+              ]
+            },
+            {
+              "reduce": [
+                {
+                  "var": "field_i8dL7QZa.field_eCyDEFw3"
+                },
+                {
+                  "+": [
+                    {
+                      "var": "accumulator"
+                    },
+                    {
+                      "if": [
+                        {
+                          "==": [
+                            {
+                              "var": "current.includeInCalculation"
+                            },
+                            false
+                          ]
+                        },
+                        0,
+                        {
+                          "max": [
+                            0,
+                            {
+                              "var": "current.total"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                0
+              ]
+            },
+            {
+              "reduce": [
+                {
+                  "var": "streamDataSources.field_eCyDEFw3"
+                },
+                {
+                  "+": [
+                    {
+                      "var": "accumulator"
+                    },
+                    {
+                      "if": [
+                        {
+                          "==": [
+                            {
+                              "var": "current.includeInCalculation"
+                            },
+                            false
+                          ]
+                        },
+                        0,
+                        {
+                          "max": [
+                            0,
+                            {
+                              "var": "current.total"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                0
+              ]
+            },
+            {
+              "reduce": [
+                {
+                  "var": "streamModelControl.field_hQeUoQl4"
+                },
+                {
+                  "+": [
+                    {
+                      "var": "accumulator"
+                    },
+                    {
+                      "if": [
+                        {
+                          "==": [
+                            {
+                              "var": "current.includeInCalculation"
+                            },
+                            false
+                          ]
+                        },
+                        0,
+                        {
+                          "max": [
+                            0,
+                            {
+                              "var": "current.total"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                0
+              ]
+            },
+            {
+              "reduce": [
+                {
+                  "var": "streamDigitalAgents.field_AuPTJbZa"
+                },
+                {
+                  "+": [
+                    {
+                      "var": "accumulator"
+                    },
+                    {
+                      "if": [
+                        {
+                          "==": [
+                            {
+                              "var": "current.includeInCalculation"
+                            },
+                            false
+                          ]
+                        },
+                        0,
+                        {
+                          "max": [
+                            0,
+                            {
+                              "var": "current.total"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                0
+              ]
+            },
+            {
+              "reduce": [
+                {
+                  "var": "streamStreamingData.field_xzzoJBAc"
+                },
+                {
+                  "+": [
+                    {
+                      "var": "accumulator"
+                    },
+                    {
+                      "if": [
+                        {
+                          "==": [
+                            {
+                              "var": "current.includeInCalculation"
+                            },
+                            false
+                          ]
+                        },
+                        0,
+                        {
+                          "max": [
+                            0,
+                            {
+                              "var": "current.total"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                0
+              ]
+            }
+          ]
+        },
+        "targetPath": "/summary/atypicalTotal",
+        "description": "ФТ-026: сумма итоговых оценок нетиповых работ.",
+        "dependencies": [
+          "/detailInfo/field_npwqpBHt",
+          "/field_aJEu5ziT/field_eCyDEFw3",
+          "/field_i8dL7QZa/field_eCyDEFw3",
+          "/streamDataSources/field_eCyDEFw3",
+          "/streamModelControl/field_hQeUoQl4",
+          "/streamDigitalAgents/field_AuPTJbZa",
+          "/streamStreamingData/field_xzzoJBAc"
+        ]
       }
     ]
   },

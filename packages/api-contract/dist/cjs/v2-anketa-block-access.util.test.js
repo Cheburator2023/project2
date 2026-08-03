@@ -222,6 +222,26 @@ const uiSchema = {
     });
 });
 /**
+ * Регресс (IFT): `ds_lead` + `sum_Lds_<stream>` — реестр не режется по стриму
+ * (lead exempt), но без fallback на AD-scoped streams `viewer.streams=[]` и
+ * Level B маскирует все оценки, включая свой стрим.
+ */
+(0, vitest_1.describe)("лид стрима: стримы из групп Keycloak", () => {
+    const groups = ["/ds_lead", "sum_Lds_rb"];
+    const viewer = {
+        roles: ["ds_lead"],
+        streams: (0, v2_anketa_block_access_util_1.resolveV2AnketaViewerStreamsFromGroups)(groups),
+    };
+    (0, vitest_1.it)("резолвит стрим из AD-группы sum_Lds_<стрим>", () => {
+        (0, vitest_1.expect)((0, v2_user_stream_mapping_util_1.resolveV2UserImplementationStreamsFromGroups)(groups)).toEqual([]);
+        (0, vitest_1.expect)(viewer.streams).toEqual([v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.RB]);
+    });
+    (0, vitest_1.it)("показывает оценки своего стрима и скрывает чужие", () => {
+        (0, vitest_1.expect)((0, v2_anketa_block_access_util_1.shouldMaskWorkEstimatesForUser)(viewer, [v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.RB])).toBe(false);
+        (0, vitest_1.expect)((0, v2_anketa_block_access_util_1.shouldMaskWorkEstimatesForUser)(viewer, [v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.PIRM])).toBe(true);
+    });
+});
+/**
  * Регресс: viewerAccess собирается из Keycloak groups. Для `sarep` реестр по
  * стриму не режется, поэтому стрим-резолвер реестра возвращает пусто — свой
  * стрим-блок становился read-only, без кнопки завершения и с чужими оценками.
@@ -253,14 +273,17 @@ const uiSchema = {
         (0, vitest_1.expect)((0, v2_user_stream_mapping_util_1.resolveV2UserImplementationStreamsFromGroups)(groups)).toEqual([]);
         (0, vitest_1.expect)(viewer.streams).toEqual([v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.DADM]);
     });
-    (0, vitest_1.it)("не подменяет стримы ролям, которые фильтруются реестром", () => {
-        for (const other of [
-            ["/ds/test_sum_ds_kmbkcb"],
-            ["/de/test_sum_de_rb"],
-            ["/architect/test_sum_arch_rb"],
-        ]) {
+    (0, vitest_1.it)("не подменяет стримы ролям уровня A (реестр уже режется по стриму)", () => {
+        for (const other of [["/ds/test_sum_ds_kmbkcb"], ["/de/test_sum_de_rb"]]) {
             (0, vitest_1.expect)((0, v2_anketa_block_access_util_1.resolveV2AnketaViewerStreamsFromGroups)(other)).toEqual((0, v2_user_stream_mapping_util_1.resolveV2UserImplementationStreamsFromGroups)(other));
         }
+    });
+    (0, vitest_1.it)("для architect тоже берёт AD-стрим, если реестр-фильтр пуст", () => {
+        const groups = ["/architect/test_sum_arch_rb"];
+        (0, vitest_1.expect)((0, v2_user_stream_mapping_util_1.resolveV2UserImplementationStreamsFromGroups)(groups)).toEqual([]);
+        (0, vitest_1.expect)((0, v2_anketa_block_access_util_1.resolveV2AnketaViewerStreamsFromGroups)(groups)).toEqual([
+            v2_implementation_streams_util_1.V2_IMPLEMENTATION_STREAM.RB,
+        ]);
     });
     (0, vitest_1.it)("возвращает кнопку «Завершить заполнение» на своём стриме", () => {
         (0, vitest_1.expect)((0, v2_anketa_block_access_util_1.canViewerCompleteAnketaSection)(viewer, schema, "streamDadm", rules)).toBe(true);

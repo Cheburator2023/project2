@@ -259,17 +259,20 @@ function userEditsOnlyOwnStreamBlocks(roles) {
  * Стримы зрителя для правил доступа к блокам.
  *
  * `resolveV2UserImplementationStreamsFromGroups` отвечает на вопрос «резать ли
- * реестр по стриму» и для `sarep` возвращает пусто — реестр ему не режется.
- * Для правил блоков нужен сам стрим: без него свой стрим-блок выглядит чужим
- * (read-only, скрытые оценки, нет кнопки завершения раздела).
+ * реестр по стриму» и для лидов / `sarep` возвращает пусто — реестр им не
+ * режется. Для правил блоков (маскирование чужих оценок, edit own stream)
+ * нужен сам стрим из AD (`sum_Lds_<stream>` / `sum_sarep_<stream>`): без него
+ * `viewer.streams=[]` и Level B прячет все оценки, включая свои.
  */
 function resolveV2AnketaViewerStreamsFromGroups(groups) {
     const filtered = (0, v2_user_stream_mapping_util_1.resolveV2UserImplementationStreamsFromGroups)(groups);
     if (filtered.length > 0)
         return filtered;
     const roles = (0, v2_user_stream_mapping_util_1.normalizeV2UserGroups)(groups).map((group) => (0, v2_stream_block_role_util_1.normalizeStreamBlockRole)(group) ?? group.trim());
-    if (!userEditsOnlyOwnStreamBlocks(roles))
+    if (!userEditsOnlyOwnStreamBlocks(roles) &&
+        !userMasksForeignWorkEstimates(roles)) {
         return filtered;
+    }
     return (0, v2_user_stream_mapping_util_1.resolveV2UserScopedStreamsFromGroups)(groups);
 }
 function isSharedAnketaSectionPath(formPath) {

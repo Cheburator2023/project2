@@ -16,7 +16,10 @@ import type {
 } from "@smart-anketa/api-contract";
 import { resolveAnketaCalculationLogic } from "@smart-anketa/api-contract";
 import { stripQuestionnaireCalcNameFromTemplateSnapshot } from "@smart-anketa/api-contract";
-import { V2_DEFAULT_TEMPLATE_SNAPSHOT } from "../constants/v2-default-template-snapshot";
+import {
+	loadV2DefaultTemplateSnapshot,
+	V2_DEFAULT_TEMPLATE_SNAPSHOT,
+} from "../constants/v2-default-template-snapshot";
 import { V2FactorySnapshotSettingEntity } from "../entities/v2-factory-snapshot-setting.entity";
 import { V2TemplateEntity } from "../entities/v2-template.entity";
 import { V2TemplateVersionEntity } from "../entities/v2-template-version.entity";
@@ -170,7 +173,8 @@ export class V2FactorySnapshotService {
 	}
 
 	private builtinSnapshot(): V2EffectiveFactorySnapshot {
-		const snap = V2_DEFAULT_TEMPLATE_SNAPSHOT;
+		/** С диска, не из кэша модуля — иначе правка JSON не видна до рестарта. */
+		const snap = loadV2DefaultTemplateSnapshot();
 		return stripQuestionnaireCalcNameFromTemplateSnapshot({
 			jsonSchema: structuredClone(snap.jsonSchema),
 			uiSchema: structuredClone(snap.uiSchema),

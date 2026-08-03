@@ -77,9 +77,10 @@ export declare function userEditsOnlyOwnStreamBlocks(roles: readonly string[]): 
  * Стримы зрителя для правил доступа к блокам.
  *
  * `resolveV2UserImplementationStreamsFromGroups` отвечает на вопрос «резать ли
- * реестр по стриму» и для `sarep` возвращает пусто — реестр ему не режется.
- * Для правил блоков нужен сам стрим: без него свой стрим-блок выглядит чужим
- * (read-only, скрытые оценки, нет кнопки завершения раздела).
+ * реестр по стриму» и для лидов / `sarep` возвращает пусто — реестр им не
+ * режется. Для правил блоков (маскирование чужих оценок, edit own stream)
+ * нужен сам стрим из AD (`sum_Lds_<stream>` / `sum_sarep_<stream>`): без него
+ * `viewer.streams=[]` и Level B прячет все оценки, включая свои.
  */
 export declare function resolveV2AnketaViewerStreamsFromGroups(groups: readonly string[]): V2ImplementationStreamCode[];
 export declare function isSharedAnketaSectionPath(formPath: string): boolean;

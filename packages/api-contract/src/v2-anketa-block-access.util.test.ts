@@ -369,6 +369,33 @@ describe("представитель стрима: правка и подтве�
 });
 
 /**
+ * Регресс (IFT): `ds_lead` + `sum_Lds_<stream>` — реестр не режется по стриму
+ * (lead exempt), но без fallback на AD-scoped streams `viewer.streams=[]` и
+ * Level B маскирует все оценки, включая свой стрим.
+ */
+describe("лид стрима: стримы из групп Keycloak", () => {
+	const groups = ["/ds_lead", "sum_Lds_rb"];
+	const viewer: V2AnketaViewerAccessContext = {
+		roles: ["ds_lead"],
+		streams: resolveV2AnketaViewerStreamsFromGroups(groups),
+	};
+
+	it("резолвит стрим из AD-группы sum_Lds_<стрим>", () => {
+		expect(resolveV2UserImplementationStreamsFromGroups(groups)).toEqual([]);
+		expect(viewer.streams).toEqual([V2_IMPLEMENTATION_STREAM.RB]);
+	});
+
+	it("показывает оценки своего стрима и скрывает чужие", () => {
+		expect(
+			shouldMaskWorkEstimatesForUser(viewer, [V2_IMPLEMENTATION_STREAM.RB]),
+		).toBe(false);
+		expect(
+			shouldMaskWorkEstimatesForUser(viewer, [V2_IMPLEMENTATION_STREAM.PIRM]),
+		).toBe(true);
+	});
+});
+
+/**
  * Регресс: viewerAccess собирается из Keycloak groups. Для `sarep` реестр по
  * стриму не режется, поэтому стрим-резолвер реестра возвращает пусто — свой
  * стрим-блок становился read-only, без кнопки завершения и с чужими оценками.
@@ -402,16 +429,20 @@ describe("представитель стрима: стримы из групп 
 		expect(viewer.streams).toEqual([V2_IMPLEMENTATION_STREAM.DADM]);
 	});
 
-	it("не подменяет стримы ролям, которые фильтруются реестром", () => {
-		for (const other of [
-			["/ds/test_sum_ds_kmbkcb"],
-			["/de/test_sum_de_rb"],
-			["/architect/test_sum_arch_rb"],
-		]) {
+	it("не подменяет стримы ролям уровня A (реестр уже режется по стриму)", () => {
+		for (const other of [["/ds/test_sum_ds_kmbkcb"], ["/de/test_sum_de_rb"]]) {
 			expect(resolveV2AnketaViewerStreamsFromGroups(other)).toEqual(
 				resolveV2UserImplementationStreamsFromGroups(other),
 			);
 		}
+	});
+
+	it("для architect тоже берёт AD-стрим, если реестр-фильтр пуст", () => {
+		const groups = ["/architect/test_sum_arch_rb"];
+		expect(resolveV2UserImplementationStreamsFromGroups(groups)).toEqual([]);
+		expect(resolveV2AnketaViewerStreamsFromGroups(groups)).toEqual([
+			V2_IMPLEMENTATION_STREAM.RB,
+		]);
 	});
 
 	it("возвращает кнопку «Завершить заполнение» на своём стриме", () => {

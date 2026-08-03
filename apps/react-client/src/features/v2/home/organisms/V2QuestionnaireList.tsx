@@ -436,6 +436,7 @@ export function V2QuestionnaireList() {
 
 	const username = useUserStore((s) => s.username);
 	const groups = useUserStore((s) => s.groups);
+	/** Delete: KK + доменная роль (дубль `usePermissions` + стрим-проверка в grid). */
 	const canDeleteInRegistry =
 		canDeleteCalculation && userHasV2QuestionnaireDeleteRole(groups);
 	const streamFilterSetting = useV2StreamFilterSetting();

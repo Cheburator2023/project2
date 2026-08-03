@@ -139,6 +139,8 @@ F-05 §2: жёсткий фильтр действует на **список а�
 
 Реализация: `isV2AnketaPathEditableForViewer` (поля и арх-панели), `canViewerCompleteAnketaSection` (кнопка раздела), `canViewerCompleteWholeAnketa` (глобальная кнопка). Право `anketa_complete_anketa` у `/sarep` снято в `v2-keycloak-f05-sync.ts`; `anketa_workflow_approve` оставлено — оно нужно для закрытия своего раздела.
 
+В 1-й итерации у `sarep` также нет создания и удаления анкет: в F-05 у `/sarep` нет `anketa_create_calculation` / `anketa_delete_calculation`; дополнительно доменный запрет в `userCanCreateV2Questionnaire` / `userHasV2QuestionnaireDeleteRole` (UI + API), чтобы остаточные KK-роли не открывали кнопки.
+
 Сервер (`V2QuestionnaireService.update`) сверяет переходы workflow через `collectForbiddenV2AnketaWorkflowChanges` и **логирует** нарушения, не блокируя сохранение. Правки данных на сервере не сверяются: клиент сохраняет `displayFormData` целиком, включая пересчитанные движком типовые работы, поэтому дифф поддеревьев давал бы ложные срабатывания на автосохранении.
 
 ### Примеры

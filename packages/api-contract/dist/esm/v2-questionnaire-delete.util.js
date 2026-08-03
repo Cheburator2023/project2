@@ -2,14 +2,23 @@ import { normalizeV2UserGroups, resolveV2UserScopedStreamsFromGroups, } from "./
 import { V2_IMPLEMENTATION_STREAM_LABELS, } from "./v2-implementation-streams.util";
 /**
  * Роли, которым доступно удаление/деактивация анкеты (карточка + реестр).
- * По живому SUMD: ds_lead / modelops_lead / sacfg / sarep.
+ * 1-я итерация: ds_lead / modelops_lead / sacfg.
+ * `sarep` (представитель стрима вне ЖЦМ) — без удаления.
  * DE / modelops (executor) — без удаления.
  */
 export const V2_QUESTIONNAIRE_DELETE_ROLE_CODES = [
     "ds_lead",
     "modelops_lead",
     "sacfg",
-    "sarep",
+];
+/**
+ * Роли, которым доступно создание анкеты (реестр + API).
+ * 1-я итерация: без `sarep` — только смотрит/правит свой стрим.
+ */
+export const V2_QUESTIONNAIRE_CREATE_ROLE_CODES = [
+    "ds_lead",
+    "modelops_lead",
+    "sacfg",
 ];
 function readImplementationStream(formData) {
     if (!formData || typeof formData !== "object")
@@ -37,9 +46,28 @@ export function userHasV2QuestionnaireDeleteRole(userGroups) {
     const normalized = normalizeV2UserGroups(userGroups);
     return V2_QUESTIONNAIRE_DELETE_ROLE_CODES.some((role) => normalized.includes(role));
 }
+export function userHasV2QuestionnaireCreateRole(userGroups) {
+    const normalized = normalizeV2UserGroups(userGroups);
+    return V2_QUESTIONNAIRE_CREATE_ROLE_CODES.some((role) => normalized.includes(role));
+}
+/**
+ * Создание анкеты: KK-permission + доменная роль.
+ * Если в groups есть только `sarep` (без lead/sacfg) — запрет (1-я итерация).
+ * Пустые groups (god / NO_ROLES без AD) — не блокируем, решает permission.
+ */
+export function userCanCreateV2Questionnaire(userGroups, hasCreatePermission) {
+    if (!hasCreatePermission)
+        return false;
+    const normalized = normalizeV2UserGroups(userGroups);
+    if (normalized.includes("sarep") &&
+        !userHasV2QuestionnaireCreateRole(userGroups)) {
+        return false;
+    }
+    return true;
+}
 /**
  * Можно ли пользователю удалить/деактивировать анкету (роль + стрим).
- * sacfg — все стримы; ds_lead / modelops_lead / sarep — свой стрим
+ * sacfg — все стримы; ds_lead / modelops_lead — свой стрим
  * (если стримы из groups не извлечены — разрешаем, как у lead без AD-суффикса).
  */
 export function canUserDeleteV2Questionnaire(userGroups, formData) {

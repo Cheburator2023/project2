@@ -10,6 +10,8 @@ import {
 import {
 	mergeV2PermissionsWithImplied,
 	normalizeV2UserGroupsWithCompat,
+	userCanCreateV2Questionnaire,
+	userHasV2QuestionnaireDeleteRole,
 } from "@smart-anketa/api-contract";
 
 const isDev = process.env.NODE_ENV === "development";
@@ -56,15 +58,19 @@ export const usePermissions = () => {
 		canViewAllCalculations: hasEffectivePermission(
 			Permission.ANKETA_VIEW_ALL_CALCULATIONS,
 		),
-		canCreateCalculation: hasEffectivePermission(
-			Permission.ANKETA_CREATE_CALCULATION,
+		/** 1-я итерация: `sarep` без create даже при KK-permission. */
+		canCreateCalculation: userCanCreateV2Questionnaire(
+			groups,
+			hasEffectivePermission(Permission.ANKETA_CREATE_CALCULATION),
 		),
 		canEditCalculation: hasEffectivePermission(
 			Permission.ANKETA_EDIT_CALCULATION,
 		),
-		canDeleteCalculation: hasEffectivePermission(
-			Permission.ANKETA_DELETE_CALCULATION,
-		),
+		/** 1-я итерация: `sarep` без delete; lead/sacfg — по доменной роли. */
+		canDeleteCalculation:
+			godMode ||
+			(hasEffectivePermission(Permission.ANKETA_DELETE_CALCULATION) &&
+				userHasV2QuestionnaireDeleteRole(groups)),
 		canExportReports: hasEffectivePermission(Permission.ANKETA_EXPORT_REPORTS),
 		canWorkflowApprove: hasEffectivePermission(
 			Permission.ANKETA_WORKFLOW_APPROVE,

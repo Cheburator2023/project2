@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
 	canUserDeleteV2Questionnaire,
 	resolveV2QuestionnaireDeleteAction,
+	userCanCreateV2Questionnaire,
+	userHasV2QuestionnaireCreateRole,
 	userHasV2QuestionnaireDeleteRole,
 } from "./v2-questionnaire-delete.util";
 
@@ -10,13 +12,16 @@ const formWithStream = (stream: string) => ({
 });
 
 describe("userHasV2QuestionnaireDeleteRole", () => {
-	it("allows ds_lead, modelops_lead, sacfg, sarep", () => {
+	it("allows ds_lead, modelops_lead, sacfg — not sarep (1-я итерация)", () => {
 		expect(userHasV2QuestionnaireDeleteRole(["/ds/ds_lead"])).toBe(true);
 		expect(userHasV2QuestionnaireDeleteRole(["/modelops/modelops_lead"])).toBe(
 			true,
 		);
 		expect(userHasV2QuestionnaireDeleteRole(["/sacfg"])).toBe(true);
-		expect(userHasV2QuestionnaireDeleteRole(["/sarep"])).toBe(true);
+		expect(userHasV2QuestionnaireDeleteRole(["/sarep"])).toBe(false);
+		expect(
+			userHasV2QuestionnaireDeleteRole(["/sarep", "sum_sarep_dadm"]),
+		).toBe(false);
 	});
 
 	it("denies de, modelops executor and plain ds", () => {
@@ -24,6 +29,23 @@ describe("userHasV2QuestionnaireDeleteRole", () => {
 		expect(userHasV2QuestionnaireDeleteRole(["/de/de_lead"])).toBe(false);
 		expect(userHasV2QuestionnaireDeleteRole(["/modelops"])).toBe(false);
 		expect(userHasV2QuestionnaireDeleteRole(["/ds"])).toBe(false);
+	});
+});
+
+describe("userCanCreateV2Questionnaire", () => {
+	it("denies sarep even with KK create permission (1-я итерация)", () => {
+		expect(userCanCreateV2Questionnaire(["/sarep"], true)).toBe(false);
+		expect(
+			userCanCreateV2Questionnaire(["/sarep", "sum_sarep_idsrc"], true),
+		).toBe(false);
+		expect(userHasV2QuestionnaireCreateRole(["/sarep"])).toBe(false);
+	});
+
+	it("allows lead/sacfg and empty groups with permission", () => {
+		expect(userCanCreateV2Questionnaire(["/ds_lead"], true)).toBe(true);
+		expect(userCanCreateV2Questionnaire(["/sacfg"], true)).toBe(true);
+		expect(userCanCreateV2Questionnaire([], true)).toBe(true);
+		expect(userCanCreateV2Questionnaire(["/sarep"], false)).toBe(false);
 	});
 });
 

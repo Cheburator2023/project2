@@ -1,6 +1,7 @@
 import {
 	BadRequestException,
 	ConflictException,
+	ForbiddenException,
 	Injectable,
 	Logger,
 	NotFoundException,
@@ -12,6 +13,7 @@ import {
 	canUserDeleteV2Questionnaire,
 	collectForbiddenV2AnketaWorkflowChanges,
 	resolveV2QuestionnaireDeleteAction,
+	userCanCreateV2Questionnaire,
 	type BulkDeleteV2QuestionnairesResultDto,
 	type CreateV2QuestionnaireRequestDto,
 	type CreateV2QuestionnaireVersionRequestDto,
@@ -193,10 +195,20 @@ export class V2QuestionnaireService {
 		};
 	}
 
+	private assertCanCreateQuestionnaire(user?: TUserLike | null): void {
+		const groups = Array.isArray(user?.groups) ? user.groups : [];
+		if (!userCanCreateV2Questionnaire(groups, true)) {
+			throw new ForbiddenException(
+				"Создание анкет недоступно для роли представителя стрима (sarep) в первой итерации",
+			);
+		}
+	}
+
 	async create(
 		dto: CreateV2QuestionnaireRequestDto,
 		user?: TUserLike | null,
 	): Promise<V2QuestionnaireDto> {
+		this.assertCanCreateQuestionnaire(user);
 		const { template, version } = await this.resolveTemplateForCreate(
 			dto.templateId,
 		);
@@ -328,6 +340,7 @@ export class V2QuestionnaireService {
 		dto: CreateV2QuestionnaireVersionRequestDto,
 		user?: TUserLike | null,
 	): Promise<V2QuestionnaireDto> {
+		this.assertCanCreateQuestionnaire(user);
 		const parent = await this.loadWithRelations(parentId);
 		const siblings = await this.questionnaireRepository.find({
 			where: { seriesId: parent.seriesId },
