@@ -6,7 +6,6 @@ import ListItemButton from "@mui/material/ListItemButton";
 import ListItemText from "@mui/material/ListItemText";
 import Stack from "@mui/material/Stack";
 import { IS_DEV } from "@react-client/common/constants/dev";
-import { useUserStore } from "@react-client/common/store/userStore";
 import { usePermissions } from "@react-client/hooks/usePermissions";
 import {
 	commonRoutes,
@@ -15,6 +14,7 @@ import {
 import type { AppRouteConfig } from "@react-client/routing/common/types";
 import { v1Routes } from "@react-client/routing/version/v1/routes";
 import { v2Routes } from "@react-client/routing/version/v2/routes";
+import { Permission } from "@react-client/types/roles";
 import { Link as RouterLink, useLocation } from "react-router";
 
 const V1_PREFIX = "/v1";
@@ -76,20 +76,34 @@ const v2UserNavItems = () =>
 			r.rootPath !== v2Routes.calculationCompare.rootPath,
 	);
 
-const useV2UserNavItems = () => {
-	const { hasPermission } = useUserStore();
+/** Меню должно совпадать с PermissionGuard / usePermissions (sarep без create/delete). */
+function useNavItemAllowed() {
+	const {
+		hasPermission,
+		canCreateCalculation,
+		canDeleteCalculation,
+	} = usePermissions();
 
-	return v2UserNavItems().filter(
-		(item) => !item?.permission || hasPermission(item.permission),
-	);
+	return (item: AppRouteConfig): boolean => {
+		if (!item.permission) return true;
+		if (item.permission === Permission.ANKETA_CREATE_CALCULATION) {
+			return canCreateCalculation;
+		}
+		if (item.permission === Permission.ANKETA_DELETE_CALCULATION) {
+			return canDeleteCalculation;
+		}
+		return hasPermission(item.permission);
+	};
+}
+
+const useV2UserNavItems = () => {
+	const allowed = useNavItemAllowed();
+	return v2UserNavItems().filter(allowed);
 };
 
 const useV1MainNestedItems = () => {
-	const { hasPermission } = useUserStore();
-
-	return getV1MainNestedItems().filter(
-		(item) => !item?.permission || hasPermission(item.permission),
-	);
+	const allowed = useNavItemAllowed();
+	return getV1MainNestedItems().filter(allowed);
 };
 
 function routeRowSelected(route: AppRouteConfig, pathname: string): boolean {
