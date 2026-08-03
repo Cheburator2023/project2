@@ -393,6 +393,18 @@ describe("лид стрима: стримы из групп Keycloak", () => {
 			shouldMaskWorkEstimatesForUser(viewer, [V2_IMPLEMENTATION_STREAM.PIRM]),
 		).toBe(true);
 	});
+
+	it("показывает оценки зонтика «Модельный стрим» при одном своём модельном стриме", () => {
+		expect(
+			shouldMaskWorkEstimatesForUser(viewer, [
+				V2_IMPLEMENTATION_STREAM.KMBKCB,
+				V2_IMPLEMENTATION_STREAM.RB,
+				V2_IMPLEMENTATION_STREAM.PTITPC,
+				V2_IMPLEMENTATION_STREAM.FINMDL,
+				V2_IMPLEMENTATION_STREAM.RND,
+			]),
+		).toBe(false);
+	});
 });
 
 /**

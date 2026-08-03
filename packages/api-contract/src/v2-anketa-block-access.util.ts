@@ -553,6 +553,10 @@ export function collectRequiredWorkflowTargetsForViewer(
 /**
  * Маскировать оценки в блоке типовых/нетиповых работ (уровень B / валидатор).
  * Свой стрим — видно; чужой — скрыто. Без своего стрима все блоки со streamExecutor — «чужие».
+ *
+ * Для зонтика «Модельный стрим» (`streamExecutor: [rb, kmbkcb, …]`) достаточно
+ * пересечения с одним своим стримом — иначе `ds_lead`/`sum_Lds_rb` не видел бы
+ * оценок модельного стрима вообще.
  */
 export function shouldMaskWorkEstimatesForUser(
 	viewer: V2AnketaViewerAccessContext,
@@ -562,8 +566,9 @@ export function shouldMaskWorkEstimatesForUser(
 	if (!userMasksForeignWorkEstimates(viewer.roles)) return false;
 	if (blockStreamExecutors.length === 0) return false;
 	if (viewer.streams.length === 0) return true;
-	return !blockStreamExecutors.every((code) =>
-		streamsIntersectViewerAndBlock(viewer.streams, [code]),
+	return !streamsIntersectViewerAndBlock(
+		viewer.streams,
+		blockStreamExecutors,
 	);
 }
 
