@@ -1,5 +1,19 @@
 # Semantic Versioning Changelog
 
+# [1.56.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.55.0...v1.56.0) (2026-08-03)
+
+
+### Bug Fixes
+
+*  проблемы в правилах маскировки ([f3908d4](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/f3908d42c2d5bc6b21d26d502b6961fac5e0c269))
+*  проблемы в правилах маскировки ([8e37419](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/8e37419d9f1a4f32f8c51bf2699d2603ec7cd5cb))
+
+
+### Features
+
+* add comment counting functionality to Kanban board tasks ([f693cc2](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/f693cc258a968a4e83b8827f3b81d742bf4ed979))
+* enhance questionnaire access controls and user permissions ([5390ce2](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/5390ce28826ced45909a166010262d93d49b09b8))
+
 # [1.55.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.54.0...v1.55.0) (2026-08-02)
 
 
