@@ -34,6 +34,25 @@ export class KanbanBoardTaskCommentService {
 		return rows.map((row) => this.toDto(row));
 	}
 
+	async countByTaskIds(taskIds: string[]): Promise<Map<string, number>> {
+		const uniqueIds = [...new Set(taskIds.filter(Boolean))];
+		const counts = new Map<string, number>();
+		if (!uniqueIds.length) return counts;
+
+		const rows = await this.commentRepository
+			.createQueryBuilder("comment")
+			.select("comment.task_id", "taskId")
+			.addSelect("COUNT(*)", "count")
+			.where("comment.task_id IN (:...taskIds)", { taskIds: uniqueIds })
+			.groupBy("comment.task_id")
+			.getRawMany<{ taskId: string; count: string }>();
+
+		for (const row of rows) {
+			counts.set(row.taskId, Number(row.count) || 0);
+		}
+		return counts;
+	}
+
 	async create(
 		taskId: string,
 		dto: CreateKanbanBoardTaskCommentRequestDto,

@@ -307,6 +307,8 @@ export interface KanbanBoardTaskRecord {
 	/** Имя исполнителя из настроек трекера («Я — исполнитель»). */
 	createdBy?: string | null;
 	updatedAt: string;
+	/** Количество комментариев (заполняется при чтении доски). */
+	commentCount?: number;
 }
 
 export interface KanbanBoardProjectDto {
@@ -802,10 +804,12 @@ export interface KanbanBoardItem {
 	type?: string;
 	content?: KanbanBoardNodeContent;
 	origin?: string;
+	taskNumber?: number;
 	createdAt?: string;
 	createdBy?: string | null;
 	/** Версия задачи для optimistic locking на доске */
 	updatedAt?: string;
+	commentCount?: number;
 }
 
 export type KanbanBoardData = {

@@ -11,20 +11,15 @@ import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import { alpha } from "@mui/material/styles";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	fromBoardData,
-	kanbanBoardAssigneeRoleByName,
 	normalizeKanbanBoardData,
 	toBoardData,
-	type KanbanBoardAssigneeRoleId,
 	type KanbanBoardColumnDto,
 	type KanbanBoardData,
 	type KanbanBoardTaskContent,
 	type KanbanBoardTaskRecord,
-	kanbanBoardTaskAssigneeRoles,
-	kanbanBoardTaskAssignees,
 	formatKanbanTaskKey,
 	normalizeTrackerCode,
 	collectKanbanBoardExpectedVersions,
@@ -32,7 +27,6 @@ import {
 	type KanbanBoardTaskEditBlockedErrorDto,
 	type KanbanBoardItem,
 } from "@smart-anketa/api-contract";
-import { KanbanTaskContentChips } from "@react-client/features/tracker/components/TrackerTaskFieldChips";
 import { Kanban, dropHandler } from "react-kanban-kit";
 import type { BoardData, BoardItem } from "react-kanban-kit";
 import {
@@ -58,7 +52,6 @@ import {
 	useKanbanBoardBoards,
 	useKanbanBoardColumns,
 	useKanbanBoardConfig,
-	useKanbanBoardAssignees,
 	useCreateKanbanBoardColumn,
 	useDeleteKanbanBoardColumn,
 	useUpdateKanbanBoardColumn,
@@ -74,127 +67,17 @@ import {
 	kanbanTaskEditPath,
 	trackerBoardHistoryPath,
 } from "@react-client/features/kanban-board/kanban-task-paths";
-import { KanbanTaskCardSubtasks } from "@react-client/features/kanban-board/components/KanbanSubtasksChecklist";
-import { KanbanTaskImagesSection } from "@react-client/features/kanban-board/components/KanbanTaskImagesSection";
+import { KanbanTaskBoardCard } from "@react-client/features/kanban-board/components/KanbanTaskBoardCard";
 import { TrackerTaskConflictDialog } from "@react-client/features/tracker/components/TrackerTaskConflictDialog";
 import { useTrackerBoardSync } from "@react-client/features/tracker/hooks/useTrackerBoardSync";
 import { useTrackerEditIdentity } from "@react-client/features/tracker/hooks/useTrackerEditIdentity";
+
+const KANBAN_BOARD_COLUMN_WIDTH_PX = 320;
 
 const buildBoardData = (
 	tasks: Parameters<typeof toBoardData>[0],
 	columns: KanbanBoardColumnDto[],
 ): KanbanBoardData => toBoardData(tasks, columns);
-
-function TaskCardContent({
-	taskId,
-	boardId,
-	parentId,
-	title,
-	content,
-	origin,
-	taskUpdatedAt,
-	editLabel,
-	columnColor,
-	assigneeRoleByName,
-	isBoardBusy,
-	onContentUpdated,
-	onEditBlocked,
-}: {
-	taskId: string;
-	boardId: string;
-	parentId: string;
-	title?: string;
-	content?: KanbanBoardTaskContent;
-	origin?: string;
-	taskUpdatedAt?: string;
-	editLabel?: string;
-	columnColor: string;
-	assigneeRoleByName?: ReadonlyMap<string, KanbanBoardAssigneeRoleId | null>;
-	isBoardBusy?: boolean;
-	onContentUpdated: (taskId: string, content: KanbanBoardTaskContent) => void;
-	onEditBlocked?: (error: unknown) => void;
-}) {
-	const displayTitle = title ?? content?.title;
-	const hasRoleChips =
-		content && assigneeRoleByName
-			? kanbanBoardTaskAssigneeRoles(content, assigneeRoleByName).length > 0
-			: false;
-	const hasMetaChips =
-		content?.priority ||
-		(content && kanbanBoardTaskAssignees(content).length > 0) ||
-		content?.currentAssignee ||
-		hasRoleChips ||
-		content?.taskType ||
-		content?.workType ||
-		content?.streamCustomer ||
-		content?.estimatePd ||
-		content?.dueDate ||
-		origin;
-
-	return (
-		<Box
-			sx={{
-				p: 1,
-				minWidth: 0,
-				borderRadius: 1,
-				border: 3,
-				borderColor: alpha(columnColor, 0.35),
-				// borderTopWidth: 3,
-				// borderTopColor: columnColor,
-				bgcolor: "background.paper",
-				boxShadow: 1,
-				cursor: "pointer",
-			}}
-		>
-			<Stack spacing={0.5}>
-				{displayTitle ? (
-					<Typography
-						variant="subtitle2"
-						fontWeight={600}
-						sx={{ wordBreak: "break-word", lineHeight: 1.35 }}
-					>
-						{displayTitle}
-					</Typography>
-				) : null}
-				{hasMetaChips ? (
-					<Stack
-						direction="row"
-						spacing={0.5}
-						flexWrap="wrap"
-						useFlexGap
-						alignItems="center"
-					>
-						<KanbanTaskContentChips
-							content={content}
-							origin={origin}
-							assigneeRoleByName={assigneeRoleByName}
-						/>
-					</Stack>
-				) : null}
-				{content ? (
-					<KanbanTaskCardSubtasks
-						taskId={taskId}
-						boardId={boardId}
-						parentId={parentId}
-						content={content}
-						taskUpdatedAt={taskUpdatedAt}
-						editLabel={editLabel}
-						onContentUpdated={onContentUpdated}
-						isSaving={isBoardBusy}
-						onEditBlocked={onEditBlocked}
-					/>
-				) : null}
-				{content?.images?.length ? (
-					<KanbanTaskImagesSection
-						taskId={taskId}
-						images={content.images}
-						compact
-					/>
-				) : null}
-			</Stack>
-		</Box>
-	);
-}
 
 export function KanbanBoardPage() {
 	const { boardKey = "" } = useParams<{ boardKey: string }>();
@@ -223,11 +106,6 @@ export function KanbanBoardPage() {
 	);
 	const boardApiRef = boardMeta?.boardKey ?? normalizeTrackerCode(boardKey);
 	const columnsQuery = useKanbanBoardColumns(boardApiRef);
-	const assigneesQuery = useKanbanBoardAssignees();
-	const assigneeRoleByName = useMemo(
-		() => kanbanBoardAssigneeRoleByName(assigneesQuery.data ?? []),
-		[assigneesQuery.data],
-	);
 	const createColumn = useCreateKanbanBoardColumn();
 	const updateColumn = useUpdateKanbanBoardColumn();
 	const deleteColumn = useDeleteKanbanBoardColumn();
@@ -715,12 +593,16 @@ export function KanbanBoardPage() {
 							"& .rkk-column-outer": {
 								height: "auto",
 								alignSelf: "stretch",
+								width: KANBAN_BOARD_COLUMN_WIDTH_PX,
+								minWidth: KANBAN_BOARD_COLUMN_WIDTH_PX,
+								maxWidth: KANBAN_BOARD_COLUMN_WIDTH_PX,
 							},
 							"& .rkk-column-outer .rkk-column": {
 								height: "auto",
 								minHeight: "100%",
 								overflow: "visible",
 								borderRadius: "4px",
+								width: "100%",
 							},
 							"& .rkk-column-outer .rkk-column-wrapper": {
 								maxHeight: "none",
@@ -760,19 +642,29 @@ export function KanbanBoardPage() {
 											data: BoardItem;
 											column: BoardItem;
 										}) => (
-											<TaskCardContent
+											<KanbanTaskBoardCard
 												taskId={data.id}
 												boardId={resolvedBoardId}
 												parentId={data.parentId ?? column.id}
+												taskKey={
+													boardMeta?.projectCode &&
+													(data as KanbanBoardItem).taskNumber
+														? formatKanbanTaskKey(
+																boardMeta.projectCode,
+																(data as KanbanBoardItem).taskNumber!,
+															)
+														: undefined
+												}
 												title={data.title}
 												content={
 													data.content as KanbanBoardTaskContent | undefined
 												}
-												origin={(data as KanbanBoardItem).origin}
+												createdAt={(data as KanbanBoardItem).createdAt}
+												createdBy={(data as KanbanBoardItem).createdBy}
+												commentCount={(data as KanbanBoardItem).commentCount}
 												taskUpdatedAt={(data as KanbanBoardItem).updatedAt}
 												editLabel={editLabel}
 												columnColor={getKanbanColumnColor(column)}
-												assigneeRoleByName={assigneeRoleByName}
 												isBoardBusy={isBoardBusy}
 												onContentUpdated={handleTaskContentUpdated}
 												onEditBlocked={handleEditBlocked}

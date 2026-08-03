@@ -208,6 +208,10 @@ describe("KanbanBoardService importSnapshot", () => {
 			boardRepo,
 			dataSource,
 			{ get: () => "local-dev" } as any,
+			{ logTaskChanges: jest.fn(), logTaskDiff: jest.fn() } as any,
+			{ syncTasksContentImages: jest.fn() } as any,
+			{ countByTaskIds: jest.fn(async () => new Map()) } as any,
+			{ assertEditable: jest.fn() } as any,
 		);
 
 		const result = await service.importSnapshot(exported);

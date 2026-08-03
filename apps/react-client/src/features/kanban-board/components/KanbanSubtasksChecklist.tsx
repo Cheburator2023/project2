@@ -6,6 +6,7 @@ import Checkbox from "@mui/material/Checkbox";
 import Collapse from "@mui/material/Collapse";
 import IconButton from "@mui/material/IconButton";
 import InputBase from "@mui/material/InputBase";
+import LinearProgress from "@mui/material/LinearProgress";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
@@ -32,6 +33,7 @@ import {
 	type MouseEvent,
 } from "react";
 import { Flex } from "@react-client/common/primitives/Flex";
+import { Spacer } from "@react-client/common/primitives/Spacer";
 
 const SUBTASK_STATUS_OPTIONS = KANBAN_BOARD_SUBTASK_STATUSES.map((option) => ({
 	value: option.id,
@@ -322,28 +324,52 @@ export function KanbanSubtasksChecklist({
 			) : null}
 		</Box>
 	) : (
-		<Stack
-			direction="row"
-			alignItems="center"
-			justifyContent="space-between"
-			sx={{ minHeight: 18, gap: 1 }}
-		>
-			<Typography
-				variant="caption"
-				fontWeight={600}
-				color="text.secondary"
-				sx={{ fontSize: compact ? "0.6875rem" : "0.75rem" }}
+		<Stack spacing={0.75} sx={{ minWidth: 0 }}>
+			<Stack
+				direction="row"
+				alignItems="center"
+				justifyContent="space-between"
+				sx={{ minHeight: 18, gap: 1 }}
 			>
-				Подзадачи
-			</Typography>
-			{progress ? (
 				<Typography
-					variant="caption"
-					color="text.secondary"
-					sx={{ fontSize: compact ? "0.6875rem" : "0.75rem", flexShrink: 0 }}
+					variant="subtitle2"
+					fontWeight={700}
+					color="text.primary"
+					sx={{ fontSize: compact ? "0.75rem" : "0.875rem" }}
 				>
-					{progress.done}/{progress.total}
+					Подзадачи
 				</Typography>
+				{progress ? (
+					<Typography
+						variant="caption"
+						color="text.secondary"
+						sx={{ fontSize: compact ? "0.6875rem" : "0.75rem", flexShrink: 0 }}
+					>
+						{progress.done}/{progress.total} выполнено
+					</Typography>
+				) : null}
+			</Stack>
+			{progress && !compact ? (
+				<LinearProgress
+					variant="determinate"
+					value={
+						progress.total
+							? Math.round((progress.done / progress.total) * 100)
+							: 0
+					}
+					sx={{
+						height: 6,
+						borderRadius: 3,
+						bgcolor: (theme) => alpha(theme.palette.text.primary, 0.08),
+						"& .MuiLinearProgress-bar": {
+							borderRadius: 3,
+							bgcolor:
+								progress.done >= progress.total
+									? "success.main"
+									: "primary.main",
+						},
+					}}
+				/>
 			) : null}
 		</Stack>
 	);
@@ -514,6 +540,7 @@ export function KanbanSubtasksChecklist({
 			sx={{ minWidth: 0 }}
 		>
 			{header}
+			{!compact ? <Spacer space={10} /> : null}
 			{collapsible ? (
 				<Collapse in={expanded} timeout="auto" unmountOnExit={false}>
 					{body}

@@ -1,13 +1,14 @@
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import SendIcon from "@mui/icons-material/Send";
 import Alert from "@mui/material/Alert";
-import Box from "@mui/material/Box";
+import Avatar from "@mui/material/Avatar";
 import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
 import IconButton from "@mui/material/IconButton";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
-import { format, parseISO } from "date-fns";
+import { alpha } from "@mui/material/styles";
+import { format, formatDistanceToNow, parseISO } from "date-fns";
 import { ru } from "date-fns/locale";
 import {
 	useCreateKanbanBoardTaskComment,
@@ -17,10 +18,9 @@ import {
 	useKanbanBoardTaskComments,
 } from "@react-client/common/api/queries/kanban-board";
 import { FuzzyAutocomplete } from "@react-client/common/muiCustom/FuzzyAutocomplete";
-import { KanbanTaskFieldChip } from "@react-client/features/kanban-board/components/KanbanTaskSelectField";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const AUTHOR_CHIP_COLORS = [
 	"#2563eb",
@@ -45,7 +45,23 @@ type Props = {
 	disabled?: boolean;
 };
 
+function initialsFromName(name: string): string {
+	const parts = name.trim().split(/\s+/).filter(Boolean);
+	if (!parts.length) return "?";
+	if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+	return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
+}
+
 const formatCommentTime = (iso: string): string => {
+	try {
+		const date = parseISO(iso);
+		return formatDistanceToNow(date, { addSuffix: true, locale: ru });
+	} catch {
+		return iso;
+	}
+};
+
+const formatCommentTooltip = (iso: string): string => {
 	try {
 		return format(parseISO(iso), "d MMM yyyy, HH:mm", { locale: ru });
 	} catch {
@@ -133,9 +149,9 @@ export function KanbanTaskCommentsSection({ taskId, disabled }: Props) {
 	const comments = commentsQuery.data ?? [];
 
 	return (
-		<Box>
-			<Typography variant="subtitle2" sx={{ mb: 1 }}>
-				Комментарии
+		<Flex flexDirection="column" gap={12}>
+			<Typography variant="subtitle1" fontWeight={700}>
+				Активность
 			</Typography>
 
 			{commentsQuery.isLoading ? (
@@ -143,90 +159,99 @@ export function KanbanTaskCommentsSection({ taskId, disabled }: Props) {
 					<CircularProgress size={24} />
 				</Flex>
 			) : comments.length ? (
-				<Box
-					sx={{
-						maxHeight: 320,
-						overflowY: "auto",
-						border: "1px solid",
-						borderColor: "divider",
-						borderRadius: 1,
-						px: 1.5,
-						py: 1.25,
-					}}
-				>
-					{comments.map((comment, index) => (
-						<Fragment key={comment.id}>
-							{index > 0 ? <Spacer space={10} /> : null}
-							<Box>
-								<Flex
-									alignItems="center"
-									justifyContent="space-between"
-									gap={1}
+				<Flex flexDirection="column" gap={14}>
+					{comments.map((comment) => {
+						const color = getAuthorColor(comment.authorName);
+						return (
+							<Flex key={comment.id} gap={10} alignItems="flex-start">
+								<Avatar
+									sx={{
+										width: 32,
+										height: 32,
+										fontSize: "0.75rem",
+										fontWeight: 700,
+										bgcolor: alpha(color, 0.18),
+										color,
+										flexShrink: 0,
+									}}
 								>
-									<Flex alignItems="center" gap={1} wrap="wrap">
-										<KanbanTaskFieldChip
-											label={comment.authorName}
-											color={getAuthorColor(comment.authorName)}
-										/>
-										<Typography variant="caption" color="text.secondary">
-											{formatCommentTime(comment.createdAt)}
-										</Typography>
-									</Flex>
-									<IconButton
-										size="small"
-										disabled={isBusy}
-										onClick={() =>
-											void deleteComment.mutateAsync({
-												taskId,
-												commentId: comment.id,
-											})
-										}
-										aria-label="Удалить комментарий"
-										title="Удалить"
+									{initialsFromName(comment.authorName)}
+								</Avatar>
+								<Flex flexDirection="column" gap={4} flexGrow={1} minWidth="0">
+									<Flex
+										alignItems="center"
+										justifyContent="space-between"
+										gap={8}
 									>
-										<DeleteOutlineIcon fontSize="small" />
-									</IconButton>
+										<Flex alignItems="baseline" gap={8} wrap="wrap" minWidth="0">
+											<Typography variant="body2" fontWeight={700} noWrap>
+												{comment.authorName}
+											</Typography>
+											<Typography
+												variant="caption"
+												color="text.secondary"
+												title={formatCommentTooltip(comment.createdAt)}
+											>
+												{formatCommentTime(comment.createdAt)}
+											</Typography>
+										</Flex>
+										<IconButton
+											size="small"
+											disabled={isBusy}
+											onClick={() =>
+												void deleteComment.mutateAsync({
+													taskId,
+													commentId: comment.id,
+												})
+											}
+											aria-label="Удалить комментарий"
+											title="Удалить"
+										>
+											<DeleteOutlineIcon fontSize="small" />
+										</IconButton>
+									</Flex>
+									<Typography
+										variant="body2"
+										sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
+									>
+										{comment.body}
+									</Typography>
 								</Flex>
-								<Spacer space={6} />
-								<Typography
-									variant="body2"
-									sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
-								>
-									{comment.body}
-								</Typography>
-							</Box>
-						</Fragment>
-					))}
-				</Box>
+							</Flex>
+						);
+					})}
+				</Flex>
 			) : (
-				<Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+				<Typography variant="body2" color="text.secondary">
 					Пока нет комментариев
 				</Typography>
 			)}
 
-			<Spacer space={12} />
+			<Spacer space={4} />
 
-			<Flex flexDirection="column" gap={1.5}>
-				<FuzzyAutocomplete<AuthorOption>
-					label="Кто пишет"
-					options={authorOptions}
-					value={selectedAuthor}
-					onChange={(option) => setAuthorName(option?.value ?? "")}
-					getOptionLabel={(option) => option.label}
-					getOptionValue={(option) => option.value}
-					disabled={isBusy || assigneesQuery.isLoading}
-					fullWidth
-				/>
+			<Flex flexDirection="column" gap={10}>
+				{!settingsQuery.data?.defaultCurrentUserAssigneeName ? (
+					<FuzzyAutocomplete<AuthorOption>
+						label="Кто пишет"
+						options={authorOptions}
+						value={selectedAuthor}
+						onChange={(option) => setAuthorName(option?.value ?? "")}
+						getOptionLabel={(option) => option.label}
+						getOptionValue={(option) => option.value}
+						disabled={isBusy || assigneesQuery.isLoading}
+						fullWidth
+						size="small"
+					/>
+				) : null}
 				<TextField
-					label="Новый комментарий"
 					value={draft}
 					onChange={(event) => setDraft(event.target.value)}
 					disabled={isBusy}
 					fullWidth
 					multiline
-					minRows={2}
+					minRows={3}
 					maxRows={8}
-					placeholder="Сообщение по задаче…"
+					placeholder="Оставить комментарий…"
 					onKeyDown={(event) => {
 						if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
 							event.preventDefault();
@@ -234,14 +259,9 @@ export function KanbanTaskCommentsSection({ taskId, disabled }: Props) {
 						}
 					}}
 				/>
-				<Flex
-					justifyContent="space-between"
-					alignItems="center"
-					wrap="wrap"
-					gap={1}
-				>
+				<Flex justifyContent="flex-end" alignItems="center" gap={8}>
 					<Typography variant="caption" color="text.secondary">
-						Ctrl+Enter — отправить
+						Ctrl+Enter
 					</Typography>
 					<Button
 						variant="contained"
@@ -250,7 +270,7 @@ export function KanbanTaskCommentsSection({ taskId, disabled }: Props) {
 						disabled={isBusy}
 						onClick={() => void handleSubmit()}
 					>
-						Отправить
+						Комментарий
 					</Button>
 				</Flex>
 				{error ? <Alert severity="error">{error}</Alert> : null}
@@ -261,7 +281,6 @@ export function KanbanTaskCommentsSection({ taskId, disabled }: Props) {
 					</Alert>
 				) : null}
 			</Flex>
-			<Spacer space={4} />
-		</Box>
+		</Flex>
 	);
 }

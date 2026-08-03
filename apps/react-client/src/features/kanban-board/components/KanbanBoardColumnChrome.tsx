@@ -181,8 +181,8 @@ export function KanbanColumnAdder({
 	return (
 		<Box
 			sx={{
-				minWidth: 264,
-				maxWidth: 264,
+				minWidth: 320,
+				maxWidth: 320,
 				height: "100%",
 				display: "flex",
 				flexDirection: "column",

@@ -46,9 +46,11 @@ export function toBoardData(rows, columns) {
                 type: "card",
                 content: task.content,
                 origin: task.origin,
+                taskNumber: task.taskNumber,
                 createdAt: task.createdAt,
                 createdBy: task.createdBy,
                 updatedAt: task.updatedAt,
+                commentCount: task.commentCount,
             };
         }
     }

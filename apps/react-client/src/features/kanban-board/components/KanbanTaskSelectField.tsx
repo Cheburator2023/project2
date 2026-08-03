@@ -37,13 +37,13 @@ export function KanbanTaskFieldChip({
 }
 
 type KanbanTaskSelectFieldProps = {
-	label: string;
+	label?: string;
 	value: string;
 	options: KanbanTaskChipOption[];
 	onChange: (value: string) => void;
 	emptyLabel?: string;
 	emptyColor?: string;
-} & Pick<TextFieldProps, "fullWidth" | "required" | "disabled">;
+} & Pick<TextFieldProps, "fullWidth" | "required" | "disabled" | "size">;
 
 export function KanbanTaskSelectField({
 	label,
@@ -55,6 +55,7 @@ export function KanbanTaskSelectField({
 	fullWidth,
 	required,
 	disabled,
+	size,
 }: KanbanTaskSelectFieldProps) {
 	const renderChip = (selectedValue: string): ReactNode => {
 		if (!selectedValue) {
@@ -74,12 +75,13 @@ export function KanbanTaskSelectField({
 	return (
 		<TextField
 			select
-			label={label}
+			label={label || undefined}
 			value={value}
 			onChange={(event) => onChange(event.target.value)}
 			fullWidth={fullWidth}
 			required={required}
 			disabled={disabled}
+			size={size}
 			SelectProps={{ renderValue: (selected) => renderChip(String(selected)) }}
 		>
 			<MenuItem value="">

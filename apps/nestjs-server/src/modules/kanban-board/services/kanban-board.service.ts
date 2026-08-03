@@ -12,6 +12,7 @@ import { KanbanBoardTaskEntity } from "../entities/kanban-board-task.entity";
 import { KanbanBoardEntity } from "../entities/kanban-board.entity";
 import { KanbanBoardHistoryService } from "./kanban-board-history.service";
 import { KanbanBoardTaskImageService } from "./kanban-board-task-image.service";
+import { KanbanBoardTaskCommentService } from "./kanban-board-task-comment.service";
 import { KanbanBoardTaskLockService } from "./kanban-board-task-lock.service";
 import type { KanbanBoardTaskLockHolder } from "./kanban-board-task-lock.service";
 import {
@@ -54,6 +55,7 @@ export class KanbanBoardService {
 		private readonly configService: ConfigService,
 		private readonly historyService: KanbanBoardHistoryService,
 		private readonly taskImageService: KanbanBoardTaskImageService,
+		private readonly taskCommentService: KanbanBoardTaskCommentService,
 		private readonly taskLockService: KanbanBoardTaskLockService,
 	) {}
 
@@ -79,7 +81,13 @@ export class KanbanBoardService {
 			order: { parentId: "ASC", position: "ASC" },
 		});
 		await this.taskImageService.syncTasksContentImages(rows);
-		return rows.map((row) => this.toRecord(row));
+		const commentCounts = await this.taskCommentService.countByTaskIds(
+			rows.map((row) => row.id),
+		);
+		return rows.map((row) => ({
+			...this.toRecord(row),
+			commentCount: commentCounts.get(row.id) ?? 0,
+		}));
 	}
 
 	async findByStand(standId: string): Promise<KanbanBoardTaskRecord[]> {
