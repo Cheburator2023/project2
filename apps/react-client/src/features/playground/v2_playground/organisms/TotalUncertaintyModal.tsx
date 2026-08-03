@@ -104,6 +104,11 @@ type TotalUncertaintyModalProps = {
 	open: boolean;
 	onClose: () => void;
 	onSubmit: (values: TotalUncertaintyFormValues) => void;
+	/**
+	 * Явный сброс рисков/поправки в formData (срок и стоимость не трогаем).
+	 * Если не передан — вызывается onSubmit с очищенными значениями.
+	 */
+	onReset?: (values: TotalUncertaintyFormValues) => void;
 	loading?: boolean;
 	defaultValues?: Partial<TotalUncertaintyFormValues>;
 	/** Шкалы из конфигуратора / схемы (приоритетнее словарей). */
@@ -124,6 +129,7 @@ export const TotalUncertaintyModal = ({
 	open,
 	onClose,
 	onSubmit,
+	onReset,
 	loading = false,
 	defaultValues,
 	timelineOptions: timelineOptionsProp,
@@ -233,6 +239,20 @@ export const TotalUncertaintyModal = ({
 		() => (computeBreakdown ? computeBreakdown(values) : null),
 		[computeBreakdown, values],
 	);
+
+	/** Сброс ответов по рискам и поправки; срок/стоимость не трогаем. Сразу в formData. */
+	const handleReset = () => {
+		const cleared: TotalUncertaintyFormValues = {
+			initiativeTimeline: values.initiativeTimeline,
+			initiativeCost: values.initiativeCost,
+			totalUncertaintyAdjustment: "",
+			risks: Object.fromEntries(
+				riskGroups.map((risk) => [risk.id, emptyRiskSelection()]),
+			) as Record<string, UncertaintyRiskSelection>,
+		};
+		setValues(cleared);
+		(onReset ?? onSubmit)(cleared);
+	};
 
 	return (
 		<Dialog
@@ -414,7 +434,7 @@ export const TotalUncertaintyModal = ({
 							</Box>
 						);
 					})}
-					{breakdown ? (
+					{breakdown || risksLocked ? (
 						<Box
 							sx={{
 								borderRadius: 1.5,
@@ -434,7 +454,12 @@ export const TotalUncertaintyModal = ({
 							>
 								Предпросмотр формулы
 							</Typography>
-							{breakdown.formulaLines.map((line) => (
+							{(risksLocked
+								? [
+										"Срок или стоимость инициативы не выбраны → коэффициент 1 (не рассчитано)",
+									]
+								: (breakdown?.formulaLines ?? [])
+							).map((line) => (
 								<Typography
 									key={line}
 									variant="body2"
@@ -457,7 +482,11 @@ export const TotalUncertaintyModal = ({
 									Общая неопределённость
 								</Typography>
 								<Typography variant="h5" sx={{ fontWeight: 700 }}>
-									{breakdown.coefficient.toFixed(2).replace(".", ",")}
+									{risksLocked
+										? "Не рассчитано"
+										: (breakdown?.coefficient ?? 1)
+												.toFixed(2)
+												.replace(".", ",")}
 								</Typography>
 							</Flex>
 						</Box>
@@ -465,8 +494,18 @@ export const TotalUncertaintyModal = ({
 				</Stack>
 			</DialogContent>
 
-			<DialogActions sx={{ px: 3, py: 2 }}>
-				<Box sx={{ display: "flex", gap: 1, ml: "auto" }}>
+			<DialogActions
+				sx={{ px: 3, py: 2, justifyContent: "space-between" }}
+			>
+				<Button
+					onClick={handleReset}
+					color="inherit"
+					disabled={loading}
+					title="Сбросить ответы по рискам и поправку"
+				>
+					Сброс
+				</Button>
+				<Box sx={{ display: "flex", gap: 1 }}>
 					<Button onClick={onClose} color="inherit" disabled={loading}>
 						ОТМЕНА
 					</Button>

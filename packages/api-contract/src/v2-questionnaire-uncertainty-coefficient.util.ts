@@ -90,6 +90,13 @@ export function resolveV2QuestionnaireUncertaintyCoefficient(
 	if (legacy) return legacy;
 
 	const preview = mapFormDataToOverallUncertaintyPreview(formData, config);
+	/**
+	 * Без срока или стоимости итог не считается (ответы по рискам в formData
+	 * сохраняются — пересчёт после повторного заполнения базы).
+	 */
+	if (preview.baseComplete === false) {
+		return { calculated: false, coefficient: 1 };
+	}
 	if (!preview.enabled) {
 		return { calculated: false, coefficient: 1 };
 	}

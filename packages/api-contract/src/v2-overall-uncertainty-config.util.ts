@@ -107,6 +107,12 @@ export type V2OverallUncertaintyConfig = {
 export type V2OverallUncertaintyPreviewState = {
 	/** false = «Не применимо», поправка 0, коэфф. = 1. */
 	enabled: boolean;
+	/**
+	 * Оба поля базы (срок + стоимость) выбраны.
+	 * false → итог «не рассчитан» (coef 1), ответы по рискам могут остаться в formData.
+	 * В калькуляторе конструктора по умолчанию true (индексы заданы явно).
+	 */
+	baseComplete?: boolean;
 	timelineIdx: number;
 	costIdx: number;
 	/** Ручная поправка 0–30%; null = не задана (считаем по рискам). */
@@ -338,6 +344,7 @@ export function createDefaultOverallUncertaintyPreviewState(
 ): V2OverallUncertaintyPreviewState {
 	return {
 		enabled: false,
+		baseComplete: true,
 		timelineIdx: 0,
 		costIdx: 0,
 		adjPct: null,
@@ -381,6 +388,7 @@ export function normalizeOverallUncertaintyCalculatorState(
 
 	return {
 		enabled: Boolean(calculator.enabled),
+		baseComplete: calculator.baseComplete !== false,
 		timelineIdx: clampIdx(
 			Number(calculator.timelineIdx),
 			config.severityLevels.length,
@@ -504,6 +512,26 @@ export function calculateOverallUncertaintyPreview(
 			adjustmentShare: 0,
 			coefficient: 1,
 			formulaLines: ["Раздел выключен («Не применимо») → коэффициент 1"],
+		};
+	}
+
+	if (preview.baseComplete === false) {
+		return {
+			applicable: true,
+			timelineLabel: "—",
+			costLabel: "—",
+			baseSeverityIdx: 0,
+			baseSeverityLabel: "Не рассчитано",
+			manualAdjPct: null,
+			enabledRiskCount: 0,
+			riskContributions: [],
+			aggregation: config.aggregation,
+			riskAggregate: 0,
+			adjustmentShare: 0,
+			coefficient: 1,
+			formulaLines: [
+				"Срок или стоимость инициативы не выбраны → коэффициент 1 (не рассчитано)",
+			],
 		};
 	}
 
@@ -790,6 +818,7 @@ function asCalculator(
 				: null;
 	return {
 		enabled: Boolean(value.enabled),
+		baseComplete: value.baseComplete !== false,
 		timelineIdx: Number(value.timelineIdx) || 0,
 		costIdx: Number(value.costIdx) || 0,
 		adjPct,

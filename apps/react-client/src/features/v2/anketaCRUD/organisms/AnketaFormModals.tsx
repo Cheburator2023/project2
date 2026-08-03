@@ -183,14 +183,15 @@ export function uncertaintySummaryText(
 		config?: V2OverallUncertaintyConfig;
 	},
 ): string {
+	const config = resolveUncertaintyConfig(options?.logicRules, options?.config);
+	const { calculated, coefficient } =
+		resolveV2QuestionnaireUncertaintyCoefficient(formData, { config });
+	/** Сначала доменный флаг: без срока/стоимости или после «Сброс» — не показывать stale ×N. */
+	if (!calculated) return "Не рассчитано";
 	const generalInfo = asRecord(formData.generalInfo);
 	if (generalInfo.overallUncertainty) {
 		return toText(generalInfo.overallUncertainty);
 	}
-	const config = resolveUncertaintyConfig(options?.logicRules, options?.config);
-	const { calculated, coefficient } =
-		resolveV2QuestionnaireUncertaintyCoefficient(formData, { config });
-	if (!calculated) return "не рассчитана";
 	return `×${coefficient.toFixed(2)}`;
 }
 
@@ -469,7 +470,7 @@ export function AnketaFormModals({
 		return synced.formData;
 	};
 
-	const handleUncertaintySubmit = (values: TotalUncertaintyFormValues) => {
+	const applyUncertaintyFormValues = (values: TotalUncertaintyFormValues) => {
 		onFormDataChange((prev) => {
 			const currentUncertainty = asRecord(prev.uncertaintyCalculation);
 			const currentRiskGroup = asRecord(currentUncertainty.riskGroup);
@@ -492,17 +493,24 @@ export function AnketaFormModals({
 					? undefined
 					: Number(values.totalUncertaintyAdjustment.replace(",", "."));
 
+			const nextUncertainty: Record<string, unknown> = {
+				...currentUncertainty,
+				initiativeTimeline: values.initiativeTimeline || undefined,
+				initiativeCost:
+					values.initiativeCost === "" ? undefined : values.initiativeCost,
+				riskGroup: nextRiskGroup,
+			};
+			if (adjustment === undefined) {
+				delete nextUncertainty.uncertaintyAdjustment;
+				delete nextUncertainty.field_QCwwo5c5;
+			} else {
+				nextUncertainty.uncertaintyAdjustment = adjustment;
+			}
+
 			const nextFormData = {
 				...prev,
 				generalInfo: { ...asRecord(prev.generalInfo) },
-				uncertaintyCalculation: {
-					...currentUncertainty,
-					initiativeTimeline: values.initiativeTimeline || undefined,
-					initiativeCost:
-						values.initiativeCost === "" ? undefined : values.initiativeCost,
-					uncertaintyAdjustment: adjustment,
-					riskGroup: nextRiskGroup,
-				},
+				uncertaintyCalculation: nextUncertainty,
 			};
 
 			const overallUncertainty = buildOverallUncertaintyLabel(
@@ -527,7 +535,16 @@ export function AnketaFormModals({
 				true,
 			);
 		});
+	};
+
+	const handleUncertaintySubmit = (values: TotalUncertaintyFormValues) => {
+		applyUncertaintyFormValues(values);
 		closeModal();
+	};
+
+	/** «Сброс»: обнулить риски/поправку в formData, модалку не закрывать. */
+	const handleUncertaintyReset = (values: TotalUncertaintyFormValues) => {
+		applyUncertaintyFormValues(values);
 	};
 
 	const handleRjsfArrayModalSubmit = (
@@ -590,6 +607,7 @@ export function AnketaFormModals({
 				open={activeModal?.kind === "uncertainty"}
 				onClose={closeModal}
 				onSubmit={handleUncertaintySubmit}
+				onReset={handleUncertaintyReset}
 				defaultValues={uncertaintyModalDefaults(formData)}
 				timelineOptions={scaleOptions.timeline}
 				costOptions={scaleOptions.cost}
