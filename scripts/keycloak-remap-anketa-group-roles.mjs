@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env npx tsx
 /**
  * Заливка ролей и групп Смарт-Анкеты в Keycloak под матрицу F-05
  * (ТИС 2026-07, llm/feature_roles_fresh/требования_матрица_ролей.csv).
@@ -18,17 +18,14 @@
  *   KC_URL=https://keycloak-….local/auth KC_REALM=cym \
  *   KC_ADMIN=admin KC_ADMIN_PASS=… \
  *   STAND_PREFIX=test_ \   # optional: test_ | dev_ | prod_ | empty
- *   node scripts/keycloak-remap-anketa-group-roles.mjs           # dry-run
+ *   npx tsx scripts/keycloak-remap-anketa-group-roles.mjs           # dry-run
  *   … --apply
  */
-import { createRequire } from "node:module";
-
-const require = createRequire(import.meta.url);
-const {
+import {
 	expandV2KeycloakTargetsWithAdAliases,
 	resolveV2KeycloakGroupPath,
 	shouldEnsureV2KeycloakGroupPath,
-} = require("../packages/api-contract/dist/cjs/v2-ad-domain-groups.util.js");
+} from "../packages/api-contract/src/v2-ad-domain-groups.util.ts";
 
 const KC = (process.env.KC_URL || "").replace(/\/$/, "");
 const REALM = process.env.KC_REALM || "cym";

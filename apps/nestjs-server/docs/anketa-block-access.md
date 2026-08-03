@@ -258,7 +258,7 @@ useUserStore (groups, roles)
 2. **Стрим** — по [implementation-stream.md §2](./implementation-stream.md#2-справочник-коды-и-подписи); при необходимости строка в `DEPARTMENT_TO_V2_STREAM_CODES` (`v2-user-stream-mapping.util.ts`) и в `StreamMappingService` на бекенде.
 3. **Лид** — код в `V2_ANKETA_LEAD_ROLE_CODES` и `RoleLead`.
 
-После изменений в api-contract: `npm run build` в `packages/api-contract`.
+Потребители берут `@smart-anketa/api-contract` из `src/` напрямую (Vite/Webpack/Nest+tsx) — отдельный `npm run build` в пакете не нужен.
 
 ### Связанная документация
 

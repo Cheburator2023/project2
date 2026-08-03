@@ -6,7 +6,7 @@ export type TFlexboxProps = {
 	maxHeight?: string;
 	maxWidth?: string;
 	minHeight?: string;
-	minWidth?: string;
+	minWidth?: string | number;
 	padding?: string;
 	pad?: string;
 	margin?: string;

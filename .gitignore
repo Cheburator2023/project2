@@ -21,7 +21,10 @@ build
 dist
 apps/**/*/dist
 apps/**/.ci-packages
-!packages/**/*/dist
+# json-logic-ts всё ещё собирает dist (CJS/ESM engine); api-contract — только src
+!packages/json-logic-ts/dist
+!packages/json-logic-ts/dist/**
+packages/api-contract/dist/
 *.tsbuildinfo
 
 # testing

@@ -30,6 +30,10 @@ const JSON_LOGIC_TS_ENTRY = path.resolve(
 	ROOT_DIR,
 	"../../packages/json-logic-ts/dist/esm/index.js",
 );
+const API_CONTRACT_ENTRY = path.resolve(
+	ROOT_DIR,
+	"../../packages/api-contract/src/index.ts",
+);
 
 const proxyList = {
 	dev: "https://example.com",
@@ -179,7 +183,7 @@ export const viteCommonConfig = ({
 			base,
 			optimizeDeps: {
 				holdUntilCrawlEnd: true,
-				// Workspace-пакет: не prebundle — иначе кэш deps устаревает после rebuild api-contract.
+				// Workspace-пакет из src: не prebundle — иначе HMR/кэш deps расходятся с исходниками.
 				exclude: IS_DEV ? ["@smart-anketa/api-contract"] : [],
 				include: [
 					"@smart-anketa/json-logic-ts",
@@ -191,6 +195,7 @@ export const viteCommonConfig = ({
 			},
 			resolve: {
 				alias: {
+					"@smart-anketa/api-contract": API_CONTRACT_ENTRY,
 					"@smart-anketa/json-logic-ts": JSON_LOGIC_TS_ENTRY,
 				},
 			},
