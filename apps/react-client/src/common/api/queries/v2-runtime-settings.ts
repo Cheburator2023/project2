@@ -8,6 +8,12 @@ export type V2StreamFilterSetting = {
 	deModelopsViewAllStreams: boolean;
 };
 
+export type V2WorkEstimatesStreamFilterSetting = {
+	enabled: boolean;
+	envDefaultEnabled: boolean;
+	override: boolean | null;
+};
+
 export type V2RoleCompatSetting = {
 	adminItAsAppadmin: boolean;
 	adminItAsAppadminEnvDefault: boolean;
@@ -18,6 +24,10 @@ export type V2RoleCompatSetting = {
 };
 
 const STREAM_FILTER_KEY = ["v2-runtime-settings", "stream-filter"] as const;
+const WORK_ESTIMATES_STREAM_FILTER_KEY = [
+	"v2-runtime-settings",
+	"work-estimates-stream-filter",
+] as const;
 const ROLE_COMPAT_KEY = ["v2-runtime-settings", "role-compat"] as const;
 
 export const useV2StreamFilterSetting = () =>
@@ -56,6 +66,46 @@ export const useResetV2StreamFilterSetting = () => {
 			}),
 		onSuccess: (data) => {
 			qc.setQueryData(STREAM_FILTER_KEY, data);
+		},
+	});
+};
+
+export const useV2WorkEstimatesStreamFilterSetting = () =>
+	useQuery<V2WorkEstimatesStreamFilterSetting>({
+		queryKey: WORK_ESTIMATES_STREAM_FILTER_KEY,
+		queryFn: () =>
+			apiClient<V2WorkEstimatesStreamFilterSetting>({
+				url: "/v2/runtime-settings/work-estimates-stream-filter",
+				method: "GET",
+			}),
+		staleTime: 30_000,
+	});
+
+export const useUpdateV2WorkEstimatesStreamFilterSetting = () => {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: (enabled: boolean) =>
+			apiClient<V2WorkEstimatesStreamFilterSetting>({
+				url: "/v2/runtime-settings/work-estimates-stream-filter",
+				method: "PUT",
+				data: { enabled },
+			}),
+		onSuccess: (data) => {
+			qc.setQueryData(WORK_ESTIMATES_STREAM_FILTER_KEY, data);
+		},
+	});
+};
+
+export const useResetV2WorkEstimatesStreamFilterSetting = () => {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: () =>
+			apiClient<V2WorkEstimatesStreamFilterSetting>({
+				url: "/v2/runtime-settings/work-estimates-stream-filter/override",
+				method: "DELETE",
+			}),
+		onSuccess: (data) => {
+			qc.setQueryData(WORK_ESTIMATES_STREAM_FILTER_KEY, data);
 		},
 	});
 };

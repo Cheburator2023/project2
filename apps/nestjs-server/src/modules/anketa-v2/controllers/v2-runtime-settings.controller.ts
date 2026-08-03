@@ -7,9 +7,15 @@ import {
 	V2RuntimeSettingsService,
 	type V2RoleCompatSettingDto,
 	type V2StreamFilterSettingDto,
+	type V2WorkEstimatesStreamFilterSettingDto,
 } from "../services/v2-runtime-settings.service";
 
 class UpdateV2StreamFilterSettingDto {
+	@IsBoolean()
+	enabled!: boolean;
+}
+
+class UpdateV2WorkEstimatesStreamFilterSettingDto {
 	@IsBoolean()
 	enabled!: boolean;
 }
@@ -63,6 +69,46 @@ export class V2RuntimeSettingsController {
 		const updatedBy =
 			user?.preferred_username || user?.username || null;
 		return this.settings.clearStreamFilterOverride(updatedBy);
+	}
+
+	@Get("work-estimates-stream-filter")
+	@ApiOperation({
+		summary:
+			"Фильтр оценок работ по стриму для DS/DE/ModelOps(+lead); sarep/architect — всегда",
+	})
+	async getWorkEstimatesStreamFilter(): Promise<V2WorkEstimatesStreamFilterSettingDto> {
+		return this.settings.getWorkEstimatesStreamFilterSetting();
+	}
+
+	@Put("work-estimates-stream-filter")
+	@DomainRoles("appadmin", "sacfg")
+	@ApiOperation({
+		summary: "Включить/выключить фильтр оценок работ по стриму (override)",
+	})
+	async putWorkEstimatesStreamFilter(
+		@Body() body: UpdateV2WorkEstimatesStreamFilterSettingDto,
+		@CurrentUser() user?: { preferred_username?: string; username?: string },
+	): Promise<V2WorkEstimatesStreamFilterSettingDto> {
+		const updatedBy =
+			user?.preferred_username || user?.username || null;
+		return this.settings.setWorkEstimatesStreamFilterEnabled(
+			body.enabled,
+			updatedBy,
+		);
+	}
+
+	@Delete("work-estimates-stream-filter/override")
+	@DomainRoles("appadmin", "sacfg")
+	@ApiOperation({
+		summary:
+			"Сбросить override — снова брать WORK_ESTIMATES_STREAM_FILTER_ENABLED / default",
+	})
+	async clearWorkEstimatesStreamFilterOverride(
+		@CurrentUser() user?: { preferred_username?: string; username?: string },
+	): Promise<V2WorkEstimatesStreamFilterSettingDto> {
+		const updatedBy =
+			user?.preferred_username || user?.username || null;
+		return this.settings.clearWorkEstimatesStreamFilterOverride(updatedBy);
 	}
 
 	@Get("role-compat")

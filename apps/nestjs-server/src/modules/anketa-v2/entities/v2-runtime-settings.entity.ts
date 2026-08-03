@@ -23,6 +23,20 @@ export class V2RuntimeSettingsEntity {
 	streamFilterEnabled!: boolean | null;
 
 	/**
+	 * Маскирование чужих оценок работ для DS/DE/ModelOps(+lead).
+	 * null = env default (`WORK_ESTIMATES_STREAM_FILTER_ENABLED`, default ON).
+	 * sarep/architect маскируются всегда; исполнители пока видят все
+	 * (`V2_WORK_ESTIMATE_STREAM_FILTER_FOR_EXECUTORS_ACTIVE`).
+	 */
+	@Column({
+		name: "work_estimates_stream_filter_enabled",
+		type: "boolean",
+		nullable: true,
+		default: null,
+	})
+	workEstimatesStreamFilterEnabled!: boolean | null;
+
+	/**
 	 * Overlay эталона матрицы Keycloak (groupRoleTarget + testUsers).
 	 * null = только code defaults (F-05 + test-users).
 	 */

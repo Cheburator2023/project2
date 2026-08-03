@@ -74,7 +74,7 @@ describe("v2-anketa-block-access.util", () => {
 		expect(isBlockVisibleForUser(viewer, restrictions)).toBe(true);
 	});
 
-	it("shows all blocks for leads but masks foreign stream estimates", () => {
+	it("shows all blocks for leads and (пока) does not mask foreign estimates", () => {
 		const viewer: V2AnketaViewerAccessContext = {
 			roles: ["ds_lead"],
 			streams: [V2_IMPLEMENTATION_STREAM.IDSRC],
@@ -84,9 +84,10 @@ describe("v2-anketa-block-access.util", () => {
 			"streamPirm",
 		);
 		expect(isBlockVisibleForUser(viewer, pirmRestrictions)).toBe(true);
-		expect(shouldMaskWorkEstimatesForUser(viewer, pirmRestrictions.streamExecutors)).toBe(
-			true,
-		);
+		// Пока V2_WORK_ESTIMATE_STREAM_FILTER_FOR_EXECUTORS_ACTIVE=false.
+		expect(
+			shouldMaskWorkEstimatesForUser(viewer, pirmRestrictions.streamExecutors),
+		).toBe(false);
 		expect(
 			shouldMaskWorkEstimatesForUser(
 				viewer,
@@ -385,13 +386,13 @@ describe("лид стрима: стримы из групп Keycloak", () => {
 		expect(viewer.streams).toEqual([V2_IMPLEMENTATION_STREAM.RB]);
 	});
 
-	it("показывает оценки своего стрима и скрывает чужие", () => {
+	it("пока показывает оценки всех стримов (фильтр исполнителей выключен в коде)", () => {
 		expect(
 			shouldMaskWorkEstimatesForUser(viewer, [V2_IMPLEMENTATION_STREAM.RB]),
 		).toBe(false);
 		expect(
 			shouldMaskWorkEstimatesForUser(viewer, [V2_IMPLEMENTATION_STREAM.PIRM]),
-		).toBe(true);
+		).toBe(false);
 	});
 
 	it("показывает оценки зонтика «Модельный стрим» при одном своём модельном стриме", () => {
@@ -404,6 +405,40 @@ describe("лид стрима: стримы из групп Keycloak", () => {
 				V2_IMPLEMENTATION_STREAM.RND,
 			]),
 		).toBe(false);
+	});
+});
+
+describe("фильтр оценок работ для DS/DE/ModelOps(+lead)", () => {
+	it("sarep по-прежнему маскирует чужие оценки без тоггла", () => {
+		const sarep: V2AnketaViewerAccessContext = {
+			roles: ["sarep"],
+			streams: [V2_IMPLEMENTATION_STREAM.DADM],
+		};
+		expect(
+			shouldMaskWorkEstimatesForUser(sarep, [V2_IMPLEMENTATION_STREAM.PIRM]),
+		).toBe(true);
+	});
+
+	it("ds / ds_lead / de / modelops пока видят все оценки", () => {
+		for (const role of [
+			"ds",
+			"ds_lead",
+			"de",
+			"de_lead",
+			"modelops",
+			"modelops_lead",
+		] as const) {
+			const viewer: V2AnketaViewerAccessContext = {
+				roles: [role],
+				streams: [V2_IMPLEMENTATION_STREAM.RB],
+				workEstimatesStreamFilterEnabled: true,
+			};
+			expect(
+				shouldMaskWorkEstimatesForUser(viewer, [
+					V2_IMPLEMENTATION_STREAM.PIRM,
+				]),
+			).toBe(false);
+		}
 	});
 });
 

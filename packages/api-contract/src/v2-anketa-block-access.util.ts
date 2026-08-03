@@ -40,15 +40,36 @@ export type V2AnketaLeadRoleCode = (typeof V2_ANKETA_LEAD_ROLE_CODES)[number];
 
 /**
  * Уровень B (§2): в чужих стримах скрывать оценки типовых/нетиповых работ.
- * Лиды + архитектор / аналитики / sarep.
+ * Готовая логика (не за тогглом админки).
+ * Лиды / DS / DE / ModelOps — отдельно, см. `V2_ANKETA_WORK_ESTIMATE_STREAM_FILTER_ROLE_CODES`.
  */
 export const V2_ANKETA_MASK_FOREIGN_ESTIMATES_ROLE_CODES = [
-	...V2_ANKETA_LEAD_ROLE_CODES,
 	"architect",
 	"mntranlst",
 	"da",
 	"sarep",
 ] as const;
+
+/**
+ * Маскирование чужих оценок работ включается тогглом
+ * «Фильтровать оценки работ по стриму» (runtime-settings, default ON).
+ * Пока `V2_WORK_ESTIMATE_STREAM_FILTER_FOR_EXECUTORS_ACTIVE === false` —
+ * эти роли видят все оценки даже при включённом тоггле.
+ */
+export const V2_ANKETA_WORK_ESTIMATE_STREAM_FILTER_ROLE_CODES = [
+	"ds",
+	"ds_lead",
+	"de",
+	"de_lead",
+	"modelops",
+	"modelops_lead",
+] as const;
+
+/**
+ * Временный выключатель: DS/DE/ModelOps(+lead) видят все оценки работ.
+ * Когда бизнес будет готов — поставить `true`: заработает тоггл админки.
+ */
+export const V2_WORK_ESTIMATE_STREAM_FILTER_FOR_EXECUTORS_ACTIVE = false;
 
 /** Валидатор / руководитель валидации — без оценок работ вообще. */
 export const V2_ANKETA_MASK_ALL_ESTIMATES_ROLE_CODES = [
@@ -75,6 +96,7 @@ export const V2_ANKETA_OWN_STREAM_BLOCK_FILTER_ROLE_CODES = [
  * B — с маскировкой чужих оценок; C — полная детализация.
  */
 export const V2_ANKETA_SEE_ALL_STREAM_BLOCKS_ROLE_CODES = [
+	...V2_ANKETA_LEAD_ROLE_CODES,
 	...V2_ANKETA_MASK_FOREIGN_ESTIMATES_ROLE_CODES,
 	...V2_ANKETA_MASK_ALL_ESTIMATES_ROLE_CODES,
 	"mipm",
@@ -88,11 +110,10 @@ export const V2_ANKETA_SEE_ALL_STREAM_BLOCKS_ROLE_CODES = [
 
 /** Роли доменных групп Keycloak, учитываемые в viewerAccess (кроме Permission). */
 export const V2_ANKETA_VIEWER_ROLE_CODES = [
+	...V2_ANKETA_LEAD_ROLE_CODES,
 	...V2_ANKETA_MASK_FOREIGN_ESTIMATES_ROLE_CODES,
 	...V2_ANKETA_MASK_ALL_ESTIMATES_ROLE_CODES,
-	"ds",
-	"de",
-	"modelops",
+	...V2_ANKETA_WORK_ESTIMATE_STREAM_FILTER_ROLE_CODES,
 	"mipm",
 	"mipm_stream",
 	"da_stream",
@@ -113,6 +134,11 @@ export const V2_ANKETA_VIEWER_ROLE_CODES = [
 export type V2AnketaViewerAccessContext = {
 	roles: readonly string[];
 	streams: readonly V2StreamBlockExecutor[];
+	/**
+	 * Тоггл «фильтр оценок работ по стриму» (runtime-settings).
+	 * undefined → выкл. для DS/DE/ModelOps(+lead): видят все оценки.
+	 */
+	workEstimatesStreamFilterEnabled?: boolean;
 };
 
 export type V2AnketaBlockAccessRestrictions = {
@@ -169,9 +195,9 @@ export function userSeesAllAnketaStreamBlocks(
 	roles: readonly string[],
 ): boolean {
 	return roles.some((role) =>
-		(
-			V2_ANKETA_SEE_ALL_STREAM_BLOCKS_ROLE_CODES as readonly string[]
-		).includes(role.trim()),
+		(V2_ANKETA_SEE_ALL_STREAM_BLOCKS_ROLE_CODES as readonly string[]).includes(
+			role.trim(),
+		),
 	);
 }
 
@@ -195,14 +221,38 @@ export function userMasksAllWorkEstimates(roles: readonly string[]): boolean {
 	);
 }
 
-export function userMasksForeignWorkEstimates(
+export function userHasWorkEstimateStreamFilterRole(
 	roles: readonly string[],
 ): boolean {
 	return roles.some((role) =>
-		(V2_ANKETA_MASK_FOREIGN_ESTIMATES_ROLE_CODES as readonly string[]).includes(
-			role.trim(),
-		),
+		(
+			V2_ANKETA_WORK_ESTIMATE_STREAM_FILTER_ROLE_CODES as readonly string[]
+		).includes(role.trim()),
 	);
+}
+
+/**
+ * Нужно ли маскировать чужие оценки работ.
+ * - architect / da / mntranlst / sarep — всегда (готовая логика);
+ * - ds / de / modelops (+ lead) — тоггл админки, пока ещё и feature-flag
+ *   `V2_WORK_ESTIMATE_STREAM_FILTER_FOR_EXECUTORS_ACTIVE`.
+ */
+export function userMasksForeignWorkEstimates(
+	roles: readonly string[],
+	options?: { workEstimatesStreamFilterEnabled?: boolean },
+): boolean {
+	if (
+		roles.some((role) =>
+			(
+				V2_ANKETA_MASK_FOREIGN_ESTIMATES_ROLE_CODES as readonly string[]
+			).includes(role.trim()),
+		)
+	) {
+		return true;
+	}
+	if (!userHasWorkEstimateStreamFilterRole(roles)) return false;
+	if (!V2_WORK_ESTIMATE_STREAM_FILTER_FOR_EXECUTORS_ACTIVE) return false;
+	return options?.workEstimatesStreamFilterEnabled !== false;
 }
 
 export function rolesIntersectViewerAndBlock(
@@ -374,12 +424,22 @@ export function resolveV2AnketaViewerStreamsFromGroups(
 	const roles = normalizeV2UserGroups(groups).map(
 		(group) => normalizeStreamBlockRole(group) ?? group.trim(),
 	);
-	if (
-		!userEditsOnlyOwnStreamBlocks(roles) &&
-		!userMasksForeignWorkEstimates(roles)
-	) {
-		return filtered;
-	}
+	/**
+	 * Fallback на AD-scoped стримы, если реестр-фильтр пуст (lead/sarep exempt).
+	 * DS/DE/ModelOps при DE_MODELOPS_VIEW_ALL не подменяем — у них стримы
+	 * уже из реестр-резолвера (или пусто = видят все стримы реестра).
+	 */
+	const needsScopedFallback =
+		userEditsOnlyOwnStreamBlocks(roles) ||
+		userIsV2AnketaLead(roles) ||
+		roles.some((role) =>
+			(
+				V2_ANKETA_MASK_FOREIGN_ESTIMATES_ROLE_CODES as readonly string[]
+			).includes(role.trim()),
+		) ||
+		(V2_WORK_ESTIMATE_STREAM_FILTER_FOR_EXECUTORS_ACTIVE &&
+			userHasWorkEstimateStreamFilterRole(roles));
+	if (!needsScopedFallback) return filtered;
 	return resolveV2UserScopedStreamsFromGroups(groups);
 }
 
@@ -563,13 +623,17 @@ export function shouldMaskWorkEstimatesForUser(
 	blockStreamExecutors: readonly V2StreamBlockExecutor[],
 ): boolean {
 	if (userMasksAllWorkEstimates(viewer.roles)) return true;
-	if (!userMasksForeignWorkEstimates(viewer.roles)) return false;
+	if (
+		!userMasksForeignWorkEstimates(viewer.roles, {
+			workEstimatesStreamFilterEnabled:
+				viewer.workEstimatesStreamFilterEnabled,
+		})
+	) {
+		return false;
+	}
 	if (blockStreamExecutors.length === 0) return false;
 	if (viewer.streams.length === 0) return true;
-	return !streamsIntersectViewerAndBlock(
-		viewer.streams,
-		blockStreamExecutors,
-	);
+	return !streamsIntersectViewerAndBlock(viewer.streams, blockStreamExecutors);
 }
 
 export function shouldMaskWorkEstimatesForViewerAtPath(
@@ -638,9 +702,7 @@ export function maskV2AnketaExportFormValue(
 		}
 	}
 
-	if (
-		!isV2AnketaBlockVisibleForViewer(viewer, uiSchema, accessPath, options)
-	) {
+	if (!isV2AnketaBlockVisibleForViewer(viewer, uiSchema, accessPath, options)) {
 		return "";
 	}
 
@@ -649,7 +711,12 @@ export function maskV2AnketaExportFormValue(
 	);
 	if (
 		isEstimateField &&
-		shouldMaskWorkEstimatesForViewerAtPath(viewer, uiSchema, accessPath, options)
+		shouldMaskWorkEstimatesForViewerAtPath(
+			viewer,
+			uiSchema,
+			accessPath,
+			options,
+		)
 	) {
 		return "";
 	}

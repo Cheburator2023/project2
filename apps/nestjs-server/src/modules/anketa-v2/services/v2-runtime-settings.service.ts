@@ -12,6 +12,12 @@ export type V2StreamFilterSettingDto = {
 	deModelopsViewAllStreams: boolean;
 };
 
+export type V2WorkEstimatesStreamFilterSettingDto = {
+	enabled: boolean;
+	envDefaultEnabled: boolean;
+	override: boolean | null;
+};
+
 export type V2RoleCompatSettingDto = {
 	adminItAsAppadmin: boolean;
 	adminItAsAppadminEnvDefault: boolean;
@@ -38,6 +44,15 @@ export class V2RuntimeSettingsService implements OnModuleInit {
 
 	getEnvDefaultEnabled(): boolean {
 		return process.env.STREAM_FILTER_DISABLED !== "true";
+	}
+
+	/**
+	 * Фильтр оценок работ по стриму для DS/DE/ModelOps(+lead).
+	 * Default ON (как фильтр реестра). Пока исполнители всё равно видят все
+	 * оценки — см. `V2_WORK_ESTIMATE_STREAM_FILTER_FOR_EXECUTORS_ACTIVE`.
+	 */
+	getEnvWorkEstimatesStreamFilterEnabled(): boolean {
+		return process.env.WORK_ESTIMATES_STREAM_FILTER_ENABLED !== "false";
 	}
 
 	getDeModelopsViewAllStreams(): boolean {
@@ -83,6 +98,38 @@ export class V2RuntimeSettingsService implements OnModuleInit {
 		row.updatedBy = updatedBy ?? null;
 		await this.repo.save(row);
 		return this.getStreamFilterSetting();
+	}
+
+	async getWorkEstimatesStreamFilterSetting(): Promise<V2WorkEstimatesStreamFilterSettingDto> {
+		const row = await this.getOrCreate();
+		const envDefaultEnabled = this.getEnvWorkEstimatesStreamFilterEnabled();
+		const override = row.workEstimatesStreamFilterEnabled;
+		return {
+			enabled: override == null ? envDefaultEnabled : override,
+			envDefaultEnabled,
+			override,
+		};
+	}
+
+	async setWorkEstimatesStreamFilterEnabled(
+		enabled: boolean,
+		updatedBy?: string | null,
+	): Promise<V2WorkEstimatesStreamFilterSettingDto> {
+		const row = await this.getOrCreate();
+		row.workEstimatesStreamFilterEnabled = enabled;
+		row.updatedBy = updatedBy ?? null;
+		await this.repo.save(row);
+		return this.getWorkEstimatesStreamFilterSetting();
+	}
+
+	async clearWorkEstimatesStreamFilterOverride(
+		updatedBy?: string | null,
+	): Promise<V2WorkEstimatesStreamFilterSettingDto> {
+		const row = await this.getOrCreate();
+		row.workEstimatesStreamFilterEnabled = null;
+		row.updatedBy = updatedBy ?? null;
+		await this.repo.save(row);
+		return this.getWorkEstimatesStreamFilterSetting();
 	}
 
 	async getRoleCompatSetting(): Promise<V2RoleCompatSettingDto> {
@@ -167,6 +214,7 @@ export class V2RuntimeSettingsService implements OnModuleInit {
 		row = this.repo.create({
 			id: 1,
 			streamFilterEnabled: null,
+			workEstimatesStreamFilterEnabled: null,
 			adminItAsAppadmin: null,
 			allowNestedLeadGroups: null,
 			updatedBy: null,
