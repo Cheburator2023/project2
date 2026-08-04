@@ -830,7 +830,7 @@ export function V2QuestionnaireList() {
 										disabled={
 											!selectedVersions.length || bulkDelete.isPending
 										}
-										title="Черновик — полное удаление; Заполнено/Утверждена — статус «Неактивная». Руководители DS·ModelOps / sarep — свой стрим; конфигуратор — все."
+										title="Черновик — полное удаление; Заполнено/Утверждена — статус «Неактивная». Руководители DS·ModelOps — свой стрим; конфигуратор — все."
 										onClick={() => {
 											setHeaderMenuAnchor(null);
 											setDeleteDialogOpen(true);
@@ -913,7 +913,7 @@ export function V2QuestionnaireList() {
 									disabled={
 										!selectedVersions.length || bulkDelete.isPending
 									}
-									title="Черновик — полное удаление; Заполнено/Утверждена — статус «Неактивная». Руководители DS·ModelOps / sarep — свой стрим; конфигуратор — все."
+									title="Черновик — полное удаление; Заполнено/Утверждена — статус «Неактивная». Руководители DS·ModelOps — свой стрим; конфигуратор — все."
 									onClick={() => setDeleteDialogOpen(true)}
 								>
 									Удалить выбранные ({selectedVersions.length})

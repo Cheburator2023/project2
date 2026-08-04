@@ -77,7 +77,12 @@ describe("v2-ad-domain-groups", () => {
 		const target = {
 			"/appadmin": ["anketa_view_all_calculations", "anketa_audit_view"],
 			"/sacfg": ["anketa_view_all_calculations"],
-			"/sarep": ["anketa_view_all_calculations"],
+			"/sarep": [
+				"anketa_view_all_calculations",
+				"anketa_edit_calculation",
+				"anketa_export_reports",
+				"anketa_workflow_approve",
+			],
 			"/saprg": ["anketa_hold"],
 			"/prjtoffice": [],
 			"/de": ["anketa_view_all_calculations"],
@@ -119,6 +124,20 @@ describe("v2-ad-domain-groups", () => {
 		expect(expanded["/sarep/dev_sum_sarep_dadm"]).toEqual(
 			expect.arrayContaining(["anketa_view_all_calculations"]),
 		);
+		/** Non-LCM sarep leaves: view/edit/export/approve — без create/delete. */
+		for (const suffix of [
+			"dadm",
+			"digagt",
+			"idsrc",
+			"mdlctl",
+			"pirm",
+			"strdat",
+		] as const) {
+			const path = `/sarep/dev_sum_sarep_${suffix}`;
+			const roles = expanded[path] ?? [];
+			expect(roles).not.toContain("anketa_create_calculation");
+			expect(roles).not.toContain("anketa_delete_calculation");
+		}
 		expect(expanded["/saprg/dev_sum_saprg"]).toEqual(
 			expect.arrayContaining(["anketa_hold"]),
 		);

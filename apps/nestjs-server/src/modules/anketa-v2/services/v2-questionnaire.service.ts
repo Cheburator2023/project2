@@ -199,7 +199,7 @@ export class V2QuestionnaireService {
 		const groups = Array.isArray(user?.groups) ? user.groups : [];
 		if (!userCanCreateV2Questionnaire(groups, true)) {
 			throw new ForbiddenException(
-				"Создание анкет недоступно для роли представителя стрима (sarep) в первой итерации",
+				"Создание анкет доступно только ролям ds_lead, modelops_lead и sacfg",
 			);
 		}
 	}

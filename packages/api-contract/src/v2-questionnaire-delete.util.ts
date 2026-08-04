@@ -80,8 +80,10 @@ export function userHasV2QuestionnaireCreateRole(
 }
 
 /**
- * Создание анкеты: KK-permission + доменная роль.
- * Если в groups есть только `sarep` (без lead/sacfg) — запрет (1-я итерация).
+ * Создание анкеты: KK-permission + allow-list доменных ролей
+ * (`ds_lead` / `modelops_lead` / `sacfg`), как у удаления.
+ * `sarep` (digagt / mdlctl / strdat / idsrc / …) и прочие роли — запрет,
+ * даже если в Keycloak ошибочно выдана create-permission.
  * Пустые groups (god / NO_ROLES без AD) — не блокируем, решает permission.
  */
 export function userCanCreateV2Questionnaire(
@@ -90,13 +92,8 @@ export function userCanCreateV2Questionnaire(
 ): boolean {
 	if (!hasCreatePermission) return false;
 	const normalized = normalizeV2UserGroups(userGroups);
-	if (
-		normalized.includes("sarep") &&
-		!userHasV2QuestionnaireCreateRole(userGroups)
-	) {
-		return false;
-	}
-	return true;
+	if (normalized.length === 0) return true;
+	return userHasV2QuestionnaireCreateRole(userGroups);
 }
 
 /**

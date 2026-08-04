@@ -58,7 +58,7 @@ export const usePermissions = () => {
 		canViewAllCalculations: hasEffectivePermission(
 			Permission.ANKETA_VIEW_ALL_CALCULATIONS,
 		),
-		/** 1-я итерация: `sarep` без create даже при KK-permission. */
+		/** Allow-list: ds_lead / modelops_lead / sacfg (+ god). sarep/digagt/mdlctl/strdat — нет. */
 		canCreateCalculation: userCanCreateV2Questionnaire(
 			groups,
 			hasEffectivePermission(Permission.ANKETA_CREATE_CALCULATION),
@@ -66,7 +66,7 @@ export const usePermissions = () => {
 		canEditCalculation: hasEffectivePermission(
 			Permission.ANKETA_EDIT_CALCULATION,
 		),
-		/** 1-я итерация: `sarep` без delete; lead/sacfg — по доменной роли. */
+		/** Allow-list: ds_lead / modelops_lead / sacfg (+ god). sarep — нет. */
 		canDeleteCalculation:
 			godMode ||
 			(hasEffectivePermission(Permission.ANKETA_DELETE_CALCULATION) &&

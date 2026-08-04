@@ -32,20 +32,56 @@ describe("userHasV2QuestionnaireDeleteRole", () => {
 	});
 });
 
+/** Все 6 AD-листов «Представитель стрима — не участника ЖЦМ». */
+const SAREP_NON_LCM_GROUP_SHAPES = [
+	"/sarep/test_sum_sarep_dadm",
+	"/sarep/test_sum_sarep_digagt",
+	"/sarep/test_sum_sarep_idsrc",
+	"/sarep/test_sum_sarep_mdlctl",
+	"/sarep/test_sum_sarep_pirm",
+	"/sarep/test_sum_sarep_strdat",
+	"test_sum_sarep_digagt",
+	"test_sum_sarep_mdlctl",
+	"test_sum_sarep_strdat",
+	"sum_sarep_digagt",
+	"sum_sarep_mdlctl",
+	"sum_sarep_strdat",
+] as const;
+
 describe("userCanCreateV2Questionnaire", () => {
-	it("denies sarep even with KK create permission (1-я итерация)", () => {
+	it("denies all non-LCM sarep reps even with KK create permission", () => {
 		expect(userCanCreateV2Questionnaire(["/sarep"], true)).toBe(false);
-		expect(
-			userCanCreateV2Questionnaire(["/sarep", "sum_sarep_idsrc"], true),
-		).toBe(false);
+		for (const groups of SAREP_NON_LCM_GROUP_SHAPES) {
+			expect(userCanCreateV2Questionnaire([groups], true)).toBe(false);
+		}
 		expect(userHasV2QuestionnaireCreateRole(["/sarep"])).toBe(false);
+	});
+
+	it("denies executors/architect with KK create (allow-list only)", () => {
+		expect(userCanCreateV2Questionnaire(["/ds"], true)).toBe(false);
+		expect(userCanCreateV2Questionnaire(["sum_ds_rb"], true)).toBe(false);
+		expect(userCanCreateV2Questionnaire(["/architect"], true)).toBe(false);
+		expect(userCanCreateV2Questionnaire(["/de_lead"], true)).toBe(false);
 	});
 
 	it("allows lead/sacfg and empty groups with permission", () => {
 		expect(userCanCreateV2Questionnaire(["/ds_lead"], true)).toBe(true);
+		expect(userCanCreateV2Questionnaire(["/modelops_lead"], true)).toBe(true);
 		expect(userCanCreateV2Questionnaire(["/sacfg"], true)).toBe(true);
 		expect(userCanCreateV2Questionnaire([], true)).toBe(true);
 		expect(userCanCreateV2Questionnaire(["/sarep"], false)).toBe(false);
+	});
+});
+
+describe("non-LCM sarep create/delete (digagt / mdlctl / strdat + peers)", () => {
+	it("denies create and delete for every sarep stream leaf", () => {
+		for (const group of SAREP_NON_LCM_GROUP_SHAPES) {
+			expect(userHasV2QuestionnaireDeleteRole([group])).toBe(false);
+			expect(userCanCreateV2Questionnaire([group], true)).toBe(false);
+			expect(
+				canUserDeleteV2Questionnaire([group], formWithStream("DIGAGT")),
+			).toEqual({ ok: false, reason: "forbidden" });
+		}
 	});
 });
 
