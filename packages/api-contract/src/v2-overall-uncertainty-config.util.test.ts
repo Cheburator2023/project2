@@ -203,6 +203,7 @@ describe("v2-overall-uncertainty-config.util v2", () => {
 		const formData = mapOverallUncertaintyPreviewToFormData({}, config, preview);
 		const back = mapFormDataToOverallUncertaintyPreview(formData, config);
 		expect(back.enabled).toBe(true);
+		expect(back.baseComplete).toBe(true);
 		expect(back.timelineIdx).toBe(1);
 		expect(back.costIdx).toBe(2);
 		expect(back.risks[0]).toMatchObject({
@@ -216,6 +217,29 @@ describe("v2-overall-uncertainty-config.util v2", () => {
 		expect(mapFormDataToOverallUncertaintyPreview(off, config).enabled).toBe(
 			false,
 		);
+	});
+
+	it("marks base incomplete when timeline or cost label is empty (keeps risks)", () => {
+		const config = createDefaultOverallUncertaintyConfig();
+		const preview = mapFormDataToOverallUncertaintyPreview(
+			{
+				uncertaintyCalculation: {
+					initiativeTimeline: config.severityLevels[1]!.timelineLabel,
+					riskGroup: {
+						[config.risks[0]!.id]: {
+							probability: config.probabilityLevels[2]!.label,
+							goals: config.severityLevels[1]!.goalsLabel,
+						},
+					},
+				},
+			},
+			config,
+		);
+		expect(preview.baseComplete).toBe(false);
+		expect(preview.risks[0]?.enabled).toBe(true);
+		const breakdown = calculateOverallUncertaintyPreview(config, preview);
+		expect(breakdown.coefficient).toBe(1);
+		expect(breakdown.baseSeverityLabel).toBe("Не рассчитано");
 	});
 
 	it("round-trips v2 config through logic and migrates v1", () => {

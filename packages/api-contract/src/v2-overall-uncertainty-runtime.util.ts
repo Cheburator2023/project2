@@ -33,6 +33,28 @@ function indexOfLabel(labels: readonly string[], value: string): number {
 	return labels.findIndex((label) => label === trimmed);
 }
 
+/** Оба поля базы (срок + стоимость) заполнены — иначе итог «не рассчитан». */
+export function isOverallUncertaintyBaseComplete(
+	formData: Record<string, unknown>,
+): boolean {
+	const uncertainty = readRecord(formData.uncertaintyCalculation);
+	const timeline =
+		typeof uncertainty?.initiativeTimeline === "string"
+			? uncertainty.initiativeTimeline.trim()
+			: "";
+	const cost =
+		typeof uncertainty?.initiativeCost === "string"
+			? uncertainty.initiativeCost.trim()
+			: "";
+	return Boolean(timeline && cost);
+}
+
+/** Индекс шкалы: пустой/неизвестный лейбл → 0 (placeholder), не путать с «базой готово». */
+function severityIdxFromLabel(labels: readonly string[], value: string): number {
+	const idx = indexOfLabel(labels, value);
+	return idx >= 0 ? idx : 0;
+}
+
 /** Запись риска в formData: новая форма или legacy-строка. */
 export type V2UncertaintyRiskFormEntry = {
 	probability?: string;
@@ -102,19 +124,14 @@ export function mapFormDataToOverallUncertaintyPreview(
 		config.adjustment,
 	);
 
-	const timelineIdx = Math.max(
-		0,
-		indexOfLabel(
-			config.severityLevels.map((level) => level.timelineLabel),
-			timelineLabel,
-		),
+	const baseComplete = Boolean(timelineLabel && costLabel);
+	const timelineIdx = severityIdxFromLabel(
+		config.severityLevels.map((level) => level.timelineLabel),
+		timelineLabel,
 	);
-	const costIdx = Math.max(
-		0,
-		indexOfLabel(
-			config.severityLevels.map((level) => level.costLabel),
-			costLabel,
-		),
+	const costIdx = severityIdxFromLabel(
+		config.severityLevels.map((level) => level.costLabel),
+		costLabel,
 	);
 
 	const goalsLabels = config.severityLevels.map((level) => level.goalsLabel);
@@ -177,6 +194,7 @@ export function mapFormDataToOverallUncertaintyPreview(
 
 	return {
 		enabled,
+		baseComplete,
 		timelineIdx,
 		costIdx,
 		adjPct,
@@ -259,6 +277,11 @@ export function resolveLegacyUncertaintyCoefficientFromRiskGroupNames(
 	if (entries.length === 0) return null;
 	if (!entries.every((value) => isLegacyUncertaintyGroupName(value, config))) {
 		return null;
+	}
+
+	/** Без базы срок+стоимость legacy-итог тоже «не рассчитан». */
+	if (!isOverallUncertaintyBaseComplete(formData)) {
+		return { calculated: false, coefficient: 1 };
 	}
 
 	const adjPct = parseAdjPct(
