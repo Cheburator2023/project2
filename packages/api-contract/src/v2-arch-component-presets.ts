@@ -54,10 +54,6 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 					"type": "boolean",
 					"title": "Необходимость поддержки проведения пилота"
 				},
-				"pkRegulatory": {
-					"type": "boolean",
-					"title": "ПВР/Регуляторная"
-				},
 				"field_4IL7OStC": {
 					"enum": [
 						"Ручной",
@@ -159,7 +155,6 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				"field_SvNx6iEq",
 				"field_o_HRj6VO",
 				"prePromEval",
-				"pkRegulatory",
 				"field_imxB4YEd",
 				"field_kkbRs50S",
 				"field_r66ph-79",
@@ -194,12 +189,6 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 					"semanticRole": "prePromEval"
 				},
 				"ui:placeholder": "Необходимость поддержки проведения пилота"
-			},
-			"pkRegulatory": {
-				"ui:options": {
-					"schemaFieldUid": "field_08ccfd5f-235f-40d5-bbee-4a4873b9a8d0"
-				},
-				"ui:placeholder": "ПВР/Регуляторная"
 			},
 			"field_4IL7OStC": {
 				"ui:widget": "select",

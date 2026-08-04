@@ -312,11 +312,11 @@ const MODEL_STREAM_ARCH_COUNT_PARAM_LABELS: Record<
 	// ключи — через normalizeParamLabel (дефисы → пробелы)
 	"кол во моделей": {
 		kind: "model",
-		steps: formatArchCountFormulaSteps(buildLinearArchCountSteps(15)),
+		steps: formatArchCountFormulaSteps(buildLinearArchCountSteps(25)),
 	},
 	"количество моделей": {
 		kind: "model",
-		steps: formatArchCountFormulaSteps(buildLinearArchCountSteps(15)),
+		steps: formatArchCountFormulaSteps(buildLinearArchCountSteps(25)),
 	},
 	"кол во источников для проработки": {
 		kind: "sourceSystem",
@@ -481,7 +481,7 @@ export function parseModelStreamLaborCoefficients(
 
 		if (/K\s*=\s*1\s*\+\s*\(N.?1\)\s*×\s*0\.75/iu.test(body)) {
 			const maxCount =
-				normalizeParamLabel(paramName).includes("модел") ? 15 : 99;
+				normalizeParamLabel(paramName).includes("модел") ? 25 : 99;
 			for (let n = 2; n <= maxCount; n += 1) {
 				const coefficient = Math.round((1 + (n - 1) * 0.75) * 10000) / 10000;
 				if (!values.some((row) => row.label === String(n))) {

@@ -205,7 +205,7 @@ function registryMatchesCsvRow(
 }
 
 function rewriteArchCountFormulaTokens(formulaText: string): string {
-	const modelSteps = formatArchCountFormulaSteps(buildLinearArchCountSteps(15));
+	const modelSteps = formatArchCountFormulaSteps(buildLinearArchCountSteps(25));
 	const sourceSteps = formatArchCountFormulaSteps(MODEL_STREAM_SOURCE_COUNT_STEPS);
 	return formulaText
 		.replace(

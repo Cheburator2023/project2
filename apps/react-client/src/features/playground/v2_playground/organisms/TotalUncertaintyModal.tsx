@@ -105,7 +105,8 @@ type TotalUncertaintyModalProps = {
 	onClose: () => void;
 	onSubmit: (values: TotalUncertaintyFormValues) => void;
 	/**
-	 * Явный сброс рисков/поправки в formData (срок и стоимость не трогаем).
+	 * Явный полный сброс формы неопределённости в formData
+	 * (срок, стоимость, поправка, риски).
 	 * Если не передан — вызывается onSubmit с очищенными значениями.
 	 */
 	onReset?: (values: TotalUncertaintyFormValues) => void;
@@ -240,11 +241,11 @@ export const TotalUncertaintyModal = ({
 		[computeBreakdown, values],
 	);
 
-	/** Сброс ответов по рискам и поправки; срок/стоимость не трогаем. Сразу в formData. */
+	/** Полный сброс: срок, стоимость, поправка и ответы по рискам. Сразу в formData. */
 	const handleReset = () => {
 		const cleared: TotalUncertaintyFormValues = {
-			initiativeTimeline: values.initiativeTimeline,
-			initiativeCost: values.initiativeCost,
+			initiativeTimeline: "",
+			initiativeCost: "",
 			totalUncertaintyAdjustment: "",
 			risks: Object.fromEntries(
 				riskGroups.map((risk) => [risk.id, emptyRiskSelection()]),
@@ -361,79 +362,81 @@ export const TotalUncertaintyModal = ({
 						</Typography>
 					</Flex>
 
-					{riskGroups.map((risk) => {
-						const selection = values.risks[risk.id] ?? emptyRiskSelection();
-						return (
-							<Box key={risk.id} sx={{ opacity: risksLocked ? 0.55 : 1 }}>
-								<Flex gap={0.5} alignItems="center" sx={{ mb: 0.5 }}>
-									<Typography variant="body2" color="text.secondary">
-										{risk.label}
-									</Typography>
-									{risk.tooltip ? (
-										<IconButton
-											size="small"
-											title={risk.tooltip}
-											aria-label={risk.tooltip}
-											disableRipple
-											sx={{ p: 0.25, flexShrink: 0, cursor: "help" }}
-										>
-											<InfoOutlineIcon
-												sx={{
-													fontSize: 16,
-													color: "#88888877",
-													pointerEvents: "none",
-												}}
-											/>
-										</IconButton>
-									) : null}
-								</Flex>
-								<Flex gap={1} wrap="wrap">
-									<FormControl sx={{ flex: 1, minWidth: 200 }}>
-										<Select
-											displayEmpty
-											disabled={risksLocked}
-											value={selection.probability}
-											onChange={(event: SelectChangeEvent<string>) =>
-												patchRisk(risk.id, "probability", event.target.value)
-											}
-										>
-											{probabilityOptions.map((option) => (
-												<MenuItem
-													key={`p-${option.value || "__empty"}`}
-													value={option.value}
-												>
-													{option.value
-														? `Вероятность: ${option.label}`
-														: "Вероятность: не выбрано"}
-												</MenuItem>
-											))}
-										</Select>
-									</FormControl>
-									<FormControl sx={{ flex: 1, minWidth: 200 }}>
-										<Select
-											displayEmpty
-											disabled={risksLocked}
-											value={selection.goals}
-											onChange={(event: SelectChangeEvent<string>) =>
-												patchRisk(risk.id, "goals", event.target.value)
-											}
-										>
-											{goalsOptions.map((option) => (
-												<MenuItem
-													key={`g-${option.value || "__empty"}`}
-													value={option.value}
-												>
-													{option.value
-														? `Цели: ${option.label}`
-														: "Цели: не выбрано"}
-												</MenuItem>
-											))}
-										</Select>
-									</FormControl>
-								</Flex>
-							</Box>
-						);
-					})}
+					<Stack spacing={2.5}>
+						{riskGroups.map((risk) => {
+							const selection = values.risks[risk.id] ?? emptyRiskSelection();
+							return (
+								<Box key={risk.id} sx={{ opacity: risksLocked ? 0.55 : 1 }}>
+									<Flex gap={0.5} alignItems="center" sx={{ mb: 1 }}>
+										<Typography variant="body2" color="text.secondary">
+											{risk.label}
+										</Typography>
+										{risk.tooltip ? (
+											<IconButton
+												size="small"
+												title={risk.tooltip}
+												aria-label={risk.tooltip}
+												disableRipple
+												sx={{ p: 0.25, flexShrink: 0, cursor: "help" }}
+											>
+												<InfoOutlineIcon
+													sx={{
+														fontSize: 16,
+														color: "#88888877",
+														pointerEvents: "none",
+													}}
+												/>
+											</IconButton>
+										) : null}
+									</Flex>
+									<Flex gap={2} wrap="wrap">
+										<FormControl sx={{ flex: 1, minWidth: 200 }}>
+											<Select
+												displayEmpty
+												disabled={risksLocked}
+												value={selection.probability}
+												onChange={(event: SelectChangeEvent<string>) =>
+													patchRisk(risk.id, "probability", event.target.value)
+												}
+											>
+												{probabilityOptions.map((option) => (
+													<MenuItem
+														key={`p-${option.value || "__empty"}`}
+														value={option.value}
+													>
+														{option.value
+															? `Вероятность: ${option.label}`
+															: "Вероятность: не выбрано"}
+													</MenuItem>
+												))}
+											</Select>
+										</FormControl>
+										<FormControl sx={{ flex: 1, minWidth: 200 }}>
+											<Select
+												displayEmpty
+												disabled={risksLocked}
+												value={selection.goals}
+												onChange={(event: SelectChangeEvent<string>) =>
+													patchRisk(risk.id, "goals", event.target.value)
+												}
+											>
+												{goalsOptions.map((option) => (
+													<MenuItem
+														key={`g-${option.value || "__empty"}`}
+														value={option.value}
+													>
+														{option.value
+															? `Цели: ${option.label}`
+															: "Цели: не выбрано"}
+													</MenuItem>
+												))}
+											</Select>
+										</FormControl>
+									</Flex>
+								</Box>
+							);
+						})}
+					</Stack>
 					{breakdown || risksLocked ? (
 						<Box
 							sx={{
@@ -501,7 +504,7 @@ export const TotalUncertaintyModal = ({
 					onClick={handleReset}
 					color="inherit"
 					disabled={loading}
-					title="Сбросить ответы по рискам и поправку"
+					title="Сбросить срок, стоимость, поправку и ответы по рискам"
 				>
 					Сброс
 				</Button>

@@ -86,7 +86,6 @@ describe("anketaSchemaAtPath modal slices", () => {
 			"field_SvNx6iEq",
 			"field_o_HRj6VO",
 			"prePromEval",
-			"pkRegulatory",
 			"field_imxB4YEd",
 			"field_kkbRs50S",
 			"field_r66ph-79",

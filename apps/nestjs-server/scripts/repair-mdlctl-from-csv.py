@@ -23,10 +23,10 @@ P = {
 		"schemaFieldUid": "field_248655c8-3aa7-4a38-9afd-d09c21f9f122",
 		"paramName": "Класс моделей @ modelClass|класс_моделей",
 	},
-	"pkRegulatory": {
-		"paramCode": "pkRegulatory",
-		"schemaFieldUid": "field_08ccfd5f-235f-40d5-bbee-4a4873b9a8d0",
-		"paramName": "ПВР/Регуляторная @ pkRegulatory|пвр_регуляторная",
+	"complexity": {
+		"paramCode": "complexity",
+		"schemaFieldUid": "field_61a51b98-b6a8-47c9-aa27-74ff2219513f",
+		"paramName": "Регуляторные требования @ complexity|регуляторные_требования",
 	},
 	"contours": {
 		"paramCode": "field_OrZLpCID",
@@ -151,18 +151,35 @@ def scenarios_labor(ok_ak_kmz: tuple[float, float, float], which: str) -> dict:
 	}
 
 
+def complexity_labor() -> dict:
+	"""Регуляторные требования (generalInfo.complexity): уровни 4–5 → 1.5."""
+	meta = P["complexity"]
+	return {
+		"paramName": meta["paramName"],
+		"paramCode": meta["paramCode"],
+		"schemaFieldUid": meta["schemaFieldUid"],
+		"kind": "by_value",
+		"values": [
+			{"label": "4", "coefficient": 1.5},
+			{"label": "5", "coefficient": 1.5},
+			{"label": "1", "coefficient": 0},
+			{"label": "2", "coefficient": 0},
+			{"label": "3", "coefficient": 0},
+		],
+	}
+
+
 def pk_labors(which: str) -> list[dict]:
 	"""OK / AK / KMZ multipliers from dict #17 mapped to existing fields."""
 	# coeff triples: (OK, AK, KMZ)
 	table = {
-		"pkRegulatory": (1.5, 1.5, 1.5),
 		"contours": (1.1, 1.1, 0.0),
 		"logs": (1.25, 1.25, 1.25),
 		"newControl": (2.0, 2.0, 2.0),
 		"perModel": (1.0, 1.0, 0.0),
 	}
 	idx = {"OK": 0, "AK": 1, "KMZ": 2}[which]
-	out: list[dict] = []
+	out: list[dict] = [complexity_labor()]
 	for key, triple in table.items():
 		out.append(any_of(key, triple[idx], 1.0 if triple[idx] != 0 else 1.0))
 		# For KMZ contours/perModel coeffOn=0: when flag on → 0 (zeros work).
@@ -174,7 +191,7 @@ def pk_labors(which: str) -> list[dict]:
 
 def pk_formula_codes(which: str) -> str:
 	codes = [
-		"pkRegulatory",
+		"complexity",
 		"field_OrZLpCID",
 		"field_IGQX_9FN",
 		"field_Tq1ez5gv",

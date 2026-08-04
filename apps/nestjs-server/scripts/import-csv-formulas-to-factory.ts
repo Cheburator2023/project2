@@ -1326,7 +1326,7 @@ function main() {
 			/коэф\(([^)]+)\)/gu,
 			(full, rawCode: string) => {
 				if (
-					/^(field_|modelClass|type|workType|pilot|pkRegulatory)/u.test(
+					/^(field_|modelClass|type|workType|pilot|complexity)/u.test(
 						rawCode,
 					)
 				) {

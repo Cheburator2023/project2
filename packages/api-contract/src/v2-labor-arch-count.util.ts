@@ -56,11 +56,11 @@ const ARCH_COUNT_LABOR_PARAM_LABELS: Record<
 > = {
 	[normalizeParamLabel("Кол-во моделей")]: {
 		kind: "model",
-		defaultSteps: formatArchCountFormulaSteps(buildLinearArchCountSteps(15)),
+		defaultSteps: formatArchCountFormulaSteps(buildLinearArchCountSteps(25)),
 	},
 	[normalizeParamLabel("Количество моделей")]: {
 		kind: "model",
-		defaultSteps: formatArchCountFormulaSteps(buildLinearArchCountSteps(15)),
+		defaultSteps: formatArchCountFormulaSteps(buildLinearArchCountSteps(25)),
 	},
 	[normalizeParamLabel("Кол-во источников для проработки")]: {
 		kind: "sourceSystem",

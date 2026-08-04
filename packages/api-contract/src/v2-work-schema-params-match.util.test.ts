@@ -247,7 +247,7 @@ describe("collectTypicalWorkSchemaConsistencyIssues", () => {
 		]);
 	});
 
-	it("resolves mdlctl CSV labor aliases to modelClass / pkRegulatory", () => {
+	it("resolves mdlctl CSV labor aliases to modelClass / complexity", () => {
 		const schemaParams = [
 			{
 				code: "modelClass",
@@ -256,9 +256,9 @@ describe("collectTypicalWorkSchemaConsistencyIssues", () => {
 				values: [],
 			},
 			{
-				code: "pkRegulatory",
-				name: "ПВР/Регуляторная",
-				schemaFieldUid: "uid-pk",
+				code: "complexity",
+				name: "Регуляторные требования",
+				schemaFieldUid: "uid-complexity",
 				values: [],
 			},
 		];

@@ -542,7 +542,7 @@ export function AnketaFormModals({
 		closeModal();
 	};
 
-	/** «Сброс»: обнулить риски/поправку в formData, модалку не закрывать. */
+	/** «Сброс»: обнулить срок/стоимость/поправку/риски в formData, модалку не закрывать. */
 	const handleUncertaintyReset = (values: TotalUncertaintyFormValues) => {
 		applyUncertaintyFormValues(values);
 	};

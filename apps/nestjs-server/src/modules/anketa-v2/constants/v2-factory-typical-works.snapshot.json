@@ -10097,7 +10097,7 @@
           "steps": [
             {
               "count": 1,
-              "coefficient": 1
+              "coefficient": 1.0
             },
             {
               "count": 2,
@@ -10113,7 +10113,7 @@
             },
             {
               "count": 5,
-              "coefficient": 4
+              "coefficient": 4.0
             },
             {
               "count": 6,
@@ -10129,7 +10129,7 @@
             },
             {
               "count": 9,
-              "coefficient": 7
+              "coefficient": 7.0
             },
             {
               "count": 10,
@@ -10145,7 +10145,7 @@
             },
             {
               "count": 13,
-              "coefficient": 10
+              "coefficient": 10.0
             },
             {
               "count": 14,
@@ -10154,11 +10154,51 @@
             {
               "count": 15,
               "coefficient": 11.5
+            },
+            {
+              "count": 16,
+              "coefficient": 12.25
+            },
+            {
+              "count": 17,
+              "coefficient": 13.0
+            },
+            {
+              "count": 18,
+              "coefficient": 13.75
+            },
+            {
+              "count": 19,
+              "coefficient": 14.5
+            },
+            {
+              "count": 20,
+              "coefficient": 15.25
+            },
+            {
+              "count": 21,
+              "coefficient": 16.0
+            },
+            {
+              "count": 22,
+              "coefficient": 16.75
+            },
+            {
+              "count": 23,
+              "coefficient": 17.5
+            },
+            {
+              "count": 24,
+              "coefficient": 18.25
+            },
+            {
+              "count": 25,
+              "coefficient": 19.0
             }
           ]
         }
       ],
-      "formulaText": "N × архкоэф(Модели; 1=1,0; 2=1,75; 3=2,5; 4=3,25; 5=4,0; 6=4,75; 7=5,5; 8=6,25; 9=7,0; 10=7,75; 11=8,5; 12=9,25; 13=10,0; 14=10,75; 15=11,5) × коэф(complexity) × коэф(overallUncertainty) × коэф(readyPromReports)",
+      "formulaText": "N × архкоэф(Модели; 1=1,0; 2=1,75; 3=2,5; 4=3,25; 5=4,0; 6=4,75; 7=5,5; 8=6,25; 9=7,0; 10=7,75; 11=8,5; 12=9,25; 13=10,0; 14=10,75; 15=11,5; 16=12,25; 17=13,0; 18=13,75; 19=14,5; 20=15,25; 21=16,0; 22=16,75; 23=17,5; 24=18,25; 25=19,0) × коэф(complexity) × коэф(overallUncertainty) × коэф(readyPromReports)",
       "roundingMode": "CEIL",
       "roundingStep": 0.01,
       "triggerRules": [],
@@ -11511,7 +11551,7 @@
           "steps": [
             {
               "count": 1,
-              "coefficient": 1
+              "coefficient": 1.0
             },
             {
               "count": 2,
@@ -11527,7 +11567,7 @@
             },
             {
               "count": 5,
-              "coefficient": 4
+              "coefficient": 4.0
             },
             {
               "count": 6,
@@ -11543,7 +11583,7 @@
             },
             {
               "count": 9,
-              "coefficient": 7
+              "coefficient": 7.0
             },
             {
               "count": 10,
@@ -11559,7 +11599,7 @@
             },
             {
               "count": 13,
-              "coefficient": 10
+              "coefficient": 10.0
             },
             {
               "count": 14,
@@ -11568,11 +11608,51 @@
             {
               "count": 15,
               "coefficient": 11.5
+            },
+            {
+              "count": 16,
+              "coefficient": 12.25
+            },
+            {
+              "count": 17,
+              "coefficient": 13.0
+            },
+            {
+              "count": 18,
+              "coefficient": 13.75
+            },
+            {
+              "count": 19,
+              "coefficient": 14.5
+            },
+            {
+              "count": 20,
+              "coefficient": 15.25
+            },
+            {
+              "count": 21,
+              "coefficient": 16.0
+            },
+            {
+              "count": 22,
+              "coefficient": 16.75
+            },
+            {
+              "count": 23,
+              "coefficient": 17.5
+            },
+            {
+              "count": 24,
+              "coefficient": 18.25
+            },
+            {
+              "count": 25,
+              "coefficient": 19.0
             }
           ]
         }
       ],
-      "formulaText": "N × архкоэф(Модели; 1=1,0; 2=1,75; 3=2,5; 4=3,25; 5=4,0; 6=4,75; 7=5,5; 8=6,25; 9=7,0; 10=7,75; 11=8,5; 12=9,25; 13=10,0; 14=10,75; 15=11,5) × коэф(complexity) × коэф(overallUncertainty) × коэф(readyPromReports) × коэф(algorithmType)",
+      "formulaText": "N × архкоэф(Модели; 1=1,0; 2=1,75; 3=2,5; 4=3,25; 5=4,0; 6=4,75; 7=5,5; 8=6,25; 9=7,0; 10=7,75; 11=8,5; 12=9,25; 13=10,0; 14=10,75; 15=11,5; 16=12,25; 17=13,0; 18=13,75; 19=14,5; 20=15,25; 21=16,0; 22=16,75; 23=17,5; 24=18,25; 25=19,0) × коэф(complexity) × коэф(overallUncertainty) × коэф(readyPromReports) × коэф(algorithmType)",
       "roundingMode": "CEIL",
       "roundingStep": 0.01,
       "triggerArchCount": {
@@ -11730,7 +11810,7 @@
           "steps": [
             {
               "count": 1,
-              "coefficient": 1
+              "coefficient": 1.0
             },
             {
               "count": 2,
@@ -11746,7 +11826,7 @@
             },
             {
               "count": 5,
-              "coefficient": 4
+              "coefficient": 4.0
             },
             {
               "count": 6,
@@ -11762,7 +11842,7 @@
             },
             {
               "count": 9,
-              "coefficient": 7
+              "coefficient": 7.0
             },
             {
               "count": 10,
@@ -11778,7 +11858,7 @@
             },
             {
               "count": 13,
-              "coefficient": 10
+              "coefficient": 10.0
             },
             {
               "count": 14,
@@ -11787,11 +11867,51 @@
             {
               "count": 15,
               "coefficient": 11.5
+            },
+            {
+              "count": 16,
+              "coefficient": 12.25
+            },
+            {
+              "count": 17,
+              "coefficient": 13.0
+            },
+            {
+              "count": 18,
+              "coefficient": 13.75
+            },
+            {
+              "count": 19,
+              "coefficient": 14.5
+            },
+            {
+              "count": 20,
+              "coefficient": 15.25
+            },
+            {
+              "count": 21,
+              "coefficient": 16.0
+            },
+            {
+              "count": 22,
+              "coefficient": 16.75
+            },
+            {
+              "count": 23,
+              "coefficient": 17.5
+            },
+            {
+              "count": 24,
+              "coefficient": 18.25
+            },
+            {
+              "count": 25,
+              "coefficient": 19.0
             }
           ]
         }
       ],
-      "formulaText": "N × архкоэф(Модели; 1=1,0; 2=1,75; 3=2,5; 4=3,25; 5=4,0; 6=4,75; 7=5,5; 8=6,25; 9=7,0; 10=7,75; 11=8,5; 12=9,25; 13=10,0; 14=10,75; 15=11,5) × коэф(complexity) × коэф(overallUncertainty) × коэф(readyPromReports) × коэф(algorithmType)",
+      "formulaText": "N × архкоэф(Модели; 1=1,0; 2=1,75; 3=2,5; 4=3,25; 5=4,0; 6=4,75; 7=5,5; 8=6,25; 9=7,0; 10=7,75; 11=8,5; 12=9,25; 13=10,0; 14=10,75; 15=11,5; 16=12,25; 17=13,0; 18=13,75; 19=14,5; 20=15,25; 21=16,0; 22=16,75; 23=17,5; 24=18,25; 25=19,0) × коэф(complexity) × коэф(overallUncertainty) × коэф(readyPromReports) × коэф(algorithmType)",
       "roundingMode": "CEIL",
       "roundingStep": 0.01,
       "triggerRules": [],
@@ -11890,7 +12010,7 @@
           "steps": [
             {
               "count": 1,
-              "coefficient": 1
+              "coefficient": 1.0
             },
             {
               "count": 2,
@@ -11906,7 +12026,7 @@
             },
             {
               "count": 5,
-              "coefficient": 4
+              "coefficient": 4.0
             },
             {
               "count": 6,
@@ -11922,7 +12042,7 @@
             },
             {
               "count": 9,
-              "coefficient": 7
+              "coefficient": 7.0
             },
             {
               "count": 10,
@@ -11938,7 +12058,7 @@
             },
             {
               "count": 13,
-              "coefficient": 10
+              "coefficient": 10.0
             },
             {
               "count": 14,
@@ -11947,11 +12067,51 @@
             {
               "count": 15,
               "coefficient": 11.5
+            },
+            {
+              "count": 16,
+              "coefficient": 12.25
+            },
+            {
+              "count": 17,
+              "coefficient": 13.0
+            },
+            {
+              "count": 18,
+              "coefficient": 13.75
+            },
+            {
+              "count": 19,
+              "coefficient": 14.5
+            },
+            {
+              "count": 20,
+              "coefficient": 15.25
+            },
+            {
+              "count": 21,
+              "coefficient": 16.0
+            },
+            {
+              "count": 22,
+              "coefficient": 16.75
+            },
+            {
+              "count": 23,
+              "coefficient": 17.5
+            },
+            {
+              "count": 24,
+              "coefficient": 18.25
+            },
+            {
+              "count": 25,
+              "coefficient": 19.0
             }
           ]
         }
       ],
-      "formulaText": "N × архкоэф(Модели; 1=1,0; 2=1,75; 3=2,5; 4=3,25; 5=4,0; 6=4,75; 7=5,5; 8=6,25; 9=7,0; 10=7,75; 11=8,5; 12=9,25; 13=10,0; 14=10,75; 15=11,5) × коэф(complexity) × коэф(overallUncertainty)",
+      "formulaText": "N × архкоэф(Модели; 1=1,0; 2=1,75; 3=2,5; 4=3,25; 5=4,0; 6=4,75; 7=5,5; 8=6,25; 9=7,0; 10=7,75; 11=8,5; 12=9,25; 13=10,0; 14=10,75; 15=11,5; 16=12,25; 17=13,0; 18=13,75; 19=14,5; 20=15,25; 21=16,0; 22=16,75; 23=17,5; 24=18,25; 25=19,0) × коэф(complexity) × коэф(overallUncertainty)",
       "roundingMode": "CEIL",
       "roundingStep": 0.01,
       "triggerArchCount": {
@@ -12036,7 +12196,7 @@
           ]
         }
       ],
-      "formulaText": "N × архкоэф(Модели; 1=1,0; 2=1,75; 3=2,5; 4=3,25; 5=4,0; 6=4,75; 7=5,5; 8=6,25; 9=7,0; 10=7,75; 11=8,5; 12=9,25; 13=10,0; 14=10,75; 15=11,5) × коэф(overallUncertainty) × коэф(readyPromReports)",
+      "formulaText": "N × архкоэф(Модели; 1=1,0; 2=1,75; 3=2,5; 4=3,25; 5=4,0; 6=4,75; 7=5,5; 8=6,25; 9=7,0; 10=7,75; 11=8,5; 12=9,25; 13=10,0; 14=10,75; 15=11,5; 16=12,25; 17=13,0; 18=13,75; 19=14,5; 20=15,25; 21=16,0; 22=16,75; 23=17,5; 24=18,25; 25=19,0) × коэф(overallUncertainty) × коэф(readyPromReports)",
       "roundingMode": "CEIL",
       "roundingStep": 0.01,
       "triggerMode": "formula",
@@ -12112,7 +12272,7 @@
           "steps": [
             {
               "count": 1,
-              "coefficient": 1
+              "coefficient": 1.0
             },
             {
               "count": 2,
@@ -12128,7 +12288,7 @@
             },
             {
               "count": 5,
-              "coefficient": 4
+              "coefficient": 4.0
             },
             {
               "count": 6,
@@ -12144,7 +12304,7 @@
             },
             {
               "count": 9,
-              "coefficient": 7
+              "coefficient": 7.0
             },
             {
               "count": 10,
@@ -12160,7 +12320,7 @@
             },
             {
               "count": 13,
-              "coefficient": 10
+              "coefficient": 10.0
             },
             {
               "count": 14,
@@ -12169,6 +12329,46 @@
             {
               "count": 15,
               "coefficient": 11.5
+            },
+            {
+              "count": 16,
+              "coefficient": 12.25
+            },
+            {
+              "count": 17,
+              "coefficient": 13.0
+            },
+            {
+              "count": 18,
+              "coefficient": 13.75
+            },
+            {
+              "count": 19,
+              "coefficient": 14.5
+            },
+            {
+              "count": 20,
+              "coefficient": 15.25
+            },
+            {
+              "count": 21,
+              "coefficient": 16.0
+            },
+            {
+              "count": 22,
+              "coefficient": 16.75
+            },
+            {
+              "count": 23,
+              "coefficient": 17.5
+            },
+            {
+              "count": 24,
+              "coefficient": 18.25
+            },
+            {
+              "count": 25,
+              "coefficient": 19.0
             }
           ]
         }
@@ -13534,7 +13734,7 @@
           "steps": [
             {
               "count": 1,
-              "coefficient": 1
+              "coefficient": 1.0
             },
             {
               "count": 2,
@@ -13550,7 +13750,7 @@
             },
             {
               "count": 5,
-              "coefficient": 4
+              "coefficient": 4.0
             },
             {
               "count": 6,
@@ -13566,7 +13766,7 @@
             },
             {
               "count": 9,
-              "coefficient": 7
+              "coefficient": 7.0
             },
             {
               "count": 10,
@@ -13582,7 +13782,7 @@
             },
             {
               "count": 13,
-              "coefficient": 10
+              "coefficient": 10.0
             },
             {
               "count": 14,
@@ -13591,11 +13791,51 @@
             {
               "count": 15,
               "coefficient": 11.5
+            },
+            {
+              "count": 16,
+              "coefficient": 12.25
+            },
+            {
+              "count": 17,
+              "coefficient": 13.0
+            },
+            {
+              "count": 18,
+              "coefficient": 13.75
+            },
+            {
+              "count": 19,
+              "coefficient": 14.5
+            },
+            {
+              "count": 20,
+              "coefficient": 15.25
+            },
+            {
+              "count": 21,
+              "coefficient": 16.0
+            },
+            {
+              "count": 22,
+              "coefficient": 16.75
+            },
+            {
+              "count": 23,
+              "coefficient": 17.5
+            },
+            {
+              "count": 24,
+              "coefficient": 18.25
+            },
+            {
+              "count": 25,
+              "coefficient": 19.0
             }
           ]
         }
       ],
-      "formulaText": "N × архкоэф(Модели; 1=1,0; 2=1,75; 3=2,5; 4=3,25; 5=4,0; 6=4,75; 7=5,5; 8=6,25; 9=7,0; 10=7,75; 11=8,5; 12=9,25; 13=10,0; 14=10,75; 15=11,5) × коэф(complexity) × коэф(overallUncertainty) × коэф(algorithmType) × коэф(field_jUm5syZf)",
+      "formulaText": "N × архкоэф(Модели; 1=1,0; 2=1,75; 3=2,5; 4=3,25; 5=4,0; 6=4,75; 7=5,5; 8=6,25; 9=7,0; 10=7,75; 11=8,5; 12=9,25; 13=10,0; 14=10,75; 15=11,5; 16=12,25; 17=13,0; 18=13,75; 19=14,5; 20=15,25; 21=16,0; 22=16,75; 23=17,5; 24=18,25; 25=19,0) × коэф(complexity) × коэф(overallUncertainty) × коэф(algorithmType) × коэф(field_jUm5syZf)",
       "roundingMode": "CEIL",
       "roundingStep": 0.01,
       "triggerMode": "formula",
@@ -13738,7 +13978,7 @@
           "steps": [
             {
               "count": 1,
-              "coefficient": 1
+              "coefficient": 1.0
             },
             {
               "count": 2,
@@ -13754,7 +13994,7 @@
             },
             {
               "count": 5,
-              "coefficient": 4
+              "coefficient": 4.0
             },
             {
               "count": 6,
@@ -13770,7 +14010,7 @@
             },
             {
               "count": 9,
-              "coefficient": 7
+              "coefficient": 7.0
             },
             {
               "count": 10,
@@ -13786,7 +14026,7 @@
             },
             {
               "count": 13,
-              "coefficient": 10
+              "coefficient": 10.0
             },
             {
               "count": 14,
@@ -13795,11 +14035,51 @@
             {
               "count": 15,
               "coefficient": 11.5
+            },
+            {
+              "count": 16,
+              "coefficient": 12.25
+            },
+            {
+              "count": 17,
+              "coefficient": 13.0
+            },
+            {
+              "count": 18,
+              "coefficient": 13.75
+            },
+            {
+              "count": 19,
+              "coefficient": 14.5
+            },
+            {
+              "count": 20,
+              "coefficient": 15.25
+            },
+            {
+              "count": 21,
+              "coefficient": 16.0
+            },
+            {
+              "count": 22,
+              "coefficient": 16.75
+            },
+            {
+              "count": 23,
+              "coefficient": 17.5
+            },
+            {
+              "count": 24,
+              "coefficient": 18.25
+            },
+            {
+              "count": 25,
+              "coefficient": 19.0
             }
           ]
         }
       ],
-      "formulaText": "N × архкоэф(Модели; 1=1,0; 2=1,75; 3=2,5; 4=3,25; 5=4,0; 6=4,75; 7=5,5; 8=6,25; 9=7,0; 10=7,75; 11=8,5; 12=9,25; 13=10,0; 14=10,75; 15=11,5) × коэф(complexity) × коэф(overallUncertainty)",
+      "formulaText": "N × архкоэф(Модели; 1=1,0; 2=1,75; 3=2,5; 4=3,25; 5=4,0; 6=4,75; 7=5,5; 8=6,25; 9=7,0; 10=7,75; 11=8,5; 12=9,25; 13=10,0; 14=10,75; 15=11,5; 16=12,25; 17=13,0; 18=13,75; 19=14,5; 20=15,25; 21=16,0; 22=16,75; 23=17,5; 24=18,25; 25=19,0) × коэф(complexity) × коэф(overallUncertainty)",
       "roundingMode": "CEIL",
       "roundingStep": 0.01,
       "triggerMode": "formula",

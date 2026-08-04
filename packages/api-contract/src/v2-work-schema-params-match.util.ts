@@ -38,18 +38,21 @@ export type TypicalWorkRuleRefLike = {
 const LEGACY_SCHEMA_PARAM_LABEL_ALIASES: Record<string, string> = {
 	"выбор класса моделей": "Класс моделей",
 	"выбор класса моделей тип работ": "Класс моделей",
-	"пвр/регуляторный": "ПВР/Регуляторная",
+	/** Удалённый boolean на modelService → generalInfo.complexity. */
+	"пвр/регуляторный": "Регуляторные требования",
+	"пвр/регуляторная": "Регуляторные требования",
 };
 
 /**
- * Legacy CSV paramCode → код поля схемы (`modelClass`, `pkRegulatory`).
+ * Legacy CSV paramCode → код поля схемы (`modelClass`, `complexity`).
  */
 const LEGACY_SCHEMA_PARAM_CODE_ALIASES: Record<string, string> = {
 	выбор_класса_моделей: "modelClass",
 	выбор_класса_моделей_тип_работ: "modelClass",
 	класс_моделей: "modelClass",
-	пвр_регуляторный: "pkRegulatory",
-	пвр_регуляторная: "pkRegulatory",
+	пвр_регуляторный: "complexity",
+	пвр_регуляторная: "complexity",
+	pkregulatory: "complexity",
 };
 
 /**

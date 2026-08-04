@@ -47,6 +47,25 @@ describe("factory sources internal works (CSV 210/211/212)", () => {
 			paramCode: "type",
 			valueLabel: "Внутренний",
 		});
+		/** Аддитивная формула: «Нет» не добавляет вклад (0), не ×1. */
+		const clarify = row?.laborCoefficients?.find(
+			(item) => item.paramCode === "field_xva1dRvW",
+		);
+		const extraRisk = row?.laborCoefficients?.find(
+			(item) => item.paramCode === "field_whHc-OoW",
+		);
+		expect(clarify?.values).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ label: "Да", coefficient: 0.3 }),
+				expect.objectContaining({ label: "Нет", coefficient: 0 }),
+			]),
+		);
+		expect(extraRisk?.values).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ label: "Да", coefficient: 1.5 }),
+				expect.objectContaining({ label: "Нет", coefficient: 0 }),
+			]),
+		);
 	});
 
 	it("maps process 212 workType Настройка→0.5 (schema label for CSV «Без изменений»)", () => {
