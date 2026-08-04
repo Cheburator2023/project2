@@ -492,9 +492,9 @@ export class V2CalculationService {
 			};
 		});
 
-		// Legacy E2E + СФЕРА (baseScoreStream / scoreWithComplexityCoeff /
-		// deviationFromBaseline) + платформенные стримы. Не затирает
-		// total/typicalTotal/atypicalTotal — merge через spread prevSummary.
+		// Итоги стримов: base = Σ типовых; scoreWithComplexityCoeff = база×коэф. + нетиповые;
+		// deviationFromBaseline = (score / base) × 100%; + detailedCalculation / platformStreams.
+		// Не затирает total/typicalTotal/atypicalTotal — merge через spread prevSummary.
 		const sourceTypicalWorksPath = resolveSourceTypicalWorksOutputPath(
 			options?.jsonSchema,
 			options?.uiSchema,

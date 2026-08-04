@@ -38,7 +38,10 @@ describe("buildExecutorStreamWorkSummaryRows", () => {
 		const rows = buildExecutorStreamWorkSummaryRows(
 			{
 				streamDataSources: {
-					sourceTypicalTasks: [{ total: 5 }, { total: 3 }],
+					sourceTypicalTasks: [
+						{ estimateHoursPerDay: 5, coefficient: 1, total: 5 },
+						{ estimateHoursPerDay: 3, coefficient: 2, total: 6 },
+					],
 					field_atyp: [
 						{
 							estimateHoursPerDay: 2,
@@ -60,7 +63,9 @@ describe("buildExecutorStreamWorkSummaryRows", () => {
 		const sources = rows.find(
 			(row) => row.streamExecutor === V2_IMPLEMENTATION_STREAM.IDSRC,
 		);
+		// База = сумма нормативов (5+3), с поправкой = сумма total (5+6).
 		expect(sources?.baseTypicalScore).toBe(8);
+		expect(sources?.adjustedTypicalScore).toBe(11);
 		expect(sources?.atypicalScore).toBe(4);
 		expect(pirm?.baseTypicalScore).toBe(0);
 		expect(pirm?.atypicalScore).toBe(4);
@@ -69,7 +74,9 @@ describe("buildExecutorStreamWorkSummaryRows", () => {
 	it("includes optional stream block only when group is active", () => {
 		const inactive = buildExecutorStreamWorkSummaryRows(
 			{
-				streamOptional: { field_typ: [{ total: 10 }] },
+				streamOptional: {
+					field_typ: [{ estimateHoursPerDay: 10, total: 10 }],
+				},
 			},
 			uiSchema,
 		);
@@ -82,7 +89,9 @@ describe("buildExecutorStreamWorkSummaryRows", () => {
 		const active = buildExecutorStreamWorkSummaryRows(
 			{
 				groupActivation: { streamOptional: true },
-				streamOptional: { field_typ: [{ total: 10 }] },
+				streamOptional: {
+					field_typ: [{ estimateHoursPerDay: 10, total: 12 }],
+				},
 			},
 			uiSchema,
 		);
@@ -90,13 +99,14 @@ describe("buildExecutorStreamWorkSummaryRows", () => {
 			(row) => row.streamExecutor === V2_IMPLEMENTATION_STREAM.DIGAGT,
 		);
 		expect(optional?.baseTypicalScore).toBe(10);
+		expect(optional?.adjustedTypicalScore).toBe(12);
 	});
 
 	it("applies the algorithm multiplier to adjusted typical scores", () => {
 		const rows = buildExecutorStreamWorkSummaryRows(
 			{
 				streamDataSources: {
-					sourceTypicalTasks: [{ total: 8 }],
+					sourceTypicalTasks: [{ estimateHoursPerDay: 8, total: 8 }],
 				},
 			},
 			uiSchema,

@@ -14,12 +14,14 @@ export function isOverwrittenByLegacyStageEngine(targetPath: string): boolean {
 	return LEGACY_POINTER_SET.has(pointer);
 }
 
-export const LEGACY_STAGE_ENGINE_TITLE = "Этапы E2E (движок v1)";
+export const LEGACY_STAGE_ENGINE_TITLE = "Итоги стримов (типовые / нетиповые)";
 
 export const LEGACY_STAGE_ENGINE_DESCRIPTION =
-	"Порт расчёта v1 (stages.ts, coefficients): 11 этапов, платформенные стримы, " +
-	"итоговые поля summary. Выполняется на бекенде после JsonLogic и перезаписывает " +
-	"baseScoreStream, scoreWithComplexityCoeff, deviationFromBaseline, detailedCalculation, platformStreams. " +
+	"После JsonLogic бекенд перезаписывает итоговые поля summary: " +
+	"baseScoreStream = сумма типовых работ стримов, " +
+	"scoreWithComplexityCoeff = База×Коэффициенты + Нетиповые, " +
+	"deviationFromBaseline = (оценка с коэф. / База) × 100%, " +
+	"плюс detailedCalculation и platformStreams. " +
 	"Не настраивается в конструкторе JsonLogic.";
 
 export function hasLegacyStageRows(

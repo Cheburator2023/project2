@@ -1,5 +1,6 @@
 import {
 	collectAtypicalWorkRowsFromData,
+	collectGeneratedTypicalWorkArrayPaths,
 	isPositiveBinaryFormValue,
 	resolveV2QuestionnaireUncertaintyCoefficient,
 	V2_LEGACY_STAGE_SUMMARY_POINTERS,
@@ -44,7 +45,10 @@ export type V2PlatformStreamRow = {
 export type V2LegacySummaryResult = {
 	baseScoreStream: number;
 	scoreWithComplexityCoeff: number;
-	/** Отклонение в процентах: (adjusted / base − 1) × 100 */
+	/**
+	 * Отклонение от базовой оценки, %:
+	 * (База×Коэффициенты + Нетиповые) / База × 100.
+	 */
 	deviationFromBaseline: number;
 	detailedCalculation: V2DetailedCalculationRow[];
 	platformStreams: V2PlatformStreamRow[];
@@ -59,6 +63,13 @@ function percentDeviation(base: number, adjusted: number): number | null {
 	if (!base || !Number.isFinite(base)) return null;
 	if (!adjusted && adjusted !== 0) return null;
 	return roundUp2(((adjusted / base) - 1) * 100);
+}
+
+/** (База×Коэффициенты + Нетиповые) / База × 100% */
+function ratioToBasePercent(base: number, adjusted: number): number | null {
+	if (!base || !Number.isFinite(base)) return null;
+	if (!Number.isFinite(adjusted)) return null;
+	return roundUp2((adjusted / base) * 100);
 }
 
 function readRecord(value: unknown): Record<string, unknown> | undefined {
@@ -619,16 +630,56 @@ export function evaluateLegacyV2Summary(
 				},
 			];
 
-	const baseScoreStream = roundUp2(baseTotal);
-	const scoreWithComplexityCoeff = roundUp2(adjustedTotal + atypicalAdjusted);
+	// СФЕРА-заголовки:
+	// база = Σ нормативов типовых (без коэфф.);
+	// оценка с коэф. = Σ(типовые с коэфф.) + Σ нетиповых;
+	// отклонение% = (оценка с коэф. / база) × 100.
+	const worksTotals = resolveStreamWorksTotals(data, platformStreams);
+	const baseScoreStream = worksTotals.typical;
+	const scoreWithComplexityCoeff = roundUp2(
+		worksTotals.adjustedTypical + worksTotals.atypical,
+	);
+	const deviationFromBaseline =
+		ratioToBasePercent(baseScoreStream, scoreWithComplexityCoeff) ?? 0;
 
 	return {
 		baseScoreStream,
 		scoreWithComplexityCoeff,
-		deviationFromBaseline:
-			percentDeviation(baseScoreStream, scoreWithComplexityCoeff) ?? 0,
+		deviationFromBaseline,
 		detailedCalculation,
 		platformStreams,
+	};
+}
+
+/** Суммы типовых/нетиповых по стримам; fallback на summary.* из JsonLogic. */
+function resolveStreamWorksTotals(
+	data: Record<string, unknown>,
+	platformStreams: V2PlatformStreamRow[],
+): { typical: number; adjustedTypical: number; atypical: number } {
+	if (platformStreams.length > 0) {
+		let typical = 0;
+		let adjustedTypical = 0;
+		let atypical = 0;
+		for (const row of platformStreams) {
+			typical += row.baseTypicalScore;
+			adjustedTypical += row.adjustedTypicalScore;
+			atypical += row.atypicalScore;
+		}
+		return {
+			typical: roundUp2(typical),
+			adjustedTypical: roundUp2(adjustedTypical),
+			atypical: roundUp2(atypical),
+		};
+	}
+	const summary = readRecord(data.summary);
+	const typical = Number(summary?.typicalTotal);
+	const atypical = Number(summary?.atypicalTotal);
+	const safeTypical = Number.isFinite(typical) ? roundUp2(typical) : 0;
+	const safeAtypical = Number.isFinite(atypical) ? roundUp2(atypical) : 0;
+	return {
+		typical: safeTypical,
+		adjustedTypical: safeTypical,
+		atypical: safeAtypical,
 	};
 }
 
@@ -696,6 +747,23 @@ export function hasLegacySummaryInputs(
 
 	const atypicalRows = collectAtypicalWorkRowsFromData(data);
 	if (atypicalRows.length > 0) return true;
+
+	const summary = readRecord(data.summary);
+	const typicalTotal = Number(summary?.typicalTotal);
+	const atypicalTotal = Number(summary?.atypicalTotal);
+	if (
+		(Number.isFinite(typicalTotal) && typicalTotal > 0) ||
+		(Number.isFinite(atypicalTotal) && atypicalTotal > 0)
+	) {
+		return true;
+	}
+
+	if (options?.uiSchema) {
+		for (const path of collectGeneratedTypicalWorkArrayPaths(options.uiSchema)) {
+			const rows = readByDotPath(data, path);
+			if (Array.isArray(rows) && countFilledNamedRows(rows) > 0) return true;
+		}
+	}
 
 	return false;
 }

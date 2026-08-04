@@ -16,7 +16,9 @@ export type V2StreamWorkSummaryRow = {
 	streamName: string;
 	blockKey: string;
 	streamExecutor: string;
+	/** Сумма нормативов типовых работ (без коэффициентов трудоёмкости). */
 	baseTypicalScore: number;
+	/** Сумма итогов типовых (с коэфф.) × множитель алгоритма. */
 	adjustedTypicalScore: number;
 	deviationPercent: number | null;
 	atypicalScore: number;
@@ -64,6 +66,30 @@ function sumTaskTotals(tasks: unknown[]): number {
 	return roundUp2(sum);
 }
 
+function countTypicalWorkInstances(item: Record<string, unknown>): number {
+	const raw = item.formulaBreakdown;
+	if (!raw || typeof raw !== "object" || Array.isArray(raw)) return 1;
+	const list = (raw as Record<string, unknown>).instanceBreakdown;
+	if (!Array.isArray(list)) return 1;
+	const count = list.filter(
+		(row) => row != null && typeof row === "object" && !Array.isArray(row),
+	).length;
+	return count > 0 ? count : 1;
+}
+
+/** Сумма нормативов типовых работ (без коэффициентов трудоёмкости). */
+function sumTypicalBases(tasks: unknown[]): number {
+	let sum = 0;
+	for (const row of tasks) {
+		const item = readRecord(row);
+		if (!item) continue;
+		const unitBase = Number(item.estimateHoursPerDay);
+		if (!Number.isFinite(unitBase)) continue;
+		sum += unitBase * countTypicalWorkInstances(item);
+	}
+	return roundUp2(sum);
+}
+
 function sumAtypicalIncluded(tasks: unknown[]): number {
 	let sum = 0;
 	for (const row of tasks) {
@@ -106,10 +132,13 @@ export function buildExecutorStreamWorkSummaryRows(
 			const typicalInBlock = pathsUnderBlock(typicalPaths, block.blockKey);
 			const atypicalInBlock = pathsUnderBlock(atypicalPaths, block.blockKey);
 
-			let typicalTotal = 0;
+			let typicalBase = 0;
+			let typicalWithCoeffs = 0;
 			for (const path of typicalInBlock) {
 				const rows = readByDotPath(data, path);
-				if (Array.isArray(rows)) typicalTotal += sumTaskTotals(rows);
+				if (!Array.isArray(rows)) continue;
+				typicalBase += sumTypicalBases(rows);
+				typicalWithCoeffs += sumTaskTotals(rows);
 			}
 
 			let atypicalTotal = 0;
@@ -118,13 +147,15 @@ export function buildExecutorStreamWorkSummaryRows(
 				if (Array.isArray(rows)) atypicalTotal += sumAtypicalIncluded(rows);
 			}
 
-			typicalTotal = roundUp2(typicalTotal);
+			typicalBase = roundUp2(typicalBase);
+			typicalWithCoeffs = roundUp2(typicalWithCoeffs);
 			atypicalTotal = roundUp2(atypicalTotal);
 			const multiplier =
 				Number.isFinite(typicalScoreMultiplier) && typicalScoreMultiplier > 0
 					? typicalScoreMultiplier
 					: 1;
-			const adjustedTypicalScore = roundUp2(typicalTotal * multiplier);
+			// База = нормативы без коэфф.; с поправкой = итоги строк (с коэфф.) × коэфф. алгоритма.
+			const adjustedTypicalScore = roundUp2(typicalWithCoeffs * multiplier);
 
 			return {
 				streamName: formatV2StreamBlockSectionTitleFromExecutors(
@@ -132,9 +163,9 @@ export function buildExecutorStreamWorkSummaryRows(
 				),
 				blockKey: block.blockKey,
 				streamExecutor: block.streamExecutor,
-				baseTypicalScore: typicalTotal,
+				baseTypicalScore: typicalBase,
 				adjustedTypicalScore,
-				deviationPercent: percentDeviation(typicalTotal, adjustedTypicalScore),
+				deviationPercent: percentDeviation(typicalBase, adjustedTypicalScore),
 				atypicalScore: atypicalTotal,
 			};
 		});

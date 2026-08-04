@@ -906,8 +906,8 @@ export function buildStaticV2QuestionnaireRegistryColumnTree(): V2RegistryColumn
 		]),
 		group("Итоговая оценка", [
 			formLeaf("summary.total", "Общая стоимость", "number"),
-			formLeaf("summary.baseScoreStream", "Базовая (СФЕРА)", "number"),
-			formLeaf("summary.scoreWithComplexityCoeff", "С поправкой сложности", "number"),
+			formLeaf("summary.baseScoreStream", "Базовая (типовые)", "number"),
+			formLeaf("summary.scoreWithComplexityCoeff", "С коэф. + нетиповые", "number"),
 			formLeaf("summary.deviationFromBaseline", "Отклонение %", "number"),
 		]),
 	];

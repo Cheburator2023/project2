@@ -1,6 +1,7 @@
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import FileDownloadOutlinedIcon from "@mui/icons-material/FileDownloadOutlined";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -395,6 +396,24 @@ export function V2FinalEvaluationPanel({
 	const typicalWorkRowCount =
 		modelStreamTypicalRows.length +
 		otherTypicalWorkGroups.reduce((sum, group) => sum + group.rows.length, 0);
+	/** Сумма нормативов типовых работ (без коэффициентов трудоёмкости). */
+	const typicalBaseSum = useMemo(() => {
+		const rows = [
+			...modelStreamTypicalRows,
+			...otherTypicalWorkGroups.flatMap((group) => group.rows),
+		];
+		let sum = 0;
+		for (const row of rows) {
+			const { baseTotal } = resolveTypicalWorkDeviationBases(row);
+			if (baseTotal != null) sum += baseTotal;
+		}
+		return sum;
+	}, [modelStreamTypicalRows, otherTypicalWorkGroups]);
+	const typicalBaseDisplay =
+		effectiveSummary?.baseScoreStream != null &&
+		Number.isFinite(effectiveSummary.baseScoreStream)
+			? effectiveSummary.baseScoreStream
+			: typicalBaseSum;
 	const showModelStreamSection =
 		hasModelStreamCatalogInSchema || modelStreamTypicalRows.length > 0;
 	const showOtherStreamsSection = otherTypicalWorkGroups.length > 0;
@@ -475,7 +494,11 @@ export function V2FinalEvaluationPanel({
 						<Metric
 							label="Общая неопределенность:"
 							value={uncertaintySummary}
-							title="Учитывается в типовых работах модельного стрима и в нетиповых. На итоговую строку сверху не домнажается."
+							infoTitle={[
+								"Коэффициент общей неопределённости по анкете.",
+								"Учитывается в типовых работах модельного стрима и в нетиповых работах.",
+								"На итоговую строку сверху отдельно не домнажается.",
+							].join("\n")}
 						/>
 					) : null}
 
@@ -484,35 +507,52 @@ export function V2FinalEvaluationPanel({
 							<Metric
 								label="Итоговая трудоёмкость (ч/д):"
 								value={formatNum(effectiveSummary?.total)}
+								infoTitle={[
+									"Сумма типовых (с коэффициентами) и нетиповых работ (ч/д).",
+									`Типовые с коэфф. = ${formatNum(effectiveSummary?.typicalTotal)}`,
+									`Нетиповые = ${formatNum(effectiveSummary?.atypicalTotal)}`,
+									`Итого = ${formatNum(effectiveSummary?.typicalTotal)} + ${formatNum(effectiveSummary?.atypicalTotal)} = ${formatNum(effectiveSummary?.total)}`,
+								].join("\n")}
+							/>
+							<Metric
+								label="Базовая оценка:"
+								value={formatNum(typicalBaseDisplay)}
+								infoTitle={[
+									"Сумма всех нормативов типовых работ",
+									"(без коэффициентов, которые формируются параметрами трудоёмкости).",
+								].join("\n")}
 							/>
 							<Metric
 								label="Типовые работы:"
 								value={formatNum(effectiveSummary?.typicalTotal)}
+								infoTitle={[
+									"Сумма типовых работ с учётом коэффициентов трудоёмкости.",
+									`Базовая оценка (нормативы без коэффициентов) = ${formatNum(typicalBaseDisplay)}`,
+								].join("\n")}
 							/>
 							<Metric
 								label="Нетиповые работы:"
 								value={formatNum(effectiveSummary?.atypicalTotal)}
+								infoTitle={[
+									"Сумма нетиповых работ стримов, включённых в расчёт",
+									"(учитываются строки с «Включить в расчёт»).",
+									"Входит в итоговую трудоёмкость и в формулу отклонения.",
+								].join("\n")}
 							/>
 						</>
 					) : null}
 					{showLegacyHeadline ? (
-						<>
-							<Metric
-								label="Базовая оценка по стриму (СФЕРА):"
-								value={formatNum(effectiveSummary?.baseScoreStream)}
-							/>
-							{/* <Metric
-								label="Оценка с поправкой на коэффициент сложности:"
-								value={formatNum(effectiveSummary?.scoreWithComplexityCoeff)}
-							/> */}
-							<Metric
-								label="Отклонение (с поправкой относительно базы):"
-								value={formatPercent(effectiveSummary?.deviationFromBaseline)}
-								valueColor={deviationColor(
-									effectiveSummary?.deviationFromBaseline,
-								)}
-							/>
-						</>
+						<Metric
+							label="Отклонение:"
+							value={formatPercent(effectiveSummary?.deviationFromBaseline)}
+							valueColor={deviationColor(
+								(effectiveSummary?.deviationFromBaseline ?? 0) - 100,
+							)}
+							infoTitle={buildDeviationFormulaTitle(
+								effectiveSummary,
+								typicalBaseDisplay,
+							)}
+						/>
 					) : null}
 				</Stack>
 			</Paper>
@@ -670,35 +710,80 @@ export function V2FinalEvaluationPanel({
 	);
 }
 
+function buildDeviationFormulaTitle(
+	summary: V2SummaryFormSlice | null | undefined,
+	typicalBase?: number,
+): string {
+	const base = typicalBase ?? summary?.baseScoreStream;
+	const atypical = summary?.atypicalTotal;
+	const withCoeff = summary?.scoreWithComplexityCoeff;
+	const deviation = summary?.deviationFromBaseline;
+	const adjustedTypical =
+		withCoeff != null &&
+		atypical != null &&
+		Number.isFinite(withCoeff) &&
+		Number.isFinite(atypical)
+			? withCoeff - atypical
+			: summary?.typicalTotal ?? null;
+
+	const lines = [
+		"Отклонение = (база×коэф. + нетиповые) / база × 100%",
+		`база (сумма нормативов без коэффициентов) = ${formatNum(base)}`,
+		`база×коэф. (типовые с коэффициентами) = ${formatNum(adjustedTypical)}`,
+		`нетиповые = ${formatNum(atypical)}`,
+		`база×коэф. + нетиповые = ${formatNum(withCoeff)}`,
+		`(${formatNum(withCoeff)} / ${formatNum(base)}) × 100% = ${formatPercent(deviation)}`,
+	];
+	return lines.join("\n");
+}
+
 function Metric({
 	label,
 	value,
 	valueColor,
 	title,
+	infoTitle,
 }: {
 	label: string;
 	value: string;
 	valueColor?: string;
 	title?: string;
+	/** Нативный title на иконке ℹ рядом с подписью. */
+	infoTitle?: string;
 }) {
 	return (
-		<Box
+		<Flex
 			title={title}
-			sx={{
-				display: "flex",
-				alignItems: "baseline",
-				justifyContent: "space-between",
-				gap: 2,
-				minWidth: 0,
-			}}
+			alignItems="baseline"
+			justifyContent="space-between"
+			gap={8}
+			minWidth="0"
 		>
-			<Typography variant="body2" color="text.secondary" sx={{ minWidth: 0 }}>
-				{label}
-			</Typography>
+			<Flex alignItems="center" gap={4} minWidth="0">
+				<Typography variant="body2" color="text.secondary" sx={{ minWidth: 0 }}>
+					{label}
+				</Typography>
+				{infoTitle ? (
+					<Box
+						component="span"
+						title={infoTitle}
+						aria-label={infoTitle}
+						sx={{
+							display: "inline-flex",
+							color: "text.secondary",
+							cursor: "help",
+							flexShrink: 0,
+							lineHeight: 0,
+						}}
+					>
+						<InfoOutlinedIcon sx={{ fontSize: 16 }} />
+					</Box>
+				) : null}
+			</Flex>
 			<Typography variant="h6" fontWeight={700} color={valueColor} noWrap>
 				{value}
 			</Typography>
-		</Box>
+		</Flex>
 	);
 }
 

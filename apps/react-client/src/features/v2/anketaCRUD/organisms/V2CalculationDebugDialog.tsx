@@ -256,11 +256,10 @@ function buildSferaBreakdown(
 				: null;
 
 	const formulaSteps = [
-		`Базовая оценка по стриму (СФЕРА) = сумма базовых значений 11 этапов E2E + база ИС/Сервисов (33 ч/д) = ${formatNumber(baseScoreStream)}`,
-		`Скорректированная сумма этапов (строка «Итого») = ${formatNumber(stageAdjustedTotal)}`,
-		`Нетиповые задачи после поправки = ${formatNumber(atypicalAdjusted)}`,
-		`Оценка с поправкой на коэффициент сложности = roundUp(скорректированные этапы + нетиповые) = roundUp(${formatNumber(stageAdjustedTotal)} + ${formatNumber(atypicalAdjusted)}) = ${formatNumber(scoreWithComplexityCoeff)}`,
-		`Отклонение = (оценка с поправкой − базовая) / базовая × 100% = ${formatPercent(deviationFromBaseline)}`,
+		`Базовая оценка = сумма типовых работ всех стримов = ${formatNumber(baseScoreStream)}`,
+		`Оценка с коэффициентами = База×Коэффициенты + Нетиповые = ${formatNumber(scoreWithComplexityCoeff)}`,
+		`Отклонение = (оценка с коэф. / База) × 100% = ${formatPercent(deviationFromBaseline)}`,
+		`Справочно: этапы E2E (строка «Итого») = ${formatNumber(stageAdjustedTotal)}; нетиповые в detailedCalculation = ${formatNumber(atypicalAdjusted)}`,
 	];
 
 	return {
@@ -638,7 +637,7 @@ export function V2CalculationDebugDialog({ open, onClose, engine }: Props) {
 									<>
 										<Spacer space={20} />
 										<Typography variant="subtitle1" fontWeight={700}>
-											Оценка по стриму (СФЕРА)
+											Базовая оценка и отклонение
 										</Typography>
 										<Spacer space={8} />
 										<Flex
@@ -647,18 +646,18 @@ export function V2CalculationDebugDialog({ open, onClose, engine }: Props) {
 											sx={{ flexWrap: "wrap" }}
 										>
 											<FlowValue
-												label="Базовая оценка по стриму (СФЕРА)"
+												label="Базовая оценка (типовые работы стримов)"
 												value={sferaBreakdown.baseScoreStream}
 											/>
 											<FlowArrow />
 											<FlowValue
-												label="Оценка с поправкой на коэффициент сложности"
+												label="Оценка с коэф. (база×коэф. + нетиповые)"
 												value={sferaBreakdown.scoreWithComplexityCoeff}
 												color="warning.main"
 											/>
 											<FlowArrow label="Δ" />
 											<FlowValue
-												label="Отклонение относительно базовой оценки (СФЕРА)"
+												label="Отклонение, %"
 												value={formatPercent(
 													sferaBreakdown.deviationFromBaseline,
 												)}

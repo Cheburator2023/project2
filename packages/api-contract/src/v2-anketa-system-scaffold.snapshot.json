@@ -241,17 +241,17 @@
 				},
 				"baseScoreStream": {
 					"type": "number",
-					"title": "Базовая оценка по стриму (СФЕРА)",
+					"title": "Базовая оценка (сумма типовых работ стримов)",
 					"readOnly": true
 				},
 				"scoreWithComplexityCoeff": {
 					"type": "number",
-					"title": "Оценка с поправкой на коэффициент сложности",
+					"title": "Оценка с коэффициентами (база×коэф. + нетиповые)",
 					"readOnly": true
 				},
 				"deviationFromBaseline": {
 					"type": "number",
-					"title": "Отклонение относительно базовой оценки по стриму (СФЕРА), %",
+					"title": "Отклонение ((база×коэф. + нетиповые) / база) × 100%",
 					"readOnly": true
 				},
 				"detailedCalculation": {
