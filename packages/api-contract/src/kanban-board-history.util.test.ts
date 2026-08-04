@@ -49,4 +49,29 @@ describe("kanban-board-history.util", () => {
 			}),
 		]);
 	});
+
+	it("diffs createdBy as Назначил", () => {
+		const before = kanbanBoardTaskHistorySnapshot({
+			parentId: "backlog",
+			position: 0,
+			boardId: "board-1",
+			createdBy: "Иванов",
+			content: { title: "Задача" },
+		});
+		const after = kanbanBoardTaskHistorySnapshot({
+			parentId: "backlog",
+			position: 0,
+			boardId: "board-1",
+			createdBy: "Петров",
+			content: { title: "Задача" },
+		});
+		expect(diffKanbanTaskChanges(before, after)).toEqual([
+			{
+				field: "createdBy",
+				label: "Назначил",
+				from: "Иванов",
+				to: "Петров",
+			},
+		]);
+	});
 });

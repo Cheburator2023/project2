@@ -35,6 +35,7 @@ export class KanbanBoardHistoryService {
 		parentId: string;
 		position: number;
 		boardId: string;
+		createdBy?: string | null;
 		content: KanbanBoardTaskEntity["content"];
 	}): KanbanBoardTaskHistorySnapshot {
 		return kanbanBoardTaskHistorySnapshot(task);

@@ -10,6 +10,7 @@ import {
 	defaultKanbanBoardColumns,
 	KANBAN_BOARD_ASSIGNEE_ROLES,
 	KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD,
+	KANBAN_BOARD_DONE_COLUMN_ID,
 	KANBAN_BOARD_INPUT_BUFFER_COLUMN_ID,
 	KANBAN_BOARD_LEGACY_COLUMN_ID_MAP,
 	KANBAN_BOARD_STATUSES,
@@ -17,6 +18,14 @@ import {
 	kanbanBoardAssigneeRoleTitle,
 	kanbanBoardSubtaskIsDone,
 } from "./kanban-board.types";
+
+export function kanbanBoardIsDoneColumn(column: {
+	id: string;
+	title?: string | null;
+}): boolean {
+	if (column.id === KANBAN_BOARD_DONE_COLUMN_ID) return true;
+	return (column.title ?? "").trim().toLowerCase() === "готово";
+}
 
 export function toBoardData(
 	rows: KanbanBoardTaskRecord[],

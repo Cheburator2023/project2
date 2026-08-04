@@ -12,6 +12,7 @@ import LinearProgress from "@mui/material/LinearProgress";
 import Typography from "@mui/material/Typography";
 import { alpha } from "@mui/material/styles";
 import { Flex } from "@react-client/common/primitives/Flex";
+import { KanbanHighlightedText } from "@react-client/features/kanban-board/components/KanbanHighlightedText";
 import { KanbanTaskCardSubtasks } from "@react-client/features/kanban-board/components/KanbanSubtasksChecklist";
 import { KanbanTaskImagesSection } from "@react-client/features/kanban-board/components/KanbanTaskImagesSection";
 import {
@@ -135,6 +136,7 @@ export function KanbanTaskBoardCard({
 	editLabel,
 	columnColor,
 	isBoardBusy,
+	highlightQuery,
 	onContentUpdated,
 	onEditBlocked,
 }: {
@@ -151,6 +153,7 @@ export function KanbanTaskBoardCard({
 	editLabel?: string;
 	columnColor: string;
 	isBoardBusy?: boolean;
+	highlightQuery?: string;
 	onContentUpdated: (taskId: string, content: KanbanBoardTaskContent) => void;
 	onEditBlocked?: (error: unknown) => void;
 }) {
@@ -218,7 +221,11 @@ export function KanbanTaskBoardCard({
 						sx={{ letterSpacing: 0.2 }}
 						title={taskKey}
 					>
-						{taskKey || "—"}
+						{taskKey ? (
+							<KanbanHighlightedText text={taskKey} query={highlightQuery} />
+						) : (
+							"—"
+						)}
 					</Typography>
 					<PriorityIcon priority={content?.priority} />
 				</Flex>
@@ -233,7 +240,10 @@ export function KanbanTaskBoardCard({
 							mt: -0.25,
 						}}
 					>
-						{displayTitle}
+						<KanbanHighlightedText
+							text={displayTitle}
+							query={highlightQuery}
+						/>
 					</Typography>
 				) : null}
 
@@ -250,7 +260,10 @@ export function KanbanTaskBoardCard({
 							mt: -0.25,
 						}}
 					>
-						{description.replace(/\s+/g, " ")}
+						<KanbanHighlightedText
+							text={description.replace(/\s+/g, " ")}
+							query={highlightQuery}
+						/>
 					</Typography>
 				) : null}
 

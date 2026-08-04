@@ -56,6 +56,7 @@ import type {
 	SaveKanbanBoardTasksRequestDto,
 	KanbanBoardHistoryDto,
 	KanbanBoardHistoryOverviewDto,
+	TrashKanbanBoardColumnTasksResultDto,
 	UpdateKanbanBoardCustomerRequestDto,
 	UpdateKanbanBoardAssigneeRequestDto,
 	UpdateKanbanBoardBoardRequestDto,
@@ -363,9 +364,32 @@ export class KanbanBoardController {
 		return this.registryService.deleteColumn(resolvedBoardId, columnId);
 	}
 
+	@Post("boards/:boardId/columns/:columnId/trash-tasks")
+	@ApiOperation({
+		summary: "Переместить все задачи колонки «Готово» в корзину",
+	})
+	async trashColumnTasks(
+		@Param("boardId") boardId: string,
+		@Param("columnId") columnId: string,
+		@CurrentUser() user: Record<string, unknown> | undefined,
+	): Promise<TrashKanbanBoardColumnTasksResultDto> {
+		const resolvedBoardId =
+			await this.registryService.resolveBoardId(boardId);
+		return this.registryService.trashColumnTasks(
+			resolvedBoardId,
+			columnId,
+			kanbanAuditUserId(user),
+		);
+	}
+
 	@Get("tasks/registry")
 	async findTasksRegistry(): Promise<KanbanBoardTaskRegistryDto[]> {
 		return this.registryService.findAllTasksRegistry();
+	}
+
+	@Get("tasks/trash")
+	async findTrashedTasks(): Promise<KanbanBoardTaskRegistryDto[]> {
+		return this.registryService.findTrashedTasksRegistry();
 	}
 
 	@Get("tasks/ref/:ref")
@@ -519,11 +543,30 @@ export class KanbanBoardController {
 	}
 
 	@Delete("tasks/:id")
+	@ApiOperation({ summary: "Переместить задачу в корзину (soft-delete)" })
 	async deleteTask(
 		@Param("id") id: string,
 		@CurrentUser() user: Record<string, unknown> | undefined,
 	): Promise<void> {
-		return this.registryService.deleteTask(id, kanbanAuditUserId(user));
+		return this.registryService.trashTask(id, kanbanAuditUserId(user));
+	}
+
+	@Post("tasks/:id/restore")
+	@ApiOperation({ summary: "Восстановить задачу из корзины" })
+	async restoreTask(
+		@Param("id") id: string,
+		@CurrentUser() user: Record<string, unknown> | undefined,
+	): Promise<void> {
+		return this.registryService.restoreTask(id, kanbanAuditUserId(user));
+	}
+
+	@Delete("tasks/:id/purge")
+	@ApiOperation({ summary: "Удалить задачу из корзины навсегда" })
+	async purgeTask(
+		@Param("id") id: string,
+		@CurrentUser() user: Record<string, unknown> | undefined,
+	): Promise<void> {
+		return this.registryService.purgeTask(id, kanbanAuditUserId(user));
 	}
 
 	@Get("tasks/:taskId/images")

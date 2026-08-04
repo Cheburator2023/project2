@@ -4,6 +4,11 @@ import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
 import Collapse from "@mui/material/Collapse";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogContentText from "@mui/material/DialogContentText";
+import DialogTitle from "@mui/material/DialogTitle";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
@@ -58,6 +63,7 @@ import { KanbanRoleEstimatesFields } from "@react-client/features/kanban-board/c
 import { KanbanSubtasksChecklist } from "@react-client/features/kanban-board/components/KanbanSubtasksChecklist";
 import { KanbanTaskImagesSection } from "@react-client/features/kanban-board/components/KanbanTaskImagesSection";
 import { KanbanTaskCommentsSection } from "@react-client/features/kanban-board/components/KanbanTaskCommentsSection";
+import { KanbanPageStatus } from "@react-client/features/kanban-board/components/KanbanPageStatus";
 import {
 	KanbanTaskDetailRow,
 	KanbanTaskDueLabel,
@@ -69,10 +75,12 @@ import {
 } from "@react-client/features/kanban-board/components/KanbanTaskPageCards";
 import {
 	isKanbanTaskCreateRoute,
+	trackerBoardPath,
 	trackerTaskPath,
 } from "@react-client/features/kanban-board/kanban-task-paths";
 import { normalizeTrackerCode } from "@smart-anketa/api-contract";
 import { TrackerMarkdownEditor } from "@react-client/features/kanban-board/components/TrackerMarkdownEditor";
+import { TrackerIdentityRequiredDialog } from "@react-client/features/tracker/components/TrackerIdentityRequiredDialog";
 import { TrackerTaskConflictDialog } from "@react-client/features/tracker/components/TrackerTaskConflictDialog";
 import { useKanbanTaskEditLock } from "@react-client/features/tracker/hooks/useKanbanTaskEditLock";
 import { useTrackerTaskSync } from "@react-client/features/tracker/hooks/useTrackerTaskSync";
@@ -220,11 +228,12 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	const [dueDate, setDueDate] = useState("");
 	const [parentTask, setParentTask] = useState("");
 	const [customer, setCustomer] = useState("");
-	const [sprintOutcome, setSprintOutcome] = useState("");
 	const [sprintId, setSprintId] = useState("");
 	const [streamCustomer, setStreamCustomer] = useState("");
 	const [description, setDescription] = useState("");
 	const [subtasks, setSubtasks] = useState<KanbanBoardSubtaskItem[]>([]);
+	const [createdByName, setCreatedByName] = useState("");
+	const [pendingCreatedBy, setPendingCreatedBy] = useState<string | null>(null);
 
 	const assigneesQuery = useKanbanBoardAssignees();
 	const settingsQuery = useKanbanBoardSettings();
@@ -279,6 +288,19 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 			})),
 		[assigneesQuery.data],
 	);
+
+	const createdByOptions = useMemo(() => {
+		const options = [...assigneeOptions];
+		const current = createdByName.trim();
+		if (current && !options.some((option) => option.value === current)) {
+			options.unshift({
+				value: current,
+				label: current,
+				color: "#7c3aed",
+			});
+		}
+		return options;
+	}, [assigneeOptions, createdByName]);
 
 	const currentAssigneeOptions = useMemo(() => {
 		const pool = assignees.length
@@ -386,7 +408,14 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 				? task.parentId
 				: columns[0].id,
 		);
-	}, [columns, isCreate, searchParams, task?.id, task?.parentId, task?.updatedAt]);
+	}, [
+		columns,
+		isCreate,
+		searchParams,
+		task?.id,
+		task?.parentId,
+		task?.updatedAt,
+	]);
 
 	useEffect(() => {
 		if (!isCreate || boardKeyParam) return;
@@ -411,16 +440,34 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	const savingRef = useRef(false);
 	saveStatusRef.current = saveStatus;
 
+	const leaveTaskPath = useMemo(() => {
+		const key = boardApiRef?.trim();
+		if (key) return trackerBoardPath(key);
+		return "/tracker";
+	}, [boardApiRef]);
+
+	const handleIdleTimeout = useCallback(() => {
+		navigate(leaveTaskPath, { replace: true });
+	}, [leaveTaskPath, navigate]);
+
 	const { editLabel, foreignLock, isLockedByOther } = useKanbanTaskEditLock(
 		taskId,
 		!isCreate,
+		{ onIdleTimeout: handleIdleTimeout },
 	);
 
 	useTrackerTaskSync({
 		taskRef: !isCreate ? taskKey : undefined,
 		enabled: !isCreate && Boolean(task),
 		baselineUpdatedAt: task?.updatedAt,
-		onRemoteUpdate: useCallback(() => setRemoteStale(true), []),
+		isLocalBusy: useCallback(
+			() =>
+				saveStatusRef.current === "dirty" ||
+				saveStatusRef.current === "saving",
+			[],
+		),
+		onRemoteStale: useCallback(() => setRemoteStale(true), []),
+		onRemoteApplied: useCallback(() => setRemoteStale(false), []),
 	});
 
 	useEffect(() => {
@@ -429,6 +476,11 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 			saveStatusRef.current === "dirty" ||
 			saveStatusRef.current === "saving"
 		) {
+			return;
+		}
+		// Свой автосейв уже обновил expectedUpdatedAt — не перетираем controlled-поля
+		// (иначе MDEditor/textarea теряют курсор и «прыгают» по тексту).
+		if (expectedUpdatedAtRef.current === task.updatedAt) {
 			return;
 		}
 		setTitle(task.content.title);
@@ -451,26 +503,17 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 		setDueDate(task.content.dueDate ?? "");
 		setParentTask(task.content.parentTask ?? "");
 		setCustomer(task.content.customer ?? "");
-		setSprintOutcome(task.content.sprintOutcome ?? "");
 		setSprintId(task.content.sprintId ?? "");
 		setStreamCustomer(task.content.streamCustomer ?? "");
 		setDescription(task.content.description ?? "");
 		setSubtasks(normalizeKanbanBoardSubtasks(task.content.subtasks) ?? []);
+		setCreatedByName(task.createdBy ?? "");
 		expectedUpdatedAtRef.current = task.updatedAt;
 		lastSavedKeyRef.current = null;
 		if (saveStatusRef.current !== "saved") {
 			setSaveStatus("idle");
 		}
 	}, [isCreate, task?.id, task?.updatedAt]);
-
-	useEffect(() => {
-		if (!isCreate) return;
-		const defaultName =
-			settingsQuery.data?.defaultCurrentUserAssigneeName?.trim();
-		if (!defaultName) return;
-		setAssignees((prev) => (prev.length ? prev : [defaultName]));
-		setCurrentAssignee((prev) => prev || defaultName);
-	}, [isCreate, settingsQuery.data?.defaultCurrentUserAssigneeName]);
 
 	useEffect(() => {
 		if (!currentAssignee) return;
@@ -530,7 +573,6 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 			dueDate: dueDate.trim() || undefined,
 			parentTask: parentTask.trim() || undefined,
 			customer: customer.trim() || undefined,
-			sprintOutcome: sprintOutcome.trim() || undefined,
 			sprintId: sprintId || undefined,
 			streamCustomer: streamCustomer.trim() || undefined,
 			subtasks: subtasks.length ? subtasks : undefined,
@@ -549,6 +591,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 				priority,
 				assignees,
 				currentAssignee,
+				createdByName,
 				taskType,
 				workType,
 				estimatePd,
@@ -556,7 +599,6 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 				dueDate,
 				parentTask,
 				customer,
-				sprintOutcome,
 				sprintId,
 				streamCustomer,
 				subtasks,
@@ -570,6 +612,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 			priority,
 			assignees,
 			currentAssignee,
+			createdByName,
 			taskType,
 			workType,
 			estimatePd,
@@ -577,7 +620,6 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 			dueDate,
 			parentTask,
 			customer,
-			sprintOutcome,
 			sprintId,
 			streamCustomer,
 			subtasks,
@@ -593,7 +635,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 				boardId: effectiveBoardId,
 				parentId,
 				content,
-				createdBy: editLabel || null,
+				createdBy: createdByName.trim() || null,
 			});
 			navigate(trackerTaskPath(created.taskKey));
 			return;
@@ -601,8 +643,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 
 		if (!task || savingRef.current) return;
 		const keyBeingSaved = draftKey;
-		const expectedUpdatedAt =
-			expectedUpdatedAtRef.current ?? task.updatedAt;
+		const expectedUpdatedAt = expectedUpdatedAtRef.current ?? task.updatedAt;
 		savingRef.current = true;
 		setSaveStatus("saving");
 		try {
@@ -612,6 +653,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 					boardId: effectiveBoardId,
 					parentId,
 					content,
+					createdBy: createdByName.trim() || null,
 					expectedUpdatedAt,
 					forceOverwrite,
 					lockHolderLabel: editLabel || undefined,
@@ -685,8 +727,16 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	]);
 
 	const formLocked = isLockedByOther || createTask.isPending;
-	const isTaskLoading = !isCreate && taskByRefQuery.isLoading && !task;
-	const showForm = isCreate || Boolean(task);
+	const isTaskLoading =
+		!isCreate &&
+		Boolean(taskKey) &&
+		!task &&
+		(taskByRefQuery.isLoading || taskByRefQuery.isFetching);
+	const isBootstrapLoading =
+		boardsQuery.isLoading ||
+		(isCreate && columnsQuery.isLoading && !columns.length);
+	const isPageLoading = isTaskLoading || isBootstrapLoading;
+	const showForm = !isPageLoading && (isCreate || Boolean(task));
 	const showBoardPicker = isCreate && !boardKeyParam && !boardKeyFromQuery;
 	const boardSubtitle = boardMeta
 		? `${boardMeta.boardKey} · ${"name" in boardMeta ? boardMeta.name : boardMeta.boardName}`
@@ -708,9 +758,15 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 						? "Ошибка сохранения"
 						: null;
 
-	if (!isCreate && !taskKey) {
-		return <Alert severity="warning">Не указана задача</Alert>;
-	}
+	const pageStatus = !isCreate && !taskKey
+		? ("missing-key" as const)
+		: isPageLoading
+			? ("loading" as const)
+			: !isCreate && taskByRefQuery.isError
+				? ("load-error" as const)
+				: !isCreate && taskByRefQuery.isSuccess && !task
+					? ("not-found" as const)
+					: null;
 
 	return (
 		<Flex
@@ -743,7 +799,11 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 					<Chip
 						size="small"
 						label={
-							isCreate ? "Создание" : isTaskLoading ? "Загрузка…" : statusTitle
+							isCreate
+								? "Создание"
+								: isPageLoading
+									? "Загрузка…"
+									: statusTitle
 						}
 						sx={{
 							bgcolor: alpha(columnColor, 0.14),
@@ -752,6 +812,15 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 						}}
 					/>
 					<Spacer />
+					{!isCreate && isLockedByOther && foreignLock ? (
+						<Chip
+							size="small"
+							color="warning"
+							variant="outlined"
+							label={`Редактирует: ${foreignLock.lockedByLabel}`}
+							title={`Задача сейчас редактируется пользователем ${foreignLock.lockedByLabel}. Поля заблокированы.`}
+						/>
+					) : null}
 					{!isCreate && saveStatusLabel ? (
 						<Flex alignItems="center" gap={6}>
 							{saveStatus === "saving" ? (
@@ -784,6 +853,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 					) : null}
 				</Flex>
 			</Header>
+
 			<Flex
 				flexDirection="column"
 				flexGrow={1}
@@ -791,51 +861,72 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 				height="100%"
 				gap={12}
 				sx={{
-					p: { xs: 1.5, md: 2 },
 					overflow: "auto",
-					bgcolor: (theme) =>
-						theme.palette.mode === "dark"
-							? alpha(theme.palette.common.white, 0.02)
-							: theme.palette.grey[50],
 				}}
 			>
-				{isTaskLoading ? (
-					<Flex
-						flexDirection="column"
-						alignItems="center"
-						justifyContent="center"
-						flexGrow={1}
-						gap={12}
-						minHeight="280px"
-					>
-						<CircularProgress size={36} />
-						<Typography variant="body2" color="text.secondary">
-							Загрузка задачи {taskKey}…
-						</Typography>
-					</Flex>
+				{pageStatus === "loading" ? (
+					<KanbanPageStatus
+						loading
+						title={
+							isTaskLoading
+								? `Загрузка задачи ${taskKey}…`
+								: "Загрузка…"
+						}
+						description={
+							isTaskLoading
+								? "Подтягиваем карточку и связанные данные"
+								: "Подготавливаем форму задачи"
+						}
+					/>
 				) : null}
-				{!isTaskLoading && !isCreate && taskByRefQuery.isError ? (
-					<Alert severity="error">Не удалось загрузить задачу</Alert>
+				{pageStatus === "missing-key" ? (
+					<KanbanPageStatus
+						title="Не указана задача"
+						description="Откройте задачу из доски или реестра трекера."
+					/>
 				) : null}
-				{!isTaskLoading && !isCreate && taskByRefQuery.isSuccess && !task ? (
-					<Alert severity="warning">Задача не найдена</Alert>
+				{pageStatus === "load-error" ? (
+					<KanbanPageStatus
+						title="Не удалось загрузить задачу"
+						description={
+							apiErrorMessage(taskByRefQuery.error) ||
+							"Проверьте соединение и попробуйте ещё раз."
+						}
+						action={
+							<Button
+								variant="outlined"
+								size="small"
+								onClick={() => void taskByRefQuery.refetch()}
+							>
+								Повторить
+							</Button>
+						}
+					/>
 				) : null}
-				{createTask.isError || updateTask.isError ? (
-					<Alert severity="error">
+				{pageStatus === "not-found" ? (
+					<KanbanPageStatus
+						title="Задача не найдена"
+						description={`Задача ${taskKey} отсутствует или недоступна.`}
+					/>
+				) : null}
+				{showForm && (createTask.isError || updateTask.isError) ? (
+					<Alert severity="error" sx={{ mx: { xs: 1.5, md: 2 }, mt: 1 }}>
 						{apiErrorMessage(createTask.error ?? updateTask.error) ||
 							(isCreate
 								? "Не удалось создать задачу"
 								: "Не удалось сохранить задачу")}
 					</Alert>
 				) : null}
-				{isLockedByOther && foreignLock ? (
-					<Alert severity="warning">
-						Задача редактируется: {foreignLock.lockedByLabel}
+				{showForm && isLockedByOther && foreignLock ? (
+					<Alert severity="warning" sx={{ mx: { xs: 1.5, md: 2 }, mt: 1 }}>
+						Задача сейчас редактируется: {foreignLock.lockedByLabel}. Поля
+						заблокированы до освобождения.
 					</Alert>
 				) : null}
-				{remoteStale ? (
+				{showForm && remoteStale ? (
 					<Alert
 						severity="info"
+						sx={{ mx: { xs: 1.5, md: 2 }, mt: 1 }}
 						action={
 							<Button
 								color="inherit"
@@ -850,7 +941,9 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 							</Button>
 						}
 					>
-						Задача изменилась на сервере. Обновите данные перед сохранением.
+						На сервере есть более новая версия, а у вас есть несохранённые
+						изменения. Обновите данные (локальные правки будут потеряны) или
+						досохраните и разрешите конфликт.
 					</Alert>
 				) : null}
 
@@ -911,6 +1004,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 										fullWidth
 										autoFocus={isCreate}
 										placeholder="Заголовок задачи"
+										disabled={formLocked}
 										sx={{ flex: 1, minWidth: 220 }}
 									/>
 									<Box sx={{ width: { xs: "100%", sm: 200 }, flexShrink: 0 }}>
@@ -920,6 +1014,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 											onChange={setTaskType}
 											emptyLabel="Тип задачи"
 											fullWidth
+											disabled={formLocked}
 										/>
 									</Box>
 								</Flex>
@@ -929,26 +1024,8 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 								<TrackerMarkdownEditor
 									value={description}
 									onChange={setDescription}
-									height={320}
+									disabled={formLocked}
 								/>
-								<Box sx={{ mt: 2 }}>
-									<Typography
-										variant="body2"
-										color="text.secondary"
-										sx={{ mb: 1 }}
-									>
-										Ожидаемый результат спринта
-									</Typography>
-									<TextField
-										value={sprintOutcome}
-										onChange={(event) => setSprintOutcome(event.target.value)}
-										fullWidth
-										multiline
-										minRows={2}
-										placeholder="Релиз, ПСИ, ошибки устранены, готовность к демо…"
-										size="small"
-									/>
-								</Box>
 							</KanbanTaskSectionCard>
 
 							<KanbanTaskSectionCard>
@@ -999,7 +1076,11 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 											value={parentId}
 											options={columnOptions}
 											onChange={setParentId}
-											disabled={columnsQuery.isLoading || !columns.length}
+											disabled={
+												formLocked ||
+												columnsQuery.isLoading ||
+												!columns.length
+											}
 											fullWidth
 										/>
 									</Box>
@@ -1016,6 +1097,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 											}))}
 											onChange={setPriority}
 											fullWidth
+											disabled={formLocked}
 										/>
 									</Box>
 								</KanbanTaskDetailRow>
@@ -1037,7 +1119,9 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 										value={currentAssignee}
 										options={currentAssigneeOptions}
 										onChange={setCurrentAssignee}
-										disabled={!currentAssigneeOptions.length}
+										disabled={
+											formLocked || !currentAssigneeOptions.length
+										}
 										fullWidth
 									/>
 								</Box>
@@ -1048,20 +1132,13 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 										options={assigneeOptions}
 										onChange={setAssignees}
 										fullWidth
+										disabled={formLocked}
 									/>
 								</Box>
 								<KanbanTaskDetailRow label="Назначил">
-									{isCreate ? (
-										editLabel ? (
-											<KanbanTaskPersonLabel name={editLabel} color="#7c3aed" />
-										) : (
-											<Typography variant="body2" color="text.secondary">
-												—
-											</Typography>
-										)
-									) : task?.createdBy ? (
+									{createdByName ? (
 										<KanbanTaskPersonLabel
-											name={task.createdBy}
+											name={createdByName}
 											color="#7c3aed"
 										/>
 									) : (
@@ -1070,6 +1147,24 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 										</Typography>
 									)}
 								</KanbanTaskDetailRow>
+								<Box sx={{ textAlign: "left", mt: 0.5 }}>
+									<KanbanTaskSelectField
+										label=""
+										value={createdByName}
+										options={createdByOptions}
+										onChange={(next) => {
+											if (next === createdByName) return;
+											if (isCreate) {
+												setCreatedByName(next);
+												return;
+											}
+											setPendingCreatedBy(next);
+										}}
+										disabled={formLocked || assigneesQuery.isLoading}
+										fullWidth
+										emptyLabel="— не указан —"
+									/>
+								</Box>
 								<KanbanTaskDetailRow label="Срок">
 									{dueDate ? (
 										<KanbanTaskDueLabel value={formatTaskDueLabel(dueDate)} />
@@ -1084,9 +1179,14 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 										label="Срок"
 										value={parseDueDate(dueDate)}
 										onChange={(value) => setDueDate(formatDueDate(value))}
+										disabled={formLocked}
 										slotProps={{
-											textField: { fullWidth: true, size: "small" },
-											field: { clearable: true },
+											textField: {
+												fullWidth: true,
+												size: "small",
+												disabled: formLocked,
+											},
+											field: { clearable: !formLocked },
 										}}
 									/>
 								</Box>
@@ -1151,6 +1251,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 												onChange={setSelectedBoardId}
 												required
 												fullWidth
+												disabled={formLocked}
 											/>
 										) : null}
 										<TextField
@@ -1160,6 +1261,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 											onChange={(event) => setBacklogNumber(event.target.value)}
 											fullWidth
 											size="small"
+											disabled={formLocked}
 											inputProps={{ min: 0, step: 1 }}
 										/>
 										<KanbanTaskSelectField
@@ -1168,6 +1270,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 											options={workTypeOptions}
 											onChange={setWorkType}
 											fullWidth
+											disabled={formLocked}
 										/>
 										<TextField
 											label="Оценка, чд (итого)"
@@ -1176,12 +1279,14 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 											onChange={(event) => setEstimatePd(event.target.value)}
 											fullWidth
 											size="small"
+											disabled={formLocked}
 											inputProps={{ min: 0, step: 0.5 }}
 											helperText="Из оценок по ролям"
 										/>
 										<KanbanRoleEstimatesFields
 											value={roleEstimates}
 											onChange={setRoleEstimates}
+											disabled={formLocked}
 										/>
 										<FuzzyAutocomplete<ParentTaskOption>
 											label="Родительская задача"
@@ -1208,7 +1313,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 													? `Не найдено в реестре: ${parentTask}`
 													: undefined
 											}
-											disabled={tasksRegistryQuery.isLoading}
+											disabled={formLocked || tasksRegistryQuery.isLoading}
 											size="small"
 										/>
 										<KanbanTaskSelectField
@@ -1217,6 +1322,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 											options={customerOptions}
 											onChange={setCustomer}
 											fullWidth
+											disabled={formLocked}
 										/>
 										<KanbanTaskSelectField
 											label="Спринт"
@@ -1224,6 +1330,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 											options={sprintOptions}
 											onChange={setSprintId}
 											fullWidth
+											disabled={formLocked}
 										/>
 										<KanbanTaskSelectField
 											label="Стрим-заказчик"
@@ -1231,6 +1338,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 											options={streamOptions}
 											onChange={setStreamCustomer}
 											fullWidth
+											disabled={formLocked}
 										/>
 									</Flex>
 								</Collapse>
@@ -1253,6 +1361,15 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 					</Flex>
 				) : null}
 			</Flex>
+			<TrackerIdentityRequiredDialog
+				open={
+					isCreate &&
+					!settingsQuery.isLoading &&
+					!editLabel.trim()
+				}
+				onCancel={() => navigate(leaveTaskPath)}
+				onSaved={() => undefined}
+			/>
 			<TrackerTaskConflictDialog
 				open={Boolean(editBlocked)}
 				error={editBlocked}
@@ -1266,6 +1383,42 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 					void handleSave(true);
 				}}
 			/>
+			<Dialog
+				open={pendingCreatedBy !== null}
+				onClose={() => setPendingCreatedBy(null)}
+				maxWidth="xs"
+				fullWidth
+			>
+				<DialogTitle>Сменить назначившего?</DialogTitle>
+				<DialogContent>
+					<Alert severity="warning" sx={{ mb: 2 }}>
+						Поле «Назначил» по умолчанию пустое. Смена изменит отображение
+						автора в карточке и на доске.
+					</Alert>
+					<DialogContentText component="div">
+						<Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+							Сейчас: <strong>{createdByName.trim() || "не указан"}</strong>
+						</Typography>
+						<Typography variant="body2" color="text.secondary">
+							Будет: <strong>{pendingCreatedBy?.trim() || "не указан"}</strong>
+						</Typography>
+					</DialogContentText>
+				</DialogContent>
+				<DialogActions>
+					<Button onClick={() => setPendingCreatedBy(null)}>Отмена</Button>
+					<Button
+						variant="contained"
+						color="warning"
+						onClick={() => {
+							if (pendingCreatedBy === null) return;
+							setCreatedByName(pendingCreatedBy);
+							setPendingCreatedBy(null);
+						}}
+					>
+						Сменить
+					</Button>
+				</DialogActions>
+			</Dialog>
 		</Flex>
 	);
 }

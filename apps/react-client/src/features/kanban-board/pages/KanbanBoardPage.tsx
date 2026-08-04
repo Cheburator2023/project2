@@ -1,15 +1,27 @@
 import AddIcon from "@mui/icons-material/Add";
 import DownloadIcon from "@mui/icons-material/Download";
+import FilterListIcon from "@mui/icons-material/FilterList";
 import HistoryIcon from "@mui/icons-material/History";
 import PublishIcon from "@mui/icons-material/Publish";
+import SearchIcon from "@mui/icons-material/Search";
 import Alert from "@mui/material/Alert";
 import Backdrop from "@mui/material/Backdrop";
+import Badge from "@mui/material/Badge";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
+import Collapse from "@mui/material/Collapse";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogContentText from "@mui/material/DialogContentText";
+import DialogTitle from "@mui/material/DialogTitle";
+import IconButton from "@mui/material/IconButton";
+import InputAdornment from "@mui/material/InputAdornment";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
+import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -49,11 +61,13 @@ import {
 	kanbanBoardGetBoardTasks,
 	kanbanBoardImportBoardSnapshot,
 	kanbanBoardSaveBoardTasks,
+	useKanbanBoardAssignees,
 	useKanbanBoardBoards,
 	useKanbanBoardColumns,
 	useKanbanBoardConfig,
 	useCreateKanbanBoardColumn,
 	useDeleteKanbanBoardColumn,
+	useTrashKanbanBoardColumnTasks,
 	useUpdateKanbanBoardColumn,
 	type KanbanBoardImportResult,
 } from "@react-client/common/api/queries/kanban-board";
@@ -62,17 +76,29 @@ import {
 	KanbanColumnHeader,
 	getKanbanColumnColor,
 } from "@react-client/features/kanban-board/components/KanbanBoardColumnChrome";
+import { KanbanBoardFilterPanel } from "@react-client/features/kanban-board/components/KanbanBoardFilterPanel";
+import { KanbanTaskBoardCard } from "@react-client/features/kanban-board/components/KanbanTaskBoardCard";
 import {
 	kanbanTaskCreatePath,
 	kanbanTaskEditPath,
 	trackerBoardHistoryPath,
 } from "@react-client/features/kanban-board/kanban-task-paths";
-import { KanbanTaskBoardCard } from "@react-client/features/kanban-board/components/KanbanTaskBoardCard";
+import {
+	EMPTY_KANBAN_BOARD_TASK_FILTERS,
+	countKanbanBoardCards,
+	filterKanbanBoardData,
+	kanbanBoardTaskFiltersActive,
+	kanbanBoardTaskMatchesFilters,
+	kanbanBoardTaskMatchesSearch,
+	type KanbanBoardTaskFilters,
+} from "@react-client/features/kanban-board/kanban-board-task-filter";
 import { TrackerTaskConflictDialog } from "@react-client/features/tracker/components/TrackerTaskConflictDialog";
 import { useTrackerBoardSync } from "@react-client/features/tracker/hooks/useTrackerBoardSync";
 import { useTrackerEditIdentity } from "@react-client/features/tracker/hooks/useTrackerEditIdentity";
+import { useDebouncedValue } from "@react-client/features/v2/admin_constructor/hooks/useDebouncedValue";
 
 const KANBAN_BOARD_COLUMN_WIDTH_PX = 320;
+const SEARCH_DEBOUNCE_MS = 300;
 
 const buildBoardData = (
 	tasks: Parameters<typeof toBoardData>[0],
@@ -91,6 +117,12 @@ export function KanbanBoardPage() {
 	const [pendingBoard, setPendingBoard] = useState<KanbanBoardData | null>(null);
 	const [remoteStale, setRemoteStale] = useState(false);
 	const [openingTaskLabel, setOpeningTaskLabel] = useState<string | null>(null);
+	const [searchQuery, setSearchQuery] = useState("");
+	const [filtersOpen, setFiltersOpen] = useState(false);
+	const [filters, setFilters] = useState<KanbanBoardTaskFilters>(
+		EMPTY_KANBAN_BOARD_TASK_FILTERS,
+	);
+	const debouncedSearch = useDebouncedValue(searchQuery, SEARCH_DEBOUNCE_MS);
 	const editLabel = useTrackerEditIdentity();
 	const [boardContextMenu, setBoardContextMenu] = useState<{
 		mouseX: number;
@@ -99,6 +131,7 @@ export function KanbanBoardPage() {
 
 	const configQuery = useKanbanBoardConfig();
 	const boardsQuery = useKanbanBoardBoards();
+	const assigneesQuery = useKanbanBoardAssignees();
 	const boardMeta = boardsQuery.data?.find(
 		(item) =>
 			item.boardKey === normalizeTrackerCode(boardKey) ||
@@ -109,6 +142,10 @@ export function KanbanBoardPage() {
 	const createColumn = useCreateKanbanBoardColumn();
 	const updateColumn = useUpdateKanbanBoardColumn();
 	const deleteColumn = useDeleteKanbanBoardColumn();
+	const trashColumnTasks = useTrashKanbanBoardColumnTasks();
+	const [trashColumnConfirmId, setTrashColumnConfirmId] = useState<string | null>(
+		null,
+	);
 
 	const tasksQuery = useQuery({
 		queryKey: ["kanbanBoardTasks", boardApiRef],
@@ -337,10 +374,76 @@ export function KanbanBoardPage() {
 		[boardApiRef, createColumn],
 	);
 
+	const confirmTrashColumnTasks = useCallback(async () => {
+		if (!resolvedBoardId || !trashColumnConfirmId) return;
+		await trashColumnTasks.mutateAsync({
+			boardId: resolvedBoardId,
+			columnId: trashColumnConfirmId,
+		});
+		setTrashColumnConfirmId(null);
+	}, [resolvedBoardId, trashColumnConfirmId, trashColumnTasks]);
+
 	const isColumnBusy =
-		createColumn.isPending || updateColumn.isPending || deleteColumn.isPending;
+		createColumn.isPending ||
+		updateColumn.isPending ||
+		deleteColumn.isPending ||
+		trashColumnTasks.isPending;
 	const isBoardBusy = !isReady || !board || isColumnBusy;
 	const isSavingBoard = saveMutation.isPending;
+
+	const filtersActive = kanbanBoardTaskFiltersActive(filters);
+	const searchActive = Boolean(debouncedSearch.trim());
+	const viewFiltered = filtersActive || searchActive;
+
+	const viewBoard = useMemo(() => {
+		if (!board) return null;
+		if (!viewFiltered) return board;
+		const projectCode = boardMeta?.projectCode;
+		return filterKanbanBoardData(board, (item) => {
+			if (!kanbanBoardTaskMatchesSearch(item, debouncedSearch, projectCode)) {
+				return false;
+			}
+			return kanbanBoardTaskMatchesFilters(item, filters);
+		});
+	}, [
+		board,
+		boardMeta?.projectCode,
+		debouncedSearch,
+		filters,
+		viewFiltered,
+	]);
+
+	const totalCardCount = useMemo(
+		() => (board ? countKanbanBoardCards(board) : 0),
+		[board],
+	);
+	const matchCardCount = useMemo(
+		() => (viewBoard ? countKanbanBoardCards(viewBoard) : 0),
+		[viewBoard],
+	);
+
+	const assigneeFilterOptions = useMemo(
+		() =>
+			(assigneesQuery.data ?? []).map((item) => ({
+				value: item.name,
+				label: item.name,
+			})),
+		[assigneesQuery.data],
+	);
+
+	const createdByFilterOptions = useMemo(() => {
+		const names = new Set<string>();
+		for (const task of tasksQuery.data ?? []) {
+			const name = task.createdBy?.trim();
+			if (name) names.add(name);
+		}
+		for (const item of assigneesQuery.data ?? []) {
+			if (item.name.trim()) names.add(item.name.trim());
+		}
+		return [...names]
+			.sort((a, b) => a.localeCompare(b, "ru"))
+			.map((name) => ({ value: name, label: name }));
+	}, [assigneesQuery.data, tasksQuery.data]);
 
 	const renderColumnHeader = useCallback(
 		(column: BoardItem) => (
@@ -350,9 +453,17 @@ export function KanbanBoardPage() {
 				onRename={handleRenameColumn}
 				onDelete={handleDeleteColumn}
 				onAddTask={openCreateTask}
+				onTrashAll={setTrashColumnConfirmId}
+				isTrashing={trashColumnTasks.isPending}
 			/>
 		),
-		[handleDeleteColumn, handleRenameColumn, isBoardBusy, openCreateTask],
+		[
+			handleDeleteColumn,
+			handleRenameColumn,
+			isBoardBusy,
+			openCreateTask,
+			trashColumnTasks.isPending,
+		],
 	);
 
 	const renderColumnAdder = useCallback(
@@ -439,6 +550,43 @@ export function KanbanBoardPage() {
 				}
 			>
 				<Flex gap={6} wrap="wrap" alignItems="center">
+					<TextField
+						size="small"
+						placeholder="Быстрый поиск…"
+						value={searchQuery}
+						onChange={(event) => setSearchQuery(event.target.value)}
+						sx={{ width: { xs: "100%", sm: 260 }, maxWidth: 360, flexShrink: 0 }}
+						InputProps={{
+							startAdornment: (
+								<InputAdornment position="start">
+									<SearchIcon fontSize="small" color="action" />
+								</InputAdornment>
+							),
+						}}
+						inputProps={{ "aria-label": "Быстрый поиск по задачам" }}
+					/>
+					<IconButton
+						size="small"
+						color={filtersOpen || filtersActive ? "primary" : "default"}
+						onClick={() => setFiltersOpen((open) => !open)}
+						title="Панель фильтров"
+						aria-label="Панель фильтров"
+						aria-pressed={filtersOpen}
+					>
+						<Badge
+							color="primary"
+							variant="dot"
+							invisible={!filtersActive}
+							overlap="circular"
+						>
+							<FilterListIcon fontSize="small" />
+						</Badge>
+					</IconButton>
+					{viewFiltered ? (
+						<Typography variant="caption" color="text.secondary" noWrap>
+							{matchCardCount} / {totalCardCount}
+						</Typography>
+					) : null}
 					<Spacer />
 					<Button
 						startIcon={<HistoryIcon />}
@@ -489,6 +637,16 @@ export function KanbanBoardPage() {
 					/>
 				</Flex>
 			</Header>
+			<Collapse in={filtersOpen} unmountOnExit>
+				<KanbanBoardFilterPanel
+					filters={filters}
+					onChange={setFilters}
+					assigneeOptions={assigneeFilterOptions}
+					createdByOptions={createdByFilterOptions}
+					matchCount={matchCardCount}
+					totalCount={totalCardCount}
+				/>
+			</Collapse>
 			<Card
 				overflow="hidden"
 				sx={{
@@ -618,9 +776,9 @@ export function KanbanBoardPage() {
 							},
 						}}
 					>
-						{board ? (
+						{viewBoard ? (
 							<Kanban
-								dataSource={board as BoardData}
+								dataSource={viewBoard as BoardData}
 								rootStyle={{
 									height: "auto",
 									minHeight: "100%",
@@ -666,6 +824,7 @@ export function KanbanBoardPage() {
 												editLabel={editLabel}
 												columnColor={getKanbanColumnColor(column)}
 												isBoardBusy={isBoardBusy}
+												highlightQuery={debouncedSearch}
 												onContentUpdated={handleTaskContentUpdated}
 												onEditBlocked={handleEditBlocked}
 											/>
@@ -673,7 +832,7 @@ export function KanbanBoardPage() {
 									},
 								}}
 								onCardMove={(move) => {
-									if (isSavingBoard || !standId) return;
+									if (isSavingBoard || !standId || viewFiltered) return;
 									const nextBoard = normalizeKanbanBoardData(
 										dropHandler(move, board as BoardData) as KanbanBoardData,
 									);
@@ -718,6 +877,37 @@ export function KanbanBoardPage() {
 					if (pendingBoard) persistBoard(pendingBoard, true);
 				}}
 			/>
+			<Dialog
+				open={Boolean(trashColumnConfirmId)}
+				onClose={() => setTrashColumnConfirmId(null)}
+				maxWidth="xs"
+				fullWidth
+			>
+				<DialogTitle>Очистить колонку в корзину?</DialogTitle>
+				<DialogContent>
+					<DialogContentText>
+						Все задачи из колонки «
+						{trashColumnConfirmId
+							? (columnsQuery.data?.find(
+									(column) => column.id === trashColumnConfirmId,
+								)?.title ?? trashColumnConfirmId)
+							: ""}
+						» будут перемещены в корзину. Полное удаление — вручную в разделе
+						«Корзина».
+					</DialogContentText>
+				</DialogContent>
+				<DialogActions>
+					<Button onClick={() => setTrashColumnConfirmId(null)}>Отмена</Button>
+					<Button
+						variant="contained"
+						color="warning"
+						disabled={trashColumnTasks.isPending}
+						onClick={() => void confirmTrashColumnTasks()}
+					>
+						В корзину
+					</Button>
+				</DialogActions>
+			</Dialog>
 			<Backdrop
 				open={Boolean(openingTaskLabel)}
 				sx={{

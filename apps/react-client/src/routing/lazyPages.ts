@@ -235,6 +235,13 @@ export const TrackerTasksPage = lazyPage(
 		),
 	"TrackerTasksPage",
 );
+export const TrackerMyTasksPage = lazyPage(
+	() =>
+		import(
+			/* webpackChunkName: "page-tracker-my-tasks" */ "@react-client/features/tracker/pages/TrackerMyTasksPage"
+		),
+	"TrackerMyTasksPage",
+);
 export const TrackerGanttPage = lazyPage(
 	() =>
 		import(
@@ -290,6 +297,13 @@ export const TrackerBoardHistoryPage = lazyPage(
 			/* webpackChunkName: "page-tracker-board-history" */ "@react-client/features/tracker/pages/TrackerBoardHistoryPage"
 		),
 	"TrackerBoardHistoryPage",
+);
+export const TrackerTrashPage = lazyPage(
+	() =>
+		import(
+			/* webpackChunkName: "page-tracker-trash" */ "@react-client/features/tracker/pages/TrackerTrashPage"
+		),
+	"TrackerTrashPage",
 );
 export const KanbanBoardPage = lazyPage(
 	() =>

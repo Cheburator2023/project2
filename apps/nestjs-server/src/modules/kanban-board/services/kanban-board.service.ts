@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { InjectRepository } from "@nestjs/typeorm";
 import * as ExcelJS from "exceljs";
-import { DataSource, Repository } from "typeorm";
+import { DataSource, IsNull, Not, Repository } from "typeorm";
 import type { KanbanBoardTaskRecord } from "@smart-anketa/api-contract";
 import {
 	formatKanbanTaskKey,
@@ -70,6 +70,7 @@ export class KanbanBoardService {
 
 	async findAll(): Promise<KanbanBoardTaskRecord[]> {
 		const rows = await this.taskRepository.find({
+			where: { deletedAt: IsNull() },
 			order: { parentId: "ASC", position: "ASC" },
 		});
 		return rows.map((row) => this.toRecord(row));
@@ -77,7 +78,7 @@ export class KanbanBoardService {
 
 	async findByBoard(boardId: string): Promise<KanbanBoardTaskRecord[]> {
 		const rows = await this.taskRepository.find({
-			where: { boardId },
+			where: { boardId, deletedAt: IsNull() },
 			order: { parentId: "ASC", position: "ASC" },
 		});
 		await this.taskImageService.syncTasksContentImages(rows);
@@ -92,7 +93,7 @@ export class KanbanBoardService {
 
 	async findByStand(standId: string): Promise<KanbanBoardTaskRecord[]> {
 		const rows = await this.taskRepository.find({
-			where: { origin: standId },
+			where: { origin: standId, deletedAt: IsNull() },
 			order: { parentId: "ASC", position: "ASC" },
 		});
 		return rows.map((row) => this.toRecord(row));
@@ -122,7 +123,7 @@ export class KanbanBoardService {
 			relations: { project: true },
 		});
 		const existing = await this.taskRepository.find({
-			where: { boardId, origin: standId },
+			where: { boardId, origin: standId, deletedAt: IsNull() },
 			relations: { board: { project: true }, project: true },
 		});
 		const existingById = new Map(existing.map((row) => [row.id, row]));
@@ -184,8 +185,10 @@ export class KanbanBoardService {
 			const repo = manager.getRepository(KanbanBoardTaskEntity);
 			const incoming = new Set(prepared.map((task) => task.id));
 			const stale = existing.filter((row) => !incoming.has(row.id));
-			if (stale.length) {
-				await repo.remove(stale);
+			for (const row of stale) {
+				row.deletedAt = now;
+				row.updatedAt = now;
+				await repo.save(row);
 			}
 
 			for (const task of prepared) {
@@ -199,7 +202,9 @@ export class KanbanBoardService {
 							: { images: prev.content.images }),
 					});
 				}
-				await repo.save(this.fromRecord(task));
+				const entity = this.fromRecord(task);
+				entity.deletedAt = null;
+				await repo.save(entity);
 			}
 		});
 
@@ -255,8 +260,8 @@ export class KanbanBoardService {
 				taskTitle: removed.content.title,
 				changes: [
 					{
-						field: "deleted",
-						label: "Удаление",
+						field: "trashed",
+						label: "В корзину",
 						from: removed.content.title,
 						to: null,
 					},
@@ -275,19 +280,52 @@ export class KanbanBoardService {
 		return this.saveBoardTasks(tasks[0].boardId, tasks);
 	}
 
-	async deleteTask(taskId: string): Promise<void> {
-		const task = await this.taskRepository.findOne({ where: { id: taskId } });
+	async trashTask(taskId: string): Promise<void> {
+		const task = await this.taskRepository.findOne({
+			where: { id: taskId, deletedAt: IsNull() },
+		});
 		if (!task) throw new NotFoundException("Задача не найдена");
+		const now = new Date().toISOString();
+		task.deletedAt = now;
+		task.updatedAt = now;
+		await this.taskRepository.save(task);
+	}
+
+	async restoreTask(taskId: string): Promise<void> {
+		const task = await this.taskRepository.findOne({
+			where: { id: taskId, deletedAt: Not(IsNull()) },
+		});
+		if (!task) throw new NotFoundException("Задача не найдена в корзине");
+		task.deletedAt = null;
+		task.updatedAt = new Date().toISOString();
+		await this.taskRepository.save(task);
+	}
+
+	async purgeTask(taskId: string): Promise<void> {
+		const task = await this.taskRepository.findOne({
+			where: { id: taskId, deletedAt: Not(IsNull()) },
+		});
+		if (!task) throw new NotFoundException("Задача не найдена в корзине");
 		await this.taskRepository.remove(task);
+	}
+
+	/** @deprecated используйте trashTask / purgeTask */
+	async deleteTask(taskId: string): Promise<void> {
+		await this.trashTask(taskId);
 	}
 
 	async deleteLocalTask(taskId: string): Promise<void> {
 		const standId = this.getStandId();
-		const task = await this.taskRepository.findOne({ where: { id: taskId } });
+		const task = await this.taskRepository.findOne({
+			where: { id: taskId, deletedAt: IsNull() },
+		});
 		if (!task || task.origin !== standId) {
 			throw new Error("Задача не найдена или принадлежит другому стенду");
 		}
-		await this.taskRepository.remove(task);
+		const now = new Date().toISOString();
+		task.deletedAt = now;
+		task.updatedAt = now;
+		await this.taskRepository.save(task);
 	}
 
 	async exportBoardSnapshot(boardId: string): Promise<Buffer> {
@@ -426,6 +464,7 @@ export class KanbanBoardService {
 			createdAt: entity.createdAt ?? entity.updatedAt,
 			createdBy: entity.createdBy ?? null,
 			updatedAt: entity.updatedAt,
+			deletedAt: entity.deletedAt ?? null,
 		};
 	}
 
@@ -442,6 +481,7 @@ export class KanbanBoardService {
 		entity.createdAt = record.createdAt ?? record.updatedAt;
 		entity.createdBy = record.createdBy ?? null;
 		entity.updatedAt = record.updatedAt;
+		entity.deletedAt = record.deletedAt ?? null;
 		return entity;
 	}
 

@@ -44,6 +44,7 @@ import type {
 	KanbanBoardTaskLockDto,
 	ResetKanbanBoardColumnsResultDto,
 } from "@smart-anketa/api-contract";
+import { KANBAN_BOARD_TASK_LOCK_POLL_INTERVAL_MS } from "@smart-anketa/api-contract";
 import { apiClient } from "../helpers/apiClient";
 
 export interface KanbanBoardConfig {
@@ -74,6 +75,7 @@ const invalidateTracker = (queryClient: ReturnType<typeof useQueryClient>) => {
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardStreams"] });
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardSettings"] });
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardTasksRegistry"] });
+	queryClient.invalidateQueries({ queryKey: ["kanbanBoardTasksTrash"] });
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardTasks"] });
 };
 
@@ -539,6 +541,17 @@ export const useKanbanBoardTasksRegistry = () =>
 			}),
 	});
 
+export const useKanbanBoardTasksTrash = () =>
+	useQuery({
+		queryKey: ["kanbanBoardTasksTrash"],
+		queryFn: ({ signal }) =>
+			apiClient<KanbanBoardTaskRegistryDto[]>({
+				url: "/kanban-board/tasks/trash",
+				method: "GET",
+				signal,
+			}),
+	});
+
 export const kanbanBoardExportTasksRegistry = (signal?: AbortSignal) =>
 	apiClient<Blob>({
 		url: "/kanban-board/tasks/registry/export",
@@ -605,6 +618,48 @@ export const useDeleteKanbanBoardTask = () => {
 			apiClient<void>({
 				url: `/kanban-board/tasks/${id}`,
 				method: "DELETE",
+			}),
+		onSuccess: () => invalidateTracker(queryClient),
+	});
+};
+
+export const useRestoreKanbanBoardTask = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (id: string) =>
+			apiClient<void>({
+				url: `/kanban-board/tasks/${id}/restore`,
+				method: "POST",
+			}),
+		onSuccess: () => invalidateTracker(queryClient),
+	});
+};
+
+export const usePurgeKanbanBoardTask = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (id: string) =>
+			apiClient<void>({
+				url: `/kanban-board/tasks/${id}/purge`,
+				method: "DELETE",
+			}),
+		onSuccess: () => invalidateTracker(queryClient),
+	});
+};
+
+export const useTrashKanbanBoardColumnTasks = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			boardId,
+			columnId,
+		}: {
+			boardId: string;
+			columnId: string;
+		}) =>
+			apiClient<{ trashedCount: number; columnId: string; boardId: string }>({
+				url: `/kanban-board/boards/${boardId}/columns/${columnId}/trash-tasks`,
+				method: "POST",
 			}),
 		onSuccess: () => invalidateTracker(queryClient),
 	});
@@ -1013,7 +1068,10 @@ export const useKanbanBoardTaskLock = (taskId: string | undefined) =>
 		queryKey: ["kanbanBoardTaskLock", taskId],
 		enabled: Boolean(taskId),
 		queryFn: ({ signal }) => kanbanBoardGetTaskLock(taskId!, signal),
-		refetchInterval: 30_000,
+		refetchInterval: () =>
+			document.visibilityState === "visible"
+				? KANBAN_BOARD_TASK_LOCK_POLL_INTERVAL_MS
+				: false,
 	});
 
 export const useAcquireKanbanBoardTaskLock = () => {

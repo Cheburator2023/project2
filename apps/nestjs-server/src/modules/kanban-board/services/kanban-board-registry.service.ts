@@ -4,7 +4,7 @@ import {
 	NotFoundException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { In, Repository } from "typeorm";
+import { In, IsNull, Not, Repository } from "typeorm";
 import { ulid } from "ulid";
 import {
 	KANBAN_BOARD_HEAP_BOARD_ID,
@@ -15,6 +15,7 @@ import {
 	kanbanBoardAssigneeRoleTitle,
 	kanbanBoardEffectiveEstimatePd,
 	kanbanBoardEffectiveSprintCapacityPd,
+	kanbanBoardIsDoneColumn,
 	kanbanBoardPriorityTitle,
 	kanbanBoardTaskAssigneeRoles,
 	kanbanBoardTaskAssigneeRoleTitles,
@@ -33,6 +34,7 @@ import {
 	type KanbanBoardPlanningImportResultDto,
 	type AssignKanbanBoardTasksToBoardRequestDto,
 	type AssignKanbanBoardTasksToBoardResultDto,
+	type TrashKanbanBoardColumnTasksResultDto,
 	type CreateKanbanBoardCustomerRequestDto,
 	type CreateKanbanBoardAssigneeRequestDto,
 	type CreateKanbanBoardBoardRequestDto,
@@ -665,6 +667,7 @@ export class KanbanBoardRegistryService {
 			.createQueryBuilder("task")
 			.select("task.board_id", "boardId")
 			.addSelect("COUNT(*)", "count")
+			.where("task.deleted_at IS NULL")
 			.groupBy("task.board_id")
 			.getRawMany<{ boardId: string; count: string }>();
 		const countMap = new Map(
@@ -682,7 +685,7 @@ export class KanbanBoardRegistryService {
 	async findBoardByRef(ref: string): Promise<KanbanBoardBoardDto> {
 		const board = await this.findBoardEntityByRef(ref);
 		const taskCount = await this.taskRepository.count({
-			where: { boardId: board.id },
+			where: { boardId: board.id, deletedAt: IsNull() },
 		});
 		return this.toBoardDto(board, new Map([[board.id, taskCount]]));
 	}
@@ -795,7 +798,7 @@ export class KanbanBoardRegistryService {
 	async deleteColumn(boardId: string, columnId: string): Promise<void> {
 		await this.ensureColumnOnBoard(boardId, columnId);
 		const taskCount = await this.taskRepository.count({
-			where: { boardId, parentId: columnId },
+			where: { boardId, parentId: columnId, deletedAt: IsNull() },
 		});
 		if (taskCount > 0) {
 			throw new BadRequestException("Нельзя удалить колонку с задачами");
@@ -920,7 +923,9 @@ export class KanbanBoardRegistryService {
 		if (dto.sortOrder !== undefined) board.sortOrder = dto.sortOrder;
 
 		await this.boardRepository.save(board);
-		const taskCount = await this.taskRepository.count({ where: { boardId: id } });
+		const taskCount = await this.taskRepository.count({
+			where: { boardId: id, deletedAt: IsNull() },
+		});
 		return this.toBoardDto(board, new Map([[id, taskCount]]));
 	}
 
@@ -932,9 +937,25 @@ export class KanbanBoardRegistryService {
 
 	async findAllTasksRegistry(): Promise<KanbanBoardTaskRegistryDto[]> {
 		const rows = await this.taskRepository.find({
+			where: { deletedAt: IsNull() },
 			relations: { board: { project: true } },
 			order: { updatedAt: "DESC" },
 		});
+		return this.mapTasksToRegistry(rows);
+	}
+
+	async findTrashedTasksRegistry(): Promise<KanbanBoardTaskRegistryDto[]> {
+		const rows = await this.taskRepository.find({
+			where: { deletedAt: Not(IsNull()) },
+			relations: { board: { project: true } },
+			order: { deletedAt: "DESC", updatedAt: "DESC" },
+		});
+		return this.mapTasksToRegistry(rows);
+	}
+
+	private async mapTasksToRegistry(
+		rows: KanbanBoardTaskEntity[],
+	): Promise<KanbanBoardTaskRegistryDto[]> {
 		await this.taskImageService.syncTasksContentImages(rows);
 		const columnTitles = await this.loadColumnTitleMap(
 			rows.map((row) => row.boardId),
@@ -1270,7 +1291,11 @@ export class KanbanBoardRegistryService {
 		const position =
 			dto.position ??
 			(await this.taskRepository.count({
-				where: { boardId: dto.boardId, parentId: dto.parentId },
+				where: {
+					boardId: dto.boardId,
+					parentId: dto.parentId,
+					deletedAt: IsNull(),
+				},
 			}));
 
 		const content = await this.validateTaskContent(dto.content);
@@ -1289,6 +1314,7 @@ export class KanbanBoardRegistryService {
 			createdAt: now,
 			createdBy: dto.createdBy?.trim() || null,
 			updatedAt: now,
+			deletedAt: null,
 		});
 		entity.board = board;
 		await this.taskRepository.save(entity);
@@ -1326,7 +1352,7 @@ export class KanbanBoardRegistryService {
 		createdBy?: string | null,
 	): Promise<KanbanBoardTaskRegistryDto> {
 		const task = await this.taskRepository.findOne({
-			where: { id },
+			where: { id, deletedAt: IsNull() },
 			relations: { board: { project: true } },
 		});
 		if (!task) throw new NotFoundException("Задача не найдена");
@@ -1376,6 +1402,9 @@ export class KanbanBoardRegistryService {
 		await this.ensureColumnOnBoard(task.boardId, nextParentId);
 		if (dto.parentId !== undefined) task.parentId = dto.parentId;
 		if (dto.position !== undefined) task.position = dto.position;
+		if (dto.createdBy !== undefined) {
+			task.createdBy = dto.createdBy?.trim() || null;
+		}
 		if (dto.content !== undefined) {
 			const mergedContent: KanbanBoardTaskContent = {
 				...task.content,
@@ -1414,9 +1443,9 @@ export class KanbanBoardRegistryService {
 		);
 	}
 
-	async deleteTask(id: string, createdBy?: string | null): Promise<void> {
+	async trashTask(id: string, createdBy?: string | null): Promise<void> {
 		const task = await this.taskRepository.findOne({
-			where: { id },
+			where: { id, deletedAt: IsNull() },
 			relations: { board: { project: true } },
 		});
 		if (!task) throw new NotFoundException("Задача не найдена");
@@ -1427,15 +1456,108 @@ export class KanbanBoardRegistryService {
 			taskTitle: task.content.title,
 			changes: [
 				{
-					field: "deleted",
-					label: "Удаление",
+					field: "trashed",
+					label: "В корзину",
 					from: task.content.title,
 					to: null,
 				},
 			],
 			createdBy,
 		});
-		await this.kanbanBoardService.deleteTask(id);
+		await this.kanbanBoardService.trashTask(id);
+	}
+
+	/** Soft-delete (в корзину). Полное удаление — purgeTask. */
+	async deleteTask(id: string, createdBy?: string | null): Promise<void> {
+		return this.trashTask(id, createdBy);
+	}
+
+	async restoreTask(id: string, createdBy?: string | null): Promise<void> {
+		const task = await this.taskRepository.findOne({
+			where: { id, deletedAt: Not(IsNull()) },
+			relations: { board: { project: true } },
+		});
+		if (!task) throw new NotFoundException("Задача не найдена в корзине");
+		await this.kanbanBoardService.restoreTask(id);
+		await this.historyService.logTaskChanges({
+			boardId: task.boardId,
+			taskId: task.id,
+			taskKey: this.historyService.formatTaskKey(task),
+			taskTitle: task.content.title,
+			changes: [
+				{
+					field: "restored",
+					label: "Восстановление",
+					from: null,
+					to: task.content.title,
+				},
+			],
+			createdBy,
+		});
+	}
+
+	async purgeTask(id: string, createdBy?: string | null): Promise<void> {
+		const task = await this.taskRepository.findOne({
+			where: { id, deletedAt: Not(IsNull()) },
+			relations: { board: { project: true } },
+		});
+		if (!task) throw new NotFoundException("Задача не найдена в корзине");
+		await this.historyService.logTaskChanges({
+			boardId: task.boardId,
+			taskId: task.id,
+			taskKey: this.historyService.formatTaskKey(task),
+			taskTitle: task.content.title,
+			changes: [
+				{
+					field: "deleted",
+					label: "Удаление навсегда",
+					from: task.content.title,
+					to: null,
+				},
+			],
+			createdBy,
+		});
+		await this.kanbanBoardService.purgeTask(id);
+	}
+
+	async trashColumnTasks(
+		boardId: string,
+		columnId: string,
+		createdBy?: string | null,
+	): Promise<TrashKanbanBoardColumnTasksResultDto> {
+		const column = await this.ensureColumnOnBoard(boardId, columnId);
+		if (!kanbanBoardIsDoneColumn(column)) {
+			throw new BadRequestException(
+				"В корзину можно очистить только колонку «Готово»",
+			);
+		}
+		const tasks = await this.taskRepository.find({
+			where: { boardId, parentId: columnId, deletedAt: IsNull() },
+			relations: { board: { project: true } },
+		});
+		for (const task of tasks) {
+			await this.historyService.logTaskChanges({
+				boardId: task.boardId,
+				taskId: task.id,
+				taskKey: this.historyService.formatTaskKey(task),
+				taskTitle: task.content.title,
+				changes: [
+					{
+						field: "trashed",
+						label: "В корзину",
+						from: task.content.title,
+						to: null,
+					},
+				],
+				createdBy,
+			});
+			await this.kanbanBoardService.trashTask(task.id);
+		}
+		return {
+			boardId,
+			columnId,
+			trashedCount: tasks.length,
+		};
 	}
 
 	async assignTasksToBoard(
@@ -1480,7 +1602,11 @@ export class KanbanBoardRegistryService {
 		const positionByColumn = new Map<string, number>();
 		for (const column of targetColumns) {
 			const count = await this.taskRepository.count({
-				where: { boardId: dto.boardId, parentId: column.id },
+				where: {
+					boardId: dto.boardId,
+					parentId: column.id,
+					deletedAt: IsNull(),
+				},
 			});
 			positionByColumn.set(column.id, count);
 		}
@@ -1671,7 +1797,7 @@ export class KanbanBoardRegistryService {
 		const trimmed = ref.trim();
 
 		const byId = await this.taskRepository.findOne({
-			where: { id: trimmed },
+			where: { id: trimmed, deletedAt: IsNull() },
 			relations: { board: { project: true }, project: true },
 		});
 		if (byId) return byId;
@@ -1690,6 +1816,7 @@ export class KanbanBoardRegistryService {
 			.andWhere("task.task_number = :taskNumber", {
 				taskNumber: parsed.taskNumber,
 			})
+			.andWhere("task.deleted_at IS NULL")
 			.getOne();
 		if (byBoardProject) return byBoardProject;
 
@@ -1697,7 +1824,11 @@ export class KanbanBoardRegistryService {
 		if (!project) throw new NotFoundException("Задача не найдена");
 
 		const task = await this.taskRepository.findOne({
-			where: { projectId: project.id, taskNumber: parsed.taskNumber },
+			where: {
+				projectId: project.id,
+				taskNumber: parsed.taskNumber,
+				deletedAt: IsNull(),
+			},
 			relations: { board: { project: true }, project: true },
 		});
 		if (!task) throw new NotFoundException("Задача не найдена");
@@ -1818,6 +1949,7 @@ export class KanbanBoardRegistryService {
 			createdAt: task.createdAt ?? task.updatedAt,
 			createdBy: task.createdBy ?? null,
 			updatedAt: task.updatedAt,
+			deletedAt: task.deletedAt ?? null,
 			projectCode,
 			projectName: task.board?.project?.name ?? task.project?.name ?? "",
 			taskKey: formatKanbanTaskKey(projectCode, task.taskNumber),
@@ -1928,7 +2060,9 @@ export class KanbanBoardRegistryService {
 	}
 
 	private async countTasksByAssigneeName(): Promise<Map<string, number>> {
-		const tasks = await this.taskRepository.find();
+		const tasks = await this.taskRepository.find({
+			where: { deletedAt: IsNull() },
+		});
 		const counts = new Map<string, number>();
 		for (const task of tasks) {
 			for (const assigneeName of kanbanBoardTaskAssignees(task.content)) {
@@ -1939,7 +2073,9 @@ export class KanbanBoardRegistryService {
 	}
 
 	private async countTasksWithAssigneeName(name: string): Promise<number> {
-		const tasks = await this.taskRepository.find();
+		const tasks = await this.taskRepository.find({
+			where: { deletedAt: IsNull() },
+		});
 		return tasks.filter((task) =>
 			kanbanBoardTaskAssignees(task.content).includes(name),
 		).length;
@@ -1949,7 +2085,9 @@ export class KanbanBoardRegistryService {
 		oldName: string,
 		newName: string,
 	): Promise<void> {
-		const tasks = await this.taskRepository.find();
+		const tasks = await this.taskRepository.find({
+			where: { deletedAt: IsNull() },
+		});
 
 		for (const task of tasks) {
 			const assignees = kanbanBoardTaskAssignees(task.content);
@@ -2103,7 +2241,8 @@ export class KanbanBoardRegistryService {
 			.createQueryBuilder("task")
 			.select("task.content->>'sprintId'", "sprintId")
 			.addSelect("COUNT(*)", "count")
-			.where("task.content->>'sprintId' IS NOT NULL")
+			.where("task.deleted_at IS NULL")
+			.andWhere("task.content->>'sprintId' IS NOT NULL")
 			.andWhere("task.content->>'sprintId' <> ''")
 			.groupBy("task.content->>'sprintId'")
 			.getRawMany<{ sprintId: string; count: string }>();
@@ -2114,7 +2253,8 @@ export class KanbanBoardRegistryService {
 	private async countTasksWithSprintId(sprintId: string): Promise<number> {
 		return this.taskRepository
 			.createQueryBuilder("task")
-			.where("task.content->>'sprintId' = :sprintId", { sprintId })
+			.where("task.deleted_at IS NULL")
+			.andWhere("task.content->>'sprintId' = :sprintId", { sprintId })
 			.getCount();
 	}
 
@@ -2123,7 +2263,8 @@ export class KanbanBoardRegistryService {
 			.createQueryBuilder("task")
 			.select("task.content->>'streamCustomer'", "streamName")
 			.addSelect("COUNT(*)", "count")
-			.where("task.content->>'streamCustomer' IS NOT NULL")
+			.where("task.deleted_at IS NULL")
+			.andWhere("task.content->>'streamCustomer' IS NOT NULL")
 			.andWhere("task.content->>'streamCustomer' <> ''")
 			.groupBy("task.content->>'streamCustomer'")
 			.getRawMany<{ streamName: string; count: string }>();
@@ -2134,7 +2275,8 @@ export class KanbanBoardRegistryService {
 	private async countTasksWithStreamName(name: string): Promise<number> {
 		return this.taskRepository
 			.createQueryBuilder("task")
-			.where("task.content->>'streamCustomer' = :name", { name })
+			.where("task.deleted_at IS NULL")
+			.andWhere("task.content->>'streamCustomer' = :name", { name })
 			.getCount();
 	}
 
@@ -2158,7 +2300,8 @@ export class KanbanBoardRegistryService {
 			.createQueryBuilder("task")
 			.select("task.content->>'customer'", "customerName")
 			.addSelect("COUNT(*)", "count")
-			.where("task.content->>'customer' IS NOT NULL")
+			.where("task.deleted_at IS NULL")
+			.andWhere("task.content->>'customer' IS NOT NULL")
 			.andWhere("task.content->>'customer' <> ''")
 			.groupBy("task.content->>'customer'")
 			.getRawMany<{ customerName: string; count: string }>();
@@ -2169,7 +2312,8 @@ export class KanbanBoardRegistryService {
 	private async countTasksWithCustomerName(name: string): Promise<number> {
 		return this.taskRepository
 			.createQueryBuilder("task")
-			.where("task.content->>'customer' = :name", { name })
+			.where("task.deleted_at IS NULL")
+			.andWhere("task.content->>'customer' = :name", { name })
 			.getCount();
 	}
 

@@ -20,6 +20,22 @@ const parseAssigneeRole = (
 ): KanbanBoardAssigneeDto["role"] =>
 	isKanbanBoardAssigneeRoleId(value) ? value : null;
 
+const joinAssigneeName = (lastName: string, firstName: string): string =>
+	[lastName.trim(), firstName.trim()].filter(Boolean).join(" ");
+
+const splitAssigneeName = (
+	name: string,
+): { lastName: string; firstName: string } => {
+	const trimmed = name.trim();
+	if (!trimmed) return { lastName: "", firstName: "" };
+	const space = trimmed.indexOf(" ");
+	if (space === -1) return { lastName: trimmed, firstName: "" };
+	return {
+		lastName: trimmed.slice(0, space),
+		firstName: trimmed.slice(space + 1).trim(),
+	};
+};
+
 export function TrackerAssigneesPage() {
 	const { data = [], isLoading } = useKanbanBoardAssignees();
 	const createAssignee = useCreateKanbanBoardAssignee();
@@ -38,7 +54,7 @@ export function TrackerAssigneesPage() {
 	const columnDefs = useMemo<ColDef<KanbanBoardAssigneeDto>[]>(
 		() => [
 			{ field: "code", headerName: "Код", flex: 1, minWidth: 120 },
-			{ field: "name", headerName: "Имя", flex: 1.2, minWidth: 160 },
+			{ field: "name", headerName: "ФИО", flex: 1.2, minWidth: 160 },
 			{ field: "roleTitle", headerName: "Роль", width: 130 },
 			{ field: "email", headerName: "Email", flex: 1.2, minWidth: 180 },
 			{
@@ -68,7 +84,7 @@ export function TrackerAssigneesPage() {
 			gridStateKey="tracker.assignees"
 			title="исполнитель"
 			createLabel="Создать исполнителя"
-			searchPlaceholder="Поиск по коду, имени, email…"
+			searchPlaceholder="Поиск по коду, ФИО, email…"
 			rowData={data}
 			columnDefs={columnDefs}
 			loading={isLoading}
@@ -80,7 +96,8 @@ export function TrackerAssigneesPage() {
 					autoGenerate: "usr",
 					helperText: "Генерируется автоматически, можно изменить",
 				},
-				{ name: "name", label: "Имя", required: true },
+				{ name: "lastName", label: "Фамилия", required: true },
+				{ name: "firstName", label: "Имя", required: true },
 				{ name: "email", label: "Email" },
 				{
 					name: "role",
@@ -95,20 +112,21 @@ export function TrackerAssigneesPage() {
 					helperText: "Пусто — используется значение из настроек трекера",
 				},
 			]}
-			getInitialFormValues={(row) =>
-				row
-					? {
-							code: row.code,
-							name: row.name,
-							email: row.email ?? "",
-							role: row.role ?? "",
-							sprintCapacityPd:
-								row.sprintCapacityPd === null
-									? ""
-									: String(row.sprintCapacityPd),
-						}
-					: TRACKER_EMPTY_FORM_VALUES
-			}
+			getInitialFormValues={(row) => {
+				if (!row) return TRACKER_EMPTY_FORM_VALUES;
+				const { lastName, firstName } = splitAssigneeName(row.name);
+				return {
+					code: row.code,
+					lastName,
+					firstName,
+					email: row.email ?? "",
+					role: row.role ?? "",
+					sprintCapacityPd:
+						row.sprintCapacityPd === null
+							? ""
+							: String(row.sprintCapacityPd),
+				};
+			}}
 			canDelete={(row) => row.taskCount === 0}
 			deleteDialogTitle="Удаление исполнителей"
 			deleteDialogText={(count) =>
@@ -117,7 +135,7 @@ export function TrackerAssigneesPage() {
 			onCreate={async (values) => {
 				await createAssignee.mutateAsync({
 					code: values.code,
-					name: values.name,
+					name: joinAssigneeName(values.lastName, values.firstName),
 					email: values.email || null,
 					role: parseAssigneeRole(values.role),
 					sprintCapacityPd: values.sprintCapacityPd.trim()
@@ -130,7 +148,7 @@ export function TrackerAssigneesPage() {
 					id: row.id,
 					data: {
 						code: values.code,
-						name: values.name,
+						name: joinAssigneeName(values.lastName, values.firstName),
 						email: values.email || null,
 						role: parseAssigneeRole(values.role),
 						sprintCapacityPd: values.sprintCapacityPd.trim()

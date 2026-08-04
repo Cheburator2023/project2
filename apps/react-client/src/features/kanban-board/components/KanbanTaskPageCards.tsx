@@ -31,7 +31,7 @@ export function KanbanTaskSectionCard({
 				bgcolor: "background.paper",
 				border: "1px solid",
 				borderColor: "divider",
-				borderRadius: 2,
+				borderRadius: 1,
 				p: 2,
 				boxShadow: (theme) =>
 					`0 1px 2px ${alpha(theme.palette.common.black, 0.04)}`,
@@ -121,11 +121,7 @@ export function KanbanTaskPersonLabel({
 	);
 }
 
-export function KanbanTaskPriorityBadge({
-	priority,
-}: {
-	priority?: string;
-}) {
+export function KanbanTaskPriorityBadge({ priority }: { priority?: string }) {
 	if (!priority) return null;
 	const color = kanbanBoardPriorityColor(priority);
 	const title = kanbanBoardPriorityTitle(priority as KanbanBoardPriorityId);

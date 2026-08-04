@@ -210,12 +210,6 @@ export function TrackerTasksPage() {
 				width: 110,
 			},
 			{
-				field: "sprintOutcome",
-				headerName: "Результат спринта",
-				minWidth: 160,
-				flex: 0.9,
-			},
-			{
 				field: "effectiveEstimatePd",
 				headerName: "Итого, чд",
 				width: 100,
@@ -302,8 +296,10 @@ export function TrackerTasksPage() {
 				onCreateClick={() => navigate(trackerStandaloneTaskCreatePath())}
 				onEditClick={openTask}
 				onRowDoubleClick={openTask}
-				deleteDialogTitle="Удаление задач"
-				deleteDialogText={(count) => `Удалить ${count} задач(и)?`}
+				deleteDialogTitle="В корзину"
+				deleteDialogText={(count) =>
+					`Переместить ${count} задач(и) в корзину?`
+				}
 				onDelete={async (rows) => {
 					for (const row of rows) {
 						await deleteTask.mutateAsync(row.id);

@@ -51,4 +51,9 @@ export class KanbanBoardTaskEntity {
 
 	@Column({ name: "updated_at", type: "varchar", length: 64 })
 	updatedAt!: string;
+
+	/** Soft-delete: в корзине, если задано (ISO). */
+	@Index()
+	@Column({ name: "deleted_at", type: "varchar", length: 64, nullable: true })
+	deletedAt!: string | null;
 }

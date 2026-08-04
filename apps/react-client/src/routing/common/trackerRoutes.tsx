@@ -15,7 +15,9 @@ import {
 	TrackerSprintsPage,
 	TrackerStreamsPage,
 	TrackerSupersprintsPage,
+	TrackerMyTasksPage,
 	TrackerTasksPage,
+	TrackerTrashPage,
 } from "@react-client/routing/lazyPages";
 import {
 	TrackerLegacyBoardRedirect,
@@ -42,6 +44,7 @@ export function trackerRoutes({
 			{ index: true, element: <Navigate to="projects" replace /> },
 			{ path: "projects", element: <TrackerProjectsPage /> },
 			{ path: "boards", element: <TrackerBoardsPage /> },
+			{ path: "my-tasks", element: <TrackerMyTasksPage /> },
 			{ path: "tasks", element: <TrackerTasksPage /> },
 			{ path: "gantt", element: <TrackerGanttPage /> },
 			{ path: "assignees", element: <TrackerAssigneesPage /> },
@@ -51,6 +54,7 @@ export function trackerRoutes({
 			{ path: "streams", element: <TrackerStreamsPage /> },
 			{ path: "settings", element: <TrackerSettingsPage /> },
 			{ path: "history", element: <TrackerBoardHistoryPage /> },
+			{ path: "trash", element: <TrackerTrashPage /> },
 			{ path: "tasks/new", element: <KanbanTaskPage mode="create" /> },
 			{ path: "task/new", element: <KanbanTaskPage mode="create" /> },
 			{ path: "board/:boardKey", element: <KanbanBoardPage /> },

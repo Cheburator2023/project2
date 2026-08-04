@@ -100,7 +100,10 @@ export interface KanbanBoardTaskContent {
 	parentTask?: string;
 	/** Заказчик (ручной ввод) */
 	customer?: string;
-	/** Ожидаемый результат спринта */
+	/**
+	 * @deprecated Перенесено в description миграцией
+	 * MergeKanbanSprintOutcomeIntoDescription. Оставлено для чтения старых данных/истории.
+	 */
 	sprintOutcome?: string;
 	sprintId?: string;
 	streamCustomer?: string;
@@ -307,8 +310,16 @@ export interface KanbanBoardTaskRecord {
 	/** Имя исполнителя из настроек трекера («Я — исполнитель»). */
 	createdBy?: string | null;
 	updatedAt: string;
+	/** Soft-delete: задача в корзине (ISO), null — активна. */
+	deletedAt?: string | null;
 	/** Количество комментариев (заполняется при чтении доски). */
 	commentCount?: number;
+}
+
+export interface TrashKanbanBoardColumnTasksResultDto {
+	trashedCount: number;
+	columnId: string;
+	boardId: string;
 }
 
 export interface KanbanBoardProjectDto {
@@ -418,6 +429,8 @@ export interface UpdateKanbanBoardTaskRequestDto {
 	parentId?: string;
 	position?: number;
 	content?: KanbanBoardTaskContent;
+	/** Кто назначил / создал задачу (подпись в карточке) */
+	createdBy?: string | null;
 	/** Версия задачи на клиенте; при расхождении — 409, если не forceOverwrite */
 	expectedUpdatedAt?: string;
 	forceOverwrite?: boolean;
@@ -434,7 +447,12 @@ export interface SaveKanbanBoardTasksRequestDto {
 }
 
 export const KANBAN_BOARD_TASK_LOCK_TTL_MS = 2 * 60 * 1000;
-export const KANBAN_BOARD_SYNC_POLL_INTERVAL_MS = 15_000;
+/** Период опроса актуальности задачи на странице редактирования. */
+export const KANBAN_BOARD_SYNC_POLL_INTERVAL_MS = 8_000;
+/** Бездействие на странице задачи → снятие lock и выход. */
+export const KANBAN_BOARD_TASK_EDIT_IDLE_TIMEOUT_MS = 10 * 60 * 1000;
+/** Период опроса статуса lock задачи. */
+export const KANBAN_BOARD_TASK_LOCK_POLL_INTERVAL_MS = 10_000;
 
 export interface KanbanBoardTaskLockDto {
 	taskId: string;
@@ -822,6 +840,7 @@ export interface KanbanBoardTaskHistorySnapshot {
 	parentId: string;
 	position: number;
 	boardId: string;
+	createdBy?: string | null;
 	content: KanbanBoardTaskContent;
 }
 
