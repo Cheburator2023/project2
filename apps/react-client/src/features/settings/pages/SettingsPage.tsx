@@ -44,11 +44,6 @@ function VersionRow({
 					<Typography variant="body2" color="text.secondary">
 						Версия: {version}
 					</Typography>
-					{gitRevision ? (
-						<Typography variant="body2" color="text.secondary">
-							Сборка: {gitRevision}
-						</Typography>
-					) : null}
 				</Flex>
 			)}
 		</Flex>
