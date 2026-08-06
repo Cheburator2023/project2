@@ -492,8 +492,8 @@ export class V2CalculationService {
 			};
 		});
 
-		// Итоги стримов: base = Σ типовых; scoreWithComplexityCoeff = база×коэф. + нетиповые;
-		// deviationFromBaseline = (score / base) × 100%; + detailedCalculation / platformStreams.
+		// Итоги: База = Σ нормативов типовых; scoreWithComplexityCoeff = итоговая трудоёмкость
+		// (Типовые+Нетиповые ≈ summary.total); отклонение = (трудоёмкость / База) × 100%.
 		// Не затирает total/typicalTotal/atypicalTotal — merge через spread prevSummary.
 		const sourceTypicalWorksPath = resolveSourceTypicalWorksOutputPath(
 			options?.jsonSchema,

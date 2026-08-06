@@ -726,13 +726,19 @@ function buildDeviationFormulaTitle(
 			? withCoeff - atypical
 			: summary?.typicalTotal ?? null;
 
+	const laborTotal =
+		summary?.total != null && Number.isFinite(summary.total)
+			? summary.total
+			: withCoeff;
 	const lines = [
-		"Отклонение = (база×коэф. + нетиповые) / база × 100%",
-		`база (сумма нормативов без коэффициентов) = ${formatNum(base)}`,
-		`база×коэф. (типовые с коэффициентами) = ${formatNum(adjustedTypical)}`,
-		`нетиповые = ${formatNum(atypical)}`,
-		`база×коэф. + нетиповые = ${formatNum(withCoeff)}`,
-		`(${formatNum(withCoeff)} / ${formatNum(base)}) × 100% = ${formatPercent(deviation)}`,
+		"Отклонение = (Типовые + Нетиповые) / База × 100%",
+		"Типовые + Нетиповые = итоговая трудоёмкость по анкете",
+		"(с коэффициентами и общей неопределённостью).",
+		`База (сумма нормативов выбранных типовых работ) = ${formatNum(base)}`,
+		`Типовые (с коэфф.) = ${formatNum(adjustedTypical)}`,
+		`Нетиповые = ${formatNum(atypical)}`,
+		`Итоговая трудоёмкость = ${formatNum(laborTotal)}`,
+		`(${formatNum(laborTotal)} / ${formatNum(base)}) × 100% = ${formatPercent(deviation)}`,
 	];
 	return lines.join("\n");
 }

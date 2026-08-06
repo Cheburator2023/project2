@@ -47,7 +47,8 @@ export type V2LegacySummaryResult = {
 	scoreWithComplexityCoeff: number;
 	/**
 	 * Отклонение от базовой оценки, %:
-	 * (База×Коэффициенты + Нетиповые) / База × 100.
+	 * (Типовые + Нетиповые) / База × 100,
+	 * где Типовые+Нетиповые = итоговая трудоёмкость по анкете.
 	 */
 	deviationFromBaseline: number;
 	detailedCalculation: V2DetailedCalculationRow[];
@@ -630,14 +631,16 @@ export function evaluateLegacyV2Summary(
 				},
 			];
 
-	// СФЕРА-заголовки:
-	// база = Σ нормативов типовых (без коэфф.);
-	// оценка с коэф. = Σ(типовые с коэфф.) + Σ нетиповых;
-	// отклонение% = (оценка с коэф. / база) × 100.
+	// СФЕРА-заголовки (упрощённая формула отклонения):
+	//   Отклонение = (Типовые + Нетиповые) / База × 100%
+	// где Типовые+Нетиповые = итоговая трудоёмкость по анкете
+	//     (с коэффициентами и общей неопределённостью — как в summary.total),
+	//     База = Σ нормативов выбранных типовых работ (без коэффициентов).
 	const worksTotals = resolveStreamWorksTotals(data, platformStreams);
 	const baseScoreStream = worksTotals.typical;
-	const scoreWithComplexityCoeff = roundUp2(
-		worksTotals.adjustedTypical + worksTotals.atypical,
+	const scoreWithComplexityCoeff = resolveLaborIntensityTotal(
+		data,
+		worksTotals,
 	);
 	const deviationFromBaseline =
 		ratioToBasePercent(baseScoreStream, scoreWithComplexityCoeff) ?? 0;
@@ -649,6 +652,30 @@ export function evaluateLegacyV2Summary(
 		detailedCalculation,
 		platformStreams,
 	};
+}
+
+/**
+ * Числитель отклонения = итоговая трудоёмкость:
+ * summary.total, иначе typicalTotal+atypicalTotal (JsonLogic),
+ * иначе сумма по стримам (типовые с коэфф. + нетиповые).
+ */
+function resolveLaborIntensityTotal(
+	data: Record<string, unknown>,
+	worksTotals: { adjustedTypical: number; atypical: number },
+): number {
+	const summary = readRecord(data.summary);
+	const total = Number(summary?.total);
+	if (Number.isFinite(total) && total >= 0) {
+		return roundUp2(total);
+	}
+	const typicalTotal = Number(summary?.typicalTotal);
+	const atypicalTotal = Number(summary?.atypicalTotal);
+	const hasTypical = Number.isFinite(typicalTotal);
+	const hasAtypical = Number.isFinite(atypicalTotal);
+	if (hasTypical || hasAtypical) {
+		return roundUp2((hasTypical ? typicalTotal : 0) + (hasAtypical ? atypicalTotal : 0));
+	}
+	return roundUp2(worksTotals.adjustedTypical + worksTotals.atypical);
 }
 
 /** Суммы типовых/нетиповых по стримам; fallback на summary.* из JsonLogic. */

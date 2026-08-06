@@ -2,9 +2,10 @@
  * Поля `summary`, которые POST /calculate перезаписывает после JsonLogic
  * (`v2-legacy-stage-evaluation.ts`).
  *
- * `baseScoreStream` = сумма нормативов типовых работ (без коэффициентов),
- * `scoreWithComplexityCoeff` = типовые с коэфф. + нетиповые,
- * `deviationFromBaseline` = (scoreWithComplexityCoeff / База) × 100%.
+ * `baseScoreStream` = сумма нормативов выбранных типовых работ (без коэффициентов),
+ * `scoreWithComplexityCoeff` = итоговая трудоёмкость = типовые + нетиповые
+ *   (с коэффициентами и общей неопределённостью; обычно = summary.total),
+ * `deviationFromBaseline` = (Типовые + Нетиповые) / База × 100%.
  * `detailedCalculation` / `platformStreams` — детализация.
  *
  * Не настраиваются в конструкторе JsonLogic.

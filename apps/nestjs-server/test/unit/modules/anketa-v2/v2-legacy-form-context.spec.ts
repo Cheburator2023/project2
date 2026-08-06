@@ -242,4 +242,42 @@ describe("evaluateLegacyV2Summary snapshot sensitivity", () => {
 			0,
 		);
 	});
+
+	it("deviation = (типовые + нетиповые) / база × 100% from summary.total", () => {
+		const uiSchema = {
+			streamDataSources: {
+				"ui:options": {
+					archComponent: "streamBlock",
+					streamExecutor: "Стрим источников данных",
+				},
+				typicalWorks: {
+					"ui:options": { archComponent: "typicalWork" },
+					items: {},
+				},
+			},
+		};
+		const data = {
+			summary: {
+				typicalTotal: 80,
+				atypicalTotal: 20,
+				total: 100,
+			},
+			streamDataSources: {
+				typicalWorks: [
+					{
+						name: "Work A",
+						estimateHoursPerDay: 50,
+						total: 80,
+						formulaBreakdown: { instanceBreakdown: [{}] },
+					},
+				],
+			},
+			generalInfo: { complexity: "1 — Низкая ×1.00" },
+		};
+		const summary = evaluateLegacyV2Summary(data, { uiSchema });
+		// База = норматив 50; трудоёмкость = summary.total 100 → 200%
+		expect(summary.baseScoreStream).toBe(50);
+		expect(summary.scoreWithComplexityCoeff).toBe(100);
+		expect(summary.deviationFromBaseline).toBe(200);
+	});
 });
