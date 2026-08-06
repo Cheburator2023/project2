@@ -1,5 +1,13 @@
 # Semantic Versioning Changelog
 
+# [1.58.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.57.0...v1.58.0) (2026-08-05)
+
+
+### Features
+
+* add createdBy field to Kanban tasks and update related functionality ([062df4b](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/062df4b26fbf5166bf898aa9394cf35071d9deb7))
+* add reset functionality and improve uncertainty calculations in TotalUncertaintyModal ([b80df4e](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/b80df4e3cbe7cc3e6583bc0eefa1a2654b4aa7ae))
+
 # [1.57.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.56.0...v1.57.0) (2026-08-03)
 
 
