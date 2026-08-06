@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+# [1.59.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.58.0...v1.59.0) (2026-08-06)
+
+
+### Features
+
+* enhance schema binding information and UI components ([6921131](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/692113190e4707c098c8bd7d084fd8e7cedd2965))
+
 # [1.58.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.57.0...v1.58.0) (2026-08-05)
 
 
