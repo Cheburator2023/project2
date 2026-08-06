@@ -128,6 +128,22 @@ function leafToColDef(leaf: V2RegistryLeafColumn): ColDef<V2QuestionnaireGridRow
 				valueGetter: (p) => resolveVersionRow(p.data)?.[leaf.id as "createdAt"] ?? "",
 			};
 		}
+		if (leaf.id === "schemaCreatedAt" || leaf.id === "schemaUpdatedAt") {
+			const bindingKey =
+				leaf.id === "schemaCreatedAt"
+					? "boundTemplateVersionCreatedAt"
+					: "boundTemplateVersionUpdatedAt";
+			return {
+				colId: leaf.id,
+				headerName: leaf.header,
+				minWidth,
+				resizable: true,
+				...baseFilter,
+				...dateSetFilterExtras(),
+				valueGetter: (p) =>
+					resolveVersionRow(p.data)?.schemaBinding?.[bindingKey] ?? "",
+			};
+		}
 		if (leaf.id === "finalCoefficient") {
 			return {
 				colId: leaf.id,

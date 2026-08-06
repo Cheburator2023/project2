@@ -64,6 +64,10 @@ export type V2SchemaBindingDto = {
 	boundTemplateVersionId: string;
 	boundTemplateVersionNumber: number | null;
 	boundTemplateVersionStatus: string | null;
+	/** Дата создания привязанной версии схемы. */
+	boundTemplateVersionCreatedAt: string | null;
+	/** Дата последнего изменения привязанной версии схемы. */
+	boundTemplateVersionUpdatedAt: string | null;
 	/** Актуальная версия шаблона в админке (если есть). */
 	currentTemplateVersionId: string | null;
 	currentTemplateVersionNumber: number | null;

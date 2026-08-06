@@ -125,6 +125,7 @@ export const AnketaPreviewPageV2 = () => {
 			questionnaireId={id}
 			questionnaireCalcName={formPackage?.questionnaire.calcName}
 			questionnaireStatus={formPackage?.questionnaire.status}
+			templateName={formPackage?.questionnaire.templateName}
 			onRenameQuestionnaire={
 				formPackage && !errorMessage && !effectiveReadOnly
 					? onRenameQuestionnaire

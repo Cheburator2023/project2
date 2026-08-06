@@ -362,12 +362,12 @@ export const TotalUncertaintyModal = ({
 						</Typography>
 					</Flex>
 
-					<Stack spacing={2.5}>
+					<Stack spacing={4.5}>
 						{riskGroups.map((risk) => {
 							const selection = values.risks[risk.id] ?? emptyRiskSelection();
 							return (
 								<Box key={risk.id} sx={{ opacity: risksLocked ? 0.55 : 1 }}>
-									<Flex gap={0.5} alignItems="center" sx={{ mb: 1 }}>
+									<Flex gap={0.5} alignItems="center" sx={{ mb: 1.5 }}>
 										<Typography variant="body2" color="text.secondary">
 											{risk.label}
 										</Typography>
@@ -502,7 +502,8 @@ export const TotalUncertaintyModal = ({
 			>
 				<Button
 					onClick={handleReset}
-					color="inherit"
+					variant="outlined"
+					color="warning"
 					disabled={loading}
 					title="Сбросить срок, стоимость, поправку и ответы по рискам"
 				>

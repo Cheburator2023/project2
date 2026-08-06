@@ -1,5 +1,6 @@
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import BugReportOutlinedIcon from "@mui/icons-material/BugReportOutlined";
 import SaveIcon from "@mui/icons-material/Save";
 import TaskAltIcon from "@mui/icons-material/TaskAlt";
@@ -41,6 +42,7 @@ import {
 	type AnketaGlobalCompleteDialogPhase,
 } from "../organisms/AnketaGlobalCompleteDialog";
 import { AnketaCalcNameDialog } from "../organisms/AnketaCalcNameDialog";
+import { AnketaSchemaInfoDialog } from "../organisms/AnketaSchemaInfoDialog";
 import { FinalScoreCard } from "../organisms/FinalScoreCard";
 import { V2AnketaFormWithModals } from "../organisms/V2AnketaFormWithModals";
 import { AnketaCommentsSection } from "../organisms/AnketaCommentsSection";
@@ -94,6 +96,8 @@ type Props = {
 	headerExtra?: ReactNode;
 	questionnaireId?: string;
 	questionnaireCalcName?: string;
+	/** Название схемы (шаблона), по которой создана анкета. */
+	templateName?: string | null;
 	/** Статус записи анкеты (active / inactive / archived). */
 	questionnaireStatus?: "active" | "archived" | "inactive";
 	onRenameQuestionnaire?: (calcName: string) => void;
@@ -158,6 +162,7 @@ export function AnketaFormShell({
 	headerExtra,
 	questionnaireId,
 	questionnaireCalcName,
+	templateName = null,
 	questionnaireStatus = "active",
 	onRenameQuestionnaire,
 	renamePending = false,
@@ -214,6 +219,12 @@ export function AnketaFormShell({
 		useState<AnketaGlobalCompleteDialogPhase>("confirm");
 	const [copyNameDialogOpen, setCopyNameDialogOpen] = useState(false);
 	const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+	const [schemaInfoOpen, setSchemaInfoOpen] = useState(false);
+	const canShowSchemaInfo = Boolean(
+		templateName?.trim() ||
+			schemaBinding?.boundTemplateVersionId ||
+			schemaBinding?.boundTemplateVersionNumber != null,
+	);
 	const saveAfterCompleteRef = useRef(false);
 	const openCompleteDialog = useCallback(() => {
 		setCompleteDialogPhase("confirm");
@@ -427,6 +438,17 @@ export function AnketaFormShell({
 				}}
 				data-test-id={`${dataTestId}--leading`}
 			>
+				{canShowSchemaInfo ? (
+					<IconButton
+						size="small"
+						title="Схема анкеты"
+						aria-label="Схема анкеты"
+						onClick={() => setSchemaInfoOpen(true)}
+						data-test-id={`${dataTestId}--schema-info`}
+					>
+						<InfoOutlinedIcon fontSize="small" />
+					</IconButton>
+				) : null}
 				{canRenameQuestionnaire ? (
 					<IconButton
 						size="small"
@@ -466,6 +488,7 @@ export function AnketaFormShell({
 		[
 			canRenameQuestionnaire,
 			canSaveQuestionnaire,
+			canShowSchemaInfo,
 			dataTestId,
 			onSave,
 			renamePending,
@@ -803,6 +826,13 @@ export function AnketaFormShell({
 					setRenameDialogOpen(false);
 				}}
 				data-test-id={`${dataTestId}--rename-dialog`}
+			/>
+			<AnketaSchemaInfoDialog
+				open={schemaInfoOpen}
+				onClose={() => setSchemaInfoOpen(false)}
+				templateName={templateName}
+				schemaBinding={schemaBinding}
+				data-test-id={`${dataTestId}--schema-info-dialog`}
 			/>
 		</>
 	);

@@ -250,15 +250,14 @@ function buildSferaBreakdown(
 					scoreWithComplexityCoeff != null &&
 					baseScoreStream !== 0
 				? Math.round(
-						((scoreWithComplexityCoeff - baseScoreStream) / baseScoreStream) *
-							10000,
+						(scoreWithComplexityCoeff / baseScoreStream) * 10000,
 					) / 100
 				: null;
 
 	const formulaSteps = [
-		`Базовая оценка = сумма типовых работ всех стримов = ${formatNumber(baseScoreStream)}`,
-		`Оценка с коэффициентами = База×Коэффициенты + Нетиповые = ${formatNumber(scoreWithComplexityCoeff)}`,
-		`Отклонение = (оценка с коэф. / База) × 100% = ${formatPercent(deviationFromBaseline)}`,
+		`База = сумма нормативов выбранных типовых работ = ${formatNumber(baseScoreStream)}`,
+		`Типовые + Нетиповые = итоговая трудоёмкость = ${formatNumber(scoreWithComplexityCoeff)}`,
+		`Отклонение = (Типовые + Нетиповые) / База × 100% = ${formatPercent(deviationFromBaseline)}`,
 		`Справочно: этапы E2E (строка «Итого») = ${formatNumber(stageAdjustedTotal)}; нетиповые в detailedCalculation = ${formatNumber(atypicalAdjusted)}`,
 	];
 

@@ -90,6 +90,7 @@ function buildColumnState(
 const DEFAULT_REGISTRY_VISIBLE = [
 	PRIMARY_NAME_COL_ID,
 	"readableId",
+	"templateName",
 	"createdAt",
 	pathCol("generalInfo.businessCustomer"),
 	pathCol("generalInfo.implementationStream"),

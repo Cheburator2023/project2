@@ -107,6 +107,7 @@ export const AnketaNewVersionPageV2 = () => {
 					loading={isLoading}
 					errorMessage={errorMessage}
 					questionnaireCalcName={calcName}
+					templateName={formPackage?.questionnaire.templateName}
 					onRenameQuestionnaire={setCalcName}
 					schemaBinding={formPackage?.questionnaire.schemaBinding}
 					onSave={formPackage && !errorMessage ? onSave : undefined}
