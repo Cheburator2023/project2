@@ -3,10 +3,12 @@ import type { AnketaCompactArrayTablePath } from "./anketaFormModalPaths";
 import { getArrayItemSchemaSliceForModal } from "./anketaSchemaAtPath";
 import { readAnketaFormContext } from "./anketaFormContext";
 import {
+	buildTypicalWorkIdToCatalogStreamLabelMap,
 	collectGeneratedTypicalWorkArrayPaths,
 	dedupeTypicalWorkRowsByWorkId,
 	listAllGeneratedTypicalWorkArrayPaths,
 	resolveTypicalWorkCatalogStreamLabel,
+	resolveV2AnketaArchComponent,
 	sortModelStreamTypicalWorkRows,
 	V2_MODEL_STREAM_EXECUTOR,
 } from "@smart-anketa/api-contract";
@@ -16,6 +18,8 @@ export type AnketaArrayTableColumn = {
 	header: string;
 	width?: string;
 	render?: (item: Record<string, unknown>) => string;
+	/** Нативный title на ячейке (подсказка). */
+	title?: (item: Record<string, unknown>) => string | undefined;
 	field?: string;
 	chip?: boolean;
 	link?: boolean;
@@ -24,6 +28,7 @@ export type AnketaArrayTableColumn = {
 
 function text(item: Record<string, unknown>, field: string): string {
 	const value = item[field];
+	if (typeof value === "boolean") return value ? "Да" : "Нет";
 	if (value == null || value === "") return "—";
 	return String(value);
 }
@@ -59,6 +64,38 @@ export function formatTypicalWorkNumberValue(value: unknown): string {
 	return String(value);
 }
 
+/** Число экземпляров в per-instance разбивке формулы. */
+export function countTypicalWorkInstanceBreakdown(
+	item: Record<string, unknown>,
+): number {
+	const raw = item.formulaBreakdown;
+	if (!raw || typeof raw !== "object" || Array.isArray(raw)) return 0;
+	const list = (raw as Record<string, unknown>).instanceBreakdown;
+	if (!Array.isArray(list)) return 0;
+	return list.filter(
+		(row) => row != null && typeof row === "object" && !Array.isArray(row),
+	).length;
+}
+
+/** Колонка «Коэффициент»: при нескольких экземплярах — Σ по N. */
+export function formatTypicalWorkCoefficientColumn(
+	item: Record<string, unknown>,
+): string {
+	const n = countTypicalWorkInstanceBreakdown(item);
+	if (n > 1) return `Σ по ${n}`;
+	return formatTypicalWorkNumberValue(item.coefficient);
+}
+
+export function typicalWorkCoefficientColumnTitle(
+	item: Record<string, unknown>,
+): string | undefined {
+	const n = countTypicalWorkInstanceBreakdown(item);
+	if (n > 1) {
+		return "Сумма трудозатрат по экземплярам арх. компонента (формула на каждый экземпляр)";
+	}
+	return undefined;
+}
+
 function formatTypicalWorkNumber(
 	item: Record<string, unknown>,
 	field: string,
@@ -85,25 +122,27 @@ const FACTORY_TYPICAL_WORK_COLUMNS: AnketaArrayTableColumn[] = [
 	{
 		key: "name",
 		header: "Название типовой работы",
-		width: "1.6fr",
+		width: "2fr",
+		multiline: true,
 		render: (item) => text(item, "name"),
 	},
 	{
 		key: "estimate",
 		header: "Базовая оценка",
-		width: "1fr",
+		width: "0.85fr",
 		render: (item) => formatTypicalWorkNumber(item, "estimateHoursPerDay"),
 	},
 	{
 		key: "coefficient",
 		header: "Коэффициент",
-		width: "0.8fr",
-		render: (item) => formatTypicalWorkNumber(item, "coefficient"),
+		width: "0.85fr",
+		render: (item) => formatTypicalWorkCoefficientColumn(item),
+		title: (item) => typicalWorkCoefficientColumnTitle(item),
 	},
 	{
 		key: "total",
 		header: "Итог",
-		width: "0.8fr",
+		width: "0.85fr",
 		render: (item) => formatTypicalWorkNumber(item, "total"),
 	},
 ];
@@ -438,13 +477,49 @@ export function getTypicalWorkFactoryTableColumns(): AnketaArrayTableColumn[] {
 	return FACTORY_TYPICAL_WORK_COLUMNS.map((column) => ({ ...column }));
 }
 
+/** Элемент массива похож на типовую работу (в т.ч. legacy reason/workType). */
+export function schemaItemsLookLikeTypicalWork(
+	rootSchema: RJSFSchema | undefined,
+	rootUi: UiSchema | undefined,
+	path: string,
+): boolean {
+	if (!rootSchema || !rootUi) return false;
+	const slice = getArrayItemSchemaSliceForModal(rootSchema, rootUi, path);
+	const props = slice?.schema.properties as
+		| Record<string, RJSFSchema>
+		| undefined;
+	if (!props) return false;
+	const keys = new Set(Object.keys(props));
+	if (keys.has("estimateHoursPerDay") && keys.has("total")) return true;
+	if (keys.has("reason") && keys.has("workType") && keys.has("total")) {
+		return true;
+	}
+	return false;
+}
+
+function readUiBranchAtDotPath(
+	uiSchema: unknown,
+	dotPath: string,
+): Record<string, unknown> | undefined {
+	const segments = dotPath.split(".").filter(Boolean);
+	let cur: unknown = uiSchema;
+	for (const segment of segments) {
+		if (!cur || typeof cur !== "object" || Array.isArray(cur)) return undefined;
+		cur = (cur as Record<string, unknown>)[segment];
+	}
+	return cur && typeof cur === "object" && !Array.isArray(cur)
+		? (cur as Record<string, unknown>)
+		: undefined;
+}
+
 export function resolveArrayTableColumns(
 	path: string,
 	rootSchema?: RJSFSchema,
 	rootUi?: UiSchema,
 ): AnketaArrayTableColumn[] | null {
 	if (
-		isTypicalWorkArrayPath(path, rootUi as Record<string, unknown> | undefined)
+		isTypicalWorkArrayPath(path, rootUi as Record<string, unknown> | undefined) ||
+		schemaItemsLookLikeTypicalWork(rootSchema, rootUi, path)
 	) {
 		return getTypicalWorkFactoryTableColumns();
 	}
@@ -476,7 +551,11 @@ export function isTypicalWorkArrayPath(
 ): boolean {
 	if (TYPICAL_WORK_ARRAY_PATHS.has(path)) return true;
 	if (!uiSchema) return false;
-	return collectGeneratedTypicalWorkArrayPaths(uiSchema).includes(path);
+	if (collectGeneratedTypicalWorkArrayPaths(uiSchema).includes(path)) {
+		return true;
+	}
+	const branch = readUiBranchAtDotPath(uiSchema, path);
+	return resolveV2AnketaArchComponent(branch) === "typicalWork";
 }
 
 export function sumTypicalWorkTotals(
@@ -598,7 +677,7 @@ export function collectAppearedTypicalWorkRows(
 	);
 }
 
-/** Типовые работы, сгруппированные по пути вывода и стриму-исполнителю. */
+/** Типовые работы, сгруппированные по стриму-исполнителю (boundWorkIds > путь массива). */
 export function collectAppearedTypicalWorkGroups(
 	formData: Record<string, unknown> | null | undefined,
 	uiSchema?: Record<string, unknown>,
@@ -607,23 +686,25 @@ export function collectAppearedTypicalWorkGroups(
 	if (!formData && !liveFormData) return [];
 
 	const paths = resolveTypicalWorkCollectionPaths(uiSchema);
+	const workIdToStream = uiSchema
+		? buildTypicalWorkIdToCatalogStreamLabelMap(uiSchema)
+		: new Map<string, string>();
 	const globalWorkIdsSeen = new Set<string>();
-	const groups: AppearedTypicalWorkGroup[] = [];
+	const rowsByStream = new Map<
+		string,
+		{ path: string; streamExecutor: string | null; rows: Record<string, unknown>[] }
+	>();
 
 	for (const path of paths) {
-		const streamExecutor = resolveTypicalWorkCatalogStreamLabel(
-			uiSchema,
-			path,
-		);
+		const pathStream = resolveTypicalWorkCatalogStreamLabel(uiSchema, path);
 		const appeared = readTypicalWorkArrayAtPath(
 			formData,
 			liveFormData,
 			path,
 		).filter(isAppearedTypicalWorkRow);
 		const collapsed = dedupeTypicalWorkRowsByWorkId(appeared, {
-			groupBySourceName: streamExecutor === "Источники данных",
+			groupBySourceName: pathStream === "Источники данных",
 		});
-		const rows: Record<string, unknown>[] = [];
 		for (const item of collapsed) {
 			const workId = typeof item.workId === "string" ? item.workId.trim() : "";
 			if (workId) {
@@ -634,39 +715,48 @@ export function collectAppearedTypicalWorkGroups(
 				if (globalWorkIdsSeen.has(`fb:${key}`)) continue;
 				globalWorkIdsSeen.add(`fb:${key}`);
 			}
-			rows.push(item);
+			const streamExecutor =
+				(workId ? workIdToStream.get(workId) : undefined) ?? pathStream;
+			const groupKey = streamExecutor ?? path;
+			const existing = rowsByStream.get(groupKey);
+			if (existing) {
+				existing.rows.push(item);
+			} else {
+				rowsByStream.set(groupKey, {
+					path,
+					streamExecutor,
+					rows: [item],
+				});
+			}
 		}
-		if (rows.length === 0) continue;
+	}
+
+	const groups: AppearedTypicalWorkGroup[] = [];
+	for (const group of rowsByStream.values()) {
+		if (group.rows.length === 0) continue;
 		groups.push({
-			path,
-			streamExecutor,
+			path: group.path,
+			streamExecutor: group.streamExecutor,
 			rows:
-				streamExecutor === V2_MODEL_STREAM_EXECUTOR
-					? sortModelStreamTypicalWorkRows(rows)
-					: rows,
+				group.streamExecutor === V2_MODEL_STREAM_EXECUTOR
+					? sortModelStreamTypicalWorkRows(group.rows)
+					: group.streamExecutor === "Источники данных"
+						? dedupeTypicalWorkRowsByWorkId(group.rows, {
+								groupBySourceName: true,
+							})
+						: group.rows,
 		});
 	}
 
 	return groups;
 }
 
-const FACTORY_TYPICAL_WORK_COLUMN_KEYS = [
-	"name",
-	"estimate",
-	"coefficient",
-	"total",
-] as const;
-
-/** Колонки таблицы типовых работ: заводской шаблон из четырёх столбцов. */
+/** Колонки таблицы типовых работ: всегда заводской шаблон (игнор legacy schema). */
 export function adjustTypicalWorkTableColumns(
-	columns: AnketaArrayTableColumn[],
+	_columns: AnketaArrayTableColumn[],
 	_items: Record<string, unknown>[],
 ): AnketaArrayTableColumn[] {
-	const byKey = new Map(columns.map((col) => [col.key, col]));
-	const factory = getTypicalWorkFactoryTableColumns();
-	return FACTORY_TYPICAL_WORK_COLUMN_KEYS.map(
-		(key) => byKey.get(key) ?? factory.find((col) => col.key === key)!,
-	);
+	return getTypicalWorkFactoryTableColumns();
 }
 
 export function getArrayAtPath(

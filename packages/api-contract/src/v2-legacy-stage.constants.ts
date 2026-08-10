@@ -1,8 +1,14 @@
 /**
- * Поля `summary`, которые POST /calculate перезаписывает движком этапов v1
- * (`v2-legacy-stage-evaluation.ts`), после правил JsonLogic.
+ * Поля `summary`, которые POST /calculate перезаписывает после JsonLogic
+ * (`v2-legacy-stage-evaluation.ts`).
  *
- * Не переносятся в конструктор JsonLogic — правятся в TypeScript на бекенде.
+ * `baseScoreStream` = сумма нормативов выбранных типовых работ (без коэффициентов),
+ * `scoreWithComplexityCoeff` = итоговая трудоёмкость = типовые + нетиповые
+ *   (с коэффициентами и общей неопределённостью; обычно = summary.total),
+ * `deviationFromBaseline` = (Типовые + Нетиповые) / База × 100%.
+ * `detailedCalculation` / `platformStreams` — детализация.
+ *
+ * Не настраиваются в конструкторе JsonLogic.
  */
 export const V2_LEGACY_STAGE_SUMMARY_FIELD_KEYS = [
 	"baseScoreStream",

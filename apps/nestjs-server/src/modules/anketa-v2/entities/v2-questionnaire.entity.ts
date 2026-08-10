@@ -22,7 +22,7 @@ export class V2QuestionnaireEntity {
 
 	@Column({
 		type: "enum",
-		enum: ["active", "archived"],
+		enum: ["active", "archived", "inactive"],
 		default: "active",
 	})
 	status: V2QuestionnaireStatus;

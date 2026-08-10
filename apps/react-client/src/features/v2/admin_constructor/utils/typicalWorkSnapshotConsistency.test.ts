@@ -4,16 +4,27 @@ import { fileURLToPath } from "node:url";
 import type { RJSFSchema } from "@rjsf/utils";
 import type { V2LogicGraphDto, V2LogicRuleDto } from "@smart-anketa/api-contract";
 import {
+	collectExecutorStreamBlocks,
+	collectGeneratedTypicalWorkArrayPaths,
 	collectTypicalWorkBlockBindings,
 	patchV2AnketaCalculationLogicRules,
 	patchV2TypicalWorksLogicRules,
 	readTypicalWorkBoundWorkIdsAtOutputPath,
+	resolveModelStreamUmbrellaBlockPointer,
 	resolveStreamExecutorForTypicalWorkOutputPath,
+	resolveTypicalWorkCatalogStreamLabel,
 	TYPICAL_WORK_BOUND_WORK_IDS_KEY,
 	V2_IMPLEMENTATION_STREAM,
+	V2_MODEL_IMPLEMENTATION_STREAM_CODES,
+	V2_MODEL_STREAM_EXECUTOR,
+	V2_MODEL_STREAM_FACTORY_WORK_IDS,
 } from "@smart-anketa/api-contract";
 import { describe, expect, it } from "vitest";
-import { placeTypicalWorkInStream } from "../schemaEditor/placeTypicalWorkInStream";
+import { ARCH_COMPONENT_PRESET_DEFS } from "../schemaEditor/archComponentPresets";
+import {
+	placeTypicalWorkInStream,
+	resolveStreamBlockPointer,
+} from "../schemaEditor/placeTypicalWorkInStream";
 import {
 	appendBoundWorkIdAtPointer,
 	pointerToOutputPath,
@@ -162,7 +173,7 @@ describe("typicalWork snapshot consistency", () => {
 		expect(after).toBe(before);
 	});
 
-	it("factory default snapshot: legacy typicalWork blocks stay unbound after coerce", () => {
+	it("factory default snapshot: boundWorkIds survive coerceUiSchema", () => {
 		const snapshot = loadDefaultSnapshot();
 		const uiSchema = roundtripUiSchema(
 			snapshot.uiSchema,
@@ -171,9 +182,8 @@ describe("typicalWork snapshot consistency", () => {
 		const bindings = collectTypicalWorkBlockBindings(uiSchema);
 
 		expect(bindings.length).toBeGreaterThan(0);
-		for (const binding of bindings) {
-			expect(binding.boundWorkIds).toBeUndefined();
-		}
+		const bound = bindings.filter((b) => (b.boundWorkIds?.length ?? 0) > 0);
+		expect(bound.length).toBeGreaterThan(0);
 
 		const patched = patchV2TypicalWorksLogicRules(snapshot.logic, {
 			jsonSchema: snapshot.jsonSchema,
@@ -185,7 +195,43 @@ describe("typicalWork snapshot consistency", () => {
 		expect(catalogRules.length).toBeGreaterThan(0);
 		for (const rule of catalogRules) {
 			const payload = rule.payload as Record<string, unknown>;
-			expect(payload.allowedWorkIds).toBeUndefined();
+			const allowed = payload.allowedWorkIds;
+			if (Array.isArray(allowed)) {
+				expect(allowed.length).toBeGreaterThan(0);
+			}
+		}
+	});
+
+	it("factory default snapshot: typicalWork item fields match constructor preset", () => {
+		const snapshot = loadDefaultSnapshot();
+		const presetItems = ARCH_COMPONENT_PRESET_DEFS.typicalWork.make()
+			.items as RJSFSchema;
+		const expectedTitles = Object.fromEntries(
+			Object.entries(
+				(presetItems.properties ?? {}) as Record<string, RJSFSchema>,
+			).map(([key, field]) => [key, field.title]),
+		);
+		const expectedKeys = Object.keys(expectedTitles).sort();
+
+		const paths = collectGeneratedTypicalWorkArrayPaths(snapshot.uiSchema);
+		expect(paths.length).toBeGreaterThan(0);
+
+		for (const path of paths) {
+			const segments = path.split(".");
+			let node: unknown = snapshot.jsonSchema;
+			for (const segment of segments) {
+				node = (node as RJSFSchema).properties?.[segment];
+			}
+			const items = (node as RJSFSchema | undefined)?.items as
+				| RJSFSchema
+				| undefined;
+			const props = (items?.properties ?? {}) as Record<string, RJSFSchema>;
+			expect(Object.keys(props).sort()).toEqual(expectedKeys);
+			for (const key of expectedKeys) {
+				expect(props[key]?.title).toBe(expectedTitles[key]);
+			}
+			expect(props).not.toHaveProperty("reason");
+			expect(props).not.toHaveProperty("workType");
 		}
 	});
 
@@ -231,5 +277,96 @@ describe("typicalWork snapshot consistency", () => {
 		expect(collectTypicalWorkBlockBindings(ui).map((b) => b.outputPath)).toContain(
 			outputPath,
 		);
+	});
+
+	it("placeTypicalWorkInStream(«Модельный стрим») resolves to detailInfo umbrella", () => {
+		const jsonSchema: RJSFSchema = {
+			type: "object",
+			properties: {
+				detailInfo: {
+					type: "object",
+					title: "Детальная информация",
+					properties: {},
+				},
+			},
+		};
+		const uiSchema: Record<string, unknown> = {
+			detailInfo: {
+				"ui:options": {
+					streamBlock: true,
+					streamExecutor: V2_MODEL_STREAM_EXECUTOR,
+					workflowSectionId: "detailInfo",
+				},
+			},
+		};
+
+		expect(resolveStreamBlockPointer(uiSchema, V2_MODEL_STREAM_EXECUTOR)).toBe(
+			"/detailInfo",
+		);
+		expect(resolveModelStreamUmbrellaBlockPointer(uiSchema)).toBe("/detailInfo");
+
+		const placed = placeTypicalWorkInStream(
+			jsonSchema,
+			uiSchema,
+			V2_MODEL_STREAM_EXECUTOR,
+		);
+		expect(placed).not.toBeNull();
+		expect(placed!.typicalWorkPointer).toMatch(/^\/detailInfo\//);
+		expect(
+			collectExecutorStreamBlocks(placed!.uiSchema).some(
+				(block) =>
+					block.pointer === "/detailInfo" &&
+					V2_MODEL_IMPLEMENTATION_STREAM_CODES.every((code) =>
+						block.streamExecutors.includes(code),
+					),
+			),
+		).toBe(true);
+
+		const roundtripped = roundtripUiSchema(
+			placed!.uiSchema,
+			placed!.jsonSchema,
+		);
+		const outputPath = pointerToOutputPath(placed!.typicalWorkPointer);
+		expect(
+			resolveTypicalWorkCatalogStreamLabel(roundtripped, outputPath),
+		).toBe(V2_MODEL_STREAM_EXECUTOR);
+		expect(
+			resolveStreamExecutorForTypicalWorkOutputPath(roundtripped, outputPath),
+		).toEqual([...V2_MODEL_IMPLEMENTATION_STREAM_CODES]);
+	});
+
+	it("factory default snapshot: detailInfo umbrella binds 10 model works", () => {
+		const snapshot = loadDefaultSnapshot();
+		const detailOpts = (
+			snapshot.uiSchema as {
+				detailInfo?: { "ui:options"?: Record<string, unknown> };
+			}
+		).detailInfo?.["ui:options"];
+		expect(detailOpts?.streamBlock).toBe(true);
+		expect(detailOpts?.streamExecutor).toBe(V2_MODEL_STREAM_EXECUTOR);
+
+		const typicalOpts = (
+			snapshot.uiSchema as {
+				detailInfo?: {
+					detailTypicalTasks?: { "ui:options"?: Record<string, unknown> };
+				};
+			}
+		).detailInfo?.detailTypicalTasks?.["ui:options"];
+		expect(typicalOpts?.streamExecutor).toBe(V2_MODEL_STREAM_EXECUTOR);
+		expect(typicalOpts?.boundWorkIds).toEqual([
+			...V2_MODEL_STREAM_FACTORY_WORK_IDS,
+		]);
+
+		const patched = patchV2TypicalWorksLogicRules(snapshot.logic, {
+			jsonSchema: snapshot.jsonSchema,
+			uiSchema: snapshot.uiSchema,
+		});
+		const modelCatalog = patched.rules.find(
+			(rule) =>
+				rule.id.startsWith("typical-works-catalog-") &&
+				(rule.payload as { worksCatalogStream?: string } | undefined)
+					?.worksCatalogStream === V2_MODEL_STREAM_EXECUTOR,
+		);
+		expect(modelCatalog).toBeDefined();
 	});
 });

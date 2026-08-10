@@ -1,5 +1,6 @@
 import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
@@ -8,6 +9,7 @@ import InputBase from "@mui/material/InputBase";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { alpha } from "@mui/material/styles";
+import { kanbanBoardIsDoneColumn } from "@smart-anketa/api-contract";
 import type { BoardItem } from "react-kanban-kit";
 import { useEffect, useState } from "react";
 
@@ -22,17 +24,25 @@ export function KanbanColumnHeader({
 	onRename,
 	onDelete,
 	onAddTask,
+	onTrashAll,
+	isTrashing,
 }: {
 	column: BoardItem;
 	disabled: boolean;
 	onRename: (columnId: string, title: string) => void;
 	onDelete: (columnId: string) => void;
 	onAddTask?: (columnId: string) => void;
+	onTrashAll?: (columnId: string) => void;
+	isTrashing?: boolean;
 }) {
 	const color = getKanbanColumnColor(column);
 	const [editing, setEditing] = useState(false);
 	const [title, setTitle] = useState(column.title);
 	const hasTasks = column.totalChildrenCount > 0;
+	const canTrashAll =
+		Boolean(onTrashAll) &&
+		hasTasks &&
+		kanbanBoardIsDoneColumn({ id: column.id, title: column.title });
 
 	useEffect(() => {
 		if (!editing) setTitle(column.title);
@@ -108,6 +118,18 @@ export function KanbanColumnHeader({
 						{column.title}
 					</Typography>
 				)}
+				{canTrashAll ? (
+					<IconButton
+						size="small"
+						disabled={disabled || isTrashing}
+						onClick={() => onTrashAll?.(column.id)}
+						title="Переместить все задачи в корзину"
+						aria-label="Переместить все задачи в корзину"
+						sx={{ color: "text.secondary" }}
+					>
+						<DeleteSweepIcon fontSize="small" />
+					</IconButton>
+				) : null}
 				<IconButton
 					size="small"
 					disabled={disabled || hasTasks}
@@ -181,8 +203,8 @@ export function KanbanColumnAdder({
 	return (
 		<Box
 			sx={{
-				minWidth: 264,
-				maxWidth: 264,
+				minWidth: 320,
+				maxWidth: 320,
 				height: "100%",
 				display: "flex",
 				flexDirection: "column",

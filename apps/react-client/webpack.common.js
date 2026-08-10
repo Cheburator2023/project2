@@ -12,12 +12,27 @@ const JSON_LOGIC_TS_ENTRY = path.resolve(
 	__dirname,
 	"../../packages/json-logic-ts/dist/esm/index.js",
 );
+const API_CONTRACT_ENTRY = path.resolve(
+	__dirname,
+	"../../packages/api-contract/src/index.ts",
+);
+const API_CONTRACT_SRC_DIR = path.resolve(
+	__dirname,
+	"../../packages/api-contract/src",
+);
 const NODE_MODULES_DIR = path.resolve(__dirname, "../../node_modules");
 
 const ALIAS = {
 	"@react-client": `${SRC_DIR}`,
+	"@smart-anketa/api-contract": API_CONTRACT_ENTRY,
 	// Webpack: ESM+browser-safe entry (CJS loadEngine uses node:module/createRequire).
 	"@smart-anketa/json-logic-ts": JSON_LOGIC_TS_ENTRY,
+};
+
+/** node_modules, кроме workspace api-contract (симлинк → .ts исходники). */
+const excludeNodeModulesExceptApiContract = (filePath) => {
+	if (filePath.startsWith(API_CONTRACT_SRC_DIR)) return false;
+	return /node_modules/.test(filePath);
 };
 
 const tsRule = isDev
@@ -34,7 +49,7 @@ const tsRule = isDev
 				],
 				plugins: ["react-refresh/babel"],
 			},
-			exclude: /node_modules/,
+			exclude: excludeNodeModulesExceptApiContract,
 		}
 	: [
 			{
@@ -44,7 +59,7 @@ const tsRule = isDev
 					loader: "tsx",
 					target: browserslistToEsbuild(),
 				},
-				exclude: /node_modules/,
+				exclude: excludeNodeModulesExceptApiContract,
 			},
 			{
 				test: /\.ts$/,
@@ -53,7 +68,7 @@ const tsRule = isDev
 					loader: "ts",
 					target: browserslistToEsbuild(),
 				},
-				exclude: /node_modules/,
+				exclude: excludeNodeModulesExceptApiContract,
 			},
 		];
 

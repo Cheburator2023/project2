@@ -42,18 +42,19 @@ import {
 import {
 	isExecutorStreamPresentInSchema,
 	isV2AnketaHiddenUiNode,
+	collectExecutorStreamBlocks,
 	readV2AnketaSectionUiOptions,
 	resolveStreamExecutorForTypicalWorkOutputPath,
 	resolveV2AnketaStreamBlockOptions,
+	setGroupActivationAtPath,
 	V2_ANKETA_MAIN_SECTION_IDS,
 	V2_ANKETA_MAIN_SECTION_TITLES,
 	V2_ANKETA_SECTION_ROLE_VALUES,
 	V2_ARCH_COMPONENT_LABELS,
 	V2_IMPLEMENTATION_STREAM,
-	V2_IMPLEMENTATION_STREAM_CODES,
 	V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE,
-	V2_IMPLEMENTATION_STREAM_LABELS,
-	normalizeStreamBlockExecutor,
+	V2_MODEL_IMPLEMENTATION_STREAM_CODES,
+	V2_MODEL_STREAM_EXECUTOR,
 	normalizeStreamBlockExecutors,
 	normalizeStreamBlockRoles,
 	resolveStreamBlockExecutorLabel,
@@ -67,6 +68,7 @@ import type { ReactNode } from "react";
 import { useCallback, useMemo } from "react";
 import { useParams, useSearchParams } from "react-router";
 import { useV2TypicalWorksList } from "@react-client/common/api/queries/v2-works";
+import { useV2ImplementationStreamCatalog } from "@react-client/common/api/queries/v2-streams";
 import {
 	BIND_POINTER_QUERY,
 	NEW_WORK_QUERY,
@@ -367,6 +369,7 @@ export function SchemaPropertiesPanel() {
 		recordDraftHistory,
 		updateField,
 		patchUiSchema,
+		setFormData,
 		handleToggleRequired,
 		handleDictionaryCodeChange,
 		openLogicTabWithRule,
@@ -380,6 +383,9 @@ export function SchemaPropertiesPanel() {
 		handleAddFieldPresetAtParent,
 		monacoError,
 	} = useSchemaEditor();
+
+	const { codes: catalogStreamCodes, catalog } =
+		useV2ImplementationStreamCatalog();
 
 	const leafUiBranch = useMemo(
 		() =>
@@ -495,23 +501,25 @@ export function SchemaPropertiesPanel() {
 				.filter((work): work is (typeof typicalWorks)[number] => Boolean(work)),
 		[typicalWorkCatalog, typicalWorkStreamExecutors, typicalWorks],
 	);
-	const unboundTypicalWorks = useMemo(() => {
-		if (explicitBoundWorkIds !== undefined) {
-			return streamScopedTypicalWorks.filter(
-				(work) => !explicitBoundWorkIds.includes(work.id),
-			);
-		}
-		return [];
+	const unboundTypicalWorksCount = useMemo(() => {
+		if (explicitBoundWorkIds === undefined) return 0;
+		return streamScopedTypicalWorks.filter(
+			(work) => !explicitBoundWorkIds.includes(work.id),
+		).length;
 	}, [explicitBoundWorkIds, streamScopedTypicalWorks]);
+	const isTypicalWorkBound = useMemo(() => {
+		const bound = new Set(explicitBoundWorkIds ?? []);
+		return (work: (typeof typicalWorks)[number]) => bound.has(work.id);
+	}, [explicitBoundWorkIds]);
 	const typicalWorkStreamPresence = useMemo(() => {
 		if (typicalWorkStreamExecutors.length === 0) {
 			return { all: false, missing: [] as V2ImplementationStreamCode[] };
 		}
 		const missing = typicalWorkStreamExecutors.filter(
-			(code) => !isExecutorStreamPresentInSchema(uiSchema, code),
+			(code) => !isExecutorStreamPresentInSchema(uiSchema, code, catalog),
 		);
 		return { all: missing.length === 0, missing };
-	}, [typicalWorkStreamExecutors, uiSchema]);
+	}, [typicalWorkStreamExecutors, uiSchema, catalog]);
 	const atypicalWorkStreamExecutors = useMemo(() => {
 		if (!isAtypicalWorkBlock || !typicalWorkOutputPath) return [];
 		const explicit = normalizeStreamBlockExecutors(
@@ -549,10 +557,10 @@ export function SchemaPropertiesPanel() {
 			return { all: false, missing: [] as V2ImplementationStreamCode[] };
 		}
 		const missing = atypicalWorkStreamExecutors.filter(
-			(code) => !isExecutorStreamPresentInSchema(uiSchema, code),
+			(code) => !isExecutorStreamPresentInSchema(uiSchema, code, catalog),
 		);
 		return { all: missing.length === 0, missing };
-	}, [atypicalWorkStreamExecutors, uiSchema]);
+	}, [atypicalWorkStreamExecutors, uiSchema, catalog]);
 	const handleCreateAtypicalWorkStreamBlock = useCallback(() => {
 		const code =
 			atypicalWorkStreamPresence.missing[0] ?? atypicalWorkStreamExecutors[0];
@@ -880,14 +888,41 @@ export function SchemaPropertiesPanel() {
 		[leafUiBranch, rootBlockKey],
 	);
 	const streamBlockExecutors = useMemo(() => {
-		const explicit = normalizeStreamBlockExecutors(
-			sectionUiOptions.streamExecutor,
-		);
-		if (explicit.length > 0) return explicit;
-		return streamBlockOptions.streamExecutors;
+		if (
+			streamBlockOptions.streamBlock &&
+			streamBlockOptions.streamExecutors.length > 0
+		) {
+			return streamBlockOptions.streamExecutors;
+		}
+		return normalizeStreamBlockExecutors(sectionUiOptions.streamExecutor);
 	}, [
 		sectionUiOptions.streamExecutor,
+		streamBlockOptions.streamBlock,
 		streamBlockOptions.streamExecutors,
+	]);
+	const streamsAssignedToOtherBlocks = useMemo(() => {
+		const used = new Set<string>();
+		for (const block of collectExecutorStreamBlocks(uiSchema)) {
+			if (block.blockKey === rootBlockKey) continue;
+			for (const code of block.streamExecutors) {
+				used.add(code);
+			}
+		}
+		return [...used];
+	}, [uiSchema, rootBlockKey]);
+	const defaultFreeStreamExecutor = useMemo(() => {
+		const current = streamBlockExecutors[0];
+		if (current && !streamsAssignedToOtherBlocks.includes(current)) {
+			return current;
+		}
+		const free = catalogStreamCodes.find(
+			(code) => !streamsAssignedToOtherBlocks.includes(code),
+		);
+		return (free ?? V2_IMPLEMENTATION_STREAM.IDSRC) as V2ImplementationStreamCode;
+	}, [
+		streamBlockExecutors,
+		streamsAssignedToOtherBlocks,
+		catalogStreamCodes,
 	]);
 	const streamBlockRoleCodes = useMemo(() => {
 		const explicit = normalizeStreamBlockRoles(
@@ -899,13 +934,13 @@ export function SchemaPropertiesPanel() {
 		sectionUiOptions.streamBlockRoles,
 		streamBlockOptions.streamBlockRoles,
 	]);
+	/** Стрим-блок: корневые object-секции, включая detailInfo (зонтик модельного). */
 	const showStreamBlockOptions =
 		showObjectLayout &&
 		isRootLevelBlock &&
 		!sectionUiOptions.system &&
 		![
 			"generalInfo",
-			"detailInfo",
 			"summary",
 			"meta",
 			"groupActivation",
@@ -1269,12 +1304,16 @@ export function SchemaPropertiesPanel() {
 											if (e.target.checked) {
 												patchSectionUi({
 													streamBlock: true,
-													streamExecutor: streamExecutorsToUiValue(
-														streamBlockExecutors.length > 0
-															? streamBlockExecutors
-															: [V2_IMPLEMENTATION_STREAM.IDSRC],
-													),
+													streamExecutor:
+														rootBlockKey === "detailInfo"
+															? V2_MODEL_STREAM_EXECUTOR
+															: streamExecutorsToUiValue([
+																	defaultFreeStreamExecutor,
+																]),
 													sectionRole: sectionUiOptions.sectionRole ?? "main",
+													...(rootBlockKey === "detailInfo"
+														? { workflowSectionId: "detailInfo" }
+														: {}),
 												});
 												return;
 											}
@@ -1285,20 +1324,35 @@ export function SchemaPropertiesPanel() {
 										}}
 									/>
 								}
-								label="Стримовый блок (платформенный / поддерживающий стрим)"
+								label={
+									rootBlockKey === "detailInfo"
+										? "Стримовый блок (зонтик / модельный стрим)"
+										: "Стримовый блок (платформенный / поддерживающий стрим)"
+								}
 							/>
 							{streamBlockOptions.streamBlock ? (
 								<Box>
 									<StreamExecutorMultiSelect
+										multiple
 										value={streamBlockExecutors}
+										excludedCodes={streamsAssignedToOtherBlocks}
 										uiSchema={uiSchema}
-										onChange={(codes) =>
+										onChange={(codes) => {
+											const isFullModelUmbrella =
+												rootBlockKey === "detailInfo" &&
+												codes.length ===
+													V2_MODEL_IMPLEMENTATION_STREAM_CODES.length &&
+												V2_MODEL_IMPLEMENTATION_STREAM_CODES.every((code) =>
+													codes.includes(code),
+												);
 											patchSectionUi({
 												streamBlock: true,
-												streamExecutor: streamExecutorsToUiValue(codes),
-											})
-										}
-										helperText={`Справочник ${V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE}. Используется в логике типовых и нетиповых работ и ролевке секций.`}
+												streamExecutor: isFullModelUmbrella
+													? V2_MODEL_STREAM_EXECUTOR
+													: streamExecutorsToUiValue(codes),
+											});
+										}}
+										helperText={`Можно выбрать несколько стримов на блок. Уже занятые другими стрим-блоками скрыты. Справочник ${V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE}.`}
 									/>
 									<StreamBlockRoleMultiSelect
 										value={streamBlockRoleCodes}
@@ -1396,16 +1450,50 @@ export function SchemaPropertiesPanel() {
 									control={
 										<Checkbox
 											checked={sectionUiOptions.groupActivatable ?? false}
-											onChange={(e) =>
+											onChange={(e) => {
+												const enabled = e.target.checked;
 												patchSectionUi({
-													groupActivatable: e.target.checked || undefined,
-													...(e.target.checked
+													groupActivatable: enabled || undefined,
+													...(enabled
 														? {}
 														: {
 																groupActive: undefined,
 															}),
-												})
-											}
+												});
+												if (!selectedPointer) return;
+												const pathKey = selectedPointer
+													.replace(/^\//, "")
+													.split("/")
+													.filter(Boolean)
+													.join(".");
+												if (!pathKey) return;
+												if (!enabled) {
+													setFormData((prev) => {
+														const map = {
+															...(typeof prev.groupActivation === "object" &&
+															prev.groupActivation &&
+															!Array.isArray(prev.groupActivation)
+																? (prev.groupActivation as Record<
+																		string,
+																		unknown
+																	>)
+																: {}),
+														};
+														delete map[pathKey];
+														return { ...prev, groupActivation: map };
+													});
+													return;
+												}
+												const activeByDefault =
+													sectionUiOptions.groupActive !== false;
+												setFormData((prev) =>
+													setGroupActivationAtPath(
+														prev,
+														pathKey,
+														activeByDefault,
+													),
+												);
+											}}
 										/>
 									}
 									label="Можно активировать и деактивировать"
@@ -1415,11 +1503,26 @@ export function SchemaPropertiesPanel() {
 										control={
 											<Checkbox
 												checked={sectionUiOptions.groupActive !== false}
-												onChange={(e) =>
+												onChange={(e) => {
+													const nextActive = e.target.checked;
 													patchSectionUi({
-														groupActive: e.target.checked,
-													})
-												}
+														groupActive: nextActive,
+													});
+													if (!selectedPointer) return;
+													const pathKey = selectedPointer
+														.replace(/^\//, "")
+														.split("/")
+														.filter(Boolean)
+														.join(".");
+													if (!pathKey) return;
+													setFormData((prev) =>
+														setGroupActivationAtPath(
+															prev,
+															pathKey,
+															nextActive,
+														),
+													);
+												}}
 											/>
 										}
 										label="Активна по умолчанию"
@@ -1703,12 +1806,18 @@ export function SchemaPropertiesPanel() {
 								{typicalWorks.length > 0 ? (
 									<Box sx={{ mt: 1 }}>
 										<FuzzyAutocomplete<(typeof typicalWorks)[number]>
-											options={unboundTypicalWorks}
+											options={streamScopedTypicalWorks}
 											value={null}
 											onChange={(
 												work: (typeof typicalWorks)[number] | null,
 											) => {
-												if (!work || !selectedPointer) return;
+												if (
+													!work ||
+													!selectedPointer ||
+													isTypicalWorkBound(work)
+												) {
+													return;
+												}
 												recordDraftHistory();
 												patchUiSchema(
 													(prev) =>
@@ -1716,9 +1825,9 @@ export function SchemaPropertiesPanel() {
 															prev as Record<string, unknown>,
 															selectedPointer,
 															work.id,
-					typicalWorkCatalog,
-					typicalWorkStreamExecutors,
-				) as UiSchema,
+															typicalWorkCatalog,
+															typicalWorkStreamExecutors,
+														) as UiSchema,
 													{ recordHistory: false },
 												);
 											}}
@@ -1727,14 +1836,15 @@ export function SchemaPropertiesPanel() {
 													? `${work.name} · ${work.archComponentType}`
 													: work.name
 											}
+											getOptionDisabled={isTypicalWorkBound}
 											label="Привязать существующую"
 											placeholder={
-												unboundTypicalWorks.length === 0
+												unboundTypicalWorksCount === 0
 													? "Все работы шаблона уже привязаны к этому блоку"
 													: "Выберите работу из справочника шаблона"
 											}
 											size="small"
-											disabled={unboundTypicalWorks.length === 0}
+											disabled={streamScopedTypicalWorks.length === 0}
 										/>
 									</Box>
 								) : null}

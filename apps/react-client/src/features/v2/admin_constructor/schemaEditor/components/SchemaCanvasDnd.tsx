@@ -26,7 +26,9 @@ import {
 	type NodeModel,
 	type TreeMethods,
 } from "@minoru/react-dnd-treeview";
+import { Flex } from "@react-client/common/primitives/Flex";
 import { useSchemaConstructorSettings } from "@react-client/common/settings/schemaConstructorSettings";
+import { describeAffectedWorkImpact } from "../panels/typicalWorksPanel/SchemaWorkSyncConfirmDialog";
 import {
 	useCallback,
 	useEffect,
@@ -43,6 +45,7 @@ import {
 	resolveStreamExecutorForTypicalWorkOutputPath,
 	resolveV2AnketaArchComponent,
 	resolveV2AnketaCanvasUiKind,
+	setGroupActivationAtPath,
 	type V2AnketaCanvasUiKind,
 	type V2ArchComponentType,
 } from "@smart-anketa/api-contract";
@@ -81,13 +84,6 @@ import {
 	type TypicalWorkCatalogItem,
 } from "../typicalWorkBlockBinding";
 import { useSchemaEditor } from "../SchemaEditorContext";
-import { ensureAnketaFormDataWithWorkflow } from "@react-client/features/v2/anketaCRUD/hooks/useAnketaWorkflow";
-import { mergeAnketaDisplayFormData } from "@react-client/features/v2/anketaCRUD/utils/mergeAnketaDisplayFormData";
-import {
-	getArrayAtPath,
-	sumTypicalWorkTotals,
-} from "@react-client/features/v2/anketaCRUD/utils/anketaModalArrayTableConfig";
-import { TypicalWorkSummaryTotal } from "@react-client/features/v2/anketaCRUD/molecules/TypicalWorkSummaryTotal";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../../testIds";
 import { PanelChrome } from "./PanelChrome";
 import { SchemaCanvasFieldSearch } from "./SchemaCanvasFieldSearch";
@@ -332,10 +328,8 @@ function SchemaCanvasFieldRow({
 		selectedPointer,
 		setSelectedPointer,
 		setUiSchema,
+		setFormData,
 		duplicateCanvasField,
-		formData,
-		liveFormData,
-		calculationLoading,
 	} = useSchemaEditor();
 
 	const { draggingTypicalWork, excludePointer } = useDragLayer((monitor) => {
@@ -380,19 +374,6 @@ function SchemaCanvasFieldRow({
 		excludePointer,
 	]);
 
-	const typicalWorkSummaryTotal = useMemo(() => {
-		if (node.data?.kind !== "typical-work-summary") return null;
-		const parentPointer = node.data.parentPointer;
-		if (!parentPointer) return null;
-		const dotPath = pointerSegments(parentPointer).join(".");
-		const displayData = mergeAnketaDisplayFormData(
-			ensureAnketaFormDataWithWorkflow(formData),
-			liveFormData,
-			uiSchema as Record<string, unknown>,
-		);
-		return sumTypicalWorkTotals(getArrayAtPath(displayData, dotPath));
-	}, [node.data, formData, liveFormData, uiSchema]);
-
 	if (node.data?.kind === "system-divider") {
 		return (
 			<Box
@@ -413,30 +394,6 @@ function SchemaCanvasFieldRow({
 				>
 					{node.text}
 				</Typography>
-			</Box>
-		);
-	}
-
-	if (node.data?.kind === "typical-work-summary") {
-		return (
-			<Box
-				sx={{
-					ml: `${depth * DEPTH_INDENT_PX}px`,
-					mr: 1,
-					my: 0.5,
-					px: 1,
-					py: 0.75,
-					borderRadius: 1,
-					border: 1,
-					borderStyle: "dashed",
-					borderColor: "divider",
-					bgcolor: alpha(theme.palette.text.secondary, 0.04),
-				}}
-			>
-				<TypicalWorkSummaryTotal
-					total={typicalWorkSummaryTotal}
-					loading={calculationLoading}
-				/>
 			</Box>
 		);
 	}
@@ -465,10 +422,11 @@ function SchemaCanvasFieldRow({
 			: undefined;
 	const isLayoutGroup = uiOptions?.layoutGroup === true;
 	const sectionUiOptions = readV2AnketaSectionUiOptions(uiBranch);
-	const groupInactive =
+	const groupInactive = Boolean(
 		isGroup &&
-		sectionUiOptions.groupActivatable &&
-		sectionUiOptions.groupActive === false;
+			sectionUiOptions.groupActivatable &&
+			sectionUiOptions.groupActive === false,
+	);
 	const canvasUiKind = resolveV2AnketaCanvasUiKind(uiBranch, { fieldPointer });
 	const isSystemField = canvasUiKind === "system";
 	const isStockField = isCanvasStockField(uiSchema, fieldPointer);
@@ -722,14 +680,25 @@ function SchemaCanvasFieldRow({
 					tabIndex={selected ? 0 : -1}
 					onClick={(e) => {
 						e.stopPropagation();
+						const nextActive = groupInactive;
 						setUiSchema(
 							(prev) =>
 								patchUiOptionsAtPointer(
 									prev as Record<string, unknown>,
 									fieldPointer,
-									{ groupActive: groupInactive },
+									{ groupActive: nextActive },
 								) as typeof prev,
 						);
+						const pathKey = fieldPointer
+							.replace(/^\//, "")
+							.split("/")
+							.filter(Boolean)
+							.join(".");
+						if (pathKey) {
+							setFormData((prev) =>
+								setGroupActivationAtPath(prev, pathKey, nextActive),
+							);
+						}
 					}}
 					sx={{ flexShrink: 0 }}
 				>
@@ -1374,13 +1343,26 @@ export function SchemaCanvasPanel({
 						<Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
 							Проверяем связи с типовыми работами…
 						</Typography>
-					) : deleteImpact && deleteImpact.worksMatched > 0 ? (
-						<Typography variant="body2" color="error" sx={{ mt: 1 }}>
-							Будут обновлены типовые работы: {deleteImpact.worksMatched},
-							условия: {deleteImpact.rulesRemoved}, параметры трудоёмкости:{" "}
-							{deleteImpact.laborParamsRemoved}. Связанные формулы будут
-							помечены как требующие исправления.
-						</Typography>
+					) : deleteImpact && deleteImpact.affectedWorks.length > 0 ? (
+						<>
+							<Typography variant="body2" color="error" sx={{ mt: 1 }}>
+								Будут изменены типовые работы:{" "}
+								{deleteImpact.affectedWorks.length}. Связанные формулы будут
+								помечены как требующие исправления.
+							</Typography>
+							<Flex flexDirection="column" gap={4} padding="8px 0 0">
+								{deleteImpact.affectedWorks.map((work) => (
+									<Typography
+										key={`${work.workId}:${work.streamExecutor}`}
+										variant="caption"
+										color="text.secondary"
+									>
+										{work.workName} · {work.streamExecutor} ·{" "}
+										{describeAffectedWorkImpact(work)}
+									</Typography>
+								))}
+							</Flex>
+						</>
 					) : null}
 				</DialogContent>
 				<DialogActions>

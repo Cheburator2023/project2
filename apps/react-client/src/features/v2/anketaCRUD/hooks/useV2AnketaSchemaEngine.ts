@@ -24,6 +24,7 @@ import { ensureAnketaFormDataWithWorkflow } from "./useAnketaWorkflow";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
 	collectGeneratedTypicalWorkArrayPaths,
+	applyBooleanDefaultsToFormData,
 	ensureGroupActivationDefaults,
 	resolveAnketaCalculationLogic,
 	syncTriggerGatedGroupActivationFromTypicalWorks,
@@ -121,6 +122,12 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 		setFormData((prev) => ensureGroupActivationDefaults(prev, uiSchema));
 	}, [uiSchema]);
 
+	useEffect(() => {
+		const props = (jsonSchema as RJSFSchema)?.properties;
+		if (!props || typeof props !== "object") return;
+		setFormData((prev) => applyBooleanDefaultsToFormData(prev, jsonSchema));
+	}, [jsonSchema]);
+
 	const uncertaintySyncSignature = useMemo(
 		() =>
 			JSON.stringify({
@@ -176,13 +183,14 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 
 	useEffect(() => {
 		if (!mappedCalculation?.liveFormData) return;
-		setFormData((prev) =>
-			syncTriggerGatedGroupActivationFromTypicalWorks(
+		setFormData((prev) => {
+			const next = syncTriggerGatedGroupActivationFromTypicalWorks(
 				prev,
 				uiSchema,
 				mappedCalculation.liveFormData,
-			),
-		);
+			);
+			return next === prev ? prev : next;
+		});
 	}, [mappedCalculation?.liveFormData, uiSchema]);
 
 	const logicPreviewPack = useMemo(

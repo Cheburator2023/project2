@@ -6,6 +6,7 @@ import { ParameterDependenciesPanel } from "./ParameterDependenciesPanel";
 import { AtypicalWorksLogicPanel } from "./AtypicalWorksLogicPanel";
 import { TypicalWorksPanelMountHost } from "./typicalWorksPanelPersistentMount";
 import { OverallUncertaintyPanel } from "../overallUncertainty/OverallUncertaintyPanel";
+import { DeviationCoefficientsPanel } from "../deviationCoefficients/DeviationCoefficientsPanel";
 
 export type LogicWorkspaceShellProps = {
 	tab: V2LogicWorkspaceTab;
@@ -30,6 +31,11 @@ const LOGIC_WORKSPACE_SEGMENTS: Array<{
 		label: "Общая неопределённость",
 		title: "Шкалы, поправка и группа рисков (п.3 Опросника)",
 	},
+	{
+		id: "deviations",
+		label: "Отклонения",
+		title: "Коэффициенты СФЕРА и список работ для отклонений в панели итогов",
+	},
 	// { id: "jsonlogic", label: "JsonLogic" },
 ];
 
@@ -47,7 +53,9 @@ export function LogicWorkspaceShell({
 					? "Зависимости между параметрами анкеты"
 					: tab === "uncertainty"
 						? "Шкалы Сроков/Стоимости, поправка и группа рисков — итоговый коэффициент п.3 Опросника"
-						: "Расширенный редактор JsonLogic-правил";
+						: tab === "deviations"
+							? "Коэффициенты моделей/источников/алгоритмов/каналов и работы для колонок отклонений"
+							: "Расширенный редактор JsonLogic-правил";
 
 	return (
 		<Box
@@ -105,8 +113,38 @@ export function LogicWorkspaceShell({
 				>
 					<AtypicalWorksLogicPanel />
 				</Box>
-				{tab === "dependencies" ? <ParameterDependenciesPanel /> : null}
-				{tab === "uncertainty" ? <OverallUncertaintyPanel /> : null}
+				<Box
+					sx={{
+						display: tab === "dependencies" ? "flex" : "none",
+						flexDirection: "column",
+						height: "100%",
+						minHeight: 0,
+					}}
+				>
+					{/* Keep mounted: иначе draft/flush теряются при смене сегмента. */}
+					<ParameterDependenciesPanel />
+				</Box>
+				<Box
+					sx={{
+						display: tab === "uncertainty" ? "flex" : "none",
+						flexDirection: "column",
+						height: "100%",
+						minHeight: 0,
+					}}
+				>
+					{/* Keep mounted: иначе правки шкал не доживают до «Сохранить схему». */}
+					<OverallUncertaintyPanel />
+				</Box>
+				<Box
+					sx={{
+						display: tab === "deviations" ? "flex" : "none",
+						flexDirection: "column",
+						height: "100%",
+						minHeight: 0,
+					}}
+				>
+					<DeviationCoefficientsPanel />
+				</Box>
 				{tab === "jsonlogic" ? (
 					<Box sx={{ height: "100%", minHeight: 0 }}>{jsonLogicPanel}</Box>
 				) : null}

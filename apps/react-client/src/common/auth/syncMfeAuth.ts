@@ -1,10 +1,16 @@
+import { queryClient } from "@react-client/common/api/queryClient";
 import { clearMfeAuthState } from "@react-client/common/auth/clearMfeAuthState";
-import { useAuthStore } from "@react-client/common/store/authStore";
 import {
 	isGodModeAccessToken,
 	isNoRolesGodMode,
 } from "@react-client/common/auth/godMode";
+import {
+	beginLogoutOverlay,
+	LOGOUT_FALLBACK_RELOAD_MS,
+	LOGOUT_OVERLAY_DELAY_MS,
+} from "@react-client/common/auth/logoutOverlayState";
 import { publishAppSync } from "@react-client/common/crossTab/appBroadcast";
+import { useAuthStore } from "@react-client/common/store/authStore";
 
 export type MfeAuthHostProps = {
 	token?: string;
@@ -24,6 +30,7 @@ type KeycloakLike = {
 };
 
 let loginRedirectInFlight = false;
+let logoutInFlight = false;
 
 function asKeycloak(value: unknown): KeycloakLike | null {
 	if (!value || typeof value !== "object") return null;
@@ -49,6 +56,18 @@ function readCookieToken(): string | null {
 	} catch {
 		return match[1].trim();
 	}
+}
+
+/** Reload, если Keycloak/host logout не завершился редиректом. */
+function scheduleLogoutFallbackReload(): void {
+	if (typeof window === "undefined") return;
+	window.setTimeout(() => {
+		const key = "auth:logout-fallback-reload-at";
+		const lastAt = Number(sessionStorage.getItem(key) || 0);
+		if (Date.now() - lastAt < 60_000) return;
+		sessionStorage.setItem(key, String(Date.now()));
+		window.location.reload();
+	}, LOGOUT_FALLBACK_RELOAD_MS);
 }
 
 export function resolveKeycloakInstance(
@@ -125,6 +144,30 @@ export function resolveFreshAccessToken(
 	return stored;
 }
 
+/**
+ * Сессия умерла (refresh / authenticated=false): оверлей + очистка + login/reload.
+ * Без этого UI часто «висит» без индикации.
+ */
+function endDeadSession(
+	reason: "session-expired" | "refresh-failed",
+	props?: MfeAuthHostProps | null,
+): void {
+	if (logoutInFlight) {
+		clearMfeAuthState();
+		return;
+	}
+	logoutInFlight = true;
+	beginLogoutOverlay();
+	clearMfeAuthState();
+	publishAppSync({ type: "auth:logout", reason });
+
+	window.setTimeout(() => {
+		queryClient.clear();
+		redirectToKeycloakLogin(props);
+		scheduleLogoutFallbackReload();
+	}, LOGOUT_OVERLAY_DELAY_MS);
+}
+
 /** Просит Keycloak обновить access token и кладёт результат в store. */
 export async function refreshHostAccessToken(
 	props?: MfeAuthHostProps | null,
@@ -132,11 +175,7 @@ export async function refreshHostAccessToken(
 	const hadToken = Boolean(useAuthStore.getState().accessToken);
 	const keycloak = resolveKeycloakInstance(props);
 	if (keycloak?.authenticated === false) {
-		clearMfeAuthState();
-		publishAppSync({
-			type: "auth:logout",
-			reason: "session-expired",
-		});
+		endDeadSession("session-expired", props);
 		return null;
 	}
 
@@ -156,11 +195,7 @@ export async function refreshHostAccessToken(
 			}
 		} catch {
 			// Не повторяем запрос с заведомо устаревшим host/cookie token.
-			clearMfeAuthState();
-			publishAppSync({
-				type: "auth:logout",
-				reason: "refresh-failed",
-			});
+			endDeadSession("refresh-failed", props);
 			return null;
 		}
 	}
@@ -171,11 +206,7 @@ export async function refreshHostAccessToken(
 		return token;
 	}
 
-	clearMfeAuthState();
-	publishAppSync({
-		type: "auth:logout",
-		reason: "session-expired",
-	});
+	endDeadSession("session-expired", props);
 	return null;
 }
 
@@ -259,21 +290,50 @@ export function ensureKeycloakSession(
 /** Только для изоляции unit-тестов auth-flow. */
 export function resetKeycloakLoginGuardForTests(): void {
 	loginRedirectInFlight = false;
+	logoutInFlight = false;
 }
 
-/** Полный logout: чистим локальное состояние и отдаём управление Keycloak. */
+/** Полный logout: сначала оверлей, затем с задержкой чистим state и Keycloak. */
 export function performMfeLogout(props?: MfeAuthHostProps | null): void {
-	clearMfeAuthState();
-	publishAppSync({ type: "auth:logout", reason: "user" });
-	props?.onLogout?.();
+	if (logoutInFlight) return;
+	logoutInFlight = true;
+	beginLogoutOverlay();
 
-	const keycloak = resolveKeycloakInstance(props);
-	if (keycloak?.logout) {
-		void keycloak.logout();
-		return;
-	}
+	window.setTimeout(() => {
+		queryClient.clear();
+		clearMfeAuthState();
+		publishAppSync({ type: "auth:logout", reason: "user" });
 
-	if (typeof window !== "undefined") {
-		window.location.reload();
-	}
+		// Если host/Keycloak logout зависнет (часто на уже мёртвой сессии) — reload.
+		scheduleLogoutFallbackReload();
+
+		try {
+			props?.onLogout?.();
+		} catch {
+			// host callback упал — всё равно пробуем Keycloak / reload
+		}
+
+		const keycloak = resolveKeycloakInstance(props);
+		if (keycloak?.logout) {
+			try {
+				const result = keycloak.logout();
+				if (result && typeof result.then === "function") {
+					void result.catch(() => {
+						if (typeof window !== "undefined") {
+							window.location.reload();
+						}
+					});
+				}
+			} catch {
+				if (typeof window !== "undefined") {
+					window.location.reload();
+				}
+			}
+			return;
+		}
+
+		if (typeof window !== "undefined") {
+			window.location.reload();
+		}
+	}, LOGOUT_OVERLAY_DELAY_MS);
 }

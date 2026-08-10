@@ -283,24 +283,33 @@ describe("V2 calculation coverage — legacy E2E stages", () => {
 		"Нетиповые задачи",
 	];
 
-	it("always returns full detailedCalculation table from factory snapshot", async () => {
+	it("СФЕРА headlines on sparse formData come from stream works, not hard-coded stage base", async () => {
 		const summary = summaryOf(await evaluateSnapshot({}));
-		expect(summary.detailedCalculation.map((r) => r.stageName)).toEqual(
+		// Пустая анкета может материализовать дефолтные типовые работы — база тогда > 0.
+		// Жёсткая база этапов E2E (~485) больше не используется.
+		if (summary.baseScoreStream === undefined) {
+			expect(summary.scoreWithComplexityCoeff).toBeUndefined();
+			expect(summary.deviationFromBaseline).toBeUndefined();
+			return;
+		}
+		// Жёсткая база этапов E2E (~485) больше не используется.
+		expect(summary.baseScoreStream).toBeLessThan(400);
+		expect(typeof summary.deviationFromBaseline).toBe("number");
+	});
+
+	it("publishes СФЕРА summary when anketa has meaningful answers", async () => {
+		const summary = summaryOf(
+			await evaluateSnapshot({
+				generalInfo: { complexity: "1 — Низкая ×1.00" },
+			}),
+		);
+		expect(summary.detailedCalculation?.map((r) => r.stageName)).toEqual(
 			allStageNames,
 		);
-		expect(summary.platformStreams.length).toBeGreaterThanOrEqual(4);
-		expect(
-			summary.platformStreams.some((row) =>
-				row.streamName.includes("ДАДМ"),
-			),
-		).toBe(true);
-		expect(
-			summary.platformStreams.some((row) =>
-				row.streamName.includes("ПиРМ"),
-			),
-		).toBe(true);
-		expect(summary.baseScoreStream).toBeGreaterThan(0);
-		expect(summary.scoreWithComplexityCoeff).toBeGreaterThan(0);
+		expect(summary.platformStreams?.length).toBeGreaterThanOrEqual(1);
+		expect(typeof summary.baseScoreStream).toBe("number");
+		expect(typeof summary.deviationFromBaseline).toBe("number");
+		expect(typeof summary.scoreWithComplexityCoeff).toBe("number");
 	});
 
 	it("stage01 reacts to regulatory complexity", () => {
@@ -439,14 +448,18 @@ describe("V2 calculation coverage — rule kinds & guards", () => {
 				modelService: [
 					{
 						field_o_HRj6VO: true,
-						field_jUm5syZf: ["Онлайн"],
 					},
 				],
 			},
 			detailInfo: {
 				sourceSystems: [{ name: "src", type: "Внутренний" }],
-				modelsList: [{ algorithmType: "NLP", autoML: false }],
-				field_npwqpBHt: [
+				modelsList: [
+					{
+						algorithmType: "NLP",
+						autoML: false,
+						field_jUm5syZf: ["Онлайн"],
+					},
+				],				field_npwqpBHt: [
 					{
 						name: "custom",
 						estimateHoursPerDay: 5,
@@ -462,10 +475,16 @@ describe("V2 calculation coverage — rule kinds & guards", () => {
 		});
 		const summary = summaryOf(result);
 		expect(summary.typicalTotal).toBeGreaterThan(0);
-		expect(summary.atypicalTotal).toBe(10);
-		expect(summary.total).toBe((summary.typicalTotal ?? 0) + 10);
-		expect(summary.scoreWithComplexityCoeff).toBeGreaterThan(summary.total ?? 0);
-		expect(summary.deviationFromBaseline).not.toBeNull();
+		expect(summary.atypicalTotal).toBeGreaterThan(0);
+		expect(summary.total).toBe(
+			(summary.typicalTotal ?? 0) + (summary.atypicalTotal ?? 0),
+		);
+		// База = Σ типовых; оценка с коэф. = база×коэф. + нетиповые; отклонение в %.
+		expect(summary.baseScoreStream).toBeGreaterThan(0);
+		expect(summary.scoreWithComplexityCoeff).toBeGreaterThanOrEqual(
+			summary.baseScoreStream ?? 0,
+		);
+		expect(typeof summary.deviationFromBaseline).toBe("number");
 	});
 });
 

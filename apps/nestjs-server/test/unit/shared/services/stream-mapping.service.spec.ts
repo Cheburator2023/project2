@@ -11,12 +11,37 @@ import {
 
 describe("StreamMappingService", () => {
 	let service: StreamMappingService;
+	const prevEnv = process.env.STREAM_FILTER_DISABLED;
+	const prevDeModelops = process.env.DE_MODELOPS_VIEW_ALL_STREAMS;
 
 	beforeEach(() => {
+		delete process.env.STREAM_FILTER_DISABLED;
+		delete process.env.DE_MODELOPS_VIEW_ALL_STREAMS;
 		service = new StreamMappingService();
 	});
 
+	afterAll(() => {
+		if (prevEnv === undefined) {
+			delete process.env.STREAM_FILTER_DISABLED;
+		} else {
+			process.env.STREAM_FILTER_DISABLED = prevEnv;
+		}
+		if (prevDeModelops === undefined) {
+			delete process.env.DE_MODELOPS_VIEW_ALL_STREAMS;
+		} else {
+			process.env.DE_MODELOPS_VIEW_ALL_STREAMS = prevDeModelops;
+		}
+	});
+
 	describe("isStreamFilteredUser", () => {
+		it("returns false when STREAM_FILTER_DISABLED=true", () => {
+			process.env.STREAM_FILTER_DISABLED = "true";
+			expect(service.isStreamFilteredUser([STREAM_FILTERED_ROLES[0]])).toBe(
+				false,
+			);
+			expect(service.isStreamFilterDisabled()).toBe(true);
+		});
+
 		it("returns false for non-array inputs", () => {
 			expect(service.isStreamFilteredUser(null as any)).toBe(false);
 		});
@@ -29,6 +54,35 @@ describe("StreamMappingService", () => {
 			expect(service.isStreamFilteredUser([STREAM_FILTERED_ROLES[0]])).toBe(
 				true,
 			);
+		});
+
+		it("DE/ModelOps view all streams by default (DE_MODELOPS_VIEW_ALL_STREAMS)", () => {
+			expect(service.isDeModelopsViewAllStreams()).toBe(true);
+			expect(service.isStreamFilteredUser(["de", "sum_de_rb"])).toBe(false);
+			expect(service.isStreamFilteredUser(["modelops", "sum_mo_rb"])).toBe(
+				false,
+			);
+		});
+
+		it("DE/ModelOps are filtered when DE_MODELOPS_VIEW_ALL_STREAMS=false", () => {
+			process.env.DE_MODELOPS_VIEW_ALL_STREAMS = "false";
+			expect(service.isDeModelopsViewAllStreams()).toBe(false);
+			expect(service.isStreamFilteredUser(["de", "sum_de_rb"])).toBe(true);
+			expect(service.isStreamFilteredUser(["modelops", "sum_mo_rb"])).toBe(
+				true,
+			);
+			delete process.env.DE_MODELOPS_VIEW_ALL_STREAMS;
+		});
+
+		it("stream_view_all bypasses stream filter", () => {
+			process.env.DE_MODELOPS_VIEW_ALL_STREAMS = "false";
+			expect(
+				service.isStreamFilteredUser(["ds", "sum_ds_rb", "stream_view_all"]),
+			).toBe(false);
+			expect(
+				service.isStreamFilteredUser(["/stream_view_all", "ds"]),
+			).toBe(false);
+			delete process.env.DE_MODELOPS_VIEW_ALL_STREAMS;
 		});
 
 		it("returns false for lead even if nested path also yields ds/de/modelops", () => {
@@ -67,6 +121,18 @@ describe("StreamMappingService", () => {
 			expect(
 				service.isStreamFilteredUser(["/sarep", "/sarep/dev_sum_sarep_idsrc"]),
 			).toBe(false);
+		});
+
+		it("maps _rnd to RnD + AI-модели партнерств for filtered ds", () => {
+			const result = service.getGroupsAfterMapping(["ds", "rnd"]);
+			expect(result).toEqual(
+				expect.arrayContaining([
+					V2_IMPLEMENTATION_STREAM.RND,
+					V2_IMPLEMENTATION_STREAM_LABELS[V2_IMPLEMENTATION_STREAM.RND],
+					V2_IMPLEMENTATION_STREAM.PTITPC,
+					V2_IMPLEMENTATION_STREAM_LABELS[V2_IMPLEMENTATION_STREAM.PTITPC],
+				]),
+			);
 		});
 	});
 

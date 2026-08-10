@@ -97,7 +97,7 @@ Keycloak groups
     → V2AnketaViewerAccessContext.streams
 ```
 
-Роли, для которых стримы резолвятся из groups: `V2_USER_STREAM_FILTERED_ROLE_CODES` (`ds`, `de`, `sarep`, `data_expert`, `mipm_stream`, `modelops`) — синхронно с `STREAM_FILTERED_ROLES` на бекенде.
+Роли, для которых стримы резолвятся из groups: `V2_USER_STREAM_FILTERED_ROLE_CODES` (`ds`, `de`, `data_expert`, `mipm_stream`, `modelops`) — синхронно с `STREAM_FILTERED_ROLES` на бекенде. `sarep` в этот список **не** входит: реестр ему не режется, стрим берётся из AD-группы `sum_sarep_<stream>`.
 
 Достаточно **одного** совпадения: если у пользователя несколько ролей или несколько стримов, блок виден при пересечении **хотя бы по одной** роли **или** одному стриму.
 
@@ -123,6 +123,25 @@ F-05 §2: жёсткий фильтр действует на **список а�
 | Лиды, architect, mntranlst, da, sarep | чужие стримы скрыты |
 | validator / validator_lead | все оценки скрыты |
 | mipm, sacfg, saprg, appadmin, auditor* | полная детализация |
+
+### Представитель стрима вне ЖЦМ (`sarep`)
+
+Видимость — как у уровня B: все вкладки открыты, чужие оценки скрыты. Дополнительно ограничены правка и статусы (`V2_ANKETA_EDIT_ONLY_OWN_STREAM_ROLE_CODES`):
+
+| Раздел | Просмотр | Правка | «Завершить заполнение» |
+|--------|----------|--------|------------------------|
+| Свой стрим | да, с оценками | да | да |
+| Чужой стрим | да, без оценок и нормативов (названия работ видны) | нет | нет |
+| `generalInfo`, `detailInfo` | да | да | нет |
+| Анкета целиком | — | — | нет, всегда |
+
+`generalInfo` и `detailInfo` перечислены в `V2_ANKETA_SHARED_SECTION_KEYS`: `detailInfo` помечен стрим-блоком модельных стримов, поэтому по общему правилу попал бы в «чужие» и стал бы read-only.
+
+Реализация: `isV2AnketaPathEditableForViewer` (поля и арх-панели), `canViewerCompleteAnketaSection` (кнопка раздела), `canViewerCompleteWholeAnketa` (глобальная кнопка). Право `anketa_complete_anketa` у `/sarep` снято в `v2-keycloak-f05-sync.ts`; `anketa_workflow_approve` оставлено — оно нужно для закрытия своего раздела.
+
+В 1-й итерации у `sarep` также нет создания и удаления анкет: в F-05 у `/sarep` нет `anketa_create_calculation` / `anketa_delete_calculation`; дополнительно доменный запрет в `userCanCreateV2Questionnaire` / `userHasV2QuestionnaireDeleteRole` (UI + API), чтобы остаточные KK-роли не открывали кнопки.
+
+Сервер (`V2QuestionnaireService.update`) сверяет переходы workflow через `collectForbiddenV2AnketaWorkflowChanges` и **логирует** нарушения, не блокируя сохранение. Правки данных на сервере не сверяются: клиент сохраняет `displayFormData` целиком, включая пересчитанные движком типовые работы, поэтому дифф поддеревьев давал бы ложные срабатывания на автосохранении.
 
 ### Примеры
 
@@ -239,7 +258,7 @@ useUserStore (groups, roles)
 2. **Стрим** — по [implementation-stream.md §2](./implementation-stream.md#2-справочник-коды-и-подписи); при необходимости строка в `DEPARTMENT_TO_V2_STREAM_CODES` (`v2-user-stream-mapping.util.ts`) и в `StreamMappingService` на бекенде.
 3. **Лид** — код в `V2_ANKETA_LEAD_ROLE_CODES` и `RoleLead`.
 
-После изменений в api-contract: `npm run build` в `packages/api-contract`.
+Потребители берут `@smart-anketa/api-contract` из `src/` напрямую (Vite/Webpack/Nest+tsx) — отдельный `npm run build` в пакете не нужен.
 
 ### Связанная документация
 

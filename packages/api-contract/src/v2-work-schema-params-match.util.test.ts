@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+	applyDictionaryEnumsToWorkSchemaParams,
 	buildWorkSchemaParamsFromTemplate,
 	collectTypicalWorkSchemaConsistencyIssues,
 	findCatalogPreviousCodeForSchemaParam,
@@ -129,15 +130,18 @@ describe("buildWorkSchemaParamsFromTemplate", () => {
 			jsonSchema: {
 				type: "object",
 				properties: {
-					modelService: {
-						type: "object",
-						properties: {
-							field_jUm5syZf: {
-								type: "array",
-								title: "Каналы внедрения",
-								items: {
-									type: "string",
-									enum: ["Батч", "Онлайн"],
+					modelsList: {
+						type: "array",
+						items: {
+							type: "object",
+							properties: {
+								field_jUm5syZf: {
+									type: "array",
+									title: "Каналы внедрения",
+									items: {
+										type: "string",
+										enum: ["Батч", "Онлайн"],
+									},
 								},
 							},
 						},
@@ -145,9 +149,13 @@ describe("buildWorkSchemaParamsFromTemplate", () => {
 				},
 			},
 			uiSchema: {
-				modelService: {
-					field_jUm5syZf: {
-						"ui:options": { schemaFieldUid: "field_4fb7d302-c5f0-49e6-9cd2-959a1fbe1f4e" },
+				modelsList: {
+					items: {
+						field_jUm5syZf: {
+							"ui:options": {
+								schemaFieldUid: "field_4fb7d302-c5f0-49e6-9cd2-959a1fbe1f4e",
+							},
+						},
 					},
 				},
 			},
@@ -239,6 +247,74 @@ describe("collectTypicalWorkSchemaConsistencyIssues", () => {
 		]);
 	});
 
+	it("resolves mdlctl CSV labor aliases to modelClass / complexity", () => {
+		const schemaParams = [
+			{
+				code: "modelClass",
+				name: "Класс моделей",
+				schemaFieldUid: "uid-model-class",
+				values: [],
+			},
+			{
+				code: "complexity",
+				name: "Регуляторные требования",
+				schemaFieldUid: "uid-complexity",
+				values: [],
+			},
+		];
+		const issues = collectTypicalWorkSchemaConsistencyIssues({
+			schemaParams,
+			rules: [],
+			laborParamCodes: [
+				{
+					paramCode: "выбор_класса_моделей",
+					paramName: "Выбор класса моделей",
+				},
+				{
+					paramCode: "выбор_класса_моделей_тип_работ",
+					paramName: "Выбор класса моделей Тип работ",
+				},
+				{
+					paramCode: "пвр_регуляторный",
+					paramName: "ПВР/Регуляторный",
+				},
+			],
+		});
+		expect(issues.every((issue) => issue.message.includes("legacy-код"))).toBe(
+			true,
+		);
+		expect(issues.some((issue) => issue.message.includes("не найден"))).toBe(
+			false,
+		);
+	});
+
+	it("still reports obsolete industrial-necessity labor without a schema field", () => {
+		const issues = collectTypicalWorkSchemaConsistencyIssues({
+			schemaParams: [
+				{
+					code: "modelClass",
+					name: "Класс моделей",
+					schemaFieldUid: "uid-model-class",
+					values: [],
+				},
+			],
+			rules: [],
+			laborParamCodes: [
+				{
+					paramCode: "определение_необходимости_промышленной_реализации",
+					paramName: "Определение необходимости промышленной реализации",
+				},
+			],
+		});
+		expect(issues).toEqual([
+			expect.objectContaining({
+				kind: "labor",
+				paramCode: "определение_необходимости_промышленной_реализации",
+				message: "Параметр трудоёмкости не найден в схеме шаблона",
+			}),
+		]);
+	});
+
 	it("uses schemaFieldUid to disambiguate fields with the same code", () => {
 		const issues = collectTypicalWorkSchemaConsistencyIssues({
 			schemaParams: [
@@ -302,6 +378,56 @@ describe("collectTypicalWorkSchemaConsistencyIssues", () => {
 				message: expect.stringContaining("Настройка"),
 			}),
 		]);
+	});
+
+	it("reports unavailable values after dictionary enums replace stale jsonSchema.enum", () => {
+		const fromSchema = [
+			{
+				code: "workType",
+				name: "Тип работ",
+				schemaFieldUid: "uid-work-type",
+				dictionaryCode: "v2.detailInfo.dataMart.workType",
+				values: [
+					{ code: "Обучение", label: "Обучение" },
+					{ code: "Дообучение", label: "Дообучение" },
+					{ code: "Калибровка", label: "Калибровка" },
+				],
+			},
+		];
+		const withDictionary = applyDictionaryEnumsToWorkSchemaParams(fromSchema, {
+			"v2.detailInfo.dataMart.workType": {
+				enums: ["Калибровка"],
+				enumNames: ["Калибровка"],
+			},
+		});
+		const issues = collectTypicalWorkSchemaConsistencyIssues({
+			schemaParams: withDictionary,
+			rules: [],
+			laborParamCodes: [
+				{
+					paramCode: "workType",
+					paramName: "Тип работ",
+					schemaFieldUid: "uid-work-type",
+					coefficients: [
+						{ valueCode: "Обучение", valueLabel: "Обучение" },
+						{ valueCode: "Дообучение", valueLabel: "Дообучение" },
+						{ valueCode: "Калибровка", valueLabel: "Калибровка" },
+					],
+				},
+			],
+		});
+
+		expect(
+			issues.filter((issue) => issue.kind === "labor_value").map((i) => i.message),
+		).toEqual(
+			expect.arrayContaining([
+				expect.stringContaining("Обучение"),
+				expect.stringContaining("Дообучение"),
+			]),
+		);
+		expect(
+			issues.some((issue) => issue.message.includes("Калибровка") && issue.kind === "labor_value" && issue.message.includes("недоступно")),
+		).toBe(false);
 	});
 
 	it("keeps Настройка available when duplicate workType codes merge catalog values", () => {

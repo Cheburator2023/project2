@@ -10,6 +10,7 @@ import {
 	stripParamNameSourceKeys,
 } from "./v2-work-param-source-keys.util";
 import {
+	formatArchCountCoeffFactorLabel,
 	formatArchCountCoeffSteps,
 	formatWorkArchCountKindLabel,
 	parseArchCountCoeffSteps,
@@ -269,7 +270,7 @@ export function formatWorkFormulaReadableSymbolic(
 						? `→${token.workName.trim()}`
 						: "→работа";
 				case "arch_count_coeff":
-					return `Кол-${formatWorkArchCountKindLabel(token.archComponentKind)}`;
+					return formatArchCountCoeffFactorLabel(token.archComponentKind);
 				case "number":
 					return String(token.value);
 				case "operator":
@@ -302,6 +303,8 @@ export function formatWorkFormulaReadableWithValues(
 		paramCoefficients: Record<string, number>;
 		formData?: Record<string, unknown>;
 		resolveFactorCoeff?: (paramCode: string) => number;
+		/** Подписи для мульти-арх коэффициентов: `max(0.5, 1)` вместо свёрнутого числа. */
+		paramCoefficientValueLabels?: Record<string, string>;
 	},
 ): string {
 	const resolveCoeff =
@@ -318,6 +321,9 @@ export function formatWorkFormulaReadableWithValues(
 					return formatReadableFormulaNumber(ctx.norm);
 				case "param_coeff":
 				case "param_anyof": {
+					const labeled =
+						ctx.paramCoefficientValueLabels?.[token.paramCode]?.trim();
+					if (labeled) return labeled;
 					const value = resolveCoeff(token.paramCode);
 					return Number.isFinite(value)
 						? formatReadableFormulaNumber(value)
@@ -373,7 +379,7 @@ export function formatWorkFormulaGeneralSummary(
 				case "work_ref":
 					return token.workName ? `→${token.workName}` : "→работа";
 				case "arch_count_coeff":
-					return `Кол-${formatWorkArchCountKindLabel(token.archComponentKind)}`;
+					return formatArchCountCoeffFactorLabel(token.archComponentKind);
 				case "number":
 					return String(token.value);
 				case "operator":
@@ -929,7 +935,19 @@ export function cleanupWorkFormulaTokensAfterOperandRemoval(
 		}
 		for (let i = 0; i < next.length - 1; i++) {
 			if (next[i]?.kind === "operator" && next[i + 1]?.kind === "operator") {
-				next.splice(i + 1, 1);
+				const first = next[i];
+				const second = next[i + 1];
+				// `× ÷` / `× −` после вырезания архкоэф: оставляем ÷/−.
+				if (
+					first?.kind === "operator" &&
+					second?.kind === "operator" &&
+					first.op === "*" &&
+					(second.op === "/" || second.op === "-")
+				) {
+					next.splice(i, 1);
+				} else {
+					next.splice(i + 1, 1);
+				}
 				changed = true;
 				break;
 			}
@@ -962,6 +980,57 @@ export function cleanupWorkFormulaTokensAfterOperandRemoval(
 	return next;
 }
 
+function isWorkFormulaValueOperand(
+	token: V2WorkFormulaToken | undefined,
+): boolean {
+	if (!token) return false;
+	return (
+		token.kind === "norm" ||
+		token.kind === "number" ||
+		token.kind === "param_coeff" ||
+		token.kind === "param_anyof" ||
+		token.kind === "arch_count_coeff" ||
+		token.kind === "work_ref" ||
+		token.kind === "paren_close"
+	);
+}
+
+function isWorkFormulaValueStart(
+	token: V2WorkFormulaToken | undefined,
+): boolean {
+	if (!token) return false;
+	return (
+		token.kind === "norm" ||
+		token.kind === "number" ||
+		token.kind === "param_coeff" ||
+		token.kind === "param_anyof" ||
+		token.kind === "arch_count_coeff" ||
+		token.kind === "work_ref" ||
+		token.kind === "paren_open"
+	);
+}
+
+/**
+ * Чинит типичные поломки ленты: два операнда подряд → вставить `×`;
+ * затем прогнать cleanup осиротевших операторов (`× ÷` → `÷`).
+ */
+export function repairWorkFormulaTokenOperators(
+	tokens: V2WorkFormulaToken[],
+): V2WorkFormulaToken[] {
+	const withImplicitMultiply: V2WorkFormulaToken[] = [];
+	for (const token of tokens) {
+		const prev = withImplicitMultiply[withImplicitMultiply.length - 1];
+		if (
+			isWorkFormulaValueOperand(prev) &&
+			isWorkFormulaValueStart(token)
+		) {
+			withImplicitMultiply.push({ kind: "operator", op: "*" });
+		}
+		withImplicitMultiply.push(token);
+	}
+	return cleanupWorkFormulaTokensAfterOperandRemoval(withImplicitMultiply);
+}
+
 /**
  * Удаляет из формулы param-токены, которых нет в трудоёмкости
  * или чей kind (param_coeff / param_anyof) не совпадает с типом параметра.
@@ -980,6 +1049,9 @@ export function removeIncompatibleLaborKindFormulaTokens(
 		if (!group) return false;
 		return isLaborKindCompatibleWithToken(token, group.kind);
 	});
+	// cleanup срезает «осиротевшие» операторы — только если реально удалили операнд.
+	// Иначе нельзя дописать оператор в конец формулы (× сразу пропадает).
+	if (filtered.length === tokens.length) return tokens;
 	return cleanupWorkFormulaTokensAfterOperandRemoval(filtered);
 }
 
@@ -1124,7 +1196,7 @@ export function evaluateWorkFormula(
 			);
 			values.push(coeff);
 			labels.push(
-				`Кол-${formatWorkArchCountKindLabel(token.archComponentKind)}=${coeff}`,
+				`${formatArchCountCoeffFactorLabel(token.archComponentKind)}=${coeff}`,
 			);
 			expectOperand = false;
 			continue;
@@ -1233,7 +1305,7 @@ export function roundWorkEffortValue(
 	rounding: V2TypicalWorkRoundingDto,
 ): number {
 	if (rounding.mode === "NONE") return value;
-	const step = rounding.step ?? 0.1;
+	const step = normalizeWorkRoundingStep(rounding.step);
 	if (step <= 0) return value;
 	const scaled = value / step;
 	switch (rounding.mode as V2WorkRoundingMode) {
@@ -1246,6 +1318,21 @@ export function roundWorkEffortValue(
 		default:
 			return value;
 	}
+}
+
+/**
+ * Excel `ОКРУГЛ.*(x; n)` для модельного стрима ошибочно сохраняли как
+ * абсолютный шаг `n` (`; 2` → шаг 2 вместо округления до 2 знаков = 0.01).
+ * `1` не трогаем — валидный шаг в целых человеко-днях.
+ */
+export function normalizeWorkRoundingStep(
+	step: number | null | undefined,
+): number {
+	if (step == null || !Number.isFinite(step) || step <= 0) return 0.1;
+	if (Number.isInteger(step) && step >= 2 && step <= 15) {
+		return 10 ** -step;
+	}
+	return step;
 }
 
 export function applyWorkRounding(

@@ -1,6 +1,7 @@
 import DownloadIcon from "@mui/icons-material/Download";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import {
 	Button,
 	Divider,
@@ -9,24 +10,31 @@ import {
 	DialogContent,
 	DialogContentText,
 	DialogTitle,
+	IconButton,
+	Popover,
 	Stack,
 	TextField,
 	Typography,
 	styled,
 	useColorScheme,
+	useMediaQuery,
 } from "@mui/material";
 import {
 	useBulkDeleteV2Questionnaires,
+	useV2QuestionnaireEditLocks,
 	useV2QuestionnaireRegistryConfig,
 	useV2Questionnaires,
 	v2QuestionnairesExportXlsx,
 } from "@react-client/common/api/queries/v2-questionnaires";
+import { useQuestionnaireEditLocksStore } from "@react-client/features/v2/anketaCRUD/stores/questionnaireEditLocksStore";
+import { isOwnV2QuestionnaireEditLock } from "@react-client/features/v2/anketaCRUD/utils/isOwnV2QuestionnaireEditLock";
 import { downloadBlob } from "@react-client/common/api/queries/kanban-board";
 import { usePermissions } from "@react-client/hooks/usePermissions";
 import { toast } from "@react-client/common/toasts";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Header } from "@react-client/common/navigation/organisms/Header";
+import { SearchInput } from "@react-client/common/navigation/organisms/SearchInput";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
 import { getAgGridMainMenuItems } from "@react-client/common/tableStuff/agGridMainMenuItems";
 import { AG_GRID_SET_FILTER_PARAMS } from "@react-client/common/tableStuff/agGridSetFilterParams";
@@ -35,7 +43,11 @@ import {
 	clearAgGridColumnState,
 	saveAgGridColumnState,
 } from "@react-client/common/tableStuff/agGridColumnState";
-import { v2Routes } from "@react-client/routing/version/v2/routes";
+import {
+	pathForV2QuestionnaireCreate,
+	pathForV2QuestionnaireNewVersion,
+	pathForV2QuestionnairePreview,
+} from "@react-client/routing/common/pathHelpers";
 import type { V2QuestionnaireGridRow, V2QuestionnaireVersionRow } from "../types/v2QuestionnaireGrid.types";
 import {
 	AllCommunityModule,
@@ -60,13 +72,21 @@ import {
 	SideBarModule,
 } from "ag-grid-enterprise";
 import { AgGridReact } from "ag-grid-react";
-import { useCallback, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link as RouterLink, useNavigate } from "react-router";
 import {
 	agGridCustomMUITheme,
 	agGridCustomMUIThemeDark,
 } from "@react-client/theme/ag-grid/agGridCustomTheme";
 import { agGridIconSet } from "@react-client/theme/ag-grid/agGridIconSet";
+import { useUserStore } from "@react-client/common/store/userStore";
+import { useV2StreamFilterSetting } from "@react-client/common/api/queries/v2-runtime-settings";
+import {
+	canUserDeleteV2Questionnaire,
+	filterV2QuestionnairesByUserStreamGroups,
+	userHasV2QuestionnaireDeleteRole,
+} from "@smart-anketa/api-contract";
+import { logV2RegistryStreamDebug } from "../utils/logV2RegistryStreamDebug";
 import {
 	buildV2QuestionnaireColumnDefsFromTree,
 } from "../utils/v2QuestionnaireGridColumns";
@@ -108,6 +128,12 @@ const GridWrapper = styled(Flex)`
 	& > div {
 		width: 100%;
 		height: 100%;
+	}
+
+	.ag-row.v2-questionnaire-row--edit-locked {
+		opacity: 0.55;
+		filter: grayscale(0.35);
+		cursor: not-allowed;
 	}
 `;
 
@@ -344,6 +370,9 @@ export function V2QuestionnaireList() {
 	const { mode } = useColorScheme();
 	const navigate = useNavigate();
 	const gridRef = useRef<AgGridReact<V2QuestionnaireGridRow>>(null);
+	const [gridApi, setGridApi] = useState<GridApi<V2QuestionnaireGridRow> | null>(
+		null,
+	);
 	const {
 		canCreateCalculation,
 		canDeleteCalculation,
@@ -357,6 +386,10 @@ export function V2QuestionnaireList() {
 	>([]);
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 	const [isExporting, setIsExporting] = useState(false);
+	const [headerMenuAnchor, setHeaderMenuAnchor] =
+		useState<HTMLElement | null>(null);
+	const compactHeader = useMediaQuery("(max-width:1360px)");
+	const headerMenuOpen = Boolean(headerMenuAnchor);
 
 	const gridTheme =
 		mode === "light" || mode === undefined
@@ -364,15 +397,109 @@ export function V2QuestionnaireList() {
 			: agGridCustomMUIThemeDark;
 
 	const { data: questionnaires, isLoading } = useV2Questionnaires();
+	const { data: editLocksPayload } = useV2QuestionnaireEditLocks(true);
+	const setEditLocks = useQuestionnaireEditLocksStore((s) => s.setLocks);
+	const locksById = useQuestionnaireEditLocksStore((s) => s.locksById);
+
+	useEffect(() => {
+		setEditLocks(editLocksPayload?.locks ?? []);
+	}, [editLocksPayload, setEditLocks]);
+
+	const defaultColDef = useMemo(
+		() => ({
+			sortable: true,
+			resizable: true,
+			filter: "agSetColumnFilter" as const,
+			filterParams: AG_GRID_SET_FILTER_PARAMS,
+			minWidth: 90,
+			mainMenuItems: getAgGridMainMenuItems,
+		}),
+		[],
+	);
+
+	const defaultColGroupDef = useMemo(
+		() => ({
+			marryChildren: false,
+		}),
+		[],
+	);
+
+	const rowSelection = useMemo(
+		() => ({
+			mode: "multiRow" as const,
+			checkboxes: true,
+			headerCheckbox: true,
+			enableClickSelection: false,
+		}),
+		[],
+	);
+
+	const username = useUserStore((s) => s.username);
+	const groups = useUserStore((s) => s.groups);
+	/** Delete: KK + доменная роль (дубль `usePermissions` + стрим-проверка в grid). */
+	const canDeleteInRegistry =
+		canDeleteCalculation && userHasV2QuestionnaireDeleteRole(groups);
+	const streamFilterSetting = useV2StreamFilterSetting();
+	const streamFilterEnabled = streamFilterSetting.data?.enabled ?? true;
+	const deModelopsViewAllStreams =
+		streamFilterSetting.data?.deModelopsViewAllStreams ?? true;
+
+	const filteredQuestionnaires = useMemo(
+		() =>
+			filterV2QuestionnairesByUserStreamGroups(
+				questionnaires ?? [],
+				groups,
+				streamFilterEnabled,
+				{ deModelopsViewAllStreams },
+			),
+		[questionnaires, groups, streamFilterEnabled, deModelopsViewAllStreams],
+	);
+
+	useEffect(() => {
+		logV2RegistryStreamDebug({
+			username,
+			groups,
+			questionnaires: filteredQuestionnaires,
+			allQuestionnaires: questionnaires,
+			streamFilterEnabled,
+			deModelopsViewAllStreams,
+			isLoading: isLoading || streamFilterSetting.isLoading,
+		});
+	}, [
+		username,
+		groups,
+		filteredQuestionnaires,
+		questionnaires,
+		streamFilterEnabled,
+		deModelopsViewAllStreams,
+		isLoading,
+		streamFilterSetting.isLoading,
+	]);
 
 	const rowData = useMemo<V2QuestionnaireVersionRow[]>(() => {
-		if (!questionnaires?.length) return [];
-		return questionnaires.map((q) => ({
-			...q,
-			rowKind: "version" as const,
-			displayLabel: q.calcName,
-		}));
-	}, [questionnaires]);
+		if (!filteredQuestionnaires.length) return [];
+		return filteredQuestionnaires.map((q) => {
+			const lock = locksById[q.id];
+			const lockedByOther =
+				Boolean(lock) && !isOwnV2QuestionnaireEditLock(lock, username);
+			return {
+				...q,
+				rowKind: "version" as const,
+				displayLabel: q.calcName,
+				/** Блокируем только чужой lock; свой — можно открыть повторно. */
+				isEditLocked: lockedByOther,
+			};
+		});
+	}, [filteredQuestionnaires, locksById, username]);
+
+	const rowClassRules = useMemo(
+		() => ({
+			"v2-questionnaire-row--edit-locked": (
+				params: { data?: V2QuestionnaireGridRow | undefined },
+			) => Boolean(resolveVersionRow(params.data)?.isEditLocked),
+		}),
+		[],
+	);
 
 	const columnTree = useMemo(
 		() => registryConfig?.columnTree ?? [],
@@ -441,9 +568,13 @@ export function V2QuestionnaireList() {
 		(e: RowDoubleClickedEvent<V2QuestionnaireGridRow>) => {
 			const row = resolveVersionRow(e.data);
 			if (!row) return;
-			navigate(
-				`/v2/${v2Routes.calculationPreview.rootPath.replace(":id", row.id)}`,
-			);
+			if (row.isEditLocked) {
+				toast.error("Анкета сейчас редактируется", {
+					description: "Откройте позже, когда блокировка снимется",
+				});
+				return;
+			}
+			navigate(pathForV2QuestionnairePreview(row.id));
 		},
 		[navigate],
 	);
@@ -458,6 +589,7 @@ export function V2QuestionnaireList() {
 
 	const onGridReady = useCallback(
 		(e: GridReadyEvent) => {
+			setGridApi(e.api);
 			const basicPreset = getFactoryGridPresetFromTree(
 				FACTORY_PRESET_IDS.default,
 				columnTree,
@@ -476,29 +608,40 @@ export function V2QuestionnaireList() {
 		saveAgGridColumnState(GRID_COLUMN_STATE_KEY, api.getColumnState());
 	}, []);
 
-	const handleExportXlsx = useCallback(async (ids?: string[]) => {
-		setIsExporting(true);
-		try {
-			const blob = await v2QuestionnairesExportXlsx({ ids });
-			const date = new Date().toISOString().slice(0, 10);
-			const suffix =
-				ids && ids.length > 0 ? `selected-${ids.length}` : "all";
-			downloadBlob(blob, `v2-questionnaires-${suffix}-${date}.xlsx`);
-			if (ids && ids.length > 0) {
-				toast.success(
-					ids.length === 1
-						? "Анкета экспортирована"
-						: `Экспортировано анкет: ${ids.length}`,
-				);
+	const handleExportXlsx = useCallback(
+		async (ids?: string[]) => {
+			setIsExporting(true);
+			try {
+				const exportIds =
+					ids && ids.length > 0
+						? ids
+						: filteredQuestionnaires.map((q) => q.id);
+				const blob = await v2QuestionnairesExportXlsx({
+					ids: exportIds.length > 0 ? exportIds : undefined,
+				});
+				const date = new Date().toISOString().slice(0, 10);
+				const suffix =
+					ids && ids.length > 0
+						? `selected-${ids.length}`
+						: `filtered-${exportIds.length}`;
+				downloadBlob(blob, `v2-questionnaires-${suffix}-${date}.xlsx`);
+				if (ids && ids.length > 0) {
+					toast.success(
+						ids.length === 1
+							? "Анкета экспортирована"
+							: `Экспортировано анкет: ${ids.length}`,
+					);
+				}
+			} catch (err) {
+				toast.error("Ошибка экспорта", {
+					description: apiErrorMessage(err),
+				});
+			} finally {
+				setIsExporting(false);
 			}
-		} catch (err) {
-			toast.error("Ошибка экспорта", {
-				description: apiErrorMessage(err),
-			});
-		} finally {
-			setIsExporting(false);
-		}
-	}, []);
+		},
+		[filteredQuestionnaires],
+	);
 
 	const getContextMenuItems = useCallback(
 		(
@@ -520,21 +663,28 @@ export function V2QuestionnaireList() {
 				exportIds.length > 1
 					? `Экспорт в XLSX (${exportIds.length})`
 					: "Экспорт в XLSX";
+			const lockedHint = row.isEditLocked
+				? "Анкета сейчас редактируется"
+				: undefined;
 
 			return [
 				{
-					name: "Открыть",
-					action: () =>
-						navigate(
-							`/v2/${v2Routes.calculationPreview.rootPath.replace(":id", row.id)}`,
-						),
+					name: lockedHint ? `Открыть (${lockedHint})` : "Открыть",
+					disabled: Boolean(row.isEditLocked),
+					action: () => {
+						if (row.isEditLocked) return;
+						navigate(pathForV2QuestionnairePreview(row.id));
+					},
 				},
 				{
-					name: "Новая версия анкеты",
-					action: () =>
-						navigate(
-							`/v2/${v2Routes.calculationNewVersion.rootPath.replace(":id", row.id)}`,
-						),
+					name: lockedHint
+						? `Новая версия анкеты (${lockedHint})`
+						: "Новая версия анкеты",
+					disabled: Boolean(row.isEditLocked),
+					action: () => {
+						if (row.isEditLocked) return;
+						navigate(pathForV2QuestionnaireNewVersion(row.id));
+					},
 				},
 				{
 					name: exportLabel,
@@ -547,8 +697,15 @@ export function V2QuestionnaireList() {
 	);
 
 	const runBulkDelete = useCallback(() => {
-		const ids = selectedVersions.map((row) => row.id);
-		if (!ids.length) return;
+		const ids = selectedVersions
+			.filter((row) => canUserDeleteV2Questionnaire(groups, row.formData).ok)
+			.map((row) => row.id);
+		if (!ids.length) {
+			toast.error(
+				"Нет доступных для удаления анкет среди выбранных (роль/стрим)",
+			);
+			return;
+		}
 		bulkDelete.mutate(
 			{ ids },
 			{
@@ -557,15 +714,22 @@ export function V2QuestionnaireList() {
 					setSelectedVersions([]);
 					gridRef.current?.api?.deselectAll();
 					const deleted = result.deletedIds.length;
+					const deactivated = result.deactivatedIds?.length ?? 0;
 					const failed = result.failed.length;
-					if (deleted > 0) {
-						toast.success(
-							failed > 0
-								? `Удалено анкет: ${deleted}, ошибок: ${failed}`
-								: `Удалено анкет: ${deleted}`,
-						);
+					const ok = deleted + deactivated;
+					if (ok > 0) {
+						const parts: string[] = [];
+						if (deleted > 0) parts.push(`удалено: ${deleted}`);
+						if (deactivated > 0) {
+							parts.push(`неактивных: ${deactivated}`);
+						}
+						if (failed > 0) parts.push(`ошибок: ${failed}`);
+						toast.success(parts.join(", "));
 					} else if (failed > 0) {
-						toast.error("Не удалось удалить выбранные анкеты");
+						toast.error(
+							result.failed[0]?.message ??
+								"Не удалось удалить выбранные анкеты",
+						);
 					}
 				},
 				onError: (err) =>
@@ -574,7 +738,7 @@ export function V2QuestionnaireList() {
 					}),
 			},
 		);
-	}, [bulkDelete, selectedVersions]);
+	}, [bulkDelete, groups, selectedVersions]);
 
 	return (
 		<Flex
@@ -585,72 +749,203 @@ export function V2QuestionnaireList() {
 			width="100%"
 		>
 			<Header>
-				<Stack direction="row" spacing={1} alignItems="center">
-					{canExportReports ? (
-						<>
-							<Button
-								variant="outlined"
-								size="small"
-								startIcon={<DownloadIcon />}
-								disabled={isExporting || isLoading}
-								onClick={() => void handleExportXlsx()}
-							>
-								{isExporting ? "Экспорт…" : "Экспорт всех"}
-							</Button>
-							<Button
-								variant="outlined"
-								size="small"
-								startIcon={<DownloadIcon />}
-								disabled={
-									isExporting || isLoading || selectedVersions.length === 0
-								}
-								onClick={() =>
-									void handleExportXlsx(
-										selectedVersions.map((row) => row.id),
-									)
-								}
-							>
-								{isExporting
-									? "Экспорт…"
-									: `Экспорт выбранных (${selectedVersions.length})`}
-							</Button>
-						</>
-					) : null}
-					{canDeleteCalculation ? (
-						<Button
-							variant="outlined"
+				{compactHeader ? (
+					<>
+						<IconButton
 							size="small"
-							color="error"
-							startIcon={<DeleteOutlineIcon />}
-							disabled={!selectedVersions.length || bulkDelete.isPending}
-							onClick={() => setDeleteDialogOpen(true)}
+							onClick={(e) => setHeaderMenuAnchor(e.currentTarget)}
+							title="Действия реестра"
+							aria-label="Действия реестра"
+							aria-controls={headerMenuOpen ? "v2-registry-header-menu" : undefined}
+							aria-haspopup="true"
+							aria-expanded={headerMenuOpen ? "true" : undefined}
+							data-test-id="anketa-registry-header-menu"
 						>
-							Удалить выбранные ({selectedVersions.length})
-						</Button>
-					) : null}
-					{canCreateCalculation && (
-						<Button
-							variant="contained"
-							size="small"
-							startIcon={<AddIcon />}
-							onClick={() =>
-								navigate(`/v2/${v2Routes.calculationCreate.rootPath}`)
-							}
+							<MoreVertIcon />
+						</IconButton>
+						<Popover
+							id="v2-registry-header-menu"
+							open={headerMenuOpen}
+							anchorEl={headerMenuAnchor}
+							onClose={() => setHeaderMenuAnchor(null)}
+							anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+							transformOrigin={{ vertical: "top", horizontal: "right" }}
+							slotProps={{
+								paper: {
+									sx: { p: 1.5, width: 320, maxWidth: "calc(100vw - 24px)" },
+								},
+							}}
 						>
-							Создать анкету
-						</Button>
-					)}
-				</Stack>
+							<Flex flexDirection="column" gap={10} width="100%">
+								<SearchInput
+									gridApi={gridApi}
+									placeholder="Поиск по реестру"
+									inputId="v2_registry_quick_filter"
+								/>
+								{canExportReports ? (
+									<>
+										<Button
+											variant="outlined"
+											size="small"
+											fullWidth
+											startIcon={<DownloadIcon />}
+											disabled={isExporting || isLoading}
+											onClick={() => {
+												setHeaderMenuAnchor(null);
+												void handleExportXlsx();
+											}}
+										>
+											{isExporting ? "Экспорт…" : "Экспорт всех"}
+										</Button>
+										<Button
+											variant="outlined"
+											size="small"
+											fullWidth
+											startIcon={<DownloadIcon />}
+											disabled={
+												isExporting ||
+												isLoading ||
+												selectedVersions.length === 0
+											}
+											onClick={() => {
+												setHeaderMenuAnchor(null);
+												void handleExportXlsx(
+													selectedVersions.map((row) => row.id),
+												);
+											}}
+										>
+											{isExporting
+												? "Экспорт…"
+												: `Экспорт выбранных (${selectedVersions.length})`}
+										</Button>
+									</>
+								) : null}
+								{canDeleteInRegistry ? (
+									<Button
+										variant="outlined"
+										size="small"
+										fullWidth
+										color="error"
+										startIcon={<DeleteOutlineIcon />}
+										disabled={
+											!selectedVersions.length || bulkDelete.isPending
+										}
+										title="Черновик — полное удаление; Заполнено/Утверждена — статус «Неактивная». Руководители DS·ModelOps — свой стрим; конфигуратор — все."
+										onClick={() => {
+											setHeaderMenuAnchor(null);
+											setDeleteDialogOpen(true);
+										}}
+									>
+										Удалить выбранные ({selectedVersions.length})
+									</Button>
+								) : null}
+								{canCreateCalculation ? (
+									<Button
+										component={RouterLink}
+										to={pathForV2QuestionnaireCreate()}
+										variant="contained"
+										size="small"
+										fullWidth
+										startIcon={<AddIcon />}
+										data-test-id="anketa-registry-create"
+										onClick={() => setHeaderMenuAnchor(null)}
+									>
+										Создать анкету
+									</Button>
+								) : null}
+							</Flex>
+						</Popover>
+					</>
+				) : (
+					<Flex
+						gap={8}
+						alignItems="center"
+						justifyContent="flex-end"
+						flexShrink={0}
+						minWidth="0"
+					>
+						<Flex width="280px" minWidth="200px" flexShrink={0}>
+							<SearchInput
+								gridApi={gridApi}
+								placeholder="Поиск по реестру"
+								inputId="v2_registry_quick_filter"
+							/>
+						</Flex>
+						<Stack direction="row" spacing={1} alignItems="center" flexShrink={0}>
+							{canExportReports ? (
+								<>
+									<Button
+										variant="outlined"
+										size="small"
+										startIcon={<DownloadIcon />}
+										disabled={isExporting || isLoading}
+										onClick={() => void handleExportXlsx()}
+									>
+										{isExporting ? "Экспорт…" : "Экспорт всех"}
+									</Button>
+									<Button
+										variant="outlined"
+										size="small"
+										startIcon={<DownloadIcon />}
+										disabled={
+											isExporting ||
+											isLoading ||
+											selectedVersions.length === 0
+										}
+										onClick={() =>
+											void handleExportXlsx(
+												selectedVersions.map((row) => row.id),
+											)
+										}
+									>
+										{isExporting
+											? "Экспорт…"
+											: `Экспорт выбранных (${selectedVersions.length})`}
+									</Button>
+								</>
+							) : null}
+							{canDeleteInRegistry ? (
+								<Button
+									variant="outlined"
+									size="small"
+									color="error"
+									startIcon={<DeleteOutlineIcon />}
+									disabled={
+										!selectedVersions.length || bulkDelete.isPending
+									}
+									title="Черновик — полное удаление; Заполнено/Утверждена — статус «Неактивная». Руководители DS·ModelOps — свой стрим; конфигуратор — все."
+									onClick={() => setDeleteDialogOpen(true)}
+								>
+									Удалить выбранные ({selectedVersions.length})
+								</Button>
+							) : null}
+							{canCreateCalculation ? (
+								<Button
+									component={RouterLink}
+									to={pathForV2QuestionnaireCreate()}
+									variant="contained"
+									size="small"
+									startIcon={<AddIcon />}
+									data-test-id="anketa-registry-create"
+								>
+									Создать анкету
+								</Button>
+							) : null}
+						</Stack>
+					</Flex>
+				)}
 			</Header>
 			<Dialog
 				open={deleteDialogOpen}
 				onClose={() => setDeleteDialogOpen(false)}
 			>
-				<DialogTitle>Удалить анкеты?</DialogTitle>
+				<DialogTitle>Удалить выбранные анкеты?</DialogTitle>
 				<DialogContent>
 					<DialogContentText>
-						Будет удалено записей: {selectedVersions.length}. Действие
-						необратимо.
+						Будет обработано записей: {selectedVersions.length}. Черновики
+						удаляются из реестра безвозвратно; анкеты в статусе «Заполнено» или
+						«Утверждена» переводятся в статус записи «Неактивная». Действие
+						применяется только к анкетам, доступным вашей роли и стриму.
 					</DialogContentText>
 				</DialogContent>
 				<DialogActions>
@@ -661,7 +956,7 @@ export function V2QuestionnaireList() {
 						disabled={bulkDelete.isPending}
 						onClick={runBulkDelete}
 					>
-						Удалить
+						Подтвердить
 					</Button>
 				</DialogActions>
 			</Dialog>
@@ -674,19 +969,11 @@ export function V2QuestionnaireList() {
 					rowData={rowData}
 					columnDefs={columnDefs}
 					getRowId={getRowId}
-					defaultColDef={{
-						sortable: true,
-						resizable: true,
-						filter: "agSetColumnFilter",
-						filterParams: AG_GRID_SET_FILTER_PARAMS,
-						minWidth: 90,
-						mainMenuItems: getAgGridMainMenuItems,
-					}}
+					rowClassRules={rowClassRules}
+					defaultColDef={defaultColDef}
 					headerHeight={32}
 					groupHeaderHeight={32}
-					defaultColGroupDef={{
-						marryChildren: false,
-					}}
+					defaultColGroupDef={defaultColGroupDef}
 					sideBar={sideBar}
 					onRowDoubleClicked={onRowDoubleClicked}
 					getContextMenuItems={getContextMenuItems}
@@ -699,12 +986,7 @@ export function V2QuestionnaireList() {
 						if (event.finished) persistColumnState(event.api);
 					}}
 					loading={isLoading || isRegistryConfigLoading}
-					rowSelection={{
-						mode: "multiRow",
-						checkboxes: true,
-						headerCheckbox: true,
-						enableClickSelection: false,
-					}}
+					rowSelection={rowSelection}
 					onSelectionChanged={(
 						e: SelectionChangedEvent<V2QuestionnaireGridRow>,
 					) => {

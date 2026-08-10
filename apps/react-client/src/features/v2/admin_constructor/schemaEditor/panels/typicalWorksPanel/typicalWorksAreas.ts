@@ -1,6 +1,7 @@
 /** Стримы-исполнители в редакторе логики типовых работ (коды V2_IMPLEMENTATION_STREAM). */
 
 import {
+	isV2ModelImplementationStreamCode,
 	normalizeStreamBlockExecutor,
 	normalizeStreamBlockRoles,
 	resolveLogicStreamDbExecutor,
@@ -11,10 +12,59 @@ import {
 	resolveStreamBlockRolesLabel,
 	V2_IMPLEMENTATION_STREAM,
 	V2_IMPLEMENTATION_STREAM_CODES,
+	V2_MODEL_IMPLEMENTATION_STREAM_CODES,
+	V2_MODEL_STREAM_EXECUTOR,
 	V2_STREAM_BLOCK_ROLE_CODES,
 	type V2ImplementationStreamCode,
 	type V2StreamBlockRoleCode,
 } from "@smart-anketa/api-contract";
+
+/** Строка пикера стримов: umbrella «Модельный стрим» + дочерние / обычные. */
+export type ExecutorStreamPickerRow =
+	| { kind: "umbrella"; value: string; label: string }
+	| { kind: "stream"; value: string; nested: boolean };
+
+export type ExecutorStreamPickerUmbrella = {
+	value: string;
+	label: string;
+};
+
+/**
+ * Порядок для UI: при первом model-child вставляем umbrella(s), затем детей (nested),
+ * остальные стримы — без отступа.
+ */
+export function buildExecutorStreamPickerRows(
+	codes: readonly string[],
+	umbrellas: readonly ExecutorStreamPickerUmbrella[] = [
+		{ value: V2_MODEL_STREAM_EXECUTOR, label: `${V2_MODEL_STREAM_EXECUTOR} (зонтик)` },
+	],
+): ExecutorStreamPickerRow[] {
+	const modelInCatalog = V2_MODEL_IMPLEMENTATION_STREAM_CODES.filter((code) =>
+		codes.includes(code),
+	);
+	const rows: ExecutorStreamPickerRow[] = [];
+	let modelRendered = false;
+	for (const code of codes) {
+		if (isV2ModelImplementationStreamCode(code)) {
+			if (!modelRendered && modelInCatalog.length > 0) {
+				modelRendered = true;
+				for (const umbrella of umbrellas) {
+					rows.push({
+						kind: "umbrella",
+						value: umbrella.value,
+						label: umbrella.label,
+					});
+				}
+				for (const child of modelInCatalog) {
+					rows.push({ kind: "stream", value: child, nested: true });
+				}
+			}
+			continue;
+		}
+		rows.push({ kind: "stream", value: code, nested: false });
+	}
+	return rows;
+}
 
 export type LogicWorksScope =
 	| { kind: "stream"; streams: string[]; roles: string[] }
@@ -82,40 +132,59 @@ const ARCH_COMPONENT_RECOMMENDED_STREAMS: Record<
 	],
 };
 
-export function streamDisplayLabel(stream: string): string {
-	return resolveStreamBlockExecutorLabel(stream);
+export function streamDisplayLabel(
+	stream: string,
+	catalog?: readonly import("@smart-anketa/api-contract").V2ImplementationStreamCatalogEntry[],
+): string {
+	return resolveStreamBlockExecutorLabel(stream, catalog);
 }
 
 /** Код implementationStream для DB-имени или кода стрима. */
-export function streamAreaKey(stream: string): string {
-	return resolveLogicStreamForDbExecutor(stream) ?? stream;
+export function streamAreaKey(
+	stream: string,
+	catalog?: readonly import("@smart-anketa/api-contract").V2ImplementationStreamCatalogEntry[],
+): string {
+	return resolveLogicStreamForDbExecutor(stream, catalog) ?? stream;
 }
 
-export function resolveScopeStreams(scope: LogicWorksScope): string[] {
+export function resolveScopeStreams(
+	scope: LogicWorksScope,
+	catalog?: readonly import("@smart-anketa/api-contract").V2ImplementationStreamCatalogEntry[],
+	streamCodes: readonly string[] = LOGIC_EXECUTOR_STREAMS,
+): string[] {
 	if (scope.kind === "all") {
-		return LOGIC_EXECUTOR_STREAMS.flatMap((code) => [
-			...resolveStreamBlockExecutorScopeStreams(code),
+		return streamCodes.flatMap((code) => [
+			...resolveStreamBlockExecutorScopeStreams(code, catalog),
 		]);
 	}
 	return scope.streams.flatMap((stream) => [
-		...resolveStreamBlockExecutorScopeStreams(stream),
+		...resolveStreamBlockExecutorScopeStreams(stream, catalog),
 	]);
 }
 
 export function workMatchesLogicScope(
 	workStreams: string[],
 	scope: LogicWorksScope,
+	catalog?: readonly import("@smart-anketa/api-contract").V2ImplementationStreamCatalogEntry[],
+	streamCodes?: readonly string[],
 ): boolean {
 	if (scope.kind === "all") return true;
-	return workAssignedToScope(workStreams, resolveScopeStreams(scope));
+	return workAssignedToScope(
+		workStreams,
+		resolveScopeStreams(scope, catalog, streamCodes),
+		catalog,
+	);
 }
 
-export function scopeLabel(scope: LogicWorksScope): string {
+export function scopeLabel(
+	scope: LogicWorksScope,
+	catalog?: readonly import("@smart-anketa/api-contract").V2ImplementationStreamCatalogEntry[],
+): string {
 	if (scope.kind === "all") return "Все области";
 	const streamPart =
 		scope.streams.length === 1
-			? streamDisplayLabel(scope.streams[0])
-			: resolveStreamBlockExecutorsLabel(scope.streams);
+			? streamDisplayLabel(scope.streams[0]!, catalog)
+			: resolveStreamBlockExecutorsLabel(scope.streams, catalog);
 	const rolePart =
 		scope.roles.length > 0 ? resolveStreamBlockRolesLabel(scope.roles) : "";
 	if (streamPart && rolePart) return `${streamPart} · ${rolePart}`;
@@ -206,18 +275,19 @@ export function toggleStreamInScope(
 export function workAssignedToScope(
 	streams: string[],
 	scopeStreams: readonly string[],
+	catalog?: readonly import("@smart-anketa/api-contract").V2ImplementationStreamCatalogEntry[],
 ): boolean {
 	const scopeCodes = new Set(
 		scopeStreams
-			.map((value) => normalizeStreamBlockExecutor(value))
+			.map((value) => normalizeStreamBlockExecutor(value, catalog))
 			.filter((value): value is V2ImplementationStreamCode => value != null),
 	);
 	return streams.some((stream) => {
-		const code = resolveLogicStreamForDbExecutor(stream);
+		const code = resolveLogicStreamForDbExecutor(stream, catalog);
 		if (code && scopeCodes.has(code)) return true;
 		return (
 			scopeStreams.includes(stream) ||
-			scopeStreams.includes(streamAreaKey(stream))
+			scopeStreams.includes(streamAreaKey(stream, catalog))
 		);
 	});
 }
@@ -226,12 +296,13 @@ export function pickStreamForScope(
 	workStreams: string[],
 	scopeStreams: string[],
 	preferred: string | null,
+	catalog?: readonly import("@smart-anketa/api-contract").V2ImplementationStreamCatalogEntry[],
 ): string | null {
 	if (preferred && workStreams.includes(preferred)) return preferred;
 	const hit = workStreams.find(
 		(s) =>
 			scopeStreams.includes(s) ||
-			scopeStreams.includes(streamAreaKey(s)),
+			scopeStreams.includes(streamAreaKey(s, catalog)),
 	);
 	return hit ?? workStreams[0] ?? null;
 }
@@ -269,10 +340,12 @@ export function recommendedStreamsForComponent(
 export function isWorkAssignedToLogicStream(
 	workStreams: string[],
 	logicStream: string,
+	catalog?: readonly import("@smart-anketa/api-contract").V2ImplementationStreamCatalogEntry[],
 ): boolean {
 	return workAssignedToScope(
 		workStreams,
-		resolveStreamBlockExecutorScopeStreams(logicStream),
+		resolveStreamBlockExecutorScopeStreams(logicStream, catalog),
+		catalog,
 	);
 }
 
@@ -280,24 +353,30 @@ export function isWorkAssignedToLogicStream(
 export function pickDbStreamForLogicStream(
 	logicStream: string,
 	workStreams: string[],
+	catalog?: readonly import("@smart-anketa/api-contract").V2ImplementationStreamCatalogEntry[],
 ): string {
-	const code = normalizeStreamBlockExecutor(logicStream);
+	const code = normalizeStreamBlockExecutor(logicStream, catalog);
 	if (!code) return logicStream.trim();
-	const scope = resolveStreamBlockExecutorScopeStreams(code);
+	const scope = resolveStreamBlockExecutorScopeStreams(code, catalog);
 	const existing = workStreams.find(
 		(stream) =>
-			scope.includes(stream) || resolveLogicStreamForDbExecutor(stream) === code,
+			scope.includes(stream) ||
+			resolveLogicStreamForDbExecutor(stream, catalog) === code,
 	);
 	if (existing) return existing;
-	return resolveLogicStreamDbExecutor(code);
+	return resolveLogicStreamDbExecutor(code, catalog);
 }
 
 export function resolveDbStreamsForScope(scopeStreams: string[]): string[] {
 	return scopeStreams;
 }
 
-export function shortenStreamLabel(stream: string, max = 16): string {
-	const label = streamDisplayLabel(stream);
+export function shortenStreamLabel(
+	stream: string,
+	max = 16,
+	catalog?: readonly import("@smart-anketa/api-contract").V2ImplementationStreamCatalogEntry[],
+): string {
+	const label = streamDisplayLabel(stream, catalog);
 	return label.length > max ? `${label.slice(0, max - 1)}…` : label;
 }
 

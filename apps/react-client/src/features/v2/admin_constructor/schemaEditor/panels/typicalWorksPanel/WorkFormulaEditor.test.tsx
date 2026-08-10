@@ -82,7 +82,7 @@ describe("WorkFormulaEditor (ui)", () => {
 			],
 		});
 
-		await user.click(screen.getByRole("button", { name: /×/ }));
+		await user.click(screen.getByTestId(`${TID.workFormulaEditor}-op-mul`));
 
 		const paramSelect = within(screen.getByTestId(TID.workFormulaParamSelect)).getByRole(
 			"combobox",
@@ -257,7 +257,7 @@ describe("WorkFormulaEditor (ui)", () => {
 
 		const ribbon = screen.getByTestId(TID.workFormulaRibbon);
 		await user.click(within(ribbon).getByText("Норма N"));
-		await user.click(screen.getByRole("button", { name: /×/ }));
+		await user.click(screen.getByTestId(`${TID.workFormulaEditor}-op-mul`));
 
 		expect(screen.getByTestId(TID.workFormulaGeneralSummary).textContent).toMatch(
 			/N.*\*.*2|N.*×.*2/,
@@ -282,7 +282,39 @@ describe("WorkFormulaEditor (ui)", () => {
 		expect(screen.queryByText("2")).not.toBeInTheDocument();
 	});
 
-	it("changes operator inline in the ribbon", async () => {
+	it("inserts operator at end of formula", async () => {
+		const user = userEvent.setup();
+		renderEditor({
+			initialFormula: {
+				tokens: [{ kind: "norm" }, { kind: "number", value: 2 }],
+				text: "N 2",
+			},
+		});
+
+		// Курсор стартует в конце (tokens.length === 2)
+		await user.click(screen.getByTestId(`${TID.workFormulaEditor}-op-mul`));
+
+		expect(screen.getByTestId(TID.workFormulaGeneralSummary).textContent).toMatch(
+			/N.*2.*\*|N.*2.*×/,
+		);
+	});
+
+	it("single click on number sets cursor without opening editor", async () => {
+		const user = userEvent.setup();
+		renderEditor({
+			initialFormula: {
+				tokens: [{ kind: "norm" }, { kind: "number", value: 2 }],
+				text: "N 2",
+			},
+		});
+
+		const ribbon = screen.getByTestId(TID.workFormulaRibbon);
+		await user.click(within(ribbon).getByText("2"));
+		expect(within(ribbon).queryByRole("textbox")).not.toBeInTheDocument();
+		expect(within(ribbon).getByTestId(TID.workFormulaCursor)).toBeInTheDocument();
+	});
+
+	it("changes operator inline in the ribbon via click", async () => {
 		const user = userEvent.setup();
 		renderEditor({
 			initialFormula: {
@@ -298,10 +330,10 @@ describe("WorkFormulaEditor (ui)", () => {
 		const ribbon = screen.getByTestId(TID.workFormulaRibbon);
 		await user.click(screen.getByTestId(TID.workFormulaOperatorChip));
 		const picker = within(ribbon).getByTestId(TID.workFormulaOperatorSelect);
-		await user.click(within(picker).getByRole("button", { name: "+" }));
+		await user.click(within(picker).getByRole("button", { name: "÷" }));
 
 		expect(screen.getByTestId(TID.workFormulaGeneralSummary)).toHaveTextContent(
-			"N + 2",
+			"N ÷ 2",
 		);
 	});
 
@@ -320,8 +352,8 @@ describe("WorkFormulaEditor (ui)", () => {
 
 		await user.click(screen.getByRole("button", { name: ")" }));
 
-		expect(screen.getByTestId(TID.workFormulaGeneralSummary)).toHaveTextContent(
-			"N * 2)",
+		expect(screen.getByTestId(TID.workFormulaGeneralSummary).textContent).toMatch(
+			/N.*[×*].*2\)/,
 		);
 	});
 

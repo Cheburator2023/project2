@@ -37,6 +37,8 @@
 		"migrate:v2-binary-booleans": "node ./scripts/migrate-v2-binary-enums-to-boolean.mjs",
 		"strip:boolean-schema-defaults": "node ./scripts/strip-boolean-schema-defaults.mjs",
 		"count:loc": "node ./scripts/count-loc.mjs",
+		"test:e2e:ui": "cd e2e && playwright test",
+		"test:e2e:ui:headed": "cd e2e && playwright test --headed",
 		"docker:build:base": "docker build -f Dockerfile -t ubi8-base-smart-anketa-ui:local .",
 		"docker:stage-packages:api": "sh scripts/stage-docker-ci-packages.sh nestjs-server api-contract json-logic-ts",
 		"docker:stage-packages:frontend": "sh scripts/stage-docker-ci-packages.sh react-client api-contract json-logic-ts ag-grid-enterprise",

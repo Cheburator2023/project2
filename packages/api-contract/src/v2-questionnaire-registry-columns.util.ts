@@ -7,6 +7,7 @@ import {
 	resolveV2AnketaSectionDisplayTitle,
 } from "./v2-anketa-section-ui.util";
 import {
+	formatV2QuestionnaireStatus,
 	formatV2SchemaBindingStatus,
 	type V2QuestionnaireDto,
 } from "./v2-questionnaire.types";
@@ -727,9 +728,22 @@ function buildMetaRegistryGroup(): V2RegistryGroupColumn {
 			metaLeaf("version", "Версия", "version"),
 			metaLeaf("status", "Статус записи", "status"),
 			metaLeaf("workflowGlobalStatus", "Статус анкеты", "workflowGlobalStatus"),
+			metaLeaf("editLock", "Редактирование", "editLock"),
 			metaLeaf("author", "Автор", "author"),
-			metaLeaf("templateName", "Шаблон", "templateName"),
+			metaLeaf("templateName", "Схема", "templateName"),
 			metaLeaf("schemaBindingStatus", "Привязка схемы", "schemaBinding.status"),
+			metaLeaf(
+				"schemaCreatedAt",
+				"Дата создания схемы",
+				"schemaBinding.boundTemplateVersionCreatedAt",
+				"date",
+			),
+			metaLeaf(
+				"schemaUpdatedAt",
+				"Дата изменения схемы",
+				"schemaBinding.boundTemplateVersionUpdatedAt",
+				"date",
+			),
 			metaLeaf("finalCoefficient", "Итоговый коэф.", "finalCoefficient", "number"),
 			metaLeaf("createdAt", "Дата создания", "createdAt", "date"),
 			metaLeaf("updatedAt", "Дата последнего изменения", "updatedAt", "date"),
@@ -904,8 +918,8 @@ export function buildStaticV2QuestionnaireRegistryColumnTree(): V2RegistryColumn
 		]),
 		group("Итоговая оценка", [
 			formLeaf("summary.total", "Общая стоимость", "number"),
-			formLeaf("summary.baseScoreStream", "Базовая (СФЕРА)", "number"),
-			formLeaf("summary.scoreWithComplexityCoeff", "С поправкой сложности", "number"),
+			formLeaf("summary.baseScoreStream", "Базовая (типовые)", "number"),
+			formLeaf("summary.scoreWithComplexityCoeff", "С коэф. + нетиповые", "number"),
 			formLeaf("summary.deviationFromBaseline", "Отклонение %", "number"),
 		]),
 	];
@@ -1118,6 +1132,15 @@ function metaValue(row: V2QuestionnaireDto, metaKey: string): unknown {
 	if (metaKey === "readableId") return row.readableId ?? row.id;
 	if (metaKey === "schemaBinding.status") {
 		return formatV2SchemaBindingStatus(row.schemaBinding.status);
+	}
+	if (metaKey === "schemaBinding.boundTemplateVersionCreatedAt") {
+		return row.schemaBinding.boundTemplateVersionCreatedAt ?? "";
+	}
+	if (metaKey === "schemaBinding.boundTemplateVersionUpdatedAt") {
+		return row.schemaBinding.boundTemplateVersionUpdatedAt ?? "";
+	}
+	if (metaKey === "status") {
+		return formatV2QuestionnaireStatus(row.status);
 	}
 	if (metaKey === "workflowGlobalStatus") return row.workflowGlobalStatus ?? "";
 	return (row as Record<string, unknown>)[metaKey];

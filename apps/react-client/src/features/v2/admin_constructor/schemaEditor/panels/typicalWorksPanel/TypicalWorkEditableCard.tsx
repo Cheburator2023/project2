@@ -23,6 +23,7 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import FormatListBulletedIcon from "@mui/icons-material/FormatListBulleted";
 import type {
 	V2TypicalWorkCardDto,
 	V2TypicalWorkParameterDto,
@@ -30,6 +31,7 @@ import type {
 import {
 	isParamUsedInFormula,
 	removeIncompatibleLaborKindFormulaTokens,
+	repairWorkFormulaTokenOperators,
 	syncTermsFromTokenFormula,
 	tokensToText,
 	computeFormulaBadgeFromTokens,
@@ -48,9 +50,12 @@ import {
 	useV2TypicalWorkAssignments,
 	useV2WorkParametersCatalog,
 } from "@react-client/common/api/queries/v2-works";
+import { useV2ImplementationStreamCatalog } from "@react-client/common/api/queries/v2-streams";
 import { useSchemaEditor } from "../../SchemaEditorContext";
 import {
+	buildLaborCoefficientRowsFromParamValues,
 	buildSchemaWorkParameters,
+	countSameNamedSchemaParams,
 	findSchemaWorkParameter,
 	isSchemaLaborParamCandidate,
 	isSchemaLaborParamUsed,
@@ -59,6 +64,7 @@ import {
 	resolveSchemaParamForTriggerRule,
 	resolveWorkParameterOption,
 	schemaLaborParamPickerCaption,
+	schemaParamArchCaption,
 	schemaParamRuleName,
 	schemaWorkParameterEmptyPickerMessage,
 	triggerRuleGroupKey,
@@ -86,7 +92,11 @@ import {
 	resolveCanonicalWorkArchComponentType,
 	WORK_ARCH_COMPONENT_TYPES,
 } from "./typicalWorkPatchErrors";
-import { isWorkCoefficientValueAvailable } from "@smart-anketa/api-contract";
+import {
+	buildWorkCoefficientCatalog,
+	isWorkCoefficientValueAvailable,
+	resolveWorkCoefficientCatalogParam,
+} from "@smart-anketa/api-contract";
 import {
 	useTypicalWorkTriggerAnalysis,
 } from "./useTypicalWorkTriggerPreview";
@@ -162,6 +172,7 @@ export function TypicalWorkEditableCard({
 		uiSchema,
 		jsonSchema,
 		enumMapByCode,
+		dictionaryEnumsLoading,
 		openDesignerAtPointer,
 		triggerParamPickId,
 		clearTriggerParamPick,
@@ -170,10 +181,15 @@ export function TypicalWorkEditableCard({
 		requestCalculationRefresh,
 		registerTypicalWorkSaveGate,
 	} = useSchemaEditor();
+	const { catalog } = useV2ImplementationStreamCatalog();
 	const { data: assignmentsList } = useV2TypicalWorkAssignments({
 		templateVersionId,
 	});
-	const { data: methodologyCatalogData } = useV2WorkParametersCatalog();
+	const {
+		data: methodologyCatalogData,
+		isLoading: methodologyCatalogLoading,
+		isError: methodologyCatalogError,
+	} = useV2WorkParametersCatalog();
 	const createVersion = useCreateV2TemplateVersion();
 	const [draft, setDraft] = useState<V2TypicalWorkCardDto | null>(null);
 	const draftRef = useRef<V2TypicalWorkCardDto | null>(null);
@@ -259,11 +275,12 @@ export function TypicalWorkEditableCard({
 
 	const buildDraftFromCard = useCallback(
 		(nextCard: V2TypicalWorkCardDto): V2TypicalWorkCardDto => {
+			const repairedTokens = repairWorkFormulaTokenOperators(
+				nextCard.formula.tokens,
+			);
 			const formula = {
-				tokens: nextCard.formula.tokens,
-				text:
-					nextCard.formula.text?.trim() ||
-					tokensToText(nextCard.formula.tokens),
+				tokens: repairedTokens,
+				text: tokensToText(repairedTokens),
 			};
 			return {
 				...structuredClone(nextCard),
@@ -435,67 +452,51 @@ export function TypicalWorkEditableCard({
 			paramCode,
 		[methodologyCatalog, paramOptions],
 	);
-	const unusedLaborParams = laborParamOptions.filter(
-		(p) => !draft?.laborParams.some((g) => isSchemaLaborParamUsed([g], p)),
-	);
+	const isLaborParamLinked = (param: V2TypicalWorkParameterDto) =>
+		Boolean(
+			draft?.laborParams.some((g) => isSchemaLaborParamUsed([g], param)),
+		);
+	const unusedLaborParamsCount = laborParamOptions.filter(
+		(p) => !isLaborParamLinked(p),
+	).length;
 	const laborPickerHint = schemaWorkParameterEmptyPickerMessage(
 		fieldPathHints.length,
 		draft?.laborParams.length ?? 0,
-		unusedLaborParams.length,
+		unusedLaborParamsCount,
 	);
 
-	const coefficientCatalog = useMemo(() => {
-		const byCode = new Map<
-			string,
-			{
-				code: string;
-				sourceKeys?: string[];
-				values: Array<{ code: string; label: string }>;
-			}
-		>();
-
-		const addParam = (
-			param: V2TypicalWorkParameterDto,
-			legacyCode?: string,
-		) => {
-			byCode.set(param.code, {
-				code: param.code,
-				sourceKeys: [
-					...(param.sourceKeys ?? [param.code]),
-					...(legacyCode && legacyCode !== param.code ? [legacyCode] : []),
-				],
-				values: param.values.map((value) => ({
-					code: value.code,
-					label: value.label,
+	const coefficientCatalog = useMemo(
+		() =>
+			buildWorkCoefficientCatalog({
+				schemaParams: laborParamOptions.map((param) => ({
+					code: param.code,
+					name: param.name,
+					sourceKeys: param.sourceKeys,
+					schemaFieldUid: param.schemaFieldUid ?? null,
+					dictionaryCode: param.dictionaryCode,
+					numeric: param.numeric === true,
+					values: param.values.map((value) => ({
+						code: value.code,
+						label: value.label,
+					})),
 				})),
-			});
-		};
-
-		for (const param of laborParamOptions) {
-			addParam(param);
-		}
-
-		for (const group of draft?.laborParams ?? []) {
-			const alreadyKnown = [...byCode.values()].some(
-				(entry) =>
-					entry.code === group.paramCode ||
-					entry.sourceKeys?.includes(group.paramCode),
-			);
-			if (alreadyKnown) continue;
-
-			const resolved = resolveWorkParameterOption(
-				group.paramCode,
-				group.paramName,
-				paramOptions,
-				methodologyCatalog,
-			);
-			if (resolved) {
-				addParam(resolved, group.paramCode);
-			}
-		}
-
-		return [...byCode.values()];
-	}, [draft?.laborParams, laborParamOptions, methodologyCatalog, paramOptions]);
+				laborParams: (draft?.laborParams ?? []).map((group) => ({
+					paramCode: group.paramCode,
+					paramName: group.paramName,
+					schemaFieldUid: group.schemaFieldUid,
+				})),
+				methodologyCatalog: methodologyCatalog.map((param) => ({
+					code: param.code,
+					name: param.name,
+					sourceKeys: param.sourceKeys,
+					values: param.values.map((value) => ({
+						code: value.code,
+						label: value.label,
+					})),
+				})),
+			}),
+		[draft?.laborParams, laborParamOptions, methodologyCatalog],
+	);
 
 	const resolveLaborParamOption = useCallback(
 		(paramCode: string, paramName?: string | null) =>
@@ -515,13 +516,15 @@ export function TypicalWorkEditableCard({
 	);
 
 	const commitDraft = (next: V2TypicalWorkCardDto) => {
-		const prunedTokens = removeIncompatibleLaborKindFormulaTokens(
-			next.formula.tokens,
-			next.laborParams.map((g) => ({
-				paramCode: g.paramCode,
-				paramName: g.paramName,
-				kind: g.kind ?? "by_value",
-			})),
+		const prunedTokens = repairWorkFormulaTokenOperators(
+			removeIncompatibleLaborKindFormulaTokens(
+				next.formula.tokens,
+				next.laborParams.map((g) => ({
+					paramCode: g.paramCode,
+					paramName: g.paramName,
+					kind: g.kind ?? "by_value",
+				})),
+			),
 		);
 		const formula = {
 			tokens: prunedTokens,
@@ -551,6 +554,38 @@ export function TypicalWorkEditableCard({
 		refreshCalcAfterSaveRef.current = true;
 		scheduleSave(cardToPatchDto(withDerived, templateVersionId));
 	};
+
+	/** Справочник догрузился после добавления параметра — заполняем пустые коэфф. */
+	useEffect(() => {
+		if (!draft) return;
+		let changed = false;
+		const nextLabor = draft.laborParams.map((group) => {
+			if ((group.kind ?? "by_value") !== "by_value") return group;
+			if (group.coefficients.length > 0) return group;
+			const param = resolveLaborParamOption(group.paramCode, group.paramName);
+			if (!param?.values.length) return group;
+			if (
+				resolveNumericLaborPresetRows(param.name ?? group.paramName) != null
+			) {
+				return group;
+			}
+			const coefficients = buildLaborCoefficientRowsFromParamValues(
+				param,
+				draft.streamExecutor,
+				group.paramName ?? param.name,
+			);
+			if (coefficients.length === 0) return group;
+			changed = true;
+			return {
+				...group,
+				schemaFieldUid: group.schemaFieldUid ?? param.schemaFieldUid ?? null,
+				coefficients,
+			};
+		});
+		if (!changed) return;
+		commitDraft({ ...draft, laborParams: nextLabor });
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- только при появлении values у paramOptions
+	}, [paramOptions, draft?.id, draft?.laborParams, draft?.streamExecutor]);
 
 	/** Лёгкий путь для триггеров: без пересборки формулы/норм на каждый клик в select. */
 	const commitTriggerPatch = useCallback(
@@ -636,11 +671,10 @@ export function TypicalWorkEditableCard({
 			values: picked.values,
 			name: paramName,
 		});
+		/** any_of — для numeric/текста; справочник всегда by_value (коэфф. по значениям). */
 		const useAnyOf =
 			!useNumericByValue &&
-			(picked.numeric ||
-				isSchemaTextualParam(picked) ||
-				(Boolean(picked.dictionaryCode) && picked.values.length === 0));
+			(picked.numeric || isSchemaTextualParam(picked));
 		const newGroup = useAnyOf
 			? {
 					schemaFieldUid: picked.schemaFieldUid ?? null,
@@ -667,17 +701,11 @@ export function TypicalWorkEditableCard({
 									paramCode: picked.code,
 									paramName,
 								})
-							: picked.values.length > 24
-								? []
-								: picked.values.map((v) => ({
-									id: `new-${Date.now()}-${v.code}`,
-									streamExecutor: draft.streamExecutor,
-									paramCode: picked.code,
+							: buildLaborCoefficientRowsFromParamValues(
+									picked,
+									draft.streamExecutor,
 									paramName,
-									valueCode: v.code,
-									valueLabel: v.label,
-									coefficient: 1,
-								})),
+								),
 				};
 		commitDraft({
 			...draft,
@@ -758,13 +786,35 @@ export function TypicalWorkEditableCard({
 		}
 	};
 
+	/** Полный экран только пока грузится сама карточка работы. */
+	const secondaryCatalogPending =
+		!methodologyCatalogError &&
+		methodologyCatalogLoading &&
+		!methodologyCatalogData;
 	if (loading) {
 		return (
-			<Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
-				<CircularProgress size={28} />
-			</Box>
+			<Flex
+				flexDirection="column"
+				alignItems="center"
+				justifyContent="center"
+				flexGrow={1}
+				height="100%"
+				minHeight="0"
+				width="100%"
+				gap={10}
+				style={{ padding: 24 }}
+			>
+				<CircularProgress size={32} />
+				<Typography variant="body2" color="text.secondary">
+					Загрузка типовой работы…
+				</Typography>
+			</Flex>
 		);
 	}
+
+	/** Справочники/каталог — мягкий оверлей: не блокируем UI навечно при stale pending. */
+	const secondaryLoading =
+		dictionaryEnumsLoading || secondaryCatalogPending;
 
 	if (error) {
 		return (
@@ -776,9 +826,46 @@ export function TypicalWorkEditableCard({
 
 	if (!draft) {
 		return (
-			<Alert severity="info" sx={{ m: 2 }}>
-				Выберите работу в списке слева.
-			</Alert>
+			<Flex
+				flexDirection="column"
+				alignItems="center"
+				justifyContent="center"
+				flexGrow={1}
+				height="100%"
+				minHeight="0"
+				width="100%"
+				gap={12}
+				style={{ padding: 32 }}
+			>
+				<Flex
+					alignItems="center"
+					justifyContent="center"
+					style={{
+						width: 64,
+						height: 64,
+						borderRadius: 16,
+						background: "#eef2f8",
+						color: "#8a93a3",
+					}}
+				>
+					<FormatListBulletedIcon sx={{ fontSize: 30 }} />
+				</Flex>
+				<Typography
+					variant="subtitle1"
+					fontWeight={700}
+					sx={{ color: "#1d2435", textAlign: "center" }}
+				>
+					Работа не выбрана
+				</Typography>
+				<Typography
+					variant="body2"
+					color="text.secondary"
+					sx={{ maxWidth: 360, textAlign: "center", lineHeight: 1.5 }}
+				>
+					Выберите типовую работу в списке слева, чтобы открыть параметры,
+					триггеры и формулу.
+				</Typography>
+			</Flex>
 		);
 	}
 
@@ -787,7 +874,7 @@ export function TypicalWorkEditableCard({
 		effectiveArchComponentType,
 	);
 	const otherStreams = availableStreams.filter(
-		(s) => !recommended.includes(streamAreaKey(s) as LogicStreamCode),
+		(s) => !recommended.includes(streamAreaKey(s, catalog) as LogicStreamCode),
 	);
 
 	return (
@@ -798,6 +885,23 @@ export function TypicalWorkEditableCard({
 			minWidth="0"
 			height="100%"
 		>
+			{secondaryLoading ? (
+				<Flex
+					alignItems="center"
+					gap={8}
+					style={{
+						flexShrink: 0,
+						padding: "8px 22px",
+						borderBottom: "1px solid #e8ecf2",
+						background: "#f8fafc",
+					}}
+				>
+					<CircularProgress size={14} />
+					<Typography variant="caption" color="text.secondary">
+						Загрузка параметров и справочников…
+					</Typography>
+				</Flex>
+			) : null}
 			{/* <TypicalWorkSaveStatusBar
 				status={status}
 				workName={draft.name}
@@ -1090,7 +1194,7 @@ export function TypicalWorkEditableCard({
 									{availableStreams
 										.filter((s) =>
 											recommended.includes(
-												streamAreaKey(s) as LogicStreamCode,
+												streamAreaKey(s, catalog) as LogicStreamCode,
 											),
 										)
 										.map((stream) => (
@@ -1109,6 +1213,7 @@ export function TypicalWorkEditableCard({
 													present={isExecutorStreamPresentInSchema(
 														uiSchema,
 														stream,
+														catalog,
 													)}
 													selected={streamExecutor === stream}
 												/>
@@ -1146,6 +1251,7 @@ export function TypicalWorkEditableCard({
 														present={isExecutorStreamPresentInSchema(
 															uiSchema,
 															stream,
+															catalog,
 														)}
 														selected={streamExecutor === stream}
 													/>
@@ -1165,6 +1271,7 @@ export function TypicalWorkEditableCard({
 							present={isExecutorStreamPresentInSchema(
 								uiSchema,
 								streamExecutor,
+								catalog,
 							)}
 						/>
 					</Box>
@@ -1270,10 +1377,10 @@ export function TypicalWorkEditableCard({
 									<FuzzyAutocomplete<V2TypicalWorkParameterDto>
 										key={laborPickerKey}
 										data-test-id="labor-param-kind-select"
-										options={unusedLaborParams}
+										options={laborParamOptions}
 										value={null}
 										onChange={(param) => {
-											if (!param) return;
+											if (!param || isLaborParamLinked(param)) return;
 											addLaborParam(param);
 										}}
 										getOptionLabel={(param) => param.name}
@@ -1281,25 +1388,32 @@ export function TypicalWorkEditableCard({
 										getOptionSecondaryText={(param) =>
 											schemaLaborParamPickerCaption(param)
 										}
+										getOptionDisabled={isLaborParamLinked}
 										label="Параметр трудоёмкости"
 										placeholder="Выберите поле схемы…"
 										emptyLabel="Выберите поле схемы…"
 										searchPlaceholder="поиск параметра…"
 										noMatchesText="Параметры не найдены"
 										allowEmpty
-										disabled={unusedLaborParams.length === 0}
+										disabled={laborParamOptions.length === 0}
 										helperText={
-											unusedLaborParams.length === 0
+											unusedLaborParamsCount === 0
 												? laborPickerHint
 												: undefined
 										}
 										statusAlert={
-											unusedLaborParams.length === 0
+											unusedLaborParamsCount === 0 &&
+											laborParamOptions.length > 0
 												? {
 														severity: "info",
 														message: laborPickerHint,
 													}
-												: null
+												: laborParamOptions.length === 0
+													? {
+															severity: "info",
+															message: laborPickerHint,
+														}
+													: null
 										}
 									/>
 								</Box>
@@ -1336,6 +1450,19 @@ export function TypicalWorkEditableCard({
 										group.paramCode,
 										group.paramName,
 									);
+									const laborSchemaParam = resolveSchemaParamForTriggerRule(
+										{
+											paramCode: group.paramCode,
+											paramName: group.paramName,
+										},
+										paramOptions,
+									);
+									const laborArchCaption =
+										schemaParamArchCaption(laborSchemaParam);
+									const laborSameNamedCount = countSameNamedSchemaParams(
+										laborSchemaParam,
+										paramOptions,
+									);
 									const numericLaborRows =
 										paramMeta?.numeric === true ||
 										resolveNumericLaborPresetRows(
@@ -1345,17 +1472,60 @@ export function TypicalWorkEditableCard({
 									const laborTableCollapsed =
 										coeffCount > 24 &&
 										expandedLaborCoeffGroups[group.paramCode] !== true;
+									const missingSchemaBinding =
+										group.kind !== "any_of" &&
+										!group.schemaFieldUid?.trim();
+									const catalogParam = resolveWorkCoefficientCatalogParam(
+										coefficientCatalog,
+										group.paramCode,
+										group.schemaFieldUid,
+									);
+									const unavailableCoeffCount = numericLaborRows
+										? 0
+										: group.coefficients.filter(
+												(row) =>
+													(row.valueCode || row.valueLabel) &&
+													!isWorkCoefficientValueAvailable(
+														{
+															paramCode: group.paramCode,
+															schemaFieldUid: group.schemaFieldUid,
+															valueCode: row.valueCode ?? null,
+															valueLabel: row.valueLabel ?? null,
+														},
+														coefficientCatalog,
+													),
+											).length;
+									const laborCalcRiskMessage = missingSchemaBinding
+										? catalogParam
+											? "Параметр без привязки к полю схемы (schemaFieldUid). Если справочник методики не совпадёт со схемой, коэффициенты могут дать ×1 в расчёте."
+											: "Параметр не привязан к полю схемы и не найден в справочнике — в расчёте анкеты будет ×1. Привяжите поле схемы."
+										: unavailableCoeffCount > 0
+											? group.schemaFieldUid?.trim()
+												? `${unavailableCoeffCount} знач. не совпадают со справочником привязанного поля схемы.`
+												: `${unavailableCoeffCount} знач. недоступны в справочнике и исключены из расчёта.`
+											: null;
 									return (
 										<Box
 											key={group.paramCode}
 											data-work-labor-param={group.paramCode}
 											sx={{
-												border: "1px solid #eef0f4",
+												border: laborCalcRiskMessage
+													? "1px solid #f5c6c6"
+													: "1px solid #eef0f4",
 												borderRadius: "10px",
 												p: "11px 12px",
 												mb: 1.25,
+												bgcolor: laborCalcRiskMessage ? "#fff8f8" : undefined,
 											}}
 										>
+											{laborCalcRiskMessage ? (
+												<Alert
+													severity="warning"
+													sx={{ mb: 1.25, py: 0.5 }}
+												>
+													{laborCalcRiskMessage}
+												</Alert>
+											) : null}
 											<Box
 												sx={{
 													display: "flex",
@@ -1380,13 +1550,34 @@ export function TypicalWorkEditableCard({
 												>
 													{group.paramCode}
 												</Box>
-												<Typography
-													sx={{ flex: 1, fontSize: 12.5, fontWeight: 700 }}
-												>
-													{paramMeta?.name ??
-														group.paramName ??
-														group.paramCode}
-												</Typography>
+												<Box sx={{ flex: 1, minWidth: 0 }}>
+													<Typography
+														sx={{ fontSize: 12.5, fontWeight: 700 }}
+													>
+														{paramMeta?.name ??
+															group.paramName ??
+															group.paramCode}
+													</Typography>
+													{laborArchCaption ? (
+														<Typography
+															sx={{
+																fontSize: 11,
+																color: "#6b7484",
+																wordBreak: "break-all",
+															}}
+															title={
+																laborSameNamedCount > 0
+																	? `В схеме есть ещё ${laborSameNamedCount} поле(й) с таким же названием — проверьте, что выбран нужный арх-компонент`
+																	: undefined
+															}
+														>
+															{laborArchCaption}
+															{laborSameNamedCount > 0
+																? ` · ещё ${laborSameNamedCount} одноимённых`
+																: ""}
+														</Typography>
+													) : null}
+												</Box>
 												<Select
 													size="small"
 													data-test-id="labor-param-mode-select"
@@ -1438,20 +1629,12 @@ export function TypicalWorkEditableCard({
 																						},
 																					);
 																				}
-																				return (param?.values ?? []).length > 24
-																					? []
-																					: (param?.values ?? []).map(
-																							(v) => ({
-																								id: `new-${Date.now()}-${v.code}`,
-																								streamExecutor:
-																									draft.streamExecutor,
-																								paramCode: g.paramCode,
-																								paramName: g.paramName,
-																								valueCode: v.code,
-																								valueLabel: v.label,
-																								coefficient: 1,
-																							}),
-																						);
+																				if (!param) return [];
+																				return buildLaborCoefficientRowsFromParamValues(
+																					param,
+																					draft.streamExecutor,
+																					g.paramName ?? param.name,
+																				);
 																			})(),
 															};
 														});
@@ -1723,7 +1906,12 @@ export function TypicalWorkEditableCard({
 															const valueAvailable =
 																numericLaborRows ||
 																isWorkCoefficientValueAvailable(
-																	row,
+																	{
+																		paramCode: group.paramCode,
+																		schemaFieldUid: group.schemaFieldUid,
+																		valueCode: row.valueCode ?? null,
+																		valueLabel: row.valueLabel ?? null,
+																	},
 																	coefficientCatalog,
 																);
 															const editableValueLabel =
@@ -1913,6 +2101,58 @@ export function TypicalWorkEditableCard({
 														>
 															Добавить значение или диапазон
 														</Button>
+													) : null}
+													{!numericLaborRows &&
+													coeffCount === 0 &&
+													(paramMeta?.values.length ?? 0) > 0 ? (
+														<Button
+															size="small"
+															startIcon={<AddIcon />}
+															sx={{ mt: 1 }}
+															onClick={() => {
+																if (!paramMeta) return;
+																const nextGroups = draft.laborParams.map(
+																	(g) =>
+																		g.paramCode === group.paramCode
+																			? {
+																					...g,
+																					schemaFieldUid:
+																						g.schemaFieldUid ??
+																						paramMeta.schemaFieldUid ??
+																						null,
+																					coefficients:
+																						buildLaborCoefficientRowsFromParamValues(
+																							paramMeta,
+																							draft.streamExecutor,
+																							g.paramName ??
+																								paramMeta.name,
+																						),
+																				}
+																			: g,
+																);
+																commitDraft({
+																	...draft,
+																	laborParams: nextGroups,
+																});
+															}}
+														>
+															Заполнить из справочника схемы
+														</Button>
+													) : null}
+													{!numericLaborRows &&
+													coeffCount === 0 &&
+													(paramMeta?.values.length ?? 0) === 0 ? (
+														<Typography
+															sx={{
+																mt: 1,
+																fontSize: 12,
+																color: "#8a93a3",
+															}}
+														>
+															{paramMeta?.dictionaryCode
+																? "Значения справочника ещё не загружены. Дождитесь загрузки или проверьте привязку dictionaryCode в конструкторе."
+																: "У поля схемы нет значений enum/справочника — задайте их в конструкторе, затем вернитесь сюда."}
+														</Typography>
 													) : null}
 												</Box>
 											)}

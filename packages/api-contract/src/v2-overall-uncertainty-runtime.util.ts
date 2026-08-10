@@ -1,9 +1,11 @@
 import {
-	calculateOverallUncertaintyPreview,
+	clampUncertaintyAdjustmentPct,
 	createDefaultOverallUncertaintyConfig,
 	parseOverallUncertaintyConfigFromLogic,
+	V2_UNCERTAINTY_ADJUSTMENT_DEFAULTS,
 	type V2OverallUncertaintyConfig,
 	type V2OverallUncertaintyPreviewState,
+	type V2UncertaintyAdjustmentSettings,
 } from "./v2-overall-uncertainty-config.util";
 import type { V2LogicRuleDto } from "./v2-template.types";
 
@@ -15,17 +17,42 @@ function readRecord(value: unknown): Record<string, unknown> | undefined {
 	return isPlainRecord(value) ? value : undefined;
 }
 
-function parseAdjPct(value: unknown): number | null {
+function parseAdjPct(
+	value: unknown,
+	settings: V2UncertaintyAdjustmentSettings = V2_UNCERTAINTY_ADJUSTMENT_DEFAULTS,
+): number | null {
 	if (value == null || value === "") return null;
 	const parsed = Number(String(value).replace(",", ".").replace("%", "").trim());
 	if (!Number.isFinite(parsed)) return null;
-	return Math.min(30, Math.max(0, parsed));
+	return clampUncertaintyAdjustmentPct(parsed, settings);
 }
 
 function indexOfLabel(labels: readonly string[], value: string): number {
 	const trimmed = value.trim();
 	if (!trimmed) return -1;
 	return labels.findIndex((label) => label === trimmed);
+}
+
+/** Оба поля базы (срок + стоимость) заполнены — иначе итог «не рассчитан». */
+export function isOverallUncertaintyBaseComplete(
+	formData: Record<string, unknown>,
+): boolean {
+	const uncertainty = readRecord(formData.uncertaintyCalculation);
+	const timeline =
+		typeof uncertainty?.initiativeTimeline === "string"
+			? uncertainty.initiativeTimeline.trim()
+			: "";
+	const cost =
+		typeof uncertainty?.initiativeCost === "string"
+			? uncertainty.initiativeCost.trim()
+			: "";
+	return Boolean(timeline && cost);
+}
+
+/** Индекс шкалы: пустой/неизвестный лейбл → 0 (placeholder), не путать с «базой готово». */
+function severityIdxFromLabel(labels: readonly string[], value: string): number {
+	const idx = indexOfLabel(labels, value);
+	return idx >= 0 ? idx : 0;
 }
 
 /** Запись риска в formData: новая форма или legacy-строка. */
@@ -94,21 +121,17 @@ export function mapFormDataToOverallUncertaintyPreview(
 			: "";
 	const adjPct = parseAdjPct(
 		uncertainty?.uncertaintyAdjustment ?? uncertainty?.field_QCwwo5c5,
+		config.adjustment,
 	);
 
-	const timelineIdx = Math.max(
-		0,
-		indexOfLabel(
-			config.severityLevels.map((level) => level.timelineLabel),
-			timelineLabel,
-		),
+	const baseComplete = Boolean(timelineLabel && costLabel);
+	const timelineIdx = severityIdxFromLabel(
+		config.severityLevels.map((level) => level.timelineLabel),
+		timelineLabel,
 	);
-	const costIdx = Math.max(
-		0,
-		indexOfLabel(
-			config.severityLevels.map((level) => level.costLabel),
-			costLabel,
-		),
+	const costIdx = severityIdxFromLabel(
+		config.severityLevels.map((level) => level.costLabel),
+		costLabel,
 	);
 
 	const goalsLabels = config.severityLevels.map((level) => level.goalsLabel);
@@ -160,18 +183,65 @@ export function mapFormDataToOverallUncertaintyPreview(
 	}
 
 	const hasRisks = risks.some((risk) => risk.enabled);
+	const applicableFlag = uncertainty?.applicable ?? uncertainty?.enabled;
 	const enabled =
-		Boolean(timelineLabel) ||
-		Boolean(costLabel) ||
-		hasRisks ||
-		adjPct != null;
+		typeof applicableFlag === "boolean"
+			? applicableFlag
+			: Boolean(timelineLabel) ||
+				Boolean(costLabel) ||
+				hasRisks ||
+				adjPct != null;
 
 	return {
 		enabled,
+		baseComplete,
 		timelineIdx,
 		costIdx,
 		adjPct,
 		risks,
+	};
+}
+
+/**
+ * Пишет дефолты калькулятора в formData.uncertaintyCalculation
+ * (для превью редактора / локального черновика).
+ */
+export function mapOverallUncertaintyPreviewToFormData(
+	formData: Record<string, unknown>,
+	config: V2OverallUncertaintyConfig,
+	preview: V2OverallUncertaintyPreviewState,
+): Record<string, unknown> {
+	const prev = readRecord(formData.uncertaintyCalculation) ?? {};
+	const timelineLabel =
+		config.severityLevels[preview.timelineIdx]?.timelineLabel ?? "";
+	const costLabel = config.severityLevels[preview.costIdx]?.costLabel ?? "";
+	const probLabels = config.probabilityLevels.map((level) => level.label);
+	const goalsLabels = config.severityLevels.map((level) => level.goalsLabel);
+
+	const riskGroup: Record<string, unknown> = {};
+	for (const risk of config.risks) {
+		const state = preview.risks.find((item) => item.id === risk.id);
+		if (state?.enabled) {
+			riskGroup[risk.id] = {
+				probability: probLabels[state.probIdx] ?? "",
+				goals: goalsLabels[state.goalsIdx] ?? "",
+			};
+		} else {
+			riskGroup[risk.id] = { probability: "", goals: "" };
+		}
+	}
+
+	return {
+		...formData,
+		uncertaintyCalculation: {
+			...prev,
+			applicable: preview.enabled,
+			initiativeTimeline: preview.enabled ? timelineLabel : "",
+			initiativeCost: preview.enabled ? costLabel : "",
+			uncertaintyAdjustment:
+				preview.enabled && preview.adjPct != null ? preview.adjPct : null,
+			riskGroup,
+		},
 	};
 }
 
@@ -209,8 +279,14 @@ export function resolveLegacyUncertaintyCoefficientFromRiskGroupNames(
 		return null;
 	}
 
+	/** Без базы срок+стоимость legacy-итог тоже «не рассчитан». */
+	if (!isOverallUncertaintyBaseComplete(formData)) {
+		return { calculated: false, coefficient: 1 };
+	}
+
 	const adjPct = parseAdjPct(
 		uncertainty?.uncertaintyAdjustment ?? uncertainty?.field_QCwwo5c5,
+		config.adjustment,
 	);
 	const groupByName = new Map(config.groups.map((group) => [group.name, group.coef]));
 	const riskSum = entries.reduce(

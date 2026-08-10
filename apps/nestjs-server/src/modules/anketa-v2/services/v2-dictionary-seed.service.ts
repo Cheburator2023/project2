@@ -38,7 +38,11 @@ export class V2DictionarySeedService implements OnModuleInit {
 		await this.syncDefaultMetadata();
 	}
 
-	/** Полностью приводит items всех заводских справочников к factory bundle. */
+	/**
+	 * Приводит items заводских справочников к factory bundle.
+	 * В т.ч. `implementationStream` — 1:1 с формой (только 5 модельных);
+	 * полный каталог стримов живёт в таблице `v2_stream`, не здесь.
+	 */
 	async syncDefaultDictionaryItems(): Promise<void> {
 		let updated = 0;
 		for (const def of V2_ALL_DEFAULT_DICTIONARIES) {
@@ -46,6 +50,7 @@ export class V2DictionarySeedService implements OnModuleInit {
 				where: { code: def.code },
 			});
 			if (!dictionary) continue;
+
 			const existing = await this.itemRepository.find({
 				where: { dictionaryId: dictionary.id },
 				order: { order: "ASC" },

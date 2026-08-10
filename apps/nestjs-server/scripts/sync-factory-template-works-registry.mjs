@@ -1,11 +1,15 @@
 #!/usr/bin/env node
 /**
- * Обновляет v2-factory-template-typical-works.registry.json из export списка работ.
+ * LEGACY / недостаточный sync: обновляет ТОЛЬКО тонкий registry
+ * (id, name, streams, norms) — без rules / labor / formulas.
+ *
+ * Для полного переноса карточек админки в factory bundle используйте:
+ *   npm run publish:factory-typical-works -- <dump.json> [--write]
  *
  * Usage:
  *   node scripts/sync-factory-template-works-registry.mjs <works-list.json> [templateId]
  *
- * works-list.json — массив как GET /v2/works (Untitled-2) или data-transfer typicalWorks.
+ * works-list.json — массив как GET /v2/works или data-transfer typicalWorks.
  * templateId — по умолчанию 424b8ab7-1be4-4d0a-a0a9-05edadd77ff5 (Схема для СА 10.07).
  */
 import { readFileSync, writeFileSync } from "node:fs";

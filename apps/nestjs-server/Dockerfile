@@ -40,8 +40,7 @@ RUN set -eux; \
 	fi; \
 	rm -rf /tmp/build-context
 
-RUN npm --prefix packages/api-contract run build \
-	&& npm --prefix packages/json-logic-ts run build
+RUN npm --prefix packages/json-logic-ts run build
 
 WORKDIR /app/apps/nestjs-server
 RUN npm run build

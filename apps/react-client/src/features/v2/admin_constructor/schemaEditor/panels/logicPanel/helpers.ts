@@ -1,5 +1,9 @@
 import type { V2LogicRuleDto } from "@smart-anketa/api-contract";
-import { isTypicalWorksCatalogLogicRule } from "@smart-anketa/api-contract";
+import {
+	isTypicalWorksCatalogLogicRule,
+	V2_DEVIATION_COEFFICIENTS_CONFIG_PAYLOAD_ROLE,
+	V2_OVERALL_UNCERTAINTY_CONFIG_PAYLOAD_ROLE,
+} from "@smart-anketa/api-contract";
 import {
 	applyLogic,
 	type JsonLogicValue,
@@ -13,6 +17,18 @@ import { ruleKindLabel } from "../../constants";
 import type { FieldPathHint } from "../../types";
 import { evaluateRuleCondition } from "../../../utils/logicPreview";
 import { isOverwrittenByLegacyStageEngine } from "../../../utils/v2LegacyStageEngine";
+
+/**
+ * Правила-контейнеры методики (общая неопределённость, коэффициенты отклонений)
+ * хранят конфиг в payload и не считаются формулой с операндами.
+ */
+function isConfigCarrierRule(rule: V2LogicRuleDto): boolean {
+	const role = rule.payload?.role;
+	return (
+		role === V2_OVERALL_UNCERTAINTY_CONFIG_PAYLOAD_ROLE ||
+		role === V2_DEVIATION_COEFFICIENTS_CONFIG_PAYLOAD_ROLE
+	);
+}
 
 export function readComputedPayload(rule: V2LogicRuleDto): ComputedRulePayload {
 	const raw = rule.payload;
@@ -303,7 +319,7 @@ export function validateRule(
 				"Целевое поле перезаписывается движком этапов v1 на /calculate — значение JsonLogic в formData не сохранится.",
 		});
 	}
-	if (rule.kind === "computed") {
+	if (rule.kind === "computed" && !isConfigCarrierRule(rule)) {
 		const mode = payload.mode === "expert" ? "expert" : "preset";
 		if (mode === "preset") {
 			const operands = Array.isArray(payload.operands) ? payload.operands : [];

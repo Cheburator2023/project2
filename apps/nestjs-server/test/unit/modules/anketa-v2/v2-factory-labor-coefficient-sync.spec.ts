@@ -38,6 +38,9 @@ describe("factory labor coefficient sync", () => {
 			{} as never,
 			{} as never,
 			{} as never,
+			{
+				getSettingDto: jest.fn(async () => ({ source: "builtin" })),
+			} as never,
 		);
 
 		const count = await service.syncFactoryLaborCoefficients();

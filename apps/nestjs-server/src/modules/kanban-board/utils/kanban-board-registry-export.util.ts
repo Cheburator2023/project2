@@ -4,6 +4,7 @@ import {
 	KANBAN_BOARD_ROLE_ESTIMATE_FIELDS,
 	kanbanBoardEffectiveEstimatePd,
 	kanbanBoardPriorityTitle,
+	kanbanBoardStandTitle,
 	kanbanBoardTaskAssignees,
 } from "@smart-anketa/api-contract";
 
@@ -15,7 +16,6 @@ const TASK_EXPORT_COLUMNS = [
 	{ header: "Статус", key: "status", width: 14 },
 	{ header: "Заголовок", key: "title", width: 42 },
 	{ header: "Заказчик", key: "customer", width: 14 },
-	{ header: "Результат спринта", key: "sprintOutcome", width: 28 },
 	{ header: "Срок", key: "dueDate", width: 14 },
 	{ header: "Аналитик", key: "analyst", width: 10 },
 	{ header: "Разработчик", key: "developer", width: 12 },
@@ -32,7 +32,10 @@ const TASK_EXPORT_COLUMNS = [
 	{ header: "Родитель", key: "parentTask", width: 24 },
 	{ header: "Спринт", key: "sprint", width: 18 },
 	{ header: "Стрим", key: "stream", width: 18 },
-	{ header: "Стенд", key: "origin", width: 12 },
+	{ header: "Стенд", key: "stand", width: 12 },
+	{ header: "Стенд данных", key: "origin", width: 14 },
+	{ header: "Создал", key: "createdBy", width: 18 },
+	{ header: "Создано", key: "createdAt", width: 22 },
 	{ header: "Обновлено", key: "updatedAt", width: 22 },
 ] as const;
 
@@ -101,7 +104,6 @@ function taskToExportRow(task: KanbanBoardTaskRegistryDto): Record<string, strin
 		status: task.statusTitle,
 		title: task.title,
 		customer: task.customer ?? "",
-		sprintOutcome: task.sprintOutcome ?? task.content.sprintOutcome ?? "",
 		dueDate: task.dueDate ?? "",
 		estimatePd: kanbanBoardEffectiveEstimatePd(task.content) ?? "",
 		project: `${task.projectCode} — ${task.projectName}`,
@@ -112,7 +114,12 @@ function taskToExportRow(task: KanbanBoardTaskRegistryDto): Record<string, strin
 		parentTask: task.parentTask ?? "",
 		sprint: task.sprintTitle ?? "",
 		stream: task.streamCustomer ?? "",
+		stand:
+			task.standTitle ??
+			(task.content.stand ? kanbanBoardStandTitle(task.content.stand) : ""),
 		origin: task.origin,
+		createdBy: task.createdBy ?? "",
+		createdAt: task.createdAt ?? "",
 		updatedAt: task.updatedAt,
 	};
 	for (const field of KANBAN_BOARD_ROLE_ESTIMATE_FIELDS) {

@@ -49,13 +49,16 @@ import type {
 	KanbanBoardTaskRecord,
 	KanbanBoardTaskRegistryDto,
 	KanbanBoardTaskImageDto,
+	KanbanBoardTaskFileDto,
 	KanbanBoardTaskCommentDto,
 	CreateKanbanBoardTaskCommentRequestDto,
+	KanbanBoardTaskHistoryEntryDto,
 	AcquireKanbanBoardTaskLockRequestDto,
 	KanbanBoardTaskLockDto,
 	SaveKanbanBoardTasksRequestDto,
 	KanbanBoardHistoryDto,
 	KanbanBoardHistoryOverviewDto,
+	TrashKanbanBoardColumnTasksResultDto,
 	UpdateKanbanBoardCustomerRequestDto,
 	UpdateKanbanBoardAssigneeRequestDto,
 	UpdateKanbanBoardBoardRequestDto,
@@ -70,6 +73,7 @@ import type {
 import type { Response } from "express";
 import { KanbanBoardRegistryService } from "../services/kanban-board-registry.service";
 import { KanbanBoardTaskImageService } from "../services/kanban-board-task-image.service";
+import { KanbanBoardTaskFileService } from "../services/kanban-board-task-file.service";
 import { KanbanBoardTaskCommentService } from "../services/kanban-board-task-comment.service";
 import { KanbanBoardTaskLockService } from "../services/kanban-board-task-lock.service";
 import {
@@ -97,6 +101,7 @@ export class KanbanBoardController {
 		private readonly kanbanBoardService: KanbanBoardService,
 		private readonly registryService: KanbanBoardRegistryService,
 		private readonly taskImageService: KanbanBoardTaskImageService,
+		private readonly taskFileService: KanbanBoardTaskFileService,
 		private readonly taskCommentService: KanbanBoardTaskCommentService,
 		private readonly taskLockService: KanbanBoardTaskLockService,
 		private readonly historyService: KanbanBoardHistoryService,
@@ -363,9 +368,32 @@ export class KanbanBoardController {
 		return this.registryService.deleteColumn(resolvedBoardId, columnId);
 	}
 
+	@Post("boards/:boardId/columns/:columnId/trash-tasks")
+	@ApiOperation({
+		summary: "Переместить все задачи колонки «Готово» в корзину",
+	})
+	async trashColumnTasks(
+		@Param("boardId") boardId: string,
+		@Param("columnId") columnId: string,
+		@CurrentUser() user: Record<string, unknown> | undefined,
+	): Promise<TrashKanbanBoardColumnTasksResultDto> {
+		const resolvedBoardId =
+			await this.registryService.resolveBoardId(boardId);
+		return this.registryService.trashColumnTasks(
+			resolvedBoardId,
+			columnId,
+			kanbanAuditUserId(user),
+		);
+	}
+
 	@Get("tasks/registry")
 	async findTasksRegistry(): Promise<KanbanBoardTaskRegistryDto[]> {
 		return this.registryService.findAllTasksRegistry();
+	}
+
+	@Get("tasks/trash")
+	async findTrashedTasks(): Promise<KanbanBoardTaskRegistryDto[]> {
+		return this.registryService.findTrashedTasksRegistry();
 	}
 
 	@Get("tasks/ref/:ref")
@@ -519,11 +547,30 @@ export class KanbanBoardController {
 	}
 
 	@Delete("tasks/:id")
+	@ApiOperation({ summary: "Переместить задачу в корзину (soft-delete)" })
 	async deleteTask(
 		@Param("id") id: string,
 		@CurrentUser() user: Record<string, unknown> | undefined,
 	): Promise<void> {
-		return this.registryService.deleteTask(id, kanbanAuditUserId(user));
+		return this.registryService.trashTask(id, kanbanAuditUserId(user));
+	}
+
+	@Post("tasks/:id/restore")
+	@ApiOperation({ summary: "Восстановить задачу из корзины" })
+	async restoreTask(
+		@Param("id") id: string,
+		@CurrentUser() user: Record<string, unknown> | undefined,
+	): Promise<void> {
+		return this.registryService.restoreTask(id, kanbanAuditUserId(user));
+	}
+
+	@Delete("tasks/:id/purge")
+	@ApiOperation({ summary: "Удалить задачу из корзины навсегда" })
+	async purgeTask(
+		@Param("id") id: string,
+		@CurrentUser() user: Record<string, unknown> | undefined,
+	): Promise<void> {
+		return this.registryService.purgeTask(id, kanbanAuditUserId(user));
 	}
 
 	@Get("tasks/:taskId/images")
@@ -608,6 +655,82 @@ export class KanbanBoardController {
 		@Param("imageId") imageId: string,
 	): Promise<void> {
 		return this.taskImageService.delete(taskId, imageId);
+	}
+
+	@Get("tasks/:taskId/files")
+	async listTaskFiles(
+		@Param("taskId") taskId: string,
+	): Promise<KanbanBoardTaskFileDto[]> {
+		return this.taskFileService.listForTask(taskId);
+	}
+
+	@Post("tasks/:taskId/files")
+	@UseInterceptors(
+		FileInterceptor("file", {
+			limits: {
+				fileSize: 15 * 1024 * 1024,
+				files: 1,
+			},
+		}),
+	)
+	@ApiConsumes("multipart/form-data")
+	async uploadTaskFile(
+		@Param("taskId") taskId: string,
+		@UploadedFile()
+		file:
+			| {
+					buffer: Buffer;
+					originalname?: string;
+					mimetype?: string;
+			  }
+			| undefined,
+		@Body()
+		body: {
+			name?: string;
+			mimeType?: string;
+		},
+	): Promise<KanbanBoardTaskFileDto> {
+		if (!file?.buffer?.length) {
+			throw new BadRequestException(
+				"Передайте file (multipart/form-data). Макс. 15 МБ.",
+			);
+		}
+		return this.taskFileService.upload(taskId, {
+			originalName: body.name ?? file.originalname ?? "file",
+			mimeType: body.mimeType ?? file.mimetype ?? "application/octet-stream",
+			data: file.buffer,
+		});
+	}
+
+	@Get("tasks/:taskId/files/:fileId")
+	async getTaskFile(
+		@Param("taskId") taskId: string,
+		@Param("fileId") fileId: string,
+		@Res() res: Response,
+	): Promise<void> {
+		const file = await this.taskFileService.readFile(taskId, fileId);
+		res.setHeader("Content-Type", file.mimeType);
+		res.setHeader(
+			"Content-Disposition",
+			`attachment; filename*=UTF-8''${encodeURIComponent(file.fileName)}`,
+		);
+		res.setHeader("Cache-Control", "private, max-age=86400");
+		res.end(file.buffer);
+	}
+
+	@Delete("tasks/:taskId/files/:fileId")
+	async deleteTaskFile(
+		@Param("taskId") taskId: string,
+		@Param("fileId") fileId: string,
+	): Promise<void> {
+		return this.taskFileService.delete(taskId, fileId);
+	}
+
+	@Get("tasks/:taskId/history")
+	async listTaskHistory(
+		@Param("taskId") taskId: string,
+	): Promise<KanbanBoardTaskHistoryEntryDto[]> {
+		return this.historyService.findTaskHistory(taskId);
 	}
 
 	@Get("tasks/:taskId/comments")

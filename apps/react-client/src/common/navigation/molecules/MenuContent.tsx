@@ -6,7 +6,6 @@ import ListItemButton from "@mui/material/ListItemButton";
 import ListItemText from "@mui/material/ListItemText";
 import Stack from "@mui/material/Stack";
 import { IS_DEV } from "@react-client/common/constants/dev";
-import { useUserStore } from "@react-client/common/store/userStore";
 import { usePermissions } from "@react-client/hooks/usePermissions";
 import {
 	commonRoutes,
@@ -15,7 +14,8 @@ import {
 import type { AppRouteConfig } from "@react-client/routing/common/types";
 import { v1Routes } from "@react-client/routing/version/v1/routes";
 import { v2Routes } from "@react-client/routing/version/v2/routes";
-import { useLocation, useNavigate } from "react-router";
+import { Permission } from "@react-client/types/roles";
+import { Link as RouterLink, useLocation } from "react-router";
 
 const V1_PREFIX = "/v1";
 const V2_PREFIX = "/v2";
@@ -76,20 +76,34 @@ const v2UserNavItems = () =>
 			r.rootPath !== v2Routes.calculationCompare.rootPath,
 	);
 
-const useV2UserNavItems = () => {
-	const { hasPermission } = useUserStore();
+/** Меню должно совпадать с PermissionGuard / usePermissions (sarep без create/delete). */
+function useNavItemAllowed() {
+	const {
+		hasPermission,
+		canCreateCalculation,
+		canDeleteCalculation,
+	} = usePermissions();
 
-	return v2UserNavItems().filter(
-		(item) => !item?.permission || hasPermission(item.permission),
-	);
+	return (item: AppRouteConfig): boolean => {
+		if (!item.permission) return true;
+		if (item.permission === Permission.ANKETA_CREATE_CALCULATION) {
+			return canCreateCalculation;
+		}
+		if (item.permission === Permission.ANKETA_DELETE_CALCULATION) {
+			return canDeleteCalculation;
+		}
+		return hasPermission(item.permission);
+	};
+}
+
+const useV2UserNavItems = () => {
+	const allowed = useNavItemAllowed();
+	return v2UserNavItems().filter(allowed);
 };
 
 const useV1MainNestedItems = () => {
-	const { hasPermission } = useUserStore();
-
-	return getV1MainNestedItems().filter(
-		(item) => !item?.permission || hasPermission(item.permission),
-	);
+	const allowed = useNavItemAllowed();
+	return getV1MainNestedItems().filter(allowed);
 };
 
 function routeRowSelected(route: AppRouteConfig, pathname: string): boolean {
@@ -103,9 +117,29 @@ function routeRowSelected(route: AppRouteConfig, pathname: string): boolean {
 	return route.rootPath === pathname;
 }
 
-/** Переход в remote shell-приложения (вне basename React Router смарт-анкеты). */
-function openRemoteApp(href: string) {
-	window.location.assign(href);
+function NavLinkItem({
+	to,
+	selected,
+	primary,
+	pl,
+}: {
+	to: string;
+	selected: boolean;
+	primary: string;
+	pl: number;
+}) {
+	return (
+		<ListItem disablePadding sx={{ display: "block", mb: 0.2, py: 0 }}>
+			<ListItemButton
+				component={RouterLink}
+				to={to}
+				selected={selected}
+				sx={{ pl }}
+			>
+				<ListItemText primary={primary} />
+			</ListItemButton>
+		</ListItem>
+	);
 }
 
 function NavSection({
@@ -114,7 +148,6 @@ function NavSection({
 	homePath,
 	nestedItems,
 	pathname,
-	onNavigate,
 	indent = 0,
 }: {
 	title: string;
@@ -122,7 +155,6 @@ function NavSection({
 	homePath: string;
 	nestedItems: { rootPath: string; name: string }[];
 	pathname: string;
-	onNavigate: (path: string) => void;
 	indent?: number;
 }) {
 	const homeSelected = pathname === homePath || pathname === `${homePath}/`;
@@ -134,33 +166,24 @@ function NavSection({
 				<ListItemText secondary={title} />
 			</ListItemButton>
 			<List disablePadding sx={{ py: 0 }}>
-				<ListItem
-					disablePadding
-					sx={{ display: "block", mb: 0.2 }}
-					onClick={() => onNavigate(homePath)}
-				>
-					<ListItemButton selected={homeSelected} sx={{ pl: pl + 1 }}>
-						<ListItemText primary={homeLabel} />
-					</ListItemButton>
-				</ListItem>
+				<NavLinkItem
+					to={homePath}
+					selected={homeSelected}
+					primary={homeLabel}
+					pl={pl + 1}
+				/>
 				{nestedItems.map((route) => {
 					const fullPath = route.rootPath.startsWith("/")
 						? route.rootPath
 						: `${homePath}/${route.rootPath}`.replace(/\/+/g, "/");
 					return (
-						<ListItem
+						<NavLinkItem
 							key={fullPath}
-							disablePadding
-							sx={{ display: "block", mb: 0.2, py: 0 }}
-							onClick={() => onNavigate(fullPath)}
-						>
-							<ListItemButton
-								selected={pathname === fullPath}
-								sx={{ pl: pl + 1 }}
-							>
-								<ListItemText primary={route.name} />
-							</ListItemButton>
-						</ListItem>
+							to={fullPath}
+							selected={pathname === fullPath}
+							primary={route.name}
+							pl={pl + 1}
+						/>
 					);
 				})}
 			</List>
@@ -168,13 +191,7 @@ function NavSection({
 	);
 }
 
-function SmartAnketaSections({
-	pathname,
-	onNavigate,
-}: {
-	pathname: string;
-	onNavigate: (path: string) => void;
-}) {
+function SmartAnketaSections({ pathname }: { pathname: string }) {
 	const {
 		canAccessTracker,
 		canAccessAdminPanel,
@@ -189,6 +206,7 @@ function SmartAnketaSections({
 		}
 		return true;
 	});
+	const sectionIndent = SHOW_SMART_ANKETA_APP_TITLE ? 1 : 0;
 
 	return (
 		<Box>
@@ -210,8 +228,7 @@ function SmartAnketaSections({
 						homePath={V2_PREFIX}
 						nestedItems={v2NavItems}
 						pathname={pathname}
-						onNavigate={onNavigate}
-						indent={SHOW_SMART_ANKETA_APP_TITLE ? 1 : 0}
+						indent={sectionIndent}
 					/>
 
 					<Divider sx={{ my: 1 }} />
@@ -222,8 +239,7 @@ function SmartAnketaSections({
 						homePath={V1_PREFIX}
 						nestedItems={v1NavItems}
 						pathname={pathname}
-						onNavigate={onNavigate}
-						indent={SHOW_SMART_ANKETA_APP_TITLE ? 1 : 0}
+						indent={sectionIndent}
 					/>
 				</>
 			) : null}
@@ -240,8 +256,7 @@ function SmartAnketaSections({
 								route.rootPath !== commonRoutes.trackerProjects.rootPath,
 						)}
 						pathname={pathname}
-						onNavigate={onNavigate}
-						indent={SHOW_SMART_ANKETA_APP_TITLE ? 1 : 0}
+						indent={sectionIndent}
 					/>
 				</>
 			) : null}
@@ -251,18 +266,12 @@ function SmartAnketaSections({
 				<>
 					<Divider sx={{ my: 1 }} />
 					<Box sx={{ display: "block", mb: 0.2 }}>
-						<ListItem
-							disablePadding
-							sx={{ display: "block", mb: 0.2, py: 0 }}
-							onClick={() => onNavigate(commonRoutes.adminV2Audit.rootPath)}
-						>
-							<ListItemButton
-								selected={pathname === commonRoutes.adminV2Audit.rootPath}
-								sx={{ pl: SHOW_SMART_ANKETA_APP_TITLE ? 2 : 1 }}
-							>
-								<ListItemText primary={commonRoutes.adminV2Audit.name} />
-							</ListItemButton>
-						</ListItem>
+						<NavLinkItem
+							to={commonRoutes.adminV2Audit.rootPath}
+							selected={pathname === commonRoutes.adminV2Audit.rootPath}
+							primary={commonRoutes.adminV2Audit.name}
+							pl={SHOW_SMART_ANKETA_APP_TITLE ? 2 : 1}
+						/>
 					</Box>
 				</>
 			) : null}
@@ -281,19 +290,13 @@ function SmartAnketaSections({
 						</ListItemButton>
 						<List disablePadding sx={{ py: 0 }}>
 							{adminNavItems.map((route) => (
-								<ListItem
+								<NavLinkItem
 									key={route.rootPath}
-									disablePadding
-									sx={{ display: "block", mb: 0.2, py: 0 }}
-									onClick={() => onNavigate(route.rootPath)}
-								>
-									<ListItemButton
-										selected={routeRowSelected(route, pathname)}
-										sx={{ pl: SHOW_SMART_ANKETA_APP_TITLE ? 3 : 2 }}
-									>
-										<ListItemText primary={route.name} />
-									</ListItemButton>
-								</ListItem>
+									to={route.rootPath}
+									selected={routeRowSelected(route, pathname)}
+									primary={route.name}
+									pl={SHOW_SMART_ANKETA_APP_TITLE ? 3 : 2}
+								/>
 							))}
 						</List>
 					</Box>
@@ -310,19 +313,13 @@ function SmartAnketaSections({
 						<ListItemText secondary={commonNavbarGroups.dev.title} />
 					</ListItemButton>
 					{getDevNavbarItems().map((item) => (
-						<ListItem
+						<NavLinkItem
 							key={item.rootPath}
-							disablePadding
-							sx={{ display: "block", mb: 0.2 }}
-							onClick={() => onNavigate(item.rootPath)}
-						>
-							<ListItemButton
-								selected={pathname === item.rootPath}
-								sx={{ pl: SHOW_SMART_ANKETA_APP_TITLE ? 3 : 2 }}
-							>
-								<ListItemText primary={item.name} />
-							</ListItemButton>
-						</ListItem>
+							to={item.rootPath}
+							selected={pathname === item.rootPath}
+							primary={item.name}
+							pl={SHOW_SMART_ANKETA_APP_TITLE ? 3 : 2}
+						/>
 					))}
 				</>
 			) : null}
@@ -344,7 +341,8 @@ function RemoteAppsList() {
 						sx={{ display: "block", mb: 0.2 }}
 					>
 						<ListItemButton
-							onClick={() => openRemoteApp(app.href)}
+							component="a"
+							href={app.href}
 							title={`Открыть ${app.label}`}
 						>
 							<ListItemText primary={app.label} />
@@ -357,10 +355,7 @@ function RemoteAppsList() {
 }
 
 export function MenuContent() {
-	const navigate = useNavigate();
 	const { pathname } = useLocation();
-
-	const go = (path: string) => navigate(path);
 
 	return (
 		<Stack
@@ -369,7 +364,7 @@ export function MenuContent() {
 		>
 			<List data-test-id="menu-content--List-0" disablePadding>
 				{/* Уровень приложений: Смарт-анкета первая (без названия — мы уже в ней) */}
-				<SmartAnketaSections pathname={pathname} onNavigate={go} />
+				<SmartAnketaSections pathname={pathname} />
 
 				<Divider sx={{ my: 1.5 }} />
 

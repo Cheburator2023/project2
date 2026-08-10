@@ -7,6 +7,7 @@ import type {
 } from "./kanban-board.types";
 import {
 	kanbanBoardPriorityTitle,
+	kanbanBoardStandTitle,
 	kanbanBoardSubtaskIsDone,
 	kanbanBoardSubtaskStatusTitle,
 	kanbanBoardTaskTypeTitle,
@@ -150,6 +151,7 @@ const CONTENT_FIELDS: ReadonlyArray<{
 	{ key: "dueDate", label: "Срок" },
 	{ key: "parentTask", label: "Родительская задача" },
 	{ key: "customer", label: "Заказчик" },
+	// deprecated: поле перенесено в description; оставлено для старых записей истории
 	{ key: "sprintOutcome", label: "Результат спринта" },
 	{ key: "sprintId", label: "Спринт" },
 	{ key: "streamCustomer", label: "Стрим / заказчик" },
@@ -168,18 +170,35 @@ const CONTENT_FIELDS: ReadonlyArray<{
 				.join(", ");
 		},
 	},
+	{
+		key: "files",
+		label: "Файлы",
+		format: (value) => {
+			if (!Array.isArray(value) || !value.length) return null;
+			return value
+				.map((item) => formatKanbanBoardHistoryValue(item) ?? "—")
+				.join(", ");
+		},
+	},
+	{
+		key: "stand",
+		label: "Стенд",
+		format: (value) => kanbanBoardStandTitle(String(value ?? "")),
+	},
 ];
 
 export function kanbanBoardTaskHistorySnapshot(input: {
 	parentId: string;
 	position: number;
 	boardId: string;
+	createdBy?: string | null;
 	content: KanbanBoardTaskContent;
 }): KanbanBoardTaskHistorySnapshot {
 	return {
 		parentId: input.parentId,
 		position: input.position,
 		boardId: input.boardId,
+		createdBy: input.createdBy?.trim() || null,
 		content: { ...input.content },
 	};
 }
@@ -207,6 +226,17 @@ export function diffKanbanTaskChanges(
 			label: "Доска",
 			from: before.boardId,
 			to: after.boardId,
+		});
+	}
+
+	const beforeCreatedBy = before.createdBy?.trim() || null;
+	const afterCreatedBy = after.createdBy?.trim() || null;
+	if (beforeCreatedBy !== afterCreatedBy) {
+		changes.push({
+			field: "createdBy",
+			label: "Назначил",
+			from: beforeCreatedBy,
+			to: afterCreatedBy,
 		});
 	}
 

@@ -63,6 +63,255 @@ function card(): V2TypicalWorkCardDto {
 }
 
 describe("reconcileTypicalWorkCardWithSchemaField", () => {
+	/**
+	 * Bulk dryRun прогоняет все поля схемы при первом открытии редактора. Если
+	 * повторная реконсиляция уже синхронной карточки возвращает `changed`, админу
+	 * предлагают обновить работы на нетронутой схеме.
+	 */
+	it("идемпотентна: повторная синхронизация не помечает карточку изменённой", () => {
+		const request = {
+			templateVersionId: "version-1",
+			mode: "dryRun" as const,
+			operation: "upsert" as const,
+			field: {
+				schemaFieldUid: "field-1",
+				previousCode: "old_code",
+				code: "new_code",
+				name: "Новое имя",
+				values: [{ code: "keep", label: "Новое значение" }],
+			},
+		};
+		const first = reconcileTypicalWorkCardWithSchemaField(card(), request);
+		expect(first.changed).toBe(true);
+
+		const second = reconcileTypicalWorkCardWithSchemaField(first.card, request);
+		expect(second.changed).toBe(false);
+		expect(second.card).toEqual(first.card);
+	});
+
+	/**
+	 * Bulk dryRun не передаёт values и не должен дописывать `@ field_xxx` к уже
+	 * корректным привязкам — иначе при первом открытии редактора схемы админу
+	 * предлагают «обновить типовые работы», хотя схему никто не менял.
+	 */
+	it("bulk binding sync: уже привязанное поле без @-суффикса не считается изменённым", () => {
+		const bound = card();
+		bound.rules = [
+			{
+				id: "rule-bound",
+				streamExecutor: "Источник",
+				schemaFieldUid: "field-1",
+				paramCode: "field_abc",
+				paramName: "Необходимо подтвердить возможность интеграции",
+				operator: "=",
+				valueCode: "yes",
+				valueLabel: "Да",
+			},
+		];
+		bound.laborParams = [
+			{
+				schemaFieldUid: "field-1",
+				paramCode: "field_abc",
+				paramName: "Необходимо подтвердить возможность интеграции",
+				kind: "by_value",
+				coefficients: [
+					{
+						id: "c1",
+						streamExecutor: "Источники данных",
+						paramCode: "field_abc",
+						paramName: "Необходимо подтвердить возможность интеграции",
+						valueCode: "yes",
+						valueLabel: "Да",
+						coefficient: 1.2,
+					},
+				],
+			},
+		];
+		bound.formula = {
+			tokens: [
+				{ kind: "norm" },
+				{ kind: "operator", op: "*" },
+				{
+					kind: "param_coeff",
+					paramCode: "field_abc",
+					paramName: "Необходимо подтвердить возможность интеграции",
+				},
+			],
+			text: "N * коэф(field_abc)",
+		};
+
+		const result = reconcileTypicalWorkCardWithSchemaField(bound, {
+			templateVersionId: "version-1",
+			mode: "dryRun",
+			operation: "upsert",
+			field: {
+				schemaFieldUid: "field-1",
+				previousCode: "field_abc",
+				aliasCodes: ["необходимость_подтвердить"],
+				code: "field_abc",
+				name: "Необходимо подтвердить возможность интеграции",
+			},
+		});
+
+		expect(result.changed).toBe(false);
+		expect(result.card.rules[0]?.paramName).toBe(
+			"Необходимо подтвердить возможность интеграции",
+		);
+		expect(result.card.laborParams[0]?.paramName).toBe(
+			"Необходимо подтвердить возможность интеграции",
+		);
+	});
+
+	it("bulk dryRun: уже актуальная привязка с @-алиасами не трогает формулу", () => {
+		const bound = card();
+		bound.rules = [];
+		bound.laborParams = [
+			{
+				schemaFieldUid: "field-1",
+				paramCode: "workType",
+				paramName: "Тип работ @ workType|тип_работ",
+				kind: "by_value",
+				coefficients: [
+					{
+						id: "c1",
+						streamExecutor: "mdlctl",
+						paramCode: "workType",
+						paramName: "Тип работ @ workType|тип_работ",
+						valueCode: "dev",
+						valueLabel: "Разработка",
+						coefficient: 1,
+					},
+				],
+			},
+		];
+		bound.formula = {
+			tokens: [
+				{ kind: "norm" },
+				{ kind: "operator", op: "*" },
+				{
+					kind: "param_coeff",
+					paramCode: "workType",
+					paramName: "Тип работ @ workType|тип_работ",
+				},
+			],
+			text: "N * коэф(workType)",
+		};
+
+		const result = reconcileTypicalWorkCardWithSchemaField(bound, {
+			templateVersionId: "version-1",
+			mode: "dryRun",
+			operation: "upsert",
+			field: {
+				schemaFieldUid: "field-1",
+				previousCode: "workType",
+				aliasCodes: ["тип_работ", "work_type_legacy"],
+				code: "workType",
+				name: "Тип работ",
+			},
+		});
+
+		expect(result.changed).toBe(false);
+		expect(result.card).toEqual(bound);
+	});
+
+	it("восстанавливает обрезанный paramName и дальше идемпотентна", () => {
+		const bound = card();
+		bound.rules = [];
+		bound.laborParams = [
+			{
+				schemaFieldUid: "field-long",
+				paramCode: "field_OrZLpCID",
+				paramName:
+					"Применение модельного сервиса в разных ко @ field_OrZLpCID|применение_модельного_сервиса_в_разных_контурах",
+				kind: "by_value",
+				coefficients: [
+					{
+						id: "c1",
+						streamExecutor: "mdlctl",
+						paramCode: "field_OrZLpCID",
+						paramName:
+							"Применение модельного сервиса в разных ко @ field_OrZLpCID|применение_модельного_сервиса_в_разных_контурах",
+						valueCode: "yes",
+						valueLabel: "Да",
+						coefficient: 1,
+					},
+				],
+			},
+		];
+		bound.formula = {
+			tokens: [
+				{ kind: "norm" },
+				{ kind: "operator", op: "*" },
+				{
+					kind: "param_coeff",
+					paramCode: "field_OrZLpCID",
+					paramName:
+						"Применение модельного сервиса в разных ко @ field_OrZLpCID|применение_модельного_сервиса_в_разных_контурах",
+				},
+			],
+			text: "N * коэф(field_OrZLpCID)",
+		};
+
+		const request = {
+			templateVersionId: "version-1",
+			mode: "dryRun" as const,
+			operation: "upsert" as const,
+			field: {
+				schemaFieldUid: "field-long",
+				previousCode: "field_OrZLpCID",
+				code: "field_OrZLpCID",
+				name: "Применение модельного сервиса в разных контурах (region и inno.local)",
+			},
+		};
+
+		const first = reconcileTypicalWorkCardWithSchemaField(bound, request);
+		expect(first.changed).toBe(true);
+		const repairedName = first.card.laborParams[0]?.paramName ?? "";
+		expect(repairedName).toContain(
+			"Применение модельного сервиса в разных контурах (region и inno.local)",
+		);
+		expect(repairedName.startsWith(" @ ")).toBe(false);
+
+		const second = reconcileTypicalWorkCardWithSchemaField(first.card, request);
+		expect(second.changed).toBe(false);
+		expect(second.card).toEqual(first.card);
+	});
+
+	it("bulk binding sync: префикс «Маркер:» / регистр не считаются изменением схемы", () => {
+		const bound = card();
+		bound.rules = [
+			{
+				id: "rule-marker",
+				streamExecutor: "ПиРМ",
+				schemaFieldUid: "field-marker",
+				paramCode: "field_LGUdr5mq",
+				paramName: "Требуется разметка данных источника",
+				operator: "=",
+				valueCode: "true",
+				valueLabel: "Да",
+			},
+		];
+		bound.laborParams = [];
+		bound.formula = { tokens: [{ kind: "norm" }], text: "N" };
+
+		const result = reconcileTypicalWorkCardWithSchemaField(bound, {
+			templateVersionId: "version-1",
+			mode: "dryRun",
+			operation: "upsert",
+			field: {
+				schemaFieldUid: "field-marker",
+				previousCode: "field_LGUdr5mq",
+				code: "field_LGUdr5mq",
+				name: "Маркер: требуется разметка данных источника",
+			},
+		});
+
+		expect(result.changed).toBe(false);
+		expect(result.card.rules[0]?.paramName).toBe(
+			"Требуется разметка данных источника",
+		);
+	});
+
 	it("preserves matching dictionary values and refreshes names and codes", () => {
 		const result = reconcileTypicalWorkCardWithSchemaField(card(), {
 			templateVersionId: "version-1",
@@ -296,9 +545,18 @@ describe("reconcileTypicalWorkCardWithSchemaField", () => {
 		expect(result.card.formula.tokens[2]).not.toHaveProperty("invalid", true);
 	});
 
-	it("marks orphan formula tokens invalid when labor param is absent", () => {
+	it("marks formula tokens invalid when matching labor param is deleted", () => {
 		const legacy = card();
-		legacy.laborParams = [];
+		legacy.rules = [];
+		legacy.laborParams = [
+			{
+				schemaFieldUid: "field_HuOLfL4K",
+				paramCode: "field_HuOLfL4K",
+				paramName: "Поле",
+				kind: "by_value",
+				coefficients: [],
+			},
+		];
 		legacy.formula.tokens[2] = {
 			kind: "param_coeff",
 			paramCode: "field_HuOLfL4K",
@@ -308,15 +566,16 @@ describe("reconcileTypicalWorkCardWithSchemaField", () => {
 		const result = reconcileTypicalWorkCardWithSchemaField(legacy, {
 			templateVersionId: "version-1",
 			mode: "apply",
-			operation: "upsert",
+			operation: "delete",
 			field: {
-				schemaFieldUid: "field-other",
-				previousCode: "other_code",
-				code: "other_code",
-				name: "Другое поле",
+				schemaFieldUid: "field_HuOLfL4K",
+				previousCode: "field_HuOLfL4K",
+				code: "field_HuOLfL4K",
+				name: "Поле",
 			},
 		});
 
+		expect(result.card.laborParams).toEqual([]);
 		expect(result.card.formula.tokens[2]).toMatchObject({
 			kind: "param_coeff",
 			paramCode: "field_HuOLfL4K",
@@ -329,8 +588,10 @@ describe("reconcileTypicalWorkCardWithSchemaField", () => {
 		const longValue =
 			"3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели";
 		const legacy = card();
+		legacy.rules = [];
 		legacy.laborParams[0] = {
 			...legacy.laborParams[0]!,
+			schemaFieldUid: "field_61a51b98-b6a8-47c9-aa27-74ff2219513f",
 			paramCode: "complexity",
 			paramName: "Сложность постановки",
 			coefficients: [
@@ -345,6 +606,7 @@ describe("reconcileTypicalWorkCardWithSchemaField", () => {
 				},
 			],
 		};
+		legacy.formula = { tokens: [{ kind: "norm" }], text: "N" };
 
 		const result = reconcileTypicalWorkCardWithSchemaField(legacy, {
 			templateVersionId: "version-1",
@@ -418,6 +680,119 @@ describe("reconcileTypicalWorkCardWithSchemaField", () => {
 			schemaFieldUid: "field_8cff1155-e458-4fea-a8c7-abad1260df8f",
 		});
 		expect(result.card.laborParams[0]?.coefficients).toHaveLength(2);
+	});
+
+	it("preserves admin coefficient rows that are not in the new schema values", () => {
+		const legacy = card();
+		legacy.laborParams = [
+			{
+				schemaFieldUid: "field-1",
+				paramCode: "workType",
+				paramName: "Тип работ",
+				kind: "by_value",
+				coefficients: [
+					{
+						id: "keep-custom",
+						streamExecutor: "Источники данных",
+						paramCode: "workType",
+						paramName: "Тип работ",
+						valueCode: "Разработка",
+						valueLabel: "Разработка",
+						coefficient: 2.5,
+					},
+					{
+						id: "remap-me",
+						streamExecutor: "Источники данных",
+						paramCode: "workType",
+						paramName: "Тип работ",
+						valueCode: "Обучение",
+						valueLabel: "Обучение",
+						coefficient: 1.7,
+					},
+				],
+			},
+		];
+
+		const result = reconcileTypicalWorkCardWithSchemaField(legacy, {
+			templateVersionId: "version-1",
+			mode: "apply",
+			operation: "upsert",
+			field: {
+				schemaFieldUid: "field-1",
+				previousCode: "workType",
+				code: "workType",
+				name: "Тип работ",
+				values: [
+					{ code: "обучение", label: "Обучение" },
+					{ code: "калибровка", label: "Калибровка" },
+				],
+			},
+		});
+
+		const coeffs = result.card.laborParams[0]?.coefficients ?? [];
+		expect(coeffs).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					valueCode: "обучение",
+					valueLabel: "Обучение",
+					coefficient: 1.7,
+				}),
+				expect.objectContaining({
+					valueCode: "калибровка",
+					valueLabel: "Калибровка",
+					coefficient: 1,
+				}),
+				expect.objectContaining({
+					valueCode: "Разработка",
+					valueLabel: "Разработка",
+					coefficient: 2.5,
+				}),
+			]),
+		);
+	});
+
+	it("does not rebuild coefficients when field.values is omitted (bulk binding sync)", () => {
+		const legacy = card();
+		legacy.laborParams = [
+			{
+				schemaFieldUid: "field-1",
+				paramCode: "workType",
+				paramName: "Тип работ",
+				kind: "by_value",
+				coefficients: [
+					{
+						id: "admin-edit",
+						streamExecutor: "Источники данных",
+						paramCode: "workType",
+						paramName: "Тип работ",
+						valueCode: "custom",
+						valueLabel: "Custom",
+						coefficient: 9,
+					},
+				],
+			},
+		];
+
+		const result = reconcileTypicalWorkCardWithSchemaField(legacy, {
+			templateVersionId: "version-1",
+			mode: "apply",
+			operation: "upsert",
+			field: {
+				schemaFieldUid: "field-1",
+				previousCode: "workType",
+				code: "field_workType",
+				name: "Тип работ",
+			},
+		});
+
+		expect(result.card.laborParams[0]?.coefficients).toEqual([
+			expect.objectContaining({
+				valueCode: "custom",
+				valueLabel: "Custom",
+				coefficient: 9,
+			}),
+		]);
+		expect(result.card.laborParams[0]?.paramCode).toBe("field_workType");
 	});
 
 	it("dedupes labor coefficients that normalize to the same stored value_code", () => {

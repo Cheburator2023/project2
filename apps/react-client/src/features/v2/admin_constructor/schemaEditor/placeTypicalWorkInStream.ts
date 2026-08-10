@@ -1,11 +1,19 @@
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import {
 	collectExecutorStreamBlocks,
+	isV2ModelImplementationStreamCode,
+	isV2ModelStreamUmbrellaLabel,
 	normalizeStreamBlockExecutor,
+	resolveModelStreamUmbrellaBlockPointer,
+	V2_MODEL_STREAM_EXECUTOR,
+	type V2ImplementationStreamCatalogEntry,
+	type V2ImplementationStreamCode,
 } from "@smart-anketa/api-contract";
 import { nanoid } from "nanoid";
 import { ARCH_COMPONENT_PRESET_DEFS } from "./archComponentPresets";
 import {
+	makeModelStreamUmbrellaBlockJsonSchema,
+	makeModelStreamUmbrellaBlockUiOptions,
 	makeStreamBlockJsonSchema,
 	makeStreamBlockUiOptions,
 } from "./streamBlockHelpers";
@@ -32,8 +40,12 @@ function isPointerUnderParent(pointer: string, parentPointer: string): boolean {
 export function resolveStreamBlockPointer(
 	uiSchema: unknown,
 	streamExecutor: string,
+	catalog?: readonly V2ImplementationStreamCatalogEntry[],
 ): string | null {
-	const code = normalizeStreamBlockExecutor(streamExecutor);
+	if (isV2ModelStreamUmbrellaLabel(streamExecutor)) {
+		return resolveModelStreamUmbrellaBlockPointer(uiSchema);
+	}
+	const code = normalizeStreamBlockExecutor(streamExecutor, catalog);
 	if (!code) return null;
 	return (
 		collectExecutorStreamBlocks(uiSchema).find((block) =>
@@ -62,6 +74,7 @@ export type PlaceTypicalWorkInStreamResult = {
 
 /**
  * Создаёт стримовый блок (если нет), вкладывает typicalWork внутрь и задаёт streamExecutor.
+ * «Модельный стрим» → umbrella-блок (detailInfo) без создания лишнего field_*.
  * Если передан preferredPointer (блок с DnD) — переносит его в стрим вместо дублирования.
  */
 export function placeTypicalWorkInStream(
@@ -69,26 +82,35 @@ export function placeTypicalWorkInStream(
 	uiSchema: Record<string, unknown>,
 	streamExecutor: string,
 	preferredPointer?: string | null,
+	catalog?: readonly V2ImplementationStreamCatalogEntry[],
 ): PlaceTypicalWorkInStreamResult | null {
-	const code = normalizeStreamBlockExecutor(streamExecutor);
-	if (!code) return null;
+	const trimmed = streamExecutor.trim();
+	const isUmbrella = isV2ModelStreamUmbrellaLabel(trimmed);
+	const code: V2ImplementationStreamCode | null = isUmbrella
+		? null
+		: normalizeStreamBlockExecutor(trimmed, catalog);
+	if (!isUmbrella && !code) return null;
+
 	let schema = jsonSchema;
 	let ui = uiSchema;
 
-	let streamPointer = resolveStreamBlockPointer(ui, code);
+	let streamPointer = resolveStreamBlockPointer(ui, trimmed, catalog);
 	if (!streamPointer) {
-		const streamKey = `field_${nanoid(8)}`;
+		const streamKey = isUmbrella ? "detailInfo" : `field_${nanoid(8)}`;
 		const streamIndex = clampCanvasInsertIndex(
 			schema,
 			"/",
 			ui as UiSchema,
 			listOrderedChildKeys(schema, "/", ui as UiSchema).length,
 		);
+		const streamSchema = isUmbrella
+			? makeModelStreamUmbrellaBlockJsonSchema()
+			: makeStreamBlockJsonSchema(code!);
 		const withStream = insertChildPropertyAt(
 			schema,
 			[],
 			streamKey,
-			makeStreamBlockJsonSchema(code),
+			streamSchema,
 			streamIndex,
 		);
 		if (!withStream) return null;
@@ -98,15 +120,21 @@ export function placeTypicalWorkInStream(
 		ui = patchUiOptionsAtPointer(
 			ui,
 			streamPointer,
-			makeStreamBlockUiOptions(code),
+			isUmbrella
+				? makeModelStreamUmbrellaBlockUiOptions()
+				: makeStreamBlockUiOptions(code!),
 		);
 	}
 
 	const streamNorm = normalizeJsonPointer(streamPointer);
 	const def = ARCH_COMPONENT_PRESET_DEFS.typicalWork;
+	/** На typicalWork: mother-label для umbrella, иначе код child/platform. */
+	const executorForTypical: string = isUmbrella
+		? V2_MODEL_STREAM_EXECUTOR
+		: code!;
 	const typicalUiOptions = {
 		...def.uiOptions,
-		streamExecutor: code,
+		streamExecutor: executorForTypical,
 	};
 
 	let typicalPointer: string | null = null;
@@ -142,7 +170,9 @@ export function placeTypicalWorkInStream(
 			streamNorm,
 		);
 		if (!typicalPointer) {
-			const typicalKey = `field_${nanoid(8)}`;
+			const typicalKey = isUmbrella
+				? "detailTypicalTasks"
+				: `field_${nanoid(8)}`;
 			const typicalIndex = clampCanvasInsertIndex(
 				schema,
 				streamNorm,
@@ -167,11 +197,21 @@ export function placeTypicalWorkInStream(
 		}
 	}
 
-	ui = patchUiOptionsAtPointer(ui, typicalPointer, { streamExecutor: code });
+	ui = patchUiOptionsAtPointer(ui, typicalPointer, {
+		streamExecutor: executorForTypical,
+	});
 
 	return {
 		jsonSchema: schema,
 		uiSchema: ui,
 		typicalWorkPointer: typicalPointer,
 	};
+}
+
+/** Для тестов / панели: стрим — umbrella или дочерний model code. */
+export function isModelStreamPlacementTarget(streamExecutor: string): boolean {
+	const trimmed = streamExecutor.trim();
+	if (isV2ModelStreamUmbrellaLabel(trimmed)) return true;
+	const code = normalizeStreamBlockExecutor(trimmed);
+	return Boolean(code && isV2ModelImplementationStreamCode(code));
 }

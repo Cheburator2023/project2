@@ -50,15 +50,18 @@ import {
 	type TriggerValidationIssue,
 } from "./typicalWorkPatchErrors";
 import {
+	countSameNamedSchemaParams,
 	excludeRulesByGroupKey,
 	filterRulesByGroupKey,
 	isSchemaTextualParam,
 	resolveSchemaParamForTriggerRule,
 	resolveSchemaParamFieldRef,
+	schemaParamArchCaption,
 	schemaParamDisplayName,
 	schemaParamRuleName,
 	schemaWorkParameterEmptyPickerMessage,
 	triggerRuleGroupKey,
+	type SchemaBuiltWorkParameterDto,
 } from "./schemaWorkParameters";
 import { TypicalWorkValueMatchingInfo } from "./typicalWorkValueMatchingHelp";
 import { TriggerFormulaEditor } from "./TriggerFormulaEditor";
@@ -97,7 +100,7 @@ type TypicalWorkTriggersSectionProps = {
 	triggerStatus: V2WorkTriggerStatus;
 	validationIssues?: TriggerValidationIssue[];
 	schemaFieldCount?: number;
-	paramOptions: V2TypicalWorkParameterDto[];
+	paramOptions: SchemaBuiltWorkParameterDto[];
 	methodologyCatalog?: V2TypicalWorkParameterDto[];
 	streamExecutor: string;
 	onChange: (rules: V2TypicalWorkRuleDto[]) => void;
@@ -538,13 +541,17 @@ export const TypicalWorkTriggersSection = memo(function TypicalWorkTriggersSecti
 							}}
 							getOptionLabel={(param) => param.name}
 							getOptionValue={(param) => param.code}
-							getOptionSecondaryText={(param) => {
-								const ref = resolveSchemaParamFieldRef(param);
-								if (ref.varPath) {
-									return `${param.id} · ${ref.varPath} · ${ref.fieldKey}`;
-								}
-								return param.id;
-							}}
+					getOptionSecondaryText={(param) => {
+						const ref = resolveSchemaParamFieldRef(param);
+						return [
+							schemaParamArchCaption(param),
+							param.id,
+							ref.varPath,
+							ref.varPath ? ref.fieldKey : null,
+						]
+							.filter((part): part is string => Boolean(part))
+							.join(" · ");
+					}}
 							initialSearchTerm={triggerPickerSearchTerm}
 							autoOpenOnInitialSearch={Boolean(triggerPickerSearchTerm)}
 							label="Параметр условия появления"
@@ -734,6 +741,11 @@ export const TypicalWorkTriggersSection = memo(function TypicalWorkTriggersSecti
 											: schemaParamDisplayName(paramRules[0]?.paramName) ||
 												groupKey));
 								const fieldRef = resolveSchemaParamFieldRef(param);
+								const archCaption = schemaParamArchCaption(param);
+								const sameNamedCount = countSameNamedSchemaParams(
+									param,
+									paramOptions,
+								);
 								const showValueChoices =
 									Boolean(param) &&
 									param!.values.length > 0 &&
@@ -768,6 +780,26 @@ export const TypicalWorkTriggersSection = memo(function TypicalWorkTriggersSecti
 												>
 													{displayName}
 												</Typography>
+												{!isAlwaysTrigger && archCaption ? (
+													<Typography
+														sx={{
+															mt: 0.35,
+															fontSize: 11,
+															color: "#6b7484",
+															wordBreak: "break-all",
+														}}
+														title={
+															sameNamedCount > 0
+																? `В схеме есть ещё ${sameNamedCount} поле(й) с таким же названием в других местах — проверьте, что выбран нужный арх-компонент`
+																: undefined
+														}
+													>
+														{archCaption}
+														{sameNamedCount > 0
+															? ` · ещё ${sameNamedCount} одноимённых`
+															: ""}
+													</Typography>
+												) : null}
 												{isAlwaysTrigger ? (
 													<Typography
 														sx={{ mt: 0.35, fontSize: 11, color: "#6b7484" }}

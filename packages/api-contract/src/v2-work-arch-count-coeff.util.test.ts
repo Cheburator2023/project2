@@ -13,6 +13,7 @@ import {
 	resolveWorkArchComponentCount,
 	validateArchCountCoeffSteps,
 } from "./v2-work-arch-count-coeff.util";
+import { formDataWithSingleArchInstance } from "./v2-typical-work-per-instance.util";
 
 describe("v2-work-arch-count-coeff.util", () => {
 	it("resolves model count from modelsList", () => {
@@ -159,6 +160,60 @@ describe("v2-work-arch-count-coeff.util", () => {
 				[{ count: 1, coefficient: 2 }],
 			),
 		).toBe(1);
+	});
+
+	it("делит архкоэф на число экземпляров в per-instance режиме", () => {
+		const steps = [
+			{ count: 1, coefficient: 1 },
+			{ count: 2, coefficient: 1.75 },
+			{ count: 3, coefficient: 2.5 },
+		];
+		const models = [{ name: "M1" }, { name: "M2" }];
+		// Работа на «Модели» повторяется по каждой модели: за 2 модели должно
+		// набежать 1.75 норматива, значит на модель приходится 0.875.
+		const perInstance = formDataWithSingleArchInstance(
+			{ detailInfo: { modelsList: models } },
+			"model",
+			{ sourceLabel: "M1", row: models[0]!, index: 0 },
+			models.length,
+		);
+		expect(resolveArchCountCoeffFromToken(perInstance, "model", steps)).toBe(
+			0.875,
+		);
+		// Один экземпляр — доля равна полному коэффициенту для 1 компонента.
+		expect(
+			resolveArchCountCoeffFromToken(
+				formDataWithSingleArchInstance(
+					{ detailInfo: { modelsList: [models[0]!] } },
+					"model",
+					{ sourceLabel: "M1", row: models[0]!, index: 0 },
+					1,
+				),
+				"model",
+				steps,
+			),
+		).toBe(1);
+	});
+
+	it("не делит архкоэф другого компонента при fan-out по моделям", () => {
+		const models = [{ name: "M1" }, { name: "M2" }];
+		const perInstance = formDataWithSingleArchInstance(
+			{
+				detailInfo: {
+					modelsList: models,
+					sourceSystems: [{ name: "S1" }, { name: "S2" }],
+				},
+			},
+			"model",
+			{ sourceLabel: "M1", row: models[0]!, index: 0 },
+			models.length,
+		);
+		expect(
+			resolveArchCountCoeffFromToken(perInstance, "sourceSystem", [
+				{ count: 1, coefficient: 1 },
+				{ count: 2, coefficient: 1.2 },
+			]),
+		).toBe(1.2);
 	});
 
 	it("validateArchCountCoeffSteps enforces model range 1-99", () => {

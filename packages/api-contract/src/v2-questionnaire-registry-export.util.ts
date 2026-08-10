@@ -31,7 +31,12 @@ export function buildV2QuestionnaireRegistryExportRow(
 	const out: Record<string, string> = {};
 	for (const col of columns) {
 		const raw = col.valueGetter(row);
-		if (col.key === "createdAt" || col.key === "updatedAt") {
+		if (
+			col.key === "createdAt" ||
+			col.key === "updatedAt" ||
+			col.key === "schemaCreatedAt" ||
+			col.key === "schemaUpdatedAt"
+		) {
 			out[col.key] = raw ? new Date(String(raw)).toLocaleString("ru-RU") : "";
 			continue;
 		}

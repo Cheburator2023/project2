@@ -2,7 +2,9 @@ import {
 	V2_SOURCE_STREAM,
 	V2_TYPICAL_WORK_ALWAYS_TRIGGER_PARAM_CODE,
 	isAlwaysShownTriggerParam,
+	normalizeLegacySchemaParamLabel,
 	normalizeParamLabel,
+	normalizeWorkRoundingStep,
 } from "@smart-anketa/api-contract";
 import {
 	dictionaryByName,
@@ -18,6 +20,30 @@ const LEGACY_SOURCE_STREAMS = new Set(["ИД. Внутренний", "ИД. Вн
 export function canonicalizeWorkStream(stream: string): string {
 	const trimmed = stream.trim();
 	return LEGACY_SOURCE_STREAMS.has(trimmed) ? V2_SOURCE_STREAM : trimmed;
+}
+
+/**
+ * Стримы, на которые нужно применить настройки каталожной строки.
+ *
+ * Методология часто описывает работу один раз (например, «Модельный стрим»),
+ * а registry разворачивает её на mother + children. Триггеры / labor / archCount
+ * должны попасть на все назначения реестра, иначе list/card на дочернем стриме
+ * показывают «без условий появления».
+ */
+export function resolveCatalogApplyStreams(
+	catalogStream: string,
+	registryStreams?: readonly string[],
+): string[] {
+	const catalog = canonicalizeWorkStream(catalogStream);
+	const fromRegistry = [
+		...new Set(
+			(registryStreams ?? [])
+				.map((stream) => canonicalizeWorkStream(stream.trim()))
+				.filter(Boolean),
+		),
+	];
+	if (fromRegistry.length === 0) return catalog ? [catalog] : [];
+	return fromRegistry;
 }
 
 export function slugParamCode(name: string): string {
@@ -77,10 +103,19 @@ export function findCatalogLaborParamGroup(
 	const trimmed = paramName.trim();
 	if (!trimmed) return undefined;
 	const norm = normalizeParamLabel(trimmed);
+	const legacyNorm = normalizeParamLabel(
+		normalizeLegacySchemaParamLabel(trimmed),
+	);
 	for (const group of row.laborCoefficients ?? []) {
 		const groupNorm = normalizeParamLabel(group.paramName);
+		const groupLegacyNorm = normalizeParamLabel(
+			normalizeLegacySchemaParamLabel(group.paramName),
+		);
 		if (
 			groupNorm === norm ||
+			groupNorm === legacyNorm ||
+			groupLegacyNorm === norm ||
+			groupLegacyNorm === legacyNorm ||
 			groupNorm.startsWith(norm) ||
 			norm.startsWith(groupNorm)
 		) {
@@ -176,7 +211,48 @@ export function findCatalogRowsForRegistryWork(
 			if (row.name.trim() === name) matches.push(row);
 		}
 	}
-	return matches;
+	if (matches.length > 0) return matches;
+
+	/**
+	 * Fallback: смена archComponent у работы (напр. канал внедрения → Модель)
+	 * ломает ключ component|stage|name. Если stage+name уникальны в каталоге —
+	 * берём эту строку, иначе не угадываем.
+	 */
+	if (!stage) return [];
+	const stripped = stripWorkStagePrefix(entry.name);
+	const byStageName: V2FactoryTypicalWork[] = [];
+	for (const rows of catalogGroups.values()) {
+		for (const row of rows) {
+			if (row.stage.trim() !== stage) continue;
+			if (row.name.trim() !== stripped && row.name.trim() !== name) continue;
+			byStageName.push(row);
+		}
+	}
+	if (byStageName.length === 1) return byStageName;
+	return [];
+}
+
+/** Сопоставление DB-работы с registry: сначала id, затем component|name, затем уникальное имя. */
+export function findRegistryEntryForWork<
+	T extends { id: string; name: string; archComponentType: string },
+>(
+	work: { id: string; name: string; archComponentType: string },
+	registryWorks: readonly T[],
+): T | undefined {
+	const byId = registryWorks.find((entry) => entry.id === work.id);
+	if (byId) return byId;
+
+	const arch = normalizeArchComponentType(work.archComponentType);
+	const name = work.name.trim();
+	const byKey = registryWorks.find(
+		(entry) =>
+			normalizeArchComponentType(entry.archComponentType) === arch &&
+			entry.name.trim() === name,
+	);
+	if (byKey) return byKey;
+
+	const byName = registryWorks.filter((entry) => entry.name.trim() === name);
+	return byName.length === 1 ? byName[0] : undefined;
 }
 
 export function groupCatalogWorks(): Map<string, V2FactoryTypicalWork[]> {
@@ -222,17 +298,34 @@ export type CatalogFormulaSeedConfig = {
 export function findCatalogFormulaForStream(
 	catalogRows: V2FactoryTypicalWork[],
 	streamExecutor: string,
+	registryStreams?: readonly string[],
 ): CatalogFormulaSeedConfig | null {
-	const stream = streamExecutor.trim();
-	for (const row of catalogRows) {
-		if (canonicalizeWorkStream(row.stream) !== stream) continue;
+	const stream = canonicalizeWorkStream(streamExecutor.trim());
+	const pick = (
+		row: V2FactoryTypicalWork,
+	): CatalogFormulaSeedConfig | null => {
 		const formulaText = row.formulaText?.trim();
-		if (!formulaText) continue;
+		if (!formulaText) return null;
 		return {
 			formulaText,
 			roundingMode: row.roundingMode ?? "CEIL",
-			roundingStep: row.roundingStep ?? 0.1,
+			roundingStep: normalizeWorkRoundingStep(row.roundingStep ?? 0.1),
 		};
+	};
+
+	for (const row of catalogRows) {
+		if (canonicalizeWorkStream(row.stream) !== stream) continue;
+		const found = pick(row);
+		if (found) return found;
+	}
+
+	/** Fan-out: mother catalog stream → all registry assignments (как triggers/labor). */
+	if (!registryStreams?.length) return null;
+	for (const row of catalogRows) {
+		const apply = resolveCatalogApplyStreams(row.stream, registryStreams);
+		if (!apply.includes(stream)) continue;
+		const found = pick(row);
+		if (found) return found;
 	}
 	return null;
 }

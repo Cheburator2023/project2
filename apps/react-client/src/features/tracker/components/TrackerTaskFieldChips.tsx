@@ -5,6 +5,8 @@ import {
 	kanbanBoardEffectiveEstimatePd,
 	kanbanBoardPriorityColor,
 	kanbanBoardPriorityTitle,
+	kanbanBoardStandColor,
+	kanbanBoardStandTitle,
 	kanbanBoardTaskAssigneeRoles,
 	kanbanBoardTaskAssignees,
 	kanbanBoardTaskTypeColor,
@@ -12,6 +14,7 @@ import {
 	kanbanBoardWorkTypeColor,
 	kanbanBoardWorkTypeTitle,
 	type KanbanBoardAssigneeRoleId,
+	type KanbanBoardStandId,
 	type KanbanBoardStatusId,
 	type KanbanBoardTaskContent,
 } from "@smart-anketa/api-contract";
@@ -215,6 +218,25 @@ export function TrackerTaskOriginChip({ origin }: { origin?: string }) {
 	);
 }
 
+export function TrackerTaskStandChip({
+	stand,
+	standTitle,
+}: {
+	stand?: KanbanBoardStandId | string;
+	standTitle?: string;
+}) {
+	const label = standTitle || kanbanBoardStandTitle(stand);
+	if (!label) return null;
+	return (
+		<TrackerRegistryChipCell>
+			<KanbanTaskFieldChip
+				label={label}
+				color={kanbanBoardStandColor(stand)}
+			/>
+		</TrackerRegistryChipCell>
+	);
+}
+
 export function KanbanTaskContentChips({
 	content,
 	origin,
@@ -272,6 +294,13 @@ export function KanbanTaskContentChips({
 			value: "stream",
 			label: content.streamCustomer,
 			color: LIST_FIELD_COLORS.stream,
+		});
+	}
+	if (content.stand) {
+		chips.push({
+			value: "stand",
+			label: kanbanBoardStandTitle(content.stand),
+			color: kanbanBoardStandColor(content.stand),
 		});
 	}
 	if (origin) {

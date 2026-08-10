@@ -3,10 +3,13 @@ import {
 	type V2EditorHeaderMeta,
 	V2TemplateSchemaEditor,
 } from "@react-client/features/v2/admin_constructor/organisms/V2TemplateSchemaEditor";
+import { V2FactoryTypicalWorksPublishDialog } from "@react-client/features/v2/admin_constructor/organisms/V2FactoryTypicalWorksPublishDialog";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Header } from "@react-client/common/navigation/organisms/Header";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "@react-client/features/v2/admin_constructor/testIds";
 import { toAbsoluteAppUrl } from "@react-client/routing/basename";
+import FileDownloadOutlinedIcon from "@mui/icons-material/FileDownloadOutlined";
+import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -46,6 +49,7 @@ export const V2TemplateSchemaEditorPage = () => {
 	const [headerMeta, setHeaderMeta] = useState<V2EditorHeaderMeta | null>(null);
 	const [headerActions, setHeaderActions] =
 		useState<V2EditorHeaderActions | null>(null);
+	const [factoryPublishOpen, setFactoryPublishOpen] = useState(false);
 	const onHeaderMetaChange = useCallback((m: V2EditorHeaderMeta | null) => {
 		setHeaderMeta(m);
 	}, []);
@@ -140,6 +144,34 @@ export const V2TemplateSchemaEditorPage = () => {
 									onVersionIdChange={setVersionId}
 								/>
 							) : null}
+							{isAdminContext ? (
+								<>
+									<Button
+										variant="outlined"
+										startIcon={<FileDownloadOutlinedIcon />}
+										disabled={!headerActions.fullExportReady}
+										data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.btnFullExport}
+										title={
+											headerActions.fullExportReady
+												? "Скачать полный dump: schema + dictionaries + typicalWorks"
+												: "Загрузка карточек типовых работ…"
+										}
+										onClick={headerActions.onFullExport}
+									>
+										Полный экспорт
+									</Button>
+									<Button
+										variant="outlined"
+										startIcon={<Inventory2OutlinedIcon />}
+										disabled={!versionId}
+										data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.btnFactoryPublish}
+										title="Dry-run / запись registry + catalog (publish:factory-typical-works)"
+										onClick={() => setFactoryPublishOpen(true)}
+									>
+										В factory…
+									</Button>
+								</>
+							) : null}
 							<Button
 								variant="outlined"
 								startIcon={<OpenInNewIcon />}
@@ -211,6 +243,14 @@ export const V2TemplateSchemaEditorPage = () => {
 					onHeaderActionsChange={onHeaderActionsChange}
 				/>
 			</Flex>
+			{isAdminContext ? (
+				<V2FactoryTypicalWorksPublishDialog
+					open={factoryPublishOpen}
+					onClose={() => setFactoryPublishOpen(false)}
+					templateId={templateId}
+					versionId={versionId}
+				/>
+			) : null}
 		</Flex>
 	);
 };

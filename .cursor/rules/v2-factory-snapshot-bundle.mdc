@@ -13,8 +13,8 @@ alwaysApply: false
 | Файл | Содержимое |
 |------|------------|
 | `v2-default-anketa.snapshot.json` | jsonSchema, uiSchema, logic, dictionariesSnapshot |
-| `v2-factory-typical-works.snapshot.json` | CSV-каталог триггеров/трудоёмкости, методологические параметры |
-| `v2-factory-template-typical-works.registry.json` | 73 типовые работы эталонной prod-схемы (имена, нормы, id) |
+| `v2-factory-typical-works.snapshot.json` | каталог триггеров/трудоёмкости/формул, методологические справочники |
+| `v2-factory-template-typical-works.registry.json` | типовые работы эталонной схемы (имена, нормы, id, стримы) |
 | `packages/api-contract/.../v2-anketa-system-scaffold.snapshot.json` | scaffold пустой анкеты |
 
 Загрузчики: `v2-default-template-snapshot.ts`, `v2-factory-typical-works-catalog.ts`.
@@ -22,9 +22,13 @@ alwaysApply: false
 ## Обновление
 
 - **Схема/UI/logic** — export версии из админки → `npm run sync:factory-snapshot -- export.json`
-- **Привязки работ к полям** — после деплоя: bulk reconcile на версии шаблона; offline: `node scripts/repair-typical-works-bindings.mjs schema.json data-transfer.json` (нужен полный export с rules/formula, не список работ)
-- **Реестр работ эталонной схемы (73 шт.)** — `v2-factory-template-typical-works.registry.json`; обновление: `npm run sync:factory-template-works-registry -- works-list.json`
-- **Типовые работы / методология (CSV-каталог триггеров)** — править `v2-factory-typical-works.snapshot.json` напрямую
+- **Типовые работы (канонический путь)** — dump вкладки «Типовые работы» / «Полный dump» из конструктора →  
+  `npm run publish:factory-typical-works -- dump.json` (dry-run + отчёт) →  
+  `npm run publish:factory-typical-works -- dump.json --write`  
+  Пишет **и** registry, **и** catalog (формулы, rules, labor, any_of, arch counts). Чужие строки каталога (напр. ПиРМ) сохраняются.
+  В UI админки: Header → **«Полный экспорт»** / **«В factory…»** (`POST /v2/factory-snapshot/publish-typical-works`). Запись на диск сервера только при `V2_FACTORY_PUBLISH_WRITE=1`.
+- **Привязки работ к полям** — после деплоя: bulk reconcile на версии шаблона; offline: `node scripts/repair-typical-works-bindings.mjs schema.json data-transfer.json`
+- **Реестр только (legacy)** — `npm run sync:factory-template-works-registry -- works-list.json` обновляет **только** тонкий registry без формул/параметров — **недостаточен** для полного мержа; используйте `publish:factory-typical-works`
 - **Arch presets** — `npm run sync:arch-presets` после изменения factory schema snapshot
 
 ## Запрещено
@@ -32,6 +36,7 @@ alwaysApply: false
 - Не добавлять runtime-зависимость от CSV в `llm/v2_new_docs/`
 - Не восстанавливать `build:doc-catalog` / `sync:v2-params-from-csv` как обязательный шаг сборки
 - Не генерировать factory data в `OnModuleInit` из внешних файлов
+- Не считать «Назначить заводским эталоном» в админке обновлением JSON в репозитории (это только DB `source=template`)
 
 ## Deprecated
 

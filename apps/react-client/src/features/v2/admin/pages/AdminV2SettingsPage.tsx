@@ -19,6 +19,8 @@ import { Spacer } from "@react-client/common/primitives/Spacer";
 import { useSchemaConstructorSettings } from "@react-client/common/settings/schemaConstructorSettings";
 import { toast } from "@react-client/common/toasts";
 import { KeycloakRoleSyncPanel } from "@react-client/features/v2/admin/organisms/KeycloakRoleSyncPanel";
+import { RoleCompatSettingsPanel } from "@react-client/features/v2/admin/organisms/RoleCompatSettingsPanel";
+import { StreamFilterSettingsPanel } from "@react-client/features/v2/admin/organisms/StreamFilterSettingsPanel";
 import { commonRoutes } from "@react-client/routing/common/routes";
 
 export function AdminV2SettingsPage() {
@@ -57,6 +59,14 @@ export function AdminV2SettingsPage() {
 						отображаются на холсте и в дереве полей. Порядок и данные в схеме
 						сохраняются.
 					</Typography>
+
+					<Divider />
+
+					<StreamFilterSettingsPanel />
+
+					<Divider />
+
+					<RoleCompatSettingsPanel />
 
 					<Divider />
 

@@ -15,6 +15,7 @@ import {
 	TrackerTaskAssigneeRolesChips,
 	TrackerTaskCurrentAssigneeChip,
 	TrackerTaskOriginChip,
+	TrackerTaskStandChip,
 	TrackerTaskPriorityChip,
 	TrackerTaskSprintChip,
 	TrackerTaskStatusChip,
@@ -210,12 +211,6 @@ export function TrackerTasksPage() {
 				width: 110,
 			},
 			{
-				field: "sprintOutcome",
-				headerName: "Результат спринта",
-				minWidth: 160,
-				flex: 0.9,
-			},
-			{
 				field: "effectiveEstimatePd",
 				headerName: "Итого, чд",
 				width: 100,
@@ -248,12 +243,39 @@ export function TrackerTasksPage() {
 					) : null,
 			},
 			{
-				colId: "origin",
+				colId: "stand",
 				headerName: "Стенд",
 				width: 120,
+				valueGetter: (params) =>
+					params.data?.standTitle ?? params.data?.content?.stand ?? "",
+				cellRenderer: (params: ICellRendererParams<KanbanBoardTaskRegistryDto>) =>
+					params.data ? (
+						<TrackerTaskStandChip
+							stand={params.data.stand ?? params.data.content?.stand}
+							standTitle={params.data.standTitle}
+						/>
+					) : null,
+			},
+			{
+				colId: "origin",
+				headerName: "Стенд данных",
+				width: 130,
 				valueGetter: (params) => params.data?.origin ?? "",
 				cellRenderer: (params: ICellRendererParams<KanbanBoardTaskRegistryDto>) =>
 					params.data ? <TrackerTaskOriginChip origin={params.data.origin} /> : null,
+			},
+			{
+				field: "createdBy",
+				headerName: "Создал",
+				minWidth: 140,
+				width: 160,
+				valueGetter: (params) => params.data?.createdBy ?? "",
+			},
+			{
+				field: "createdAt",
+				headerName: "Создано",
+				minWidth: 170,
+				valueFormatter: (params) => trackerDateFormatter(params.value),
 			},
 			{
 				field: "updatedAt",
@@ -289,8 +311,10 @@ export function TrackerTasksPage() {
 				onCreateClick={() => navigate(trackerStandaloneTaskCreatePath())}
 				onEditClick={openTask}
 				onRowDoubleClick={openTask}
-				deleteDialogTitle="Удаление задач"
-				deleteDialogText={(count) => `Удалить ${count} задач(и)?`}
+				deleteDialogTitle="В корзину"
+				deleteDialogText={(count) =>
+					`Переместить ${count} задач(и) в корзину?`
+				}
 				onDelete={async (rows) => {
 					for (const row of rows) {
 						await deleteTask.mutateAsync(row.id);

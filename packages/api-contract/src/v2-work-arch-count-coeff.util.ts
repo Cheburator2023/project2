@@ -4,6 +4,10 @@ import type {
 	V2WorkArchCountCoeffStep,
 	V2WorkFormulaArchCountKind,
 } from "./v2-typical-work.types";
+import {
+	readPerInstanceArchCountOverride,
+	readPerInstanceArchCountShare,
+} from "./v2-typical-work-per-instance.util";
 import { isFilledTypicalWorkSourceRow } from "./v2-typical-works.util";
 
 export const V2_WORK_ARCH_COUNT_LIMITS: Record<
@@ -84,6 +88,27 @@ export function formatWorkArchCountKindLabel(
 	kind: V2WorkFormulaArchCountKind,
 ): string {
 	return V2_ARCH_COMPONENT_LABELS[kind];
+}
+
+/**
+ * Подпись множителя arch_count_coeff в формулах / разборе
+ * («Коэф. по числу моделей», не путать с самим количеством).
+ */
+const ARCH_COUNT_COEFF_FACTOR_LABELS: Record<
+	V2WorkFormulaArchCountKind,
+	string
+> = {
+	model: "Коэф. по числу моделей",
+	sourceSystem: "Коэф. по числу систем-источников",
+	dataMart: "Коэф. по числу витрин",
+	dataProcess: "Коэф. по числу процессов",
+	modelService: "Коэф. по числу модельных сервисов",
+};
+
+export function formatArchCountCoeffFactorLabel(
+	kind: V2WorkFormulaArchCountKind,
+): string {
+	return ARCH_COUNT_COEFF_FACTOR_LABELS[kind];
 }
 
 export function parseWorkArchCountKindLabel(
@@ -367,6 +392,9 @@ export function resolveWorkArchComponentCount(
 	formData: Record<string, unknown>,
 	kind: V2WorkFormulaArchCountKind,
 ): number {
+	const forced = readPerInstanceArchCountOverride(formData, kind);
+	if (forced != null) return forced;
+
 	const detailInfo = readRecord(formData.detailInfo);
 	const generalInfo = readRecord(formData.generalInfo);
 	const streamModelControl = readRecord(formData.streamModelControl);
@@ -432,6 +460,13 @@ export function resolveArchCountCoeffFromToken(
 	kind: V2WorkFormulaArchCountKind,
 	steps: readonly V2WorkArchCountCoeffStep[],
 ): number {
+	// Fan-out по этому же компоненту: работа уже повторяется по каждому
+	// экземпляру, поэтому на экземпляр приходится доля общего множителя.
+	const share = readPerInstanceArchCountShare(formData, kind);
+	if (share != null) {
+		const total = lookupArchCountCoefficient(steps, share);
+		return total == null ? 1 : total / share;
+	}
 	const count = resolveWorkArchComponentCount(formData, kind);
 	return lookupArchCountCoefficient(steps, count) ?? 1;
 }

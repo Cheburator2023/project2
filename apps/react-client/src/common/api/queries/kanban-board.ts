@@ -25,8 +25,10 @@ import type {
 	KanbanBoardTaskRecord,
 	KanbanBoardTaskRegistryDto,
 	KanbanBoardTaskImageDto,
+	KanbanBoardTaskFileDto,
 	KanbanBoardTaskCommentDto,
 	CreateKanbanBoardTaskCommentRequestDto,
+	KanbanBoardTaskHistoryEntryDto,
 	KanbanBoardHistoryDto,
 	KanbanBoardHistoryOverviewDto,
 	UpdateKanbanBoardAssigneeRequestDto,
@@ -44,6 +46,7 @@ import type {
 	KanbanBoardTaskLockDto,
 	ResetKanbanBoardColumnsResultDto,
 } from "@smart-anketa/api-contract";
+import { KANBAN_BOARD_TASK_LOCK_POLL_INTERVAL_MS } from "@smart-anketa/api-contract";
 import { apiClient } from "../helpers/apiClient";
 
 export interface KanbanBoardConfig {
@@ -74,7 +77,11 @@ const invalidateTracker = (queryClient: ReturnType<typeof useQueryClient>) => {
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardStreams"] });
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardSettings"] });
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardTasksRegistry"] });
+	queryClient.invalidateQueries({ queryKey: ["kanbanBoardTasksTrash"] });
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardTasks"] });
+	queryClient.invalidateQueries({ queryKey: ["kanbanBoardTaskHistory"] });
+	queryClient.invalidateQueries({ queryKey: ["kanbanBoardHistory"] });
+	queryClient.invalidateQueries({ queryKey: ["kanbanBoardHistoryOverview"] });
 };
 
 const patchKanbanBoardTaskInCaches = (
@@ -539,6 +546,17 @@ export const useKanbanBoardTasksRegistry = () =>
 			}),
 	});
 
+export const useKanbanBoardTasksTrash = () =>
+	useQuery({
+		queryKey: ["kanbanBoardTasksTrash"],
+		queryFn: ({ signal }) =>
+			apiClient<KanbanBoardTaskRegistryDto[]>({
+				url: "/kanban-board/tasks/trash",
+				method: "GET",
+				signal,
+			}),
+	});
+
 export const kanbanBoardExportTasksRegistry = (signal?: AbortSignal) =>
 	apiClient<Blob>({
 		url: "/kanban-board/tasks/registry/export",
@@ -605,6 +623,48 @@ export const useDeleteKanbanBoardTask = () => {
 			apiClient<void>({
 				url: `/kanban-board/tasks/${id}`,
 				method: "DELETE",
+			}),
+		onSuccess: () => invalidateTracker(queryClient),
+	});
+};
+
+export const useRestoreKanbanBoardTask = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (id: string) =>
+			apiClient<void>({
+				url: `/kanban-board/tasks/${id}/restore`,
+				method: "POST",
+			}),
+		onSuccess: () => invalidateTracker(queryClient),
+	});
+};
+
+export const usePurgeKanbanBoardTask = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (id: string) =>
+			apiClient<void>({
+				url: `/kanban-board/tasks/${id}/purge`,
+				method: "DELETE",
+			}),
+		onSuccess: () => invalidateTracker(queryClient),
+	});
+};
+
+export const useTrashKanbanBoardColumnTasks = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			boardId,
+			columnId,
+		}: {
+			boardId: string;
+			columnId: string;
+		}) =>
+			apiClient<{ trashedCount: number; columnId: string; boardId: string }>({
+				url: `/kanban-board/boards/${boardId}/columns/${columnId}/trash-tasks`,
+				method: "POST",
 			}),
 		onSuccess: () => invalidateTracker(queryClient),
 	});
@@ -879,6 +939,118 @@ export const useDeleteKanbanBoardTaskImage = () => {
 	});
 };
 
+export const kanbanBoardListTaskFiles = (
+	taskId: string,
+	signal?: AbortSignal,
+) =>
+	apiClient<KanbanBoardTaskFileDto[]>({
+		url: `/kanban-board/tasks/${taskId}/files`,
+		method: "GET",
+		signal,
+	});
+
+export const useKanbanBoardTaskFiles = (taskId: string | undefined) =>
+	useQuery({
+		queryKey: ["kanbanBoardTaskFiles", taskId],
+		enabled: Boolean(taskId),
+		queryFn: ({ signal }) => kanbanBoardListTaskFiles(taskId!, signal),
+	});
+
+export const kanbanBoardFetchTaskFileBlob = async (
+	taskId: string,
+	fileId: string,
+	signal?: AbortSignal,
+): Promise<Blob> => {
+	const blob = await apiClient<Blob>({
+		url: `/kanban-board/tasks/${taskId}/files/${fileId}`,
+		method: "GET",
+		responseType: "blob",
+		signal,
+	});
+	if (
+		!blob.size ||
+		blob.type === "application/json" ||
+		blob.type === "application/problem+json"
+	) {
+		throw new Error("Не удалось скачать файл");
+	}
+	return blob;
+};
+
+export const kanbanBoardUploadTaskFile = async (
+	taskId: string,
+	file: File,
+	signal?: AbortSignal,
+): Promise<KanbanBoardTaskFileDto> => {
+	const formData = new FormData();
+	formData.append("file", file, file.name);
+	formData.append("name", file.name);
+	formData.append("mimeType", file.type || "application/octet-stream");
+	return apiClient<KanbanBoardTaskFileDto>({
+		url: `/kanban-board/tasks/${taskId}/files`,
+		method: "POST",
+		data: formData,
+		signal,
+		timeout: 120_000,
+	});
+};
+
+export const useUploadKanbanBoardTaskFile = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({ taskId, file }: { taskId: string; file: File }) =>
+			kanbanBoardUploadTaskFile(taskId, file),
+		onSuccess: (_file, { taskId }) => {
+			invalidateTracker(queryClient);
+			queryClient.invalidateQueries({
+				queryKey: ["kanbanBoardTaskFiles", taskId],
+			});
+			queryClient.invalidateQueries({ queryKey: ["kanbanBoardTaskRef"] });
+		},
+	});
+};
+
+export const useDeleteKanbanBoardTaskFile = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			taskId,
+			fileId,
+		}: {
+			taskId: string;
+			fileId: string;
+		}) =>
+			apiClient<void>({
+				url: `/kanban-board/tasks/${taskId}/files/${fileId}`,
+				method: "DELETE",
+			}),
+		onSuccess: (_result, { taskId }) => {
+			invalidateTracker(queryClient);
+			queryClient.invalidateQueries({
+				queryKey: ["kanbanBoardTaskFiles", taskId],
+			});
+			queryClient.invalidateQueries({ queryKey: ["kanbanBoardTaskRef"] });
+		},
+	});
+};
+
+export const kanbanBoardListTaskHistory = (
+	taskId: string,
+	signal?: AbortSignal,
+) =>
+	apiClient<KanbanBoardTaskHistoryEntryDto[]>({
+		url: `/kanban-board/tasks/${taskId}/history`,
+		method: "GET",
+		signal,
+	});
+
+export const useKanbanBoardTaskHistory = (taskId: string | undefined) =>
+	useQuery({
+		queryKey: ["kanbanBoardTaskHistory", taskId],
+		enabled: Boolean(taskId),
+		queryFn: ({ signal }) => kanbanBoardListTaskHistory(taskId!, signal),
+	});
+
 export const kanbanBoardListTaskComments = (
 	taskId: string,
 	signal?: AbortSignal,
@@ -1013,7 +1185,10 @@ export const useKanbanBoardTaskLock = (taskId: string | undefined) =>
 		queryKey: ["kanbanBoardTaskLock", taskId],
 		enabled: Boolean(taskId),
 		queryFn: ({ signal }) => kanbanBoardGetTaskLock(taskId!, signal),
-		refetchInterval: 30_000,
+		refetchInterval: () =>
+			document.visibilityState === "visible"
+				? KANBAN_BOARD_TASK_LOCK_POLL_INTERVAL_MS
+				: false,
 	});
 
 export const useAcquireKanbanBoardTaskLock = () => {

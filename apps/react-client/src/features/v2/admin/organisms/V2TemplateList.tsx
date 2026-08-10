@@ -6,6 +6,7 @@ import {
 	useDeleteV2Template,
 	useRestoreV2Template,
 	useRestoreV2TemplateVersions,
+	useUpdateV2FactorySnapshotSetting,
 	useV2TemplateRegistry,
 } from "@react-client/common/api/queries/v2-templates";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
@@ -15,6 +16,7 @@ import { Flex } from "@react-client/common/primitives/Flex";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
 import { getAgGridMainMenuItems } from "@react-client/common/tableStuff/agGridMainMenuItems";
 import { registerAgGridTableModules } from "@react-client/common/tableStuff/agGridTableModules";
+import { AgGridRouterLink } from "@react-client/common/tableStuff/AgGridRouterLink";
 import { useAgGridColumnPersistence } from "@react-client/common/tableStuff/useAgGridColumnPersistence";
 import {
 	pathForAdminV2Template,
@@ -155,6 +157,7 @@ export const V2TemplateList = forwardRef<
 	const bulkDeleteVersions = useBulkDeleteV2TemplateVersions();
 	const restoreVersions = useRestoreV2TemplateVersions();
 	const activateVersion = useActivateV2TemplateVersionAsCurrent();
+	const setFactorySnapshot = useUpdateV2FactorySnapshotSetting();
 
 	const systemCurrentVersionId = useMemo(() => {
 		const holder = templates?.find((t) => t.currentVersionId);
@@ -359,6 +362,33 @@ export const V2TemplateList = forwardRef<
 		[theme.palette.primary.main, theme.palette.success.main],
 	);
 
+	const assignFactoryEtalon = useCallback(
+		(templateId: string, versionId: string, label: string) => {
+			if (
+				!window.confirm(
+					`Назначить заводским эталоном «${label}»?\nНовые схемы и сброс будут копировать эту версию (включая типовые работы).`,
+				)
+			) {
+				return;
+			}
+			setFactorySnapshot.mutate(
+				{
+					source: "template",
+					templateId,
+					versionId,
+				},
+				{
+					onSuccess: () => toast.success("Заводской эталон обновлён"),
+					onError: (err) =>
+						toast.error("Не удалось назначить эталон", {
+							description: apiErrorMessage(err),
+						}),
+				},
+			);
+		},
+		[setFactorySnapshot],
+	);
+
 	const getContextMenuItems = useCallback(
 		(params: GetContextMenuItemsParams<V2SchemaGridRow>) => {
 			const row = params.node?.data;
@@ -369,11 +399,30 @@ export const V2TemplateList = forwardRef<
 			}
 
 			if (row.rowKind === "template") {
+				const etalonVersionId = row.currentVersionId ?? row.children[0]?.id;
 				return [
 					{
 						name: "История изменений",
 						action: () => navigate(pathForAdminV2TemplateHistory(row.id)),
 						icon: '<span class="ag-icon ag-icon-menu"></span>',
+					},
+					{
+						name: "Назначить заводским эталоном",
+						disabled: !etalonVersionId || setFactorySnapshot.isPending,
+						action: () => {
+							if (!etalonVersionId) return;
+							const versionNum =
+								row.children.find((c) => c.id === etalonVersionId)
+									?.versionNumber ?? "?";
+							assignFactoryEtalon(
+								row.id,
+								etalonVersionId,
+								`${row.name} · v${versionNum}`,
+							);
+						},
+						tooltip: etalonVersionId
+							? "Эталон для «Заводская схема» и сброса; копируются схема и типовые работы"
+							: "Нет версии для назначения эталоном",
 					},
 					"separator",
 					{
@@ -424,6 +473,18 @@ export const V2TemplateList = forwardRef<
 					name: "Открыть редактор схемы",
 					action: () => openEditor(row.templateId, row.id),
 				},
+				{
+					name: "Назначить заводским эталоном",
+					disabled: setFactorySnapshot.isPending,
+					action: () =>
+						assignFactoryEtalon(
+							row.templateId,
+							row.id,
+							`${row.displayLabel || `v${row.versionNumber}`}`,
+						),
+					tooltip:
+						"Эталон для «Заводская схема» и сброса; копируются схема и типовые работы",
+				},
 				"separator",
 				{
 					name: "Удалить версию",
@@ -443,6 +504,8 @@ export const V2TemplateList = forwardRef<
 			handleBulkDeleteVersions,
 			handleDeleteVersion,
 			activateVersion,
+			assignFactoryEtalon,
+			setFactorySnapshot.isPending,
 			bulkDeleteVersions.isPending,
 			deleteTemplate.isPending,
 			systemCurrentVersionId,
@@ -458,6 +521,25 @@ export const V2TemplateList = forwardRef<
 			sortable: false,
 			filter: "agTextColumnFilter",
 			floatingFilter: true,
+			cellRendererParams: {
+				innerRenderer: (p: ICellRendererParams<V2SchemaGridRow>) => {
+					const d = p.data;
+					const label =
+						(typeof p.value === "string" && p.value) ||
+						d?.displayLabel ||
+						"";
+					if (!d || !label) return label;
+					const to =
+						d.rowKind === "template"
+							? pathForAdminV2Template(d.id, d.currentVersionId)
+							: pathForAdminV2Template(d.templateId, d.id);
+					return (
+						<AgGridRouterLink to={to} title="Открыть схему">
+							{label}
+						</AgGridRouterLink>
+					);
+				},
+			},
 		}),
 		[],
 	);

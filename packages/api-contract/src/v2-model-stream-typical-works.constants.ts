@@ -1,32 +1,97 @@
-/** Эталонные id 10 типовых работ модельного стрима (factory registry). */
+import {
+	V2_IMPLEMENTATION_STREAM,
+	V2_IMPLEMENTATION_STREAM_LABELS,
+	type V2ImplementationStreamCode,
+} from "./v2-implementation-streams.util";
+
+/** Эталонные id 10 типовых работ модельного стрима (factory registry / anketa boundWorkIds). */
 export const V2_MODEL_STREAM_FACTORY_WORK_IDS = [
-	"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4001",
-	"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4002",
-	"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4003",
-	"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4004",
-	"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4005",
-	"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4006",
-	"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4007",
-	"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4008",
-	"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4009",
-	"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4010",
+	"fbfa5b48-abae-442a-a7a7-6b7ccebe88f7", // 01. Постановка задачи
+	"8004b30d-592f-4fb6-81f4-b4e052f56d90", // 02. Поиск данных
+	"64e97c0a-8662-4530-9aac-57016cf4f32e", // 04. Построение витрины для разработки
+	"9c71a3a2-d980-4d39-a603-ca1d35f9ea31", // 05A. Разработка пилотной модели (MVP)
+	"4a349bdc-be66-4c86-b36c-b6733eec8455", // 05. Разработка модели
+	"d888922b-f141-4e9c-84bc-2c9dbc5dfee3", // AutoML: разработка
+	"278cd153-4188-4dea-bba7-a45edaed7bbf", // 05B. Пилотирование модели
+	"5862d9a7-b2d5-4a99-90f8-a042532a62aa", // 07. Разработка витрины для применения модели
+	"053b1fbc-25ef-4182-9b78-dc100ce19712", // 09. Адаптация и внедрение модели
+	"22c7a066-51de-4b59-b5a1-770733276212", // AutoML: внедрение
 ] as const;
 
 export const V2_MODEL_STREAM_EXECUTOR = "Модельный стрим";
 
-/** Всегда показываются в блоке типовых работ и в «Подробном расчёте». */
-export const V2_MODEL_STREAM_ALWAYS_SHOWN_WORK_IDS: ReadonlySet<string> = new Set([
-	"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4001",
-	"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4003",
-	"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4005",
-	"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4008",
-]);
+/**
+ * Код зонтичного стрима в реестре implementationStream (не выбирается в анкете
+ * как implementationStream — только каталог / конструктор типовых работ).
+ */
+export const V2_MODEL_STREAM_UMBRELLA_CODE = "mdls";
 
-/** Всегда активны (формула считается даже без явных триггеров). */
-export const V2_MODEL_STREAM_ALWAYS_ACTIVE_WORK_IDS: ReadonlySet<string> = new Set([
-	"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4001",
-	"f8e3a1b2-4c5d-6e7f-8a9b-0c1d2e3f4005",
-]);
+/**
+ * Пять модельных стримов-исполнителей (ролевка / implementationStream).
+ * Legacy-каталог «Модельный стрим» должен видеть назначения на любой из них.
+ */
+export const V2_MODEL_IMPLEMENTATION_STREAM_CODES = [
+	V2_IMPLEMENTATION_STREAM.KMBKCB,
+	V2_IMPLEMENTATION_STREAM.RB,
+	V2_IMPLEMENTATION_STREAM.PTITPC,
+	V2_IMPLEMENTATION_STREAM.FINMDL,
+	V2_IMPLEMENTATION_STREAM.RND,
+] as const satisfies readonly V2ImplementationStreamCode[];
+
+/** DB-имена пяти дочерних стримов (registry `streams` / `normsByStream`). */
+export const V2_MODEL_STREAM_CHILD_DB_NAMES = [
+	V2_IMPLEMENTATION_STREAM_LABELS[V2_IMPLEMENTATION_STREAM.KMBKCB],
+	V2_IMPLEMENTATION_STREAM_LABELS[V2_IMPLEMENTATION_STREAM.RB],
+	V2_IMPLEMENTATION_STREAM_LABELS[V2_IMPLEMENTATION_STREAM.PTITPC],
+	V2_IMPLEMENTATION_STREAM_LABELS[V2_IMPLEMENTATION_STREAM.FINMDL],
+	V2_IMPLEMENTATION_STREAM_LABELS[V2_IMPLEMENTATION_STREAM.RND],
+] as const;
+
+/** Mother + 5 children — полный список назначений factory model works. */
+export const V2_MODEL_STREAM_REGISTRY_STREAM_NAMES = [
+	V2_MODEL_STREAM_EXECUTOR,
+	...V2_MODEL_STREAM_CHILD_DB_NAMES,
+] as const;
+
+export function isV2ModelImplementationStreamCode(
+	value: string,
+): value is (typeof V2_MODEL_IMPLEMENTATION_STREAM_CODES)[number] {
+	return (V2_MODEL_IMPLEMENTATION_STREAM_CODES as readonly string[]).includes(
+		value,
+	);
+}
+
+export function isV2ModelStreamUmbrellaLabel(value: string): boolean {
+	const trimmed = value.trim();
+	return (
+		trimmed === V2_MODEL_STREAM_EXECUTOR ||
+		trimmed === "Модельные стримы" ||
+		trimmed === V2_MODEL_STREAM_UMBRELLA_CODE
+	);
+}
+
+/** DB-имена + коды + legacy-подпись для каталога типовых работ модельного блока. */
+export function resolveModelStreamCatalogScopeDbStreams(): readonly string[] {
+	const result: string[] = [V2_MODEL_STREAM_EXECUTOR, "Модельные стримы"];
+	for (const code of V2_MODEL_IMPLEMENTATION_STREAM_CODES) {
+		if (!result.includes(code)) result.push(code);
+		const label = V2_IMPLEMENTATION_STREAM_LABELS[code];
+		if (label && !result.includes(label)) result.push(label);
+	}
+	return result;
+}
+
+/**
+ * @deprecated Работы модельного стрима появляются только по триггеру (CSV).
+ * Оставлено пустым для обратной совместимости импортов.
+ */
+export const V2_MODEL_STREAM_ALWAYS_SHOWN_WORK_IDS: ReadonlySet<string> = new Set();
+
+/**
+ * @deprecated Работы модельного стрима считаются только по триггеру (CSV).
+ * Оставлено пустым для обратной совместимости импортов.
+ */
+export const V2_MODEL_STREAM_ALWAYS_ACTIVE_WORK_IDS: ReadonlySet<string> = new Set();
 
 const MODEL_STREAM_WORK_ORDER = [
 	/^01[\.\s]/i,

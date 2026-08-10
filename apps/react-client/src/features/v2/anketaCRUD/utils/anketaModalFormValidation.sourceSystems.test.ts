@@ -22,7 +22,7 @@ const sourceSystemItemSchema: RJSFSchema = {
 			type: "boolean",
 			title: "Необходим новый тракт данных от источника",
 		},
-		field_lzP44Urx: {
+		field_xva1dRvW: {
 			type: "string",
 			title:
 				"Необходимо уточнение требований по составу выгружаемых данных и алгоритмам расчета метрик",
@@ -41,7 +41,7 @@ describe("sourceSystems modal save (regression)", () => {
 		const formData = {
 			name: "CRM",
 			type: "Внутренний",
-			field_lzP44Urx: "Да",
+			field_xva1dRvW: "Да",
 			field_HuOLfL4K: "Есть",
 		};
 		expect(isAnketaModalFormValid(formData, sourceSystemItemSchema, {})).toBe(
@@ -53,7 +53,7 @@ describe("sourceSystems modal save (regression)", () => {
 		const formData = {
 			name: "CRM",
 			type: "Внутренний",
-			field_lzP44Urx: "Да",
+			field_xva1dRvW: "Да",
 			field_HuOLfL4K: "Есть",
 			"field_-EGYyyJF": "",
 			field_other: "",
@@ -67,7 +67,7 @@ describe("sourceSystems modal save (regression)", () => {
 		const formData = {
 			name: "CRM",
 			type: "",
-			field_lzP44Urx: null,
+			field_xva1dRvW: null,
 			field_HuOLfL4K: undefined,
 			"field_-EGYyyJF": "",
 		};
@@ -90,7 +90,7 @@ describe("sourceSystems modal save (regression)", () => {
 		const formData: Record<string, unknown> = {
 			name: "CRM",
 			type: "Внутренний",
-			field_lzP44Urx: "Да",
+			field_xva1dRvW: "Да",
 			field_HuOLfL4K: "Есть",
 		};
 		for (const key of [

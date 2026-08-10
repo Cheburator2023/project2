@@ -38,6 +38,7 @@ export function V2SchemaBindingStatusCell(
 			underline="hover"
 			title={schemaBinding.message || "Открыть привязанную схему"}
 			onClick={(e) => e.stopPropagation()}
+			onContextMenu={(e) => e.stopPropagation()}
 			sx={{ fontSize: "inherit", lineHeight: "inherit" }}
 		>
 			{text}

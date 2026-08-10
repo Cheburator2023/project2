@@ -1,8 +1,10 @@
 import {
 	resolveV2AnketaArchComponent,
 	resolveStreamExecutorForTypicalWorkOutputPath,
+	resolveTypicalWorkCatalogStreamLabel,
 } from "./v2-anketa-section-ui.util";
 import { typicalWorkAssignedToAnyExecutorStream } from "./v2-executor-streams.util";
+import { V2_MODEL_STREAM_EXECUTOR } from "./v2-model-stream-typical-works.constants";
 
 export const V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH =
 	"streamDataSources.sourceTypicalTasks";
@@ -52,7 +54,16 @@ function writeAtDotPath(
 	let cur: Record<string, unknown> = next;
 	for (let i = 0; i < parts.length - 1; i++) {
 		const key = parts[i];
-		const child = readRecord(cur[key]) ?? {};
+		const existing = cur[key];
+		/**
+		 * modelService/dataMart и т.п. в анкете хранятся как pseudo-array
+		 * (список экземпляров), хотя в jsonSchema — object. Нельзя подменять
+		 * массив на `{}` при записи вложенного legacy-пути вроде
+		 * `generalInfo.modelService.controlTypicalTasks` — иначе теряются
+		 * ответы пользователя и последующие триггеры типовых работ (ПиРМ и др.).
+		 */
+		if (Array.isArray(existing)) return data;
+		const child = readRecord(existing) ?? {};
 		cur[key] = { ...child };
 		cur = cur[key] as Record<string, unknown>;
 	}
@@ -137,6 +148,42 @@ export function collectTypicalWorkBlockBindings(
 			outputPath,
 		),
 	}));
+}
+
+/**
+ * workId → подпись стрима каталога по boundWorkIds блоков typicalWork.
+ * Если работа привязана и к модельному, и к другому стриму — побеждает не-модельный
+ * (источники/ПиРМ и т.п.), чтобы ошибочно попавшие в массив модельного стрима
+ * строки в итоге уезжали в свой раздел.
+ */
+export function buildTypicalWorkIdToCatalogStreamLabelMap(
+	uiSchema: unknown,
+): Map<string, string> {
+	const map = new Map<string, string>();
+	for (const binding of collectTypicalWorkBlockBindings(uiSchema)) {
+		if (!binding.boundWorkIds?.length) continue;
+		const label = resolveTypicalWorkCatalogStreamLabel(
+			uiSchema,
+			binding.outputPath,
+		);
+		if (!label) continue;
+		for (const rawId of binding.boundWorkIds) {
+			const workId = rawId.trim();
+			if (!workId) continue;
+			const prev = map.get(workId);
+			if (!prev) {
+				map.set(workId, label);
+				continue;
+			}
+			if (
+				prev === V2_MODEL_STREAM_EXECUTOR &&
+				label !== V2_MODEL_STREAM_EXECUTOR
+			) {
+				map.set(workId, label);
+			}
+		}
+	}
+	return map;
 }
 
 function patchBoundWorkIdsAtOutputPath(

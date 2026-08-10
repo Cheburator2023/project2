@@ -9,6 +9,7 @@ interface GlobalSettingsState {
 	user: T_KEYCLOAK_USER | undefined;
 	configMap?: T_CONFIG_MAP;
 	toggleSideMenu: () => void;
+	setSideMenuVisible: (visible: boolean) => void;
 	setGridApi: (api: GridApi | null) => void;
 	setUser: (user?: T_KEYCLOAK_USER) => void;
 	setConfigMap: (configMap?: T_CONFIG_MAP) => void;
@@ -23,6 +24,8 @@ export const useGlobalSettingsStore = create<GlobalSettingsState>()(
 			configMap: undefined,
 			toggleSideMenu: () =>
 				set((state) => ({ isSideMenuVisible: !state.isSideMenuVisible })),
+			setSideMenuVisible: (visible: boolean) =>
+				set({ isSideMenuVisible: visible }),
 			setGridApi: (api: GridApi | null) => set({ gridApi: api }),
 			setUser: (user?: T_KEYCLOAK_USER) => set({ user }),
 			setConfigMap: (configMap?: T_CONFIG_MAP) => set({ configMap }),

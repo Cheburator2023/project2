@@ -381,13 +381,17 @@ function parseBacklogRows(
 		const taskTypeText = cellText(readMappedCell(row, headers.taskType));
 		const workTypeText = cellText(readMappedCell(row, headers.workType));
 
+		const sprintOutcomeText = cellText(
+			readMappedCell(row, headers.sprintOutcome),
+		);
 		const content = normalizeKanbanBoardTaskContent({
 			title,
 			priority: resolvedPriority,
 			backlogNumber,
 			customer: cellText(readMappedCell(row, headers.customer)) || undefined,
-			sprintOutcome:
-				cellText(readMappedCell(row, headers.sprintOutcome)) || undefined,
+			description: sprintOutcomeText
+				? `## Ожидаемый результат спринта\n${sprintOutcomeText}`
+				: undefined,
 			dueDate: parseDueDate(readMappedCell(row, headers.dueDate)),
 			parentTask: parentTask || undefined,
 			assignees: assignee ? [assignee] : undefined,
@@ -412,6 +416,8 @@ function parseBacklogRows(
 			position,
 			content,
 			origin: options.standId,
+			createdAt: now,
+			createdBy: null,
 			updatedAt: now,
 		});
 	});
@@ -479,6 +485,8 @@ function applyWorkloadSheet(
 					estimatePd: effort,
 				}),
 				origin: options.standId,
+				createdAt: now,
+				createdBy: null,
 				updatedAt: now,
 			};
 			tasks.push(task);

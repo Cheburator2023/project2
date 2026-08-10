@@ -17,6 +17,7 @@ import {
 	getObjectItemsSchema,
 	isObjectFieldGroup,
 	readUiSchemaBranchAtPointer,
+	resolveSchemaNode,
 } from "../utils/schemaMutators";
 
 export type PropertiesFieldKind =
@@ -282,6 +283,62 @@ export function resolveArchComponentAtPointer(
 		if (arch) return arch;
 	}
 	return null;
+}
+
+/** Арх-компонент поля с человекочитаемым названием и стабильным id блока. */
+export type ArchComponentRef = {
+	type: V2ArchComponentType;
+	label: string;
+	/** archBlockUid, а при его отсутствии — schemaFieldUid самого блока. */
+	blockUid: string | null;
+	blockTitle: string | null;
+	blockPointer: string;
+};
+
+export function resolveArchComponentRefAtPointer(
+	uiSchema: UiSchema | Record<string, unknown> | undefined,
+	pointer: string,
+	jsonSchema?: RJSFSchema,
+): ArchComponentRef | null {
+	if (!uiSchema || !pointer) return null;
+	const segs = pointerSegments(pointer);
+	for (let len = segs.length; len > 0; len -= 1) {
+		const blockPointer = `/${segs.slice(0, len).join("/")}`;
+		const branch = readUiSchemaBranchAtPointer(uiSchema, blockPointer);
+		const type = resolveV2AnketaArchComponent(branch);
+		if (!type) continue;
+
+		const options = branch?.["ui:options"] as
+			| Record<string, unknown>
+			| undefined;
+		const archBlockUid = options?.archBlockUid;
+		const schemaFieldUid = options?.schemaFieldUid;
+		const blockUid =
+			(typeof archBlockUid === "string" && archBlockUid.trim()) ||
+			(typeof schemaFieldUid === "string" && schemaFieldUid.trim()) ||
+			null;
+		const node = jsonSchema
+			? resolveSchemaNode(jsonSchema, segs.slice(0, len))
+			: undefined;
+		const title = typeof node?.title === "string" ? node.title.trim() : "";
+
+		return {
+			type,
+			label: V2_ARCH_COMPONENT_LABELS[type] ?? type,
+			blockUid,
+			blockTitle: title || null,
+			blockPointer,
+		};
+	}
+	return null;
+}
+
+/** «Модельный сервис · modelService · block_a1b2c3» для подписей в работах. */
+export function formatArchComponentRef(
+	ref: ArchComponentRef | null | undefined,
+): string | null {
+	if (!ref) return null;
+	return [ref.label, ref.type, ref.blockUid].filter(Boolean).join(" · ");
 }
 
 export function describeArrayItems(

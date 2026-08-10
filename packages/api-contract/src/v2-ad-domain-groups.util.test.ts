@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
 	expandV2KeycloakTargetsWithAdAliases,
+	isV2AdDelegatedCanonPath,
 	mapV2AdGroupLeafToRoleCodes,
 	normalizeV2AdStandPrefix,
+	isV2KeycloakIgnoredOrgGroupPath,
+	resolveV2KeycloakGroupPath,
+	v2KeycloakGroupParentPath,
+	shouldEnsureV2KeycloakGroupPath,
 	stripV2AdStandPrefix,
 } from "./v2-ad-domain-groups.util";
 import { normalizeV2UserGroups } from "./v2-user-stream-mapping.util";
@@ -33,6 +38,12 @@ describe("v2-ad-domain-groups", () => {
 		expect(mapV2AdGroupLeafToRoleCodes("sum_da")).toEqual(["da"]);
 		expect(mapV2AdGroupLeafToRoleCodes("sum_da_ptitpc")).toEqual(["da_stream"]);
 		expect(mapV2AdGroupLeafToRoleCodes("sum_sarep_idsrc")).toEqual(["sarep"]);
+		expect(mapV2AdGroupLeafToRoleCodes("sum_stream_view_all")).toEqual([
+			"stream_view_all",
+		]);
+		expect(mapV2AdGroupLeafToRoleCodes("stream_view_all")).toEqual([
+			"stream_view_all",
+		]);
 		/** KK канон без AD sum_ */
 		expect(mapV2AdGroupLeafToRoleCodes("appadmin")).toEqual(["appadmin"]);
 	});
@@ -66,21 +77,166 @@ describe("v2-ad-domain-groups", () => {
 		const target = {
 			"/appadmin": ["anketa_view_all_calculations", "anketa_audit_view"],
 			"/sacfg": ["anketa_view_all_calculations"],
+			"/sarep": [
+				"anketa_view_all_calculations",
+				"anketa_edit_calculation",
+				"anketa_export_reports",
+				"anketa_workflow_approve",
+			],
+			"/saprg": ["anketa_hold"],
+			"/prjtoffice": [],
+			"/de": ["anketa_view_all_calculations"],
+			"/de_lead": [
+				"anketa_view_all_calculations",
+				"anketa_edit_calculation",
+			],
+			"/auditor": [
+				"anketa_view_all_calculations",
+				"anketa_audit_view",
+			],
+			"/auditorib": [
+				"anketa_view_all_calculations",
+				"anketa_audit_view",
+			],
+			"/mipm_stream": ["anketa_view_all_calculations"],
 		};
-		const expanded = expandV2KeycloakTargetsWithAdAliases(target, "test_");
-		expect(expanded["/appadmin"]).toEqual(
+		const expanded = expandV2KeycloakTargetsWithAdAliases(target, "dev_");
+		/** delegated: роли только на AD-листе, не на каноне /appadmin */
+		expect(expanded["/appadmin"]).toBeUndefined();
+		expect(isV2AdDelegatedCanonPath("/appadmin")).toBe(true);
+		expect(shouldEnsureV2KeycloakGroupPath("/appadmin")).toBe(false);
+		expect(shouldEnsureV2KeycloakGroupPath("/admin_it")).toBe(true);
+		expect(shouldEnsureV2KeycloakGroupPath("/auditor")).toBe(true);
+		expect(shouldEnsureV2KeycloakGroupPath("/auditorib")).toBe(false);
+		/** appadmin AD → под /admin_it, не top-level */
+		expect(expanded["/dev_sum_appadmin"]).toBeUndefined();
+		expect(expanded["/admin_it/dev_sum_appadmin"]).toEqual(
 			expect.arrayContaining(["anketa_audit_view"]),
 		);
-		expect(expanded["/test_sum_appadmin"]).toEqual(
+		/** nested canons — без top-level */
+		expect(expanded["/dev_sum_sacfg"]).toBeUndefined();
+		expect(expanded["/dev_sum_sarep_dadm"]).toBeUndefined();
+		expect(expanded["/dev_sum_saprg"]).toBeUndefined();
+		expect(expanded["/dev_sum_prjtoffice"]).toBeUndefined();
+		expect(expanded["/sacfg/dev_sum_sacfg"]).toEqual(
+			expect.arrayContaining(["anketa_view_all_calculations"]),
+		);
+		expect(expanded["/sarep/dev_sum_sarep_dadm"]).toEqual(
+			expect.arrayContaining(["anketa_view_all_calculations"]),
+		);
+		/** Non-LCM sarep leaves: view/edit/export/approve — без create/delete. */
+		for (const suffix of [
+			"dadm",
+			"digagt",
+			"idsrc",
+			"mdlctl",
+			"pirm",
+			"strdat",
+		] as const) {
+			const path = `/sarep/dev_sum_sarep_${suffix}`;
+			const roles = expanded[path] ?? [];
+			expect(roles).not.toContain("anketa_create_calculation");
+			expect(roles).not.toContain("anketa_delete_calculation");
+		}
+		expect(expanded["/saprg/dev_sum_saprg"]).toEqual(
+			expect.arrayContaining(["anketa_hold"]),
+		);
+		expect(expanded["/project_office/dev_sum_prjtoffice"]).toEqual([]);
+		expect(expanded["/prjtoffice/dev_sum_prjtoffice"]).toEqual([]);
+
+		/** /de — папка; AD только внутри, не top-level */
+		expect(expanded["/dev_sum_de_kmbkcb"]).toBeUndefined();
+		expect(expanded["/dev_sum_Lde_kmbkcb"]).toBeUndefined();
+		expect(expanded["/de"]).toEqual(
+			expect.arrayContaining(["anketa_view_all_calculations"]),
+		);
+		expect(expanded["/de/de_lead"]).toBeUndefined();
+		expect(expanded["/de/dev_sum_de_kmbkcb"]).toEqual(
+			expect.arrayContaining(["anketa_view_all_calculations"]),
+		);
+		/** Lead AD только под top-level /de_lead */
+		expect(expanded["/de/de_lead/dev_sum_Lde_rb"]).toBeUndefined();
+		expect(expanded["/de_lead/dev_sum_Lde_rb"]).toEqual(
+			expect.arrayContaining(["anketa_edit_calculation"]),
+		);
+		expect(expanded["/controller/dev_sum_auditor"]).toEqual(
 			expect.arrayContaining(["anketa_audit_view"]),
 		);
-		expect(expanded["/test_sum_sacfg"]).toEqual(
+		expect(expanded["/auditor/dev_sum_auditorib"]).toEqual(
+			expect.arrayContaining(["anketa_audit_view"]),
+		);
+		expect(expanded["/auditorib"]).toBeUndefined();
+		expect(expanded["/mipm_stream/dev_sum_mipm_kmbkcb"]).toEqual(
 			expect.arrayContaining(["anketa_view_all_calculations"]),
 		);
 
-		const noStand = expandV2KeycloakTargetsWithAdAliases(target, "");
-		expect(noStand["/sum_appadmin"]).toEqual(
+		const withStreamViewAll = expandV2KeycloakTargetsWithAdAliases(
+			{ "/stream_view_all": [] },
+			"test_",
+		);
+		expect(withStreamViewAll["/stream_view_all"]).toBeUndefined();
+		expect(withStreamViewAll["/test_sum_stream_view_all"]).toEqual([]);
+		expect(shouldEnsureV2KeycloakGroupPath("/stream_view_all")).toBe(false);
+		expect(shouldEnsureV2KeycloakGroupPath("/test_sum_stream_view_all")).toBe(
+			true,
+		);
+
+		const noStand = expandV2KeycloakTargetsWithAdAliases(
+			{ "/appadmin": ["anketa_audit_view"] },
+			"",
+		);
+		expect(noStand["/admin_it/sum_appadmin"]).toEqual(
 			expect.arrayContaining(["anketa_audit_view"]),
 		);
+		expect(noStand["/sum_appadmin"]).toBeUndefined();
+	});
+
+	it("resolves AD leaf under nested canon path", () => {
+		expect(
+			resolveV2KeycloakGroupPath("/dev_sum_sarep_dadm", [
+				"/sarep",
+				"/sarep/dev_sum_sarep_dadm",
+				"/sarep/dev_sum_sarep_idsrc",
+			]),
+		).toBe("/sarep/dev_sum_sarep_dadm");
+		expect(
+			resolveV2KeycloakGroupPath("/admin_it/dev_sum_appadmin", [
+				"/admin_it",
+				"/admin_it/dev_sum_appadmin",
+			]),
+		).toBe("/admin_it/dev_sum_appadmin");
+		expect(
+			resolveV2KeycloakGroupPath("/dev_sum_appadmin", [
+				"/admin_it/dev_sum_appadmin",
+			]),
+		).toBe("/admin_it/dev_sum_appadmin");
+		expect(resolveV2KeycloakGroupPath("/dev_sum_appadmin", ["/appadmin"])).toBe(
+			null,
+		);
+	});
+
+	it("ignores org noise groups in matrix warnings", () => {
+		expect(isV2KeycloakIgnoredOrgGroupPath("/access_during_freeze")).toBe(
+			true,
+		);
+		expect(
+			isV2KeycloakIgnoredOrgGroupPath(
+				"/departament/Управление моделирования КИБ и СМБ",
+			),
+		).toBe(true);
+		expect(
+			isV2KeycloakIgnoredOrgGroupPath(
+				"/departament_business_customer/Департамент брокерского обслуживания",
+			),
+		).toBe(true);
+		expect(isV2KeycloakIgnoredOrgGroupPath("/mipm")).toBe(false);
+		expect(isV2KeycloakIgnoredOrgGroupPath("/ds_lead")).toBe(false);
+	});
+
+	it("parent path of nested groups", () => {
+		expect(v2KeycloakGroupParentPath("/mipm/dev_sum_mipm")).toBe("/mipm");
+		expect(v2KeycloakGroupParentPath("/ds/ds_lead")).toBe("/ds");
+		expect(v2KeycloakGroupParentPath("/ds_lead")).toBe(null);
+		expect(v2KeycloakGroupParentPath("/de_lead")).toBe(null);
 	});
 });

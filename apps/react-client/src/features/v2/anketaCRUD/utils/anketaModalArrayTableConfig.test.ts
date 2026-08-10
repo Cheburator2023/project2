@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
+import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import {
 	adjustTypicalWorkTableColumns,
+	collectAppearedTypicalWorkGroups,
 	collectAppearedTypicalWorkRows,
 	collectTypicalWorkSourceNames,
 	filterTypicalWorkItems,
 	formatTypicalWorkSummaryTotal,
 	getTypicalWorkFactoryTableColumns,
+	isTypicalWorkArrayPath,
 	resolveArrayTableColumns,
+	schemaItemsLookLikeTypicalWork,
 	sumTypicalWorkTotals,
 	typicalWorkItemDisplayName,
 } from "./anketaModalArrayTableConfig";
@@ -68,8 +72,64 @@ describe("typical work table helpers", () => {
 					{ key: "total", header: "Итог" },
 				],
 				[{ name: "Уточнение требований", total: 1 }],
-			).map((col) => col.key),
-		).toEqual(["name", "estimate", "coefficient", "total"]);
+			).map((col) => col.header),
+		).toEqual([
+			"Название типовой работы",
+			"Базовая оценка",
+			"Коэффициент",
+			"Итог",
+		]);
+	});
+
+	it("forces factory columns for custom typicalWork path with legacy item schema", () => {
+		const path = "field_custom.sourceTypicalTasks";
+		const rootSchema: RJSFSchema = {
+			type: "object",
+			properties: {
+				field_custom: {
+					type: "object",
+					properties: {
+						sourceTypicalTasks: {
+							type: "array",
+							items: {
+								type: "object",
+								properties: {
+									name: { type: "string", title: "Наименование" },
+									total: { type: "number", title: "Итог" },
+									reason: { type: "string", title: "Причина" },
+									workType: { type: "string", title: "Тип работ" },
+									coefficient: { type: "number", title: "Коэф." },
+									estimateHoursPerDay: {
+										type: "number",
+										title: "Базовая оценка (ч/д)",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		};
+		const rootUi: UiSchema = {
+			field_custom: {
+				sourceTypicalTasks: {
+					"ui:options": { archComponent: "typicalWork" },
+				},
+			},
+		};
+
+		expect(isTypicalWorkArrayPath(path, rootUi as Record<string, unknown>)).toBe(
+			true,
+		);
+		expect(schemaItemsLookLikeTypicalWork(rootSchema, rootUi, path)).toBe(true);
+		expect(
+			resolveArrayTableColumns(path, rootSchema, rootUi)?.map((col) => col.header),
+		).toEqual([
+			"Название типовой работы",
+			"Базовая оценка",
+			"Коэффициент",
+			"Итог",
+		]);
 	});
 
 	it("shows only numeric coefficient in coefficient column", () => {
@@ -89,6 +149,25 @@ describe("typical work table helpers", () => {
 			}),
 		).toBe("1.2");
 		expect(coefficientCol?.render?.({ coefficient: 1.5 })).toBe("1.5");
+	});
+
+	it("shows Σ по N in coefficient column for multi-instance breakdown", () => {
+		const coefficientCol = getTypicalWorkFactoryTableColumns().find(
+			(col) => col.key === "coefficient",
+		);
+		const item = {
+			coefficient: 1.2,
+			formulaBreakdown: {
+				symbolic: "N",
+				expanded: "a + b = 10",
+				instanceBreakdown: [
+					{ sourceLabel: "Модель A", index: 0, expanded: "5", total: 5 },
+					{ sourceLabel: "Модель B", index: 1, expanded: "5", total: 5 },
+				],
+			},
+		};
+		expect(coefficientCol?.render?.(item)).toBe("Σ по 2");
+		expect(coefficientCol?.title?.(item)).toMatch(/экземпляр/i);
 	});
 
 	it("resolves typical work display name", () => {
@@ -184,5 +263,52 @@ describe("typical work table helpers", () => {
 		);
 		expect(rows).toHaveLength(1);
 		expect(rows[0]?.workId).toBe(workId);
+	});
+
+	it("rebuckets source-bound works out of model stream path into Источники данных", () => {
+		const sourceWorkId = "61096f43-075f-4060-8ac4-eab56345480f";
+		const uiSchema = {
+			detailInfo: {
+				detailTypicalTasks: {
+					"ui:options": {
+						archComponent: "typicalWork",
+						streamExecutor: "Модельный стрим",
+						boundWorkIds: ["fbfa5b48-abae-442a-a7a7-6b7ccebe88f7"],
+					},
+				},
+			},
+			streamDataSources: {
+				"ui:options": {
+					streamBlock: true,
+					streamExecutor: "idsrc",
+				},
+				field_u7: {
+					"ui:options": {
+						archComponent: "typicalWork",
+						streamExecutor: "Источники данных",
+						boundWorkIds: [sourceWorkId],
+					},
+				},
+			},
+		};
+		const sourceRow = {
+			workId: sourceWorkId,
+			name: "Этап 210. Исследование и описание внутренних источников",
+			estimateHoursPerDay: 14,
+			coefficient: 3.5,
+			total: 49,
+			generatedByRuleId: "typical-works-catalog-detailInfo-detailTypicalTasks",
+		};
+		const groups = collectAppearedTypicalWorkGroups(
+			{
+				detailInfo: { detailTypicalTasks: [sourceRow] },
+				streamDataSources: { field_u7: [] },
+			},
+			uiSchema,
+		);
+		expect(groups).toHaveLength(1);
+		expect(groups[0]?.streamExecutor).toBe("Источники данных");
+		expect(groups[0]?.rows).toHaveLength(1);
+		expect(groups[0]?.rows[0]?.workId).toBe(sourceWorkId);
 	});
 });

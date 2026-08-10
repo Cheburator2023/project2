@@ -1,8 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { V2_MODEL_STREAM_REGISTRY_STREAM_NAMES } from "@smart-anketa/api-contract";
 import {
 	extractWorkStage,
+	findCatalogFormulaForStream,
 	findCatalogRowsForRegistryWork,
 	groupCatalogWorks,
+	resolveCatalogApplyStreams,
 } from "../../../../src/modules/anketa-v2/utils/v2-typical-work-catalog.util";
 
 describe("v2-typical-work-catalog util", () => {
@@ -26,14 +28,107 @@ describe("v2-typical-work-catalog util", () => {
 		const rows = findCatalogRowsForRegistryWork(
 			{
 				name: "09. Адаптация и внедрение модели",
-				archComponentType: "Модельный сервис",
+				archComponentType: "Модель",
 			},
 			groups,
 		);
 
 		expect(rows).toHaveLength(1);
 		expect(rows[0]?.formulaText).toContain("архкоэф(Модели");
-		expect(rows[0]?.triggerRules?.[0]?.paramName).toBe("Каналы внедрения");
+		expect(rows[0]?.component).toBe("Модель");
+		expect(rows[0]?.triggerMode).toBe("formula");
+		expect(rows[0]?.triggerFormula?.tokens?.length).toBeGreaterThan(0);
+		expect(
+			rows[0]?.triggerRules?.some((r) => r.paramCode === "field_jUm5syZf"),
+		).toBe(true);
+		expect(
+			rows[0]?.laborCoefficients?.some((c) => c.paramCode === "field_jUm5syZf"),
+		).toBe(true);
+	});
+
+	it("falls back to stage+name when registry archComponent is stale", () => {
+		const groups = groupCatalogWorks();
+		const rows = findCatalogRowsForRegistryWork(
+			{
+				name: "09. Адаптация и внедрение модели",
+				archComponentType: "Модельный сервис",
+			},
+			groups,
+		);
+		expect(rows).toHaveLength(1);
+		expect(rows[0]?.component).toBe("Модель");
+		expect(rows[0]?.triggerFormula?.tokens?.length).toBeGreaterThan(0);
+	});
+
+	it("fans out model-stream catalog settings to mother + children", () => {
+		expect(
+			resolveCatalogApplyStreams(
+				"Модельный стрим",
+				V2_MODEL_STREAM_REGISTRY_STREAM_NAMES,
+			),
+		).toEqual([...V2_MODEL_STREAM_REGISTRY_STREAM_NAMES]);
+		expect(resolveCatalogApplyStreams("Модельный стрим")).toEqual([
+			"Модельный стрим",
+		]);
+		expect(
+			resolveCatalogApplyStreams("ИД. Внутренний", ["Источники данных"]),
+		).toEqual(["Источники данных"]);
+	});
+
+	it("finds catalog formula for child stream via registry fan-out", () => {
+		const rows = [
+			{
+				stream: "Модельный стрим",
+				component: "Модель",
+				stage: "09",
+				name: "Адаптация",
+				originalName: "Адаптация",
+				workType: "Опциональная",
+				norm: 1,
+				normRaw: "1",
+				triggerParam: "",
+				triggerParams: [] as string[],
+				laborParams: [] as string[],
+				formulaText: "N * 2",
+				roundingMode: "CEIL" as const,
+				roundingStep: 0.1,
+			},
+		];
+		const child = V2_MODEL_STREAM_REGISTRY_STREAM_NAMES[1];
+		expect(child).toBeTruthy();
+		expect(findCatalogFormulaForStream(rows, child!)).toBeNull();
+		expect(
+			findCatalogFormulaForStream(
+				rows,
+				child!,
+				V2_MODEL_STREAM_REGISTRY_STREAM_NAMES,
+			)?.formulaText,
+		).toBe("N * 2");
+	});
+
+	it("model works without triggerRules still have triggerArchCount in catalog", () => {
+		const groups = groupCatalogWorks();
+		const stage01 = findCatalogRowsForRegistryWork(
+			{
+				name: "01. Постановка задачи",
+				archComponentType: "Модель",
+			},
+			groups,
+		);
+		expect(stage01[0]?.triggerArchCount?.kind).toBe("model");
+		expect(stage01[0]?.triggerArchCount?.steps?.[0]).toMatchObject({
+			count: 1,
+			coefficient: 1,
+		});
+
+		const stage05 = findCatalogRowsForRegistryWork(
+			{
+				name: "05. Разработка модели",
+				archComponentType: "Модель",
+			},
+			groups,
+		);
+		expect(stage05[0]?.triggerArchCount?.kind).toBe("model");
 	});
 
 	it("does not merge same-name works from different stages", () => {

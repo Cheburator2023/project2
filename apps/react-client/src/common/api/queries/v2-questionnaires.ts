@@ -6,8 +6,11 @@ import type {
 	BulkDeleteV2QuestionnairesResultDto,
 	SeedV2TestQuestionnairesResultDto,
 	UpdateV2QuestionnaireRequestDto,
+	AcquireV2QuestionnaireEditLockRequestDto,
 	V2QuestionnaireCommentDto,
 	V2QuestionnaireDto,
+	V2QuestionnaireEditLockDto,
+	V2QuestionnaireEditLocksListDto,
 	V2QuestionnaireFormPackageDto,
 	V2QuestionnaireRegistryConfigDto,
 } from "@smart-anketa/api-contract";
@@ -90,12 +93,24 @@ export const useUpdateV2Questionnaire = () => {
 				method: "PATCH",
 				data: body,
 			}),
-		onSuccess: (_data, vars) => {
-			qc.invalidateQueries({ queryKey: ROOT_KEY });
-			qc.invalidateQueries({ queryKey: [...ROOT_KEY, vars.id] });
-			qc.invalidateQueries({
-				queryKey: [...ROOT_KEY, vars.id, "form-package"],
-			});
+		onSuccess: (data, vars) => {
+			// Soft-update: без invalidate form-package, чтобы не флешило форму.
+			qc.setQueryData<V2QuestionnaireDto>([...ROOT_KEY, vars.id], data);
+			qc.setQueryData<V2QuestionnaireFormPackageDto>(
+				[...ROOT_KEY, vars.id, "form-package"],
+				(prev) => {
+					if (!prev) return prev;
+					return {
+						...prev,
+						questionnaire: {
+							...prev.questionnaire,
+							...data,
+							formData: vars.body.formData ?? prev.questionnaire.formData,
+						},
+					};
+				},
+			);
+			void qc.invalidateQueries({ queryKey: ROOT_KEY, exact: true });
 		},
 	});
 };
@@ -240,3 +255,64 @@ export const useDeleteV2QuestionnaireComment = () => {
 		},
 	});
 };
+
+export const useV2QuestionnaireEditLocks = (enabled = true) =>
+	useQuery<V2QuestionnaireEditLocksListDto>({
+		queryKey: [...ROOT_KEY, "edit-locks"],
+		queryFn: () =>
+			apiClient<V2QuestionnaireEditLocksListDto>({
+				url: "/v2/questionnaires/edit-locks",
+				method: "GET",
+			}),
+		enabled,
+		refetchInterval: 5_000,
+		refetchOnWindowFocus: true,
+	});
+
+export const useAcquireV2QuestionnaireEditLock = () =>
+	useMutation({
+		mutationFn: ({
+			id,
+			body,
+		}: {
+			id: string;
+			body: AcquireV2QuestionnaireEditLockRequestDto;
+		}) =>
+			apiClient<V2QuestionnaireEditLockDto>({
+				url: `/v2/questionnaires/${id}/edit-lock`,
+				method: "POST",
+				data: body,
+			}),
+	});
+
+export const useRenewV2QuestionnaireEditLock = () =>
+	useMutation({
+		mutationFn: ({
+			id,
+			body,
+		}: {
+			id: string;
+			body: AcquireV2QuestionnaireEditLockRequestDto;
+		}) =>
+			apiClient<V2QuestionnaireEditLockDto>({
+				url: `/v2/questionnaires/${id}/edit-lock`,
+				method: "PUT",
+				data: body,
+			}),
+	});
+
+export const useReleaseV2QuestionnaireEditLock = () =>
+	useMutation({
+		mutationFn: ({
+			id,
+			body,
+		}: {
+			id: string;
+			body: AcquireV2QuestionnaireEditLockRequestDto;
+		}) =>
+			apiClient<void>({
+				url: `/v2/questionnaires/${id}/edit-lock`,
+				method: "DELETE",
+				data: body,
+			}),
+	});

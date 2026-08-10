@@ -1,6 +1,6 @@
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import type { V2TemplateSnapshotDto } from "./v2-template.types";
-import scaffoldSnapshot from "./v2-anketa-system-scaffold.snapshot.json";
+import scaffoldSnapshotJson from "./v2-anketa-system-scaffold.snapshot.json";
 
 export const V2_ANKETA_SYSTEM_ROOT_KEYS = [
 	"workflow",
@@ -20,11 +20,17 @@ export function isV2AnketaSystemRootKey(
 	return SYSTEM_ROOT_KEY_SET.has(key);
 }
 
-const scaffoldJsonSchemaProperties = scaffoldSnapshot.jsonSchemaProperties as Record<
-	string,
-	RJSFSchema
->;
-const scaffoldUiSchema = scaffoldSnapshot.uiSchema as Record<string, unknown>;
+type ScaffoldSnapshot = {
+	jsonSchemaProperties: Record<string, RJSFSchema>;
+	uiSchema: Record<string, unknown>;
+};
+
+/** ts-jest/CJS иногда кладёт JSON в `.default` — нормализуем. */
+const scaffoldSnapshot = ((scaffoldSnapshotJson as { default?: ScaffoldSnapshot })
+	.default ?? scaffoldSnapshotJson) as ScaffoldSnapshot;
+
+const scaffoldJsonSchemaProperties = scaffoldSnapshot.jsonSchemaProperties;
+const scaffoldUiSchema = scaffoldSnapshot.uiSchema;
 
 /** Канонический scaffold скрытых системных корневых секций анкеты. */
 export function buildV2AnketaSystemScaffold(): {

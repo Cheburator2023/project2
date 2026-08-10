@@ -24,8 +24,11 @@ import {
 	resolveCanonicalWorkArchComponentType,
 } from "./typicalWorkPatchErrors";
 import {
+	formatArchComponentRef,
 	resolveArchComponentAtPointer,
+	resolveArchComponentRefAtPointer,
 	resolveSchemaNodeType,
+	type ArchComponentRef,
 } from "../../propertiesFieldKind";
 import type { FieldPathHint } from "../../types";
 
@@ -71,6 +74,8 @@ export function schemaWorkParameterEmptyPickerMessage(
 export type SchemaBuiltWorkParameterDto = V2TypicalWorkParameterDto & {
 	/** Свободный ввод (type: string без enum/справочника). */
 	textual?: boolean;
+	/** Арх-компонент, внутри которого лежит поле схемы. */
+	archRef?: ArchComponentRef | null;
 };
 
 export function isSchemaTextualParam(
@@ -130,13 +135,72 @@ function schemaLaborParamModeHint(
 	return "Нет дискретных значений — Any-of, скорее всего, не подойдёт";
 }
 
-/** Подсказка в селекте «Параметр трудоёмкости» — путь к полю и уместный режим. */
+/** «Модельный сервис · modelService · block_a1b2c3» — арх-компонент поля. */
+export function schemaParamArchCaption(
+	param: SchemaBuiltWorkParameterDto | undefined,
+): string | null {
+	return formatArchComponentRef(param?.archRef);
+}
+
+/**
+ * Сколько ещё полей схемы носят то же название. Одноимённые поля в разных
+ * арх-компонентах — самая частая причина привязки работы не к тому компоненту.
+ */
+export function countSameNamedSchemaParams(
+	param: Pick<V2TypicalWorkParameterDto, "code" | "name"> | undefined,
+	paramOptions: Array<Pick<V2TypicalWorkParameterDto, "code" | "name">>,
+): number {
+	const name = param?.name.trim().toLocaleLowerCase("ru");
+	if (!name) return 0;
+	return paramOptions.filter(
+		(other) =>
+			other.code !== param?.code &&
+			other.name.trim().toLocaleLowerCase("ru") === name,
+	).length;
+}
+
+/** Подсказка в селекте «Параметр трудоёмкости» — арх-компонент, путь и режим. */
 export function schemaLaborParamPickerCaption(
 	param: SchemaBuiltWorkParameterDto,
 ): string {
-	const path = param.description?.trim();
+	const ref = resolveSchemaParamFieldRef(param);
+	const pathParts = [
+		schemaParamArchCaption(param),
+		param.id,
+		ref.varPath || param.description?.trim() || null,
+		ref.fieldKey !== param.code ? ref.fieldKey : null,
+	].filter((part): part is string => Boolean(part?.trim()));
+	const path = pathParts.join(" · ");
 	const modeHint = schemaLaborParamModeHint(param);
 	return path ? `${path} · ${modeHint}` : modeHint;
+}
+
+/** Строки коэффициентов «по значениям» из значений параметра схемы / справочника. */
+export function buildLaborCoefficientRowsFromParamValues(
+	param: Pick<V2TypicalWorkParameterDto, "code" | "name" | "values">,
+	streamExecutor: string,
+	paramName?: string | null,
+): Array<{
+	id: string;
+	streamExecutor: string;
+	paramCode: string;
+	paramName: string;
+	valueCode: string;
+	valueLabel: string;
+	coefficient: number;
+}> {
+	if (param.values.length === 0 || param.values.length > 24) return [];
+	const name = paramName?.trim() || param.name;
+	const stamp = Date.now();
+	return param.values.map((value, index) => ({
+		id: `new-${stamp}-${value.code}-${index}`,
+		streamExecutor,
+		paramCode: param.code,
+		paramName: name,
+		valueCode: value.code,
+		valueLabel: value.label,
+		coefficient: 1,
+	}));
 }
 
 export function resolveWorkArchSchemaType(
@@ -245,9 +309,16 @@ function valuesFromHintPreview(
 	);
 }
 
+/**
+ * Лист схемы, пригодный как параметр работы.
+ * Массивы объектов отсекаем; исключение — мультисправочник
+ * (`array` of `string` + `ui:options.dictionaryCode`): его значения —
+ * элементы справочника, как у одиночного select.
+ */
 function isArchComponentLeafField(
 	pointer: string,
 	jsonSchema: RJSFSchema,
+	dictionaryCode?: string | null,
 ): boolean {
 	const node = resolveSchemaNode(jsonSchema, pointerSegments(pointer));
 	const type = resolveSchemaNodeType(node);
@@ -255,7 +326,11 @@ function isArchComponentLeafField(
 		if (Array.isArray(node?.enum) && node.enum.length > 0) return true;
 		return node?.const !== undefined;
 	}
-	if (type === "array") return false;
+	if (type === "array") {
+		if (!dictionaryCode?.trim()) return false;
+		const items = node?.items as RJSFSchema | undefined;
+		return resolveSchemaNodeType(items) === "string";
+	}
 	if (type === "object" && node && isObjectFieldGroup(node)) return false;
 	return true;
 }
@@ -287,14 +362,10 @@ function schemaParamCodeFromHint(
 
 function schemaParamDescription(
 	hint: FieldPathHint,
-	uiSchema: Record<string, unknown> | undefined,
+	archRef: ArchComponentRef | null,
 ): string {
-	const fieldArch = resolveArchComponentAtPointer(uiSchema, hint.pointer);
-	const archLabel = fieldArch
-		? (V2_ARCH_COMPONENT_LABELS[fieldArch as V2ArchComponentType] ?? fieldArch)
-		: null;
 	const path = hint.varPath || hint.pointer;
-	return archLabel ? `${archLabel} · ${path}` : path;
+	return archRef ? `${archRef.label} · ${path}` : path;
 }
 
 type BuiltSchemaParam = SchemaBuiltWorkParameterDto & {
@@ -321,6 +392,7 @@ function finalizeSchemaWorkParameters(
 			dictionaryCode: param.dictionaryCode,
 			numeric: param.numeric,
 			textual: param.textual,
+			archRef: param.archRef,
 			values: param.values,
 			sourceKeys: [param.code],
 		}))
@@ -398,12 +470,21 @@ export function buildSchemaWorkParameters({
 
 	for (const hint of fieldPathHints) {
 		if (isSystemScaffoldField(hint.pointer)) continue;
-		if (!isArchComponentLeafField(hint.pointer, jsonSchema)) continue;
+		if (
+			!isArchComponentLeafField(
+				hint.pointer,
+				jsonSchema,
+				hint.dictionaryCode,
+			)
+		) {
+			continue;
+		}
 		if (isWorkResultBlockField(uiSchema, hint.pointer)) continue;
 
 		const node = resolveSchemaNode(jsonSchema, pointerSegments(hint.pointer));
-		const dictionaryValues = hint.dictionaryCode
-			? valuesFromDictionary(hint.dictionaryCode, enumMapByCode)
+		const dictionaryCode = hint.dictionaryCode?.trim() || undefined;
+		const dictionaryValues = dictionaryCode
+			? valuesFromDictionary(dictionaryCode, enumMapByCode)
 			: [];
 		const previewValues = valuesFromHintPreview(hint);
 		const schemaValues = valuesFromSchemaNode(node);
@@ -417,13 +498,14 @@ export function buildSchemaWorkParameters({
 			dictionaryValues.length > 0 || previewValues.length > 0
 				? false
 				: schemaValues.numeric;
+		/** Привязка к справочнику — не «свободный текст», даже пока enum ещё грузится. */
 		const textual =
+			dictionaryCode ||
 			dictionaryValues.length > 0 ||
 			previewValues.length > 0 ||
 			schemaValues.textual !== true
 				? undefined
 				: true;
-		const dictionaryCode = hint.dictionaryCode?.trim() || undefined;
 
 		if (values.length === 0 && !numeric && !dictionaryCode && !textual)
 			continue;
@@ -432,12 +514,18 @@ export function buildSchemaWorkParameters({
 		if (!name) continue;
 
 		const code = schemaParamCodeFromHint(hint, usedCodes);
+		const archRef = resolveArchComponentRefAtPointer(
+			uiSchema,
+			hint.pointer,
+			jsonSchema,
+		);
 		params.push({
 			id: `schema:${hint.schemaFieldUid ?? hint.pointer}`,
 			schemaFieldUid: hint.schemaFieldUid ?? undefined,
 			code,
 			name,
-			description: schemaParamDescription(hint, uiSchema),
+			description: schemaParamDescription(hint, archRef),
+			archRef,
 			dictionaryCode,
 			numeric,
 			textual,
@@ -633,9 +721,8 @@ export function excludeRulesByGroupKey<T extends TriggerRuleLike>(
 }
 
 /** CSV/seed-триггер → поле схемы анкеты (алиас «Тип источника (внешний)» → `type`). */
-export function resolveSchemaParamForTriggerRule(
-	rule: TriggerRuleLike,
-	paramOptions: V2TypicalWorkParameterDto[],
-): V2TypicalWorkParameterDto | undefined {
+export function resolveSchemaParamForTriggerRule<
+	T extends V2TypicalWorkParameterDto,
+>(rule: TriggerRuleLike, paramOptions: T[]): T | undefined {
 	return resolveWorkSchemaParamForRule(rule, paramOptions);
 }

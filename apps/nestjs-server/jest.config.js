@@ -3,7 +3,16 @@ module.exports = {
 	rootDir: ".",
 	testRegex: ".*\\.spec\\.ts$",
 	transform: {
-		"^.+\\.(t|j)s$": "ts-jest",
+		"^.+\\.(t|j)s$": [
+			"ts-jest",
+			{
+				tsconfig: {
+					resolveJsonModule: true,
+					esModuleInterop: true,
+					allowSyntheticDefaultImports: true,
+				},
+			},
+		],
 	},
 	collectCoverageFrom: [
 		"src/**/*.(t|j)s",
@@ -18,6 +27,10 @@ module.exports = {
 	coverageDirectory: "../coverage",
 	testEnvironment: "node",
 	moduleNameMapper: {
+		"^@smart-anketa/api-contract$":
+			"<rootDir>/../../packages/api-contract/src/index.ts",
+		"^@smart-anketa/api-contract/(.*)$":
+			"<rootDir>/../../packages/api-contract/src/$1",
 		"^@app/(.*)$": "<rootDir>/src/$1",
 		"^src/(.*)$": "<rootDir>/src/$1",
 		"^test/(.*)$": "<rootDir>/test/$1",

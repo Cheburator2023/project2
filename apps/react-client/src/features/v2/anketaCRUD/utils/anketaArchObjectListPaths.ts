@@ -14,12 +14,33 @@ export const ANKETA_ARCH_OBJECT_LIST_PATHS = [
 export type AnketaArchObjectListPath =
 	(typeof ANKETA_ARCH_OBJECT_LIST_PATHS)[number];
 
+/** Лимит записей для отдельных арх. блоков (undefined = без лимита). */
+export const ANKETA_ARCH_OBJECT_LIST_MAX_ITEMS: Partial<
+	Record<AnketaArchObjectListPath, number>
+> = {
+	"generalInfo.modelService": 1,
+};
+
 const ARCH_OBJECT_LIST_PATH_SET = new Set<string>(
 	ANKETA_ARCH_OBJECT_LIST_PATHS,
 );
 
 export function isAnketaArchObjectListPath(path: string): boolean {
 	return ARCH_OBJECT_LIST_PATH_SET.has(path);
+}
+
+export function getArchObjectListMaxItems(path: string): number | undefined {
+	if (!isAnketaArchObjectListPath(path)) return undefined;
+	return ANKETA_ARCH_OBJECT_LIST_MAX_ITEMS[path as AnketaArchObjectListPath];
+}
+
+export function canAppendArchObjectListItem(
+	data: Record<string, unknown>,
+	path: string,
+): boolean {
+	const maxItems = getArchObjectListMaxItems(path);
+	if (maxItems == null) return true;
+	return readArchObjectListAtPath(data, path).length < maxItems;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -69,14 +90,17 @@ function clonePathRoot(data: Record<string, unknown>, path: string): {
 	};
 }
 
-/** Записывает список арх. блока в formData (всегда массив). */
+/** Записывает список арх. блока в formData (всегда массив, с учётом maxItems). */
 export function writeArchObjectListAtPath(
 	data: Record<string, unknown>,
 	path: string,
 	items: Record<string, unknown>[],
 ): Record<string, unknown> {
+	const maxItems = getArchObjectListMaxItems(path);
+	const limited =
+		maxItems == null ? items : items.slice(0, Math.max(0, maxItems));
 	const { next, parent, lastKey } = clonePathRoot(data, path);
-	parent[lastKey] = items;
+	parent[lastKey] = limited;
 	return next;
 }
 
@@ -85,6 +109,7 @@ export function appendArchObjectListItem(
 	path: string,
 	item: Record<string, unknown>,
 ): Record<string, unknown> {
+	if (!canAppendArchObjectListItem(data, path)) return data;
 	return writeArchObjectListAtPath(data, path, [
 		...readArchObjectListAtPath(data, path),
 		item,

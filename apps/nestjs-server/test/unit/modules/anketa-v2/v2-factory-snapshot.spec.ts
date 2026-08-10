@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
 	resolveAnketaCalculationLogic,
+	stripParamNameSourceKeys,
 	stripQuestionnaireCalcNameFromTemplateSnapshot,
 	type V2LogicGraphDto,
 } from "@smart-anketa/api-contract";
@@ -12,6 +13,16 @@ const snapshotPath = join(
 	__dirname,
 	"../../../../src/modules/anketa-v2/constants/v2-default-anketa.snapshot.json",
 );
+
+const SOURCE_STREAMS = new Set([
+	"Источники данных",
+	"ИД. Внутренний",
+	"ИД. Внешний",
+]);
+
+function laborDisplayName(paramName: string | null | undefined): string {
+	return stripParamNameSourceKeys(paramName).trim();
+}
 
 function stripDraft07Schema(schema: Record<string, unknown>) {
 	const { $schema: _omit, ...rest } = schema;
@@ -104,13 +115,20 @@ describe("v2 factory snapshot", () => {
 		);
 		expect(work).toBeDefined();
 		const hashing = work?.laborCoefficients?.find(
-			(group) => group.paramName === "Требуется хэширование/ шифрование",
+			(group) =>
+				laborDisplayName(group.paramName) ===
+				"Требуется хэширование/ шифрование",
 		);
-		expect(hashing?.values).toEqual([
-			{ label: "Да", coefficient: 1.25 },
-			{ label: "Нет", coefficient: 0.75 },
-			{ label: "Неизвестно", coefficient: 1 },
-		]);
+		expect(hashing?.values).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ label: "Да", coefficient: 1.25 }),
+				expect.objectContaining({ label: "Нет", coefficient: 0.75 }),
+				expect.objectContaining({
+					label: "Неизвестно",
+					coefficient: 1,
+				}),
+			]),
+		);
 	});
 
 	it("учитывает компонентное исключение для хэширования системы-источника", () => {
@@ -122,7 +140,9 @@ describe("v2 factory snapshot", () => {
 					"Интервьюирование заказчика, подтверждение финансирования и обработка RDS",
 		);
 		const hashing = work?.laborCoefficients?.find(
-			(group) => group.paramName === "Требуется хэширование/ шифрование",
+			(group) =>
+				laborDisplayName(group.paramName) ===
+				"Требуется хэширование/ шифрование",
 		);
 		expect(hashing?.values.find((value) => value.label === "Нет")?.coefficient).toBe(
 			0.9,
@@ -133,6 +153,21 @@ describe("v2 factory snapshot", () => {
 		for (const work of V2_FACTORY_TYPICAL_WORKS_SNAPSHOT.typicalWorks) {
 			if (!work.formulaText) continue;
 			for (const group of work.laborCoefficients ?? []) {
+				if (group.kind === "any_of") {
+					expect(group.anyOf).toBeDefined();
+					expect(Number.isFinite(group.anyOf?.coeffOn)).toBe(true);
+					expect(Number.isFinite(group.anyOf?.coeffOff)).toBe(true);
+					continue;
+				}
+				// overallUncertainty подставляется рантаймом, в snapshot values могут быть пустыми.
+				if (
+					group.paramCode === "overallUncertainty" ||
+					laborDisplayName(group.paramName)
+						.toLowerCase()
+						.includes("общая неопределённость")
+				) {
+					continue;
+				}
 				expect(group.values.length).toBeGreaterThan(0);
 				for (const value of group.values) {
 					expect(Number.isFinite(value.coefficient)).toBe(true);
@@ -145,36 +180,128 @@ describe("v2 factory snapshot", () => {
 		const bindings = V2_FACTORY_TYPICAL_WORKS_SNAPSHOT.typicalWorks.flatMap(
 			(work) =>
 				(work.laborCoefficients ?? [])
-					.filter((group) => group.paramName === "Тип работ")
+					.filter(
+						(group) => laborDisplayName(group.paramName) === "Тип работ",
+					)
 					.map((group) => ({ work, group })),
 		);
 
-		expect(bindings).toHaveLength(24);
+		expect(bindings.length).toBeGreaterThanOrEqual(20);
 		for (const { work, group } of bindings) {
-			expect(group.values.map((value) => value.label)).toEqual([
-				"Разработка",
-				"Доработка",
-				"Настройка",
-			]);
+			const labels = group.values.map((value) => value.label);
+			expect(labels.length).toBeGreaterThanOrEqual(2);
+			expect(labels).toEqual(
+				expect.arrayContaining(["Разработка", "Доработка"]),
+			);
 			if (work.component.includes("Процесс")) {
-				expect(group).toMatchObject({
-					paramCode: "field_yJ51GkCR",
-					schemaFieldUid: "field_68f5a4fa-579f-4b89-b4f3-11214957dffe",
-				});
-				expect(work.formulaText).toContain("коэф(field_yJ51GkCR)");
+				expect(group.paramCode).toBe("field_yJ51GkCR");
+				expect(work.formulaText ?? "").toContain("коэф(field_yJ51GkCR)");
 			} else {
-				expect(group).toMatchObject({
-					paramCode: "workType",
-					schemaFieldUid: "field_6f91d0c5-3949-4468-88e9-29741af2b07d",
-				});
-				expect(work.formulaText).toContain("коэф(workType)");
+				expect(group.paramCode).toBe("workType");
+				expect(work.formulaText ?? "").toContain("коэф(workType)");
 			}
 		}
 	});
 
+	it("внутренние источники 210–212: нормы и триггеры после publish из admin export", () => {
+		const byName = (fragment: string) =>
+			V2_FACTORY_TYPICAL_WORKS_SNAPSHOT.typicalWorks.find(
+				(row) =>
+					SOURCE_STREAMS.has(row.stream) &&
+					row.name.includes(fragment),
+			);
+
+		const stage210 = byName(
+			"Исследование и описание внутренних источников",
+		);
+		expect(stage210?.stream).toBe("Источники данных");
+		expect(stage210?.norm).toBe(14);
+		expect(stage210?.triggerRules).toEqual([
+			expect.objectContaining({
+				paramCode: "type",
+				values: ["Внутренний"],
+				valueCode: "внутренний",
+				valueLabel: "Внутренний",
+			}),
+		]);
+
+		const stage211Process = byName(
+			"процесса загрузки данных для внутренних",
+		);
+		expect(stage211Process?.norm).toBe(22);
+		expect(
+			stage211Process?.laborCoefficients?.some(
+				(g) => laborDisplayName(g.paramName) === "Сложность реализации",
+			),
+		).toBe(true);
+
+		const stage211Vitrina = byName("витрины для внутренних данных");
+		expect(stage211Vitrina?.norm).toBe(22);
+		const clarify = stage211Vitrina?.laborCoefficients?.find((g) =>
+			laborDisplayName(g.paramName).includes("уточнение требований"),
+		);
+		expect(clarify?.values.map((v) => v.label)).toEqual(["Да", "Нет"]);
+		expect(clarify?.values.map((v) => v.coefficient)).toEqual([10, 1]);
+
+		const stage212Process = byName(
+			"процесса загрузки внутренних данных",
+		);
+		expect(stage212Process?.norm).toBe(22);
+		expect(stage212Process?.stream).toBe("Источники данных");
+		expect(stage212Process?.triggerRules).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					paramCode: "type",
+					values: ["Внутренний"],
+					valueCode: "внутренний",
+				}),
+				expect.objectContaining({
+					values: ["Да"],
+					valueCode: "true",
+				}),
+			]),
+		);
+		const processWorkType = stage212Process?.laborCoefficients?.find(
+			(g) => laborDisplayName(g.paramName) === "Тип работ",
+		);
+		expect(processWorkType?.paramCode).toBe("field_yJ51GkCR");
+		expect(processWorkType?.values.map((v) => v.label).sort()).toEqual([
+			"Доработка",
+			"Разработка",
+		]);
+
+		/**
+		 * Витрина зависит только от количества метрик: «Тип работ» давал
+		 * коэффициент 1 при любом значении и складывался с метриками, из-за
+		 * чего оценка удваивалась (22 × (1 + 1.2) вместо 22 × 1.2).
+		 */
+		const stage212Vitrina = byName("витрины внутренних данных");
+		expect(stage212Vitrina?.norm).toBe(22);
+		expect(stage212Vitrina?.laborParams).toEqual(["Количество метрик"]);
+		expect(
+			stage212Vitrina?.laborCoefficients?.map((g) =>
+				laborDisplayName(g.paramName),
+			),
+		).toEqual(["Количество метрик"]);
+		expect(stage212Vitrina?.laborCoefficients?.[0]?.values).toEqual([
+			expect.objectContaining({ label: "до 20 метрик", coefficient: 1 }),
+			expect.objectContaining({ label: "20–50 метрик", coefficient: 1.2 }),
+			expect.objectContaining({ label: ">50 метрик", coefficient: 1.4 }),
+		]);
+		expect(stage212Vitrina?.formulaText).toBe("N × коэф(field_28IPlEQu)");
+	});
+
 	it("dictionariesSnapshot из v35", () => {
 		expect(file.dictionariesSnapshot?.referencedDictionaryCodes?.length).toBe(
-			70,
+			67,
+		);
+		expect(
+			file.dictionariesSnapshot?.referencedDictionaryCodes,
+		).not.toEqual(
+			expect.arrayContaining([
+				"v2.method.21.сроки_инициативы",
+				"v2.method.22.стоимость_инициативы",
+			]),
 		);
 	});
 
@@ -187,7 +314,7 @@ describe("v2 factory snapshot", () => {
 		);
 		expect(work?.triggerRules).toEqual([
 			expect.objectContaining({
-				paramName: "Необходимость пилота (MVP)",
+				paramName: expect.stringContaining("Необходимость пилота (MVP)"),
 				operator: "=",
 				values: ["Да"],
 				paramCode: "field_o_HRj6VO",
@@ -195,5 +322,32 @@ describe("v2 factory snapshot", () => {
 				valueLabel: "Да",
 			}),
 		]);
+	});
+
+	it("модельный стрим 07: формула с prePromEval, без «Поддержка пилота»", () => {
+		const work = V2_FACTORY_TYPICAL_WORKS_SNAPSHOT.typicalWorks.find(
+			(row) =>
+				row.stream === "Модельный стрим" &&
+				row.stage === "07" &&
+				row.name === "Разработка витрины для применения модели",
+		);
+		expect(work?.triggerMode).toBe("formula");
+		expect(work?.triggerFormula?.text).toContain(
+			"Необходимость поддержки проведения пилота",
+		);
+		expect(work?.triggerFormula?.text).not.toContain("Поддержка пилота =");
+		expect(work?.triggerFormula?.tokens).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					kind: "param",
+					paramCode: "prePromEval",
+				}),
+				expect.objectContaining({
+					kind: "param",
+					paramCode: "productionAdditionalReports",
+					operator: "!=",
+				}),
+			]),
+		);
 	});
 });

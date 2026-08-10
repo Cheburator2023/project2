@@ -1,107 +1,116 @@
 /**
- * Канон F-05 (редакция 2026-07 TIS, llm/feature_roles_fresh):
- * group path → realm roles.
+ * Канон group path → realm roles.
+ *
+ * Снято с живого Keycloak SUMD (realm `cym`, 2026-07-25) — тестер подтвердил OK.
+ * Источник дампа: `llm/output/keycloak-sumd-live-group-role-matrix.json`.
  *
  * Важно: «approve» разделён на две realm-роли:
  * - anketa_workflow_approve — завершение раздела/блока (§3.10);
  * - anketa_complete_anketa — завершение заполнения анкеты (§3.12).
  *
+ * Лиды — только top-level: `/ds_lead`, `/de_lead`, `/modelops_lead`, `/validator_lead`.
+ * Не создавать nested `/ds/ds_lead`, `/de/de_lead` и т.п.
+ *
  * Latin-дубли с другим регистром (/DE vs /de) НЕ трогаем.
  */
 
+const DS_LEAD_ROLES = [
+	"anketa_view_all_calculations",
+	"anketa_create_calculation",
+	"anketa_edit_calculation",
+	"anketa_delete_calculation",
+	"anketa_export_reports",
+	"anketa_workflow_approve",
+	"anketa_complete_anketa",
+] as const;
+
+/** Руководитель DE: edit + завершение, без create/delete. */
+const DE_LEAD_ROLES = [
+	"anketa_view_all_calculations",
+	"anketa_edit_calculation",
+	"anketa_export_reports",
+	"anketa_workflow_approve",
+	"anketa_complete_anketa",
+] as const;
+
+const MODELOPS_LEAD_ROLES = [
+	"anketa_view_all_calculations",
+	"anketa_create_calculation",
+	"anketa_edit_calculation",
+	"anketa_delete_calculation",
+	"anketa_export_reports",
+	"anketa_workflow_approve",
+	"anketa_complete_anketa",
+] as const;
+
+const VALIDATOR_ROLES = [
+	"anketa_view_all_calculations",
+	"anketa_export_reports",
+] as const;
+
+const AUDITOR_ROLES = [
+	"anketa_view_all_calculations",
+	"anketa_export_reports",
+	"anketa_audit_view",
+] as const;
+
+const MIPM_ROLES = [
+	"anketa_view_all_calculations",
+	"anketa_export_reports",
+] as const;
+
 export const V2_KEYCLOAK_GROUP_ROLE_TARGET: Record<string, readonly string[]> = {
 	"/ds": ["anketa_view_all_calculations", "anketa_export_reports"],
-	"/ds/ds_lead": [
-		"anketa_view_all_calculations",
-		"anketa_create_calculation",
-		"anketa_edit_calculation",
-		"anketa_delete_calculation",
-		"anketa_export_reports",
-		"anketa_workflow_approve",
-		"anketa_complete_anketa",
-	],
+	"/ds_lead": DS_LEAD_ROLES,
 	"/de": ["anketa_view_all_calculations", "anketa_export_reports"],
-	"/de/de_lead": [
-		"anketa_view_all_calculations",
-		"anketa_edit_calculation",
-		"anketa_export_reports",
-		"anketa_workflow_approve",
-		"anketa_complete_anketa",
-	],
+	"/de_lead": DE_LEAD_ROLES,
+	/** ModelOps executor: только view + export (без delete на SUMD). */
 	"/modelops": ["anketa_view_all_calculations", "anketa_export_reports"],
-	"/modelops/modelops_lead": [
-		"anketa_view_all_calculations",
-		"anketa_create_calculation",
-		"anketa_edit_calculation",
-		"anketa_delete_calculation",
-		"anketa_export_reports",
-		"anketa_workflow_approve",
-		"anketa_complete_anketa",
-	],
+	"/modelops_lead": MODELOPS_LEAD_ROLES,
 	"/business_customer": [],
-	/** Бизнес-партнёр (sum_mipm) / стрима (sum_mipm_<стрим>): только view + export. */
-	"/mipm": ["anketa_view_all_calculations", "anketa_export_reports"],
-	"/validator": ["anketa_view_all_calculations", "anketa_export_reports"],
-	"/validator/validator_lead": [
-		"anketa_view_all_calculations",
-		"anketa_export_reports",
-	],
-	/** Архитектор: завершение раздела, но не анкеты. */
+	"/mipm": MIPM_ROLES,
+	"/mipm_stream": MIPM_ROLES,
+	"/validator": VALIDATOR_ROLES,
+	"/validator_lead": VALIDATOR_ROLES,
 	"/architect": [
 		"anketa_view_all_calculations",
 		"anketa_edit_calculation",
 		"anketa_export_reports",
 		"anketa_workflow_approve",
 	],
-	/** Аналитик качества работы моделей ДАДМ: раздел да, анкета нет. */
 	"/mntranlst": [
 		"anketa_view_all_calculations",
 		"anketa_edit_calculation",
 		"anketa_export_reports",
 		"anketa_workflow_approve",
 	],
-	/**
-	 * Аналитик качества модельных данных (sum_da): уровень B, завершение анкеты
-	 * (немодельной), без завершения раздела.
-	 */
 	"/da": [
 		"anketa_view_all_calculations",
 		"anketa_edit_calculation",
 		"anketa_export_reports",
 		"anketa_complete_anketa",
 	],
-	/**
-	 * Аналитик качества модельных данных стрима (sum_da_<стрим>): уровень A,
-	 * только edit своего блока, без завершения раздела/анкеты.
-	 */
 	"/da_stream": [
 		"anketa_view_all_calculations",
 		"anketa_edit_calculation",
 		"anketa_export_reports",
 	],
-	/** AD sum_appadmin. Админка — по группе appadmin/sacfg, не anketa_admin_*. */
-	"/appadmin": [
-		"anketa_view_all_calculations",
-		"anketa_audit_view",
-	],
+	/**
+	 * Группы `/appadmin` в KK нет. Логический ключ → AD-лист
+	 * `/admin_it/{stand}sum_appadmin` (например `/admin_it/dev_sum_appadmin`).
+	 * Доменный код роли `appadmin` берётся из leaf (`mapV2AdGroupLeafToRoleCodes`).
+	 */
+	"/appadmin": ["anketa_view_all_calculations", "anketa_audit_view"],
 	"/admin_it": [],
 	"/admin_it/admin_it_lead": [],
-	"/auditor": [
-		"anketa_view_all_calculations",
-		"anketa_export_reports",
-		"anketa_audit_view",
-	],
-	"/auditor/auditor_lead": [
-		"anketa_view_all_calculations",
-		"anketa_export_reports",
-		"anketa_audit_view",
-	],
-	"/auditorib": [
-		"anketa_view_all_calculations",
-		"anketa_export_reports",
-		"anketa_audit_view",
-	],
-	/** AD sum_prjtoffice; /project_office — legacy alias. */
+	"/auditor": AUDITOR_ROLES,
+	"/controller": AUDITOR_ROLES,
+	"/auditor/auditor_lead": AUDITOR_ROLES,
+	/**
+	 * Группы `/auditorib` нет. Логический ключ → AD-лист
+	 * `/auditor/{stand}sum_auditorib` (например `/auditor/test_sum_auditorib`).
+	 */
+	"/auditorib": AUDITOR_ROLES,
 	"/prjtoffice": [],
 	"/project_office": [],
 	"/sacfg": [
@@ -118,15 +127,23 @@ export const V2_KEYCLOAK_GROUP_ROLE_TARGET: Record<string, readonly string[]> = 
 		"anketa_export_reports",
 		"anketa_hold",
 	],
+	/**
+	 * Представитель стрима вне ЖЦМ (1-я итерация): без create/delete и без
+	 * `anketa_complete_anketa` — анкету не создаёт, не удаляет и не завершает
+	 * целиком. `anketa_workflow_approve` нужен, чтобы закрывать раздел своего
+	 * стрима.
+	 */
 	"/sarep": [
 		"anketa_view_all_calculations",
-		"anketa_create_calculation",
 		"anketa_edit_calculation",
-		"anketa_delete_calculation",
 		"anketa_export_reports",
 		"anketa_workflow_approve",
-		"anketa_complete_anketa",
 	],
+	/**
+	 * Bypass разделения реестра по стримам (доменный код `stream_view_all`).
+	 * Группы `/stream_view_all` нет — только AD `/{stand}sum_stream_view_all`.
+	 */
+	"/stream_view_all": [],
 };
 
 /** Все path из TARGET + родители, parents first (create-only). */

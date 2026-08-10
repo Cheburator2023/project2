@@ -13,7 +13,7 @@ import {
 import { buildTypicalWorkTriggerLookupSource } from "./v2-typical-works.util";
 import type { TypicalWorkTriggerMatchContext } from "./v2-typical-works.util";
 import type { V2TypicalWorkTriggerArchCountCombinator } from "./v2-typical-work.types";
-
+import { buildV2SchemaFieldIndex } from "./v2-schema-field-index.util";
 export {
 	formatParamNameWithSourceKeys,
 	parseParamNameSourceKeys,
@@ -65,6 +65,7 @@ export type TypicalWorkRuleLike = {
 	valueCode: string | null;
 	valueLabel: string | null;
 	values?: Array<{ code: string; label: string | null }>;
+	schemaFieldUid?: string | null;
 };
 
 /** Вход для normalize: factory snapshot может хранить values как string[]. */
@@ -73,6 +74,7 @@ export type TypicalWorkTriggerRuleMatchInput = Omit<
 	"values"
 > & {
 	values?: Array<{ code: string; label: string | null } | string>;
+	schemaFieldUid?: string | null;
 };
 
 function coerceTypicalWorkTriggerRuleValues(
@@ -101,6 +103,7 @@ export function normalizeTypicalWorkTriggerRuleForMatch(
 		operator: rule.operator ?? "=",
 		valueCode: rule.valueCode,
 		valueLabel: rule.valueLabel,
+		schemaFieldUid: rule.schemaFieldUid ?? null,
 	};
 
 	if (rule.operator === "in" || rule.operator === "not_in") {
@@ -415,7 +418,19 @@ export function catalogValueMatchesTriggerRule(
 	},
 ): boolean {
 	if (rule.valueCode && catalogValue.code === rule.valueCode) return true;
+	if (
+		rule.valueCode &&
+		catalogValue.code.toLowerCase() === rule.valueCode.toLowerCase()
+	) {
+		return true;
+	}
 	if (rule.valueLabel && catalogValue.label === rule.valueLabel) return true;
+	if (
+		rule.valueLabel &&
+		catalogValue.label.toLowerCase() === rule.valueLabel.toLowerCase()
+	) {
+		return true;
+	}
 	if (rule.valueLabel) {
 		const labelUpper = catalogValue.label.toUpperCase();
 		const ruleUpper = rule.valueLabel.toUpperCase();
@@ -489,6 +504,9 @@ function scalarRuleValueMatches(
 
 /** Сопоставление значения поля анкеты с кодом/меткой из справочника или схемы. */
 export function coerceNumericLaborActual(actual: unknown): unknown {
+	if (Array.isArray(actual)) {
+		return actual.map((item) => coerceNumericLaborActual(item));
+	}
 	if (typeof actual === "string") {
 		const trimmed = actual.trim();
 		if (!trimmed) return actual;
@@ -521,6 +539,119 @@ export function readValueAtSchemaPointer(
 }
 
 /**
+ * Есть ли контейнер поля по schemaPointer (родитель последнего сегмента).
+ * Нужен, чтобы отличить «поле на срезе экземпляра пустое» от «pointer не резолвится
+ * в этом formData» — во втором случае нельзя затирать значение из source.
+ */
+export function schemaPointerFieldParentExists(
+	root: Record<string, unknown>,
+	pointer: string,
+): boolean {
+	if (!pointer.startsWith("/")) return false;
+	const segments = pointer.split("/").filter(Boolean);
+	if (segments.length === 0) return false;
+	const parentSegments = segments.slice(0, -1);
+	let cur: unknown = root;
+	for (const segment of parentSegments) {
+		if (segment === "items") {
+			if (!Array.isArray(cur) || cur.length === 0) return false;
+			cur = cur[0];
+			continue;
+		}
+		if (cur == null || typeof cur !== "object") return false;
+		if (Array.isArray(cur)) {
+			if (cur.length === 0) return false;
+			cur = cur[0];
+		}
+		if (cur == null || typeof cur !== "object" || Array.isArray(cur)) {
+			return false;
+		}
+		cur = (cur as Record<string, unknown>)[segment];
+	}
+	return cur != null && typeof cur === "object" && !Array.isArray(cur);
+}
+
+function isPresentLaborLookupValue(value: unknown): boolean {
+	return value !== undefined && value !== null && value !== "";
+}
+
+function toLaborLookupItems(value: unknown): unknown[] {
+	if (!isPresentLaborLookupValue(value)) return [];
+	if (Array.isArray(value)) {
+		return value.flatMap((item) => toLaborLookupItems(item));
+	}
+	return [value];
+}
+
+function laborLookupItemKey(value: unknown): string {
+	if (typeof value === "string") return `s:${value}`;
+	if (typeof value === "number") return `n:${value}`;
+	if (typeof value === "boolean") return `b:${value ? "1" : "0"}`;
+	return `j:${JSON.stringify(value)}`;
+}
+
+function mergeLaborLookupValue(existing: unknown, next: unknown): unknown {
+	const merged = [...toLaborLookupItems(existing), ...toLaborLookupItems(next)];
+	if (merged.length === 0) return undefined;
+	const seen = new Set<string>();
+	const deduped: unknown[] = [];
+	for (const item of merged) {
+		const key = laborLookupItemKey(item);
+		if (seen.has(key)) continue;
+		seen.add(key);
+		deduped.push(item);
+	}
+	return deduped.length === 1 ? deduped[0] : deduped;
+}
+
+function isOwnTriggerSourceValue(value: unknown): boolean {
+	return isPresentLaborLookupValue(value) || typeof value === "boolean";
+}
+
+/**
+ * Поля триггера с другого арх. компонента (напр. readyPromReports на моделях
+ * при fan-out по системам-источникам): flatten last-write даёт значение
+ * последней модели и ломает «хотя бы одна модель = Нет».
+ *
+ * Если в formData несколько разных ответов — всегда подставляем массив
+ * (laborValueMatches = any), даже когда source уже содержит last-write.
+ * Один ответ: не трогаем source, если поле на нём уже есть.
+ */
+export function overlayCrossComponentTriggerLookup(
+	lookup: Record<string, unknown>,
+	source: Record<string, unknown>,
+	formData: Record<string, unknown> | undefined,
+	paramCodes: readonly string[],
+): Record<string, unknown> {
+	if (!formData || paramCodes.length === 0) return lookup;
+	const next: Record<string, unknown> = { ...lookup };
+	for (const code of paramCodes) {
+		const trimmed = code.trim();
+		if (!trimmed) continue;
+		const values = findFieldValuesWithSourceLabels(formData, trimmed).map(
+			(row) => row.value,
+		);
+		const meaningful = values.filter((value) => isOwnTriggerSourceValue(value));
+		if (meaningful.length === 0) continue;
+		const seen = new Set<string>();
+		const deduped: unknown[] = [];
+		for (const item of meaningful) {
+			const key = laborLookupItemKey(item);
+			if (seen.has(key)) continue;
+			seen.add(key);
+			deduped.push(item);
+		}
+		if (deduped.length > 1) {
+			next[trimmed] = deduped;
+			continue;
+		}
+		if (isOwnTriggerSourceValue(source[trimmed])) continue;
+		next[trimmed] = deduped[0];
+	}
+	return next;
+}
+
+/**
  * Разворачивает значение sourceContextPaths в плоский объект полей.
  * UI хранит dataProcess/dataMart/modelService как массив записей — берём первую.
  */
@@ -539,33 +670,80 @@ export function flattenSourceContextValue(
 	return { ...(value as Record<string, unknown>) };
 }
 
+export type LaborFieldValueWithSource = {
+	value: unknown;
+	sourceLabel: string | null;
+};
+
+function readArchComponentSourceLabel(
+	record: Record<string, unknown>,
+	fallbackIndex: number | null,
+): string | null {
+	for (const key of ["name", "title", "label", "modelName"]) {
+		const raw = record[key];
+		if (typeof raw === "string" && raw.trim()) return raw.trim();
+	}
+	if (fallbackIndex != null && fallbackIndex >= 0) {
+		return `Компонент ${fallbackIndex + 1}`;
+	}
+	return null;
+}
+
+/** Ищет все вхождения поля по коду с подписью арх-компонента (name и т.п.). */
+export function findFieldValuesWithSourceLabels(
+	formData: Record<string, unknown>,
+	fieldCode: string,
+): LaborFieldValueWithSource[] {
+	const code = fieldCode.trim();
+	if (!code) return [];
+
+	const results: LaborFieldValueWithSource[] = [];
+	const seen = new Set<string>();
+
+	const push = (value: unknown, sourceLabel: string | null) => {
+		for (const item of toLaborLookupItems(value)) {
+			const key = `${sourceLabel ?? ""}|${laborLookupItemKey(item)}`;
+			if (seen.has(key)) continue;
+			seen.add(key);
+			results.push({ value: item, sourceLabel });
+		}
+	};
+
+	const visit = (
+		node: unknown,
+		parentLabel: string | null,
+		arrayIndex: number | null,
+	): void => {
+		if (node == null || typeof node !== "object") return;
+		if (Array.isArray(node)) {
+			node.forEach((item, index) => visit(item, parentLabel, index));
+			return;
+		}
+		const record = node as Record<string, unknown>;
+		const ownLabel =
+			readArchComponentSourceLabel(record, arrayIndex) ?? parentLabel;
+		if (Object.hasOwn(record, code)) {
+			push(record[code], ownLabel);
+		}
+		for (const child of Object.values(record)) {
+			visit(child, ownLabel, null);
+		}
+	};
+
+	visit(formData, null, null);
+	return results;
+}
+
 /** Ищет значение поля по коду в глубине formData (массивы арх. блоков и т.п.). */
 export function findFieldValueInFormData(
 	formData: Record<string, unknown>,
 	fieldCode: string,
 ): unknown {
-	const code = fieldCode.trim();
-	if (!code) return undefined;
-
-	const visit = (node: unknown): unknown => {
-		if (node == null || typeof node !== "object") return undefined;
-		if (Array.isArray(node)) {
-			for (const item of node) {
-				const found = visit(item);
-				if (found !== undefined) return found;
-			}
-			return undefined;
-		}
-		const record = node as Record<string, unknown>;
-		if (Object.hasOwn(record, code)) return record[code];
-		for (const child of Object.values(record)) {
-			const found = visit(child);
-			if (found !== undefined) return found;
-		}
-		return undefined;
-	};
-
-	return visit(formData);
+	const values = findFieldValuesWithSourceLabels(formData, fieldCode).map(
+		(row) => row.value,
+	);
+	if (values.length === 0) return undefined;
+	return values.length === 1 ? values[0] : values;
 }
 
 /** Контекст для коэффициентов: строка arch-компонента + поля formData вне строки (generalInfo и т.д.). */
@@ -576,23 +754,40 @@ export function buildLaborCoefficientLookupSource(
 		code: string;
 		name?: string | null;
 		schemaPointer?: string | null;
+		schemaFieldUid?: string | null;
+		multiSelect?: boolean;
 	}>,
 	paramCodes: readonly string[],
+	options?: {
+		/** Индекс схемы: uid → актуальный pointer (path не SoT). */
+		schemaFieldIndex?: import("./v2-schema-field-index.util").V2SchemaFieldIndex | null;
+	},
 ): Record<string, unknown> {
 	const merged: Record<string, unknown> = { ...source };
 	const codes = new Set(paramCodes);
+	const fieldIndex = options?.schemaFieldIndex ?? null;
 
-	const isPresent = (value: unknown) =>
-		value !== undefined && value !== null && value !== "";
+	const isPresent = (value: unknown) => isPresentLaborLookupValue(value);
 
 	for (const param of schemaParams) {
 		if (!codes.has(param.code)) continue;
-		if (isPresent(merged[param.code])) continue;
-		const pointer = param.schemaPointer?.trim();
+		// 1) Стабильный uid → pointer из индекса (переживает DnD).
+		const uid = param.schemaFieldUid?.trim();
+		const pointerFromUid =
+			uid && fieldIndex
+				? fieldIndex.byUid.get(uid)?.pointer
+				: undefined;
+		const pointer = pointerFromUid ?? param.schemaPointer?.trim();
 		if (!pointer) continue;
+		// Срез экземпляра (per-instance formData) — источник истины для поля:
+		// пустое значение на строке НЕ должно наследовать flatten last-write из source
+		// (иначе пустые модели получают коэф. последней заполненной).
+		if (!schemaPointerFieldParentExists(formData, pointer)) continue;
 		const fromForm = readValueAtSchemaPointer(formData, pointer);
 		if (isPresent(fromForm) || typeof fromForm === "boolean") {
 			merged[param.code] = fromForm;
+		} else {
+			delete merged[param.code];
 		}
 	}
 
@@ -616,7 +811,10 @@ export function buildLaborCoefficientLookupSource(
 			if (aliasName !== name) continue;
 			const aliasValue = merged[alias.code];
 			if (isPresent(aliasValue) || typeof aliasValue === "boolean") {
-				merged[param.code] = aliasValue;
+				merged[param.code] = mergeLaborLookupValue(
+					merged[param.code],
+					aliasValue,
+				);
 				break;
 			}
 		}
@@ -624,11 +822,83 @@ export function buildLaborCoefficientLookupSource(
 
 	// Fallback: поле лежит в массиве арх. блока, а schemaPointer/schemaParams недоступны.
 	for (const code of codes) {
-		if (isPresent(merged[code]) || typeof merged[code] === "boolean") continue;
+		if (isPresent(merged[code]) || typeof merged[code] === "boolean") {
+			continue;
+		}
 		const fromDeep = findFieldValueInFormData(formData, code);
 		if (isPresent(fromDeep) || typeof fromDeep === "boolean") {
-			merged[code] = fromDeep;
+			merged[code] = mergeLaborLookupValue(merged[code], fromDeep);
 		}
+	}
+
+	// Legacy labor code (`workType`) vs factory field (`field_yJ51GkCR`) с тем же
+	// названием «Тип работ»: подтянуть значение с текущей строки экземпляра.
+	for (const code of codes) {
+		if (isPresent(merged[code]) || typeof merged[code] === "boolean") {
+			continue;
+		}
+		const targetName = stripParamNameSourceKeys(
+			schemaParams.find((param) => param.code === code)?.name ?? "",
+		)
+			.trim()
+			.toLowerCase();
+		if (targetName) {
+			for (const alias of schemaParams) {
+				if (alias.code === code) continue;
+				if (
+					stripParamNameSourceKeys(alias.name).trim().toLowerCase() !==
+					targetName
+				) {
+					continue;
+				}
+				const aliasValue = merged[alias.code] ?? source[alias.code];
+				if (isPresent(aliasValue) || typeof aliasValue === "boolean") {
+					merged[code] = mergeLaborLookupValue(merged[code], aliasValue);
+					break;
+				}
+			}
+		}
+		if (isPresent(merged[code]) || typeof merged[code] === "boolean") {
+			continue;
+		}
+		// labor code отсутствует в schemaParams: сопоставить по имени ключа в source.
+		for (const [key, raw] of Object.entries(source)) {
+			if (key === code) continue;
+			const sp = schemaParams.find((param) => param.code === key);
+			if (!sp) continue;
+			const spName = stripParamNameSourceKeys(sp.name).trim().toLowerCase();
+			if (!spName) continue;
+			const codeAsName = code.replace(/_/g, " ").toLowerCase();
+			const slugName = slugParamCode(sp.name ?? "");
+			const isWorkTypeAlias =
+				spName === "тип работ" &&
+				(code === "workType" || code === "work_type");
+			if (
+				slugName === code ||
+				spName === codeAsName ||
+				isWorkTypeAlias
+			) {
+				if (isPresent(raw) || typeof raw === "boolean") {
+					merged[code] = mergeLaborLookupValue(merged[code], raw);
+					break;
+				}
+			}
+		}
+	}
+
+	// Массив в lookup имеет два разных смысла. У array-поля схемы это множественный
+	// выбор одного экземпляра (каналы внедрения модели) — его значения складываются
+	// ниже по потоку. У скалярного поля массив собран из нескольких экземпляров
+	// арх-компонента; складывать такие значения нельзя, берём первое, как раньше.
+	const multiSelectCodes = new Set(
+		schemaParams
+			.filter((param) => param.multiSelect)
+			.map((param) => param.code),
+	);
+	for (const code of codes) {
+		const value = merged[code];
+		if (!Array.isArray(value) || multiSelectCodes.has(code)) continue;
+		merged[code] = value[0];
 	}
 
 	return merged;
@@ -640,11 +910,18 @@ export function laborValueMatches(
 	valueCode: string | null | undefined,
 	valueLabel: string | null | undefined,
 ): boolean {
+	if (Array.isArray(actual)) {
+		return actual.some((item) => laborValueMatches(item, valueCode, valueLabel));
+	}
 	const normalizedActual = coerceNumericLaborActual(actual);
+	const actualStr = String(normalizedActual).trim();
+
 	if (valueLabel != null && String(valueLabel).trim() !== "") {
-		if (String(normalizedActual) === valueLabel) return true;
+		const label = String(valueLabel).trim();
+		if (actualStr === label) return true;
+		if (matchesEnumPrefixLaborValue(actualStr, label)) return true;
 		if (typeof normalizedActual === "number" && Number.isFinite(normalizedActual)) {
-			const range = valueLabel.trim().toLowerCase().replace(/\s+/g, " ");
+			const range = label.toLowerCase().replace(/\s+/g, " ");
 			const upTo = range.match(/^до\s*(\d+(?:[.,]\d+)?)/u);
 			if (upTo?.[1] && normalizedActual <= Number(upTo[1].replace(",", "."))) {
 				return true;
@@ -662,23 +939,50 @@ export function laborValueMatches(
 				return true;
 			}
 		}
-		if (typeof normalizedActual === "boolean") {
-			const norm = valueLabel.trim().toLowerCase();
-			if (norm === "да" && normalizedActual === true) return true;
-			if (norm === "нет" && normalizedActual === false) return true;
-			if (norm === "true" && normalizedActual === true) return true;
-			if (norm === "false" && normalizedActual === false) return true;
+		if (matchesBooleanLaborLabel(normalizedActual, label)) {
+			return true;
 		}
 	}
 	if (valueCode != null && String(valueCode).trim() !== "") {
-		if (String(normalizedActual) === valueCode) return true;
-		if (typeof normalizedActual === "boolean") {
-			const norm = valueCode.trim().toLowerCase();
-			if (norm === "true" && normalizedActual === true) return true;
-			if (norm === "false" && normalizedActual === false) return true;
-			if (norm === "да" && normalizedActual === true) return true;
-			if (norm === "нет" && normalizedActual === false) return true;
+		const code = String(valueCode).trim();
+		if (actualStr === code) return true;
+		if (matchesEnumPrefixLaborValue(actualStr, code)) return true;
+		if (matchesBooleanLaborLabel(normalizedActual, code)) {
+			return true;
 		}
+	}
+	return false;
+}
+
+/**
+ * Enum схемы «4 — …» / «ОК — …» ↔ короткий код/метка трудоёмкости «4» / «ОК».
+ * Как у catalogValueMatchesTriggerRule.
+ */
+function matchesEnumPrefixLaborValue(
+	actualStr: string,
+	expectedShort: string,
+): boolean {
+	const short = expectedShort.trim();
+	if (!short) return false;
+	return (
+		actualStr.startsWith(`${short} —`) ||
+		actualStr.startsWith(`${short} -`) ||
+		actualStr.startsWith(`${short} –`)
+	);
+}
+
+function matchesBooleanLaborLabel(actual: unknown, expected: string): boolean {
+	const norm = expected.trim().toLowerCase();
+	const truthy = norm === "да" || norm === "true";
+	const falsy = norm === "нет" || norm === "false";
+	if (!truthy && !falsy) return false;
+	if (typeof actual === "boolean") {
+		return truthy ? actual === true : actual === false;
+	}
+	if (typeof actual === "string") {
+		const a = actual.trim().toLowerCase();
+		if (truthy) return a === "да" || a === "true";
+		return a === "нет" || a === "false";
 	}
 	return false;
 }
@@ -800,6 +1104,23 @@ export function typicalWorkRulesMatchSource(
 	const hasArch = hasTypicalWorkTriggerArchCount(triggerArchCount);
 	if (rules.length === 0 && !hasArch) return false;
 
+	const archMatch = hasArch
+		? formData
+			? archCountTriggerMatches(
+					formData,
+					triggerArchCount!.kind!,
+					triggerArchCount!.steps ?? [],
+				)
+			: false
+		: false;
+
+	/** Только arch-count (без ПТ) — как у модельного стрима «Модельный сервис >= 1». */
+	if (rules.length === 0) return archMatch;
+
+	const resolvedRules = remapTriggerRulesToSchemaParams(
+		rules,
+		matchContext?.schemaParams,
+	);
 	const lookupSource = buildTypicalWorkTriggerLookupSource(
 		source,
 		formData,
@@ -807,8 +1128,16 @@ export function typicalWorkRulesMatchSource(
 		matchContext?.uiSchema,
 	);
 	const paramCodes = [
-		...new Set(rules.map((rule) => rule.paramCode.trim()).filter(Boolean)),
+		...new Set(resolvedRules.map((rule) => rule.paramCode.trim()).filter(Boolean)),
 	];
+	const schemaFieldIndex =
+		matchContext?.schemaFieldIndex ??
+		(matchContext?.jsonSchema || matchContext?.uiSchema
+			? buildV2SchemaFieldIndex(
+					matchContext.jsonSchema,
+					matchContext.uiSchema,
+				)
+			: null);
 	const enrichedLookup =
 		formData && matchContext?.schemaParams?.length
 			? buildLaborCoefficientLookupSource(
@@ -816,21 +1145,72 @@ export function typicalWorkRulesMatchSource(
 					formData,
 					matchContext.schemaParams,
 					paramCodes,
+					{ schemaFieldIndex },
 				)
 			: lookupSource;
-	const paramMatch = matchTypicalWorkParamRules(rules, enrichedLookup);
+	const triggerLookup = overlayCrossComponentTriggerLookup(
+		enrichedLookup,
+		source,
+		formData,
+		paramCodes,
+	);
+	const paramMatch = matchTypicalWorkParamRules(resolvedRules, triggerLookup);
 	if (!hasArch) return paramMatch;
 
-	const archMatch = formData
-		? archCountTriggerMatches(
-				formData,
-				triggerArchCount!.kind!,
-				triggerArchCount!.steps ?? [],
-			)
-		: false;
 	const combinator = triggerArchCount?.combinator ?? "and";
 	if (combinator === "or") return paramMatch || archMatch;
 	return paramMatch && archMatch;
+}
+
+/**
+ * Устаревший paramCode в триггере (после пересоздания поля в схеме):
+ * перепривязка по имени параметра через schemaParams.
+ */
+export function remapTriggerRulesToSchemaParams(
+	rules: TypicalWorkRuleLike[],
+	schemaParams?: ReadonlyArray<{
+		code: string;
+		name?: string | null;
+		schemaFieldUid?: string | null;
+	}> | null,
+): TypicalWorkRuleLike[] {
+	if (!schemaParams?.length) return rules;
+	const byCode = new Set(schemaParams.map((param) => param.code));
+	const byUid = new Map(
+		schemaParams
+			.filter((param) => param.schemaFieldUid?.trim())
+			.map((param) => [param.schemaFieldUid!.trim(), param] as const),
+	);
+	return rules.map((rule) => {
+		const uid = rule.schemaFieldUid?.trim();
+		if (uid) {
+			const byFieldUid = byUid.get(uid);
+			if (byFieldUid) {
+				return {
+					...rule,
+					paramCode: byFieldUid.code,
+					paramName: byFieldUid.name ?? rule.paramName,
+					schemaFieldUid: uid,
+				};
+			}
+		}
+		const code = rule.paramCode.trim();
+		if (!code || byCode.has(code)) return rule;
+		const ruleName = stripParamNameSourceKeys(rule.paramName)
+			.trim()
+			.toLowerCase();
+		if (!ruleName) return rule;
+		const byName = schemaParams.find(
+			(param) =>
+				stripParamNameSourceKeys(param.name).trim().toLowerCase() === ruleName,
+		);
+		if (!byName) return rule;
+		return {
+			...rule,
+			paramCode: byName.code,
+			schemaFieldUid: byName.schemaFieldUid ?? rule.schemaFieldUid,
+		};
+	});
 }
 
 export function hasTypicalWorkTriggersConfiguredSimple(
@@ -889,10 +1269,150 @@ function expectedBooleanLaborValue(
 	return null;
 }
 
+export type LaborCoefficientAnswerPart = {
+	sourceLabel: string | null;
+	answerLabel: string;
+	coefficient: number;
+};
+
+export type LaborCoefficientResolvedDetail = {
+	paramCode: string;
+	value: number;
+	aggregation: "single" | "sum" | "max";
+	/** Подстановка в разборе формулы: `0.5` или `(0,5 + 1,5)` для multi-select. */
+	formulaValueLabel: string;
+	parts: LaborCoefficientAnswerPart[];
+};
+
+function formatLaborAnswerLabel(actual: unknown): string {
+	if (actual === true) return "Да";
+	if (actual === false) return "Нет";
+	if (actual == null) return "—";
+	const text = String(actual).trim();
+	return text || "—";
+}
+
+function formatLaborCoeffNumber(value: number): string {
+	if (!Number.isFinite(value)) return "?";
+	const rounded = Math.round(value * 10000) / 10000;
+	if (Number.isInteger(rounded)) return String(rounded);
+	return String(rounded)
+		.replace(/(\.\d*?)0+$/, "$1")
+		.replace(/\.$/, "");
+}
+
+function matchLaborCoefficientRow(
+	actual: unknown,
+	paramRows: readonly ByValueLaborCoefficientRow[],
+): ByValueLaborCoefficientRow | null {
+	for (const row of paramRows) {
+		if (laborValueMatches(actual, row.valueCode, row.valueLabel)) {
+			return row;
+		}
+	}
+	return null;
+}
+
+/**
+ * Строки коэффициентов по фактическому ответу, в порядке выбора.
+ * Для multi-select возвращает строку на каждое выбранное значение — их
+ * коэффициенты складываются (напр. «Каналы внедрения»: батч + стриминг).
+ */
+function matchLaborCoefficientRows(
+	actual: unknown,
+	paramRows: readonly ByValueLaborCoefficientRow[],
+): ByValueLaborCoefficientRow[] {
+	if (!Array.isArray(actual)) {
+		const matched = matchLaborCoefficientRow(actual, paramRows);
+		return matched ? [matched] : [];
+	}
+	const matched: ByValueLaborCoefficientRow[] = [];
+	const seen = new Set<ByValueLaborCoefficientRow>();
+	for (const item of actual) {
+		const row = matchLaborCoefficientRow(item, paramRows);
+		if (!row || seen.has(row)) continue;
+		seen.add(row);
+		matched.push(row);
+	}
+	return matched;
+}
+
+function sumLaborCoefficients(
+	rows: readonly ByValueLaborCoefficientRow[],
+): number {
+	const sum = rows.reduce((acc, row) => acc + row.coefficient, 0);
+	return Math.round(sum * 10000) / 10000;
+}
+
+function coerceBooleanLaborDefault(
+	actual: unknown,
+	paramRows: readonly ByValueLaborCoefficientRow[],
+): unknown {
+	if (actual !== undefined) return actual;
+	const booleanValues = new Set(
+		paramRows.map((row) =>
+			expectedBooleanLaborValue(row.valueCode, row.valueLabel),
+		),
+	);
+	if (booleanValues.has(true) && booleanValues.has(false)) {
+		return false;
+	}
+	return actual;
+}
+
+/**
+ * Детальный разбор коэффициента «по значениям» для одного source-контекста
+ * (per-instance: скаляр текущего экземпляра).
+ */
+export function resolveByValueLaborParamCoefficientDetails(
+	source: Record<string, unknown>,
+	rows: readonly ByValueLaborCoefficientRow[],
+	_formData?: Record<string, unknown> | null,
+): Record<string, LaborCoefficientResolvedDetail> {
+	const details: Record<string, LaborCoefficientResolvedDetail> = {};
+	const coeffs = resolveByValueLaborParamCoefficients(source, rows);
+	const rowsByParam = new Map<string, ByValueLaborCoefficientRow[]>();
+	for (const row of rows) {
+		const paramRows = rowsByParam.get(row.paramCode) ?? [];
+		paramRows.push(row);
+		rowsByParam.set(row.paramCode, paramRows);
+	}
+
+	for (const [paramCode, value] of Object.entries(coeffs)) {
+		const paramRows = rowsByParam.get(paramCode) ?? [];
+		const paramName = paramRows[0]?.paramName ?? null;
+		const actual = coerceBooleanLaborDefault(
+			readLaborParamAnswer(source, paramCode, paramName),
+			paramRows,
+		);
+		const matched = matchLaborCoefficientRows(actual, paramRows);
+		const parts = matched.map((row) => ({
+			sourceLabel: null,
+			answerLabel:
+				row.valueLabel?.trim() ||
+				row.valueCode?.trim() ||
+				formatLaborAnswerLabel(actual),
+			coefficient: row.coefficient,
+		}));
+		details[paramCode] = {
+			paramCode,
+			value,
+			aggregation: parts.length > 1 ? "sum" : "single",
+			formulaValueLabel:
+				parts.length > 1
+					? `(${parts.map((part) => formatLaborCoeffNumber(part.coefficient)).join(" + ")})`
+					: formatLaborCoeffNumber(value),
+			parts,
+		};
+	}
+	return details;
+}
+
 /** Коэффициенты режима «По значениям» по фактическому ответу в анкете. */
 export function resolveByValueLaborParamCoefficients(
 	source: Record<string, unknown>,
 	rows: readonly ByValueLaborCoefficientRow[],
+	_formData?: Record<string, unknown> | null,
 ): Record<string, number> {
 	const paramCoefficients: Record<string, number> = {};
 	const rowsByParam = new Map<string, ByValueLaborCoefficientRow[]>();
@@ -904,27 +1424,13 @@ export function resolveByValueLaborParamCoefficients(
 
 	for (const [paramCode, paramRows] of rowsByParam) {
 		const paramName = paramRows[0]?.paramName ?? null;
-		let actual = readLaborParamAnswer(source, paramCode, paramName);
-
-		// Неотмеченный чекбокс часто отсутствует в formData целиком. Если набор
-		// коэффициентов явно логический (есть и Да/true, и Нет/false), отсутствие
-		// поля эквивалентно false и должно выбрать коэффициент строки «Нет».
-		if (actual === undefined) {
-			const booleanValues = new Set(
-				paramRows.map((row) =>
-					expectedBooleanLaborValue(row.valueCode, row.valueLabel),
-				),
-			);
-			if (booleanValues.has(true) && booleanValues.has(false)) {
-				actual = false;
-			}
-		}
-
-		for (const row of paramRows) {
-			if (laborValueMatches(actual, row.valueCode, row.valueLabel)) {
-				paramCoefficients[paramCode] = row.coefficient;
-				break;
-			}
+		const actual = coerceBooleanLaborDefault(
+			readLaborParamAnswer(source, paramCode, paramName),
+			paramRows,
+		);
+		const matched = matchLaborCoefficientRows(actual, paramRows);
+		if (matched.length > 0) {
+			paramCoefficients[paramCode] = sumLaborCoefficients(matched);
 		}
 	}
 	return paramCoefficients;

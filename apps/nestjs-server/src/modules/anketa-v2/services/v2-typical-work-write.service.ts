@@ -26,10 +26,13 @@ import type {
 	V2TypicalWorkSchemaFieldSyncRequestDto,
 	V2TypicalWorkSchemaBulkSyncResponseDto,
 	BulkDeleteV2TypicalWorksResultDto,
+	WorkSchemaParamDef,
 } from "@smart-anketa/api-contract";
 import {
 	applyComputedOverallUncertaintyToTypicalWorkParamCoefficients,
+	applyDictionaryEnumsToWorkSchemaParams,
 	buildWorkSchemaParamsFromTemplate,
+	collectDictionaryCodesFromWorkSchemaParams,
 	collectTypicalWorkSchemaConsistencyIssues,
 	enrichWorkSchemaParamsWithCatalogAliases,
 	findCatalogPreviousCodeForSchemaParam,
@@ -44,6 +47,7 @@ import {
 	defaultWorkRounding,
 	detectTransitiveCycle,
 	evaluateTermsFormula,
+	isObsoleteCatalogLaborParam,
 	isWorkCoefficientValueAvailable,
 	needsCalculationLogicBackfill,
 	normalizeStoredFormula,
@@ -55,6 +59,8 @@ import {
 	resolveLaborAnyOfCoefficient,
 	resolveByValueLaborParamCoefficients,
 	reconcileTypicalWorkCardWithSchemaField,
+	stripParamNameSourceKeys,
+	mergeSchemaSyncAffectedWorks,
 	mergeLaborParamGroupsByParamCode,
 	dedupeLaborCoefficientsByStoredValue,
 	reconcileFormulaWithLaborArchCounts,
@@ -84,6 +90,7 @@ import { V2TypicalWorkEntity } from "../entities/v2-typical-work.entity";
 import { normalizeArchComponentType, slugParamCode } from "../utils/v2-typical-work-catalog.util";
 import { V2_FACTORY_TYPICAL_WORKS_SNAPSHOT } from "../constants/v2-factory-typical-works-catalog";
 import { V2TypicalWorkParamCatalogService } from "./v2-typical-work-param-catalog.service";
+import { V2DictionaryService } from "./v2-dictionary.service";
 import {
 	V2TypicalWorkSeedService,
 	V2TypicalWorkService,
@@ -116,6 +123,7 @@ export class V2TypicalWorkWriteService {
 		private readonly typicalWorkService: V2TypicalWorkService,
 		private readonly typicalWorkSeedService: V2TypicalWorkSeedService,
 		private readonly paramCatalogService: V2TypicalWorkParamCatalogService,
+		private readonly dictionaryService: V2DictionaryService,
 	) {}
 
 	private withReconcileLock<T>(
@@ -1011,6 +1019,7 @@ export class V2TypicalWorkWriteService {
 			laborParamsUpdated: 0,
 			laborParamsRemoved: 0,
 			formulasInvalidated: 0,
+			affectedWorks: [],
 		};
 
 		if (configs.length === 0) {
@@ -1092,6 +1101,16 @@ export class V2TypicalWorkWriteService {
 			impact.laborParamsUpdated += reconciled.impact.laborParamsUpdated;
 			impact.laborParamsRemoved += reconciled.impact.laborParamsRemoved;
 			impact.formulasInvalidated += reconciled.impact.formulasInvalidated;
+			impact.affectedWorks.push({
+				workId: config.workId,
+				workName: card.name,
+				streamExecutor: config.streamExecutor,
+				rulesUpdated: reconciled.impact.rulesUpdated,
+				rulesRemoved: reconciled.impact.rulesRemoved,
+				laborParamsUpdated: reconciled.impact.laborParamsUpdated,
+				laborParamsRemoved: reconciled.impact.laborParamsRemoved,
+				formulaInvalidated: reconciled.impact.formulasInvalidated > 0,
+			});
 
 			if (dto.mode !== "apply") continue;
 			const next = reconciled.card;
@@ -1197,9 +1216,19 @@ export class V2TypicalWorkWriteService {
 		for (const group of card.laborParams) {
 			if (group.kind === "any_of") continue;
 			const eligibleRows = group.coefficients
-				.filter((row) =>
-					isWorkCoefficientValueAvailable(row, coefficientValueCatalog, atDate),
-				)
+				.filter((row) => {
+					if (group.schemaFieldUid?.trim()) return true;
+					return isWorkCoefficientValueAvailable(
+						{
+							paramCode: group.paramCode,
+							schemaFieldUid: group.schemaFieldUid,
+							valueCode: row.valueCode ?? null,
+							valueLabel: row.valueLabel ?? null,
+						},
+						coefficientValueCatalog,
+						atDate,
+					);
+				})
 				.map((row) => ({
 					paramCode: group.paramCode,
 					paramName: group.paramName,
@@ -1389,6 +1418,30 @@ export class V2TypicalWorkWriteService {
 			}),
 			catalog.items,
 		);
+		const dictionaryCodes = collectDictionaryCodesFromWorkSchemaParams(
+			schemaParams,
+		);
+		const dictionaryJson =
+			dictionaryCodes.length > 0
+				? await this.dictionaryService.getDictionariesAsJsonBulk(
+						dictionaryCodes,
+					)
+				: {};
+		const enumMapByCode: Record<
+			string,
+			{ enums: string[]; enumNames: string[] }
+		> = {};
+		for (const [code, snapshot] of Object.entries(dictionaryJson)) {
+			enumMapByCode[code] = {
+				enums: snapshot.items.map((item) => item.code),
+				enumNames: snapshot.items.map((item) => item.label),
+			};
+		}
+		/** Только для панели проблем: values = живой справочник, не jsonSchema.enum. */
+		const schemaParamsForConsistency = applyDictionaryEnumsToWorkSchemaParams(
+			schemaParams,
+			enumMapByCode,
+		);
 		const aggregate: V2TypicalWorkSchemaBulkSyncResponseDto = {
 			worksMatched: 0,
 			worksUpdated: 0,
@@ -1397,6 +1450,7 @@ export class V2TypicalWorkWriteService {
 			laborParamsUpdated: 0,
 			laborParamsRemoved: 0,
 			formulasInvalidated: 0,
+			affectedWorks: [],
 			fieldsProcessed: 0,
 			consistencyIssues: [],
 		};
@@ -1432,10 +1486,12 @@ export class V2TypicalWorkWriteService {
 						aliasCodes: schemaParam.sourceKeys,
 						code: schemaParam.code,
 						name: schemaParam.name,
-						values:
-							schemaParam.values && schemaParam.values.length > 0
-								? schemaParam.values
-								: undefined,
+						/**
+						 * Не передаём values в bulk: иначе apply пересобирает
+						 * коэффициенты из jsonSchema.enum и затирает правки админа
+						 * при каждом заходе в редактор. Values синконятся точечно
+						 * при изменении поля схемы (client per-field sync).
+						 */
 					},
 				},
 				duplicateNameCount > 1 ? schemaParam.archComponent : null,
@@ -1449,6 +1505,78 @@ export class V2TypicalWorkWriteService {
 			aggregate.laborParamsUpdated += impact.laborParamsUpdated;
 			aggregate.laborParamsRemoved += impact.laborParamsRemoved;
 			aggregate.formulasInvalidated += impact.formulasInvalidated;
+			aggregate.affectedWorks = mergeSchemaSyncAffectedWorks(
+				aggregate.affectedWorks,
+				impact.affectedWorks,
+			);
+		}
+
+		/**
+		 * Ссылки на поля, которых больше нет в схеме (поле пересоздали в
+		 * конструкторе — uid сменился). Без этой фазы они не чинятся никогда:
+		 * матч по коду/имени блокируется заполненным schemaFieldUid.
+		 */
+		const knownFieldUids = new Set(
+			schemaParams
+				.map((schemaParam) => schemaParam.schemaFieldUid?.trim())
+				.filter((uid): uid is string => Boolean(uid)),
+		);
+		const rebindableStaleUids = new Set<string>();
+		for (const config of configs) {
+			let card: Awaited<
+				ReturnType<V2TypicalWorkService["getWorkCardForSchemaSync"]>
+			>;
+			try {
+				card = await this.typicalWorkService.getWorkCardForSchemaSync(
+					config.workId,
+					config.streamExecutor,
+					templateVersionId,
+				);
+			} catch (error) {
+				if (error instanceof NotFoundException) continue;
+				throw error;
+			}
+
+			for (const ref of [...card.rules, ...card.laborParams]) {
+				const staleUid = ref.schemaFieldUid?.trim();
+				if (!staleUid || knownFieldUids.has(staleUid)) continue;
+				const target = findUniqueSchemaParamForOrphanRef(ref, schemaParams);
+				if (!target?.schemaFieldUid) continue;
+
+				const rebindKey = `${config.workId}:${config.streamExecutor}:${staleUid}:${target.schemaFieldUid}`;
+				if (rebindableStaleUids.has(rebindKey)) continue;
+				rebindableStaleUids.add(rebindKey);
+
+				const impact = await this.reconcileSchemaField(
+					{
+						templateVersionId,
+						mode,
+						operation: "upsert",
+						staleSchemaFieldUids: [staleUid],
+						field: {
+							schemaFieldUid: target.schemaFieldUid,
+							previousCode: ref.paramCode,
+							aliasCodes: target.sourceKeys,
+							code: target.code,
+							name: target.name,
+							// См. bulk upsert выше: только привязки, без пересборки коэффициентов.
+						},
+					},
+					null,
+					{ workId: config.workId, prefetchedConfigs: configs },
+				);
+				aggregate.worksMatched += impact.worksMatched;
+				aggregate.worksUpdated += impact.worksUpdated;
+				aggregate.rulesUpdated += impact.rulesUpdated;
+				aggregate.rulesRemoved += impact.rulesRemoved;
+				aggregate.laborParamsUpdated += impact.laborParamsUpdated;
+				aggregate.laborParamsRemoved += impact.laborParamsRemoved;
+				aggregate.formulasInvalidated += impact.formulasInvalidated;
+				aggregate.affectedWorks = mergeSchemaSyncAffectedWorks(
+					aggregate.affectedWorks,
+					impact.affectedWorks,
+				);
+			}
 		}
 
 		const repairedLaborBindings = new Set<string>();
@@ -1490,10 +1618,7 @@ export class V2TypicalWorkWriteService {
 							aliasCodes: resolved.sourceKeys,
 							code: resolved.code,
 							name: resolved.name,
-							values:
-								resolved.values && resolved.values.length > 0
-									? resolved.values
-									: undefined,
+							// См. bulk upsert выше: bindings only, без пересборки coeff.
 						},
 					},
 					null,
@@ -1510,7 +1635,85 @@ export class V2TypicalWorkWriteService {
 				aggregate.laborParamsUpdated += impact.laborParamsUpdated;
 				aggregate.laborParamsRemoved += impact.laborParamsRemoved;
 				aggregate.formulasInvalidated += impact.formulasInvalidated;
+			aggregate.affectedWorks = mergeSchemaSyncAffectedWorks(
+				aggregate.affectedWorks,
+				impact.affectedWorks,
+			);
 			}
+		}
+
+		for (const config of configs) {
+			let card: Awaited<
+				ReturnType<V2TypicalWorkService["getWorkCardForSchemaSync"]>
+			>;
+			try {
+				card = await this.typicalWorkService.getWorkCardForSchemaSync(
+					config.workId,
+					config.streamExecutor,
+					templateVersionId,
+				);
+			} catch (error) {
+				if (error instanceof NotFoundException) continue;
+				throw error;
+			}
+
+			const obsoleteLabor = card.laborParams.filter((labor) =>
+				isObsoleteCatalogLaborParam(labor),
+			);
+			if (obsoleteLabor.length === 0) continue;
+
+			const obsoleteCodes = new Set(
+				obsoleteLabor.map((labor) => labor.paramCode.trim()).filter(Boolean),
+			);
+			const nextLaborParams = card.laborParams.filter(
+				(labor) => !isObsoleteCatalogLaborParam(labor),
+			);
+			const nextFormulaTokens = card.formula.tokens.filter(
+				(token) =>
+					!(
+						(token.kind === "param_coeff" || token.kind === "param_anyof") &&
+						obsoleteCodes.has(token.paramCode)
+					),
+			);
+			const formulaChanged =
+				nextFormulaTokens.length !== card.formula.tokens.length;
+
+			aggregate.worksMatched++;
+			aggregate.laborParamsRemoved += obsoleteLabor.length;
+			if (formulaChanged) {
+				aggregate.formulasInvalidated++;
+			}
+			aggregate.affectedWorks = mergeSchemaSyncAffectedWorks(
+				aggregate.affectedWorks,
+				[
+					{
+						workId: config.workId,
+						workName: card.name,
+						streamExecutor: config.streamExecutor,
+						rulesUpdated: 0,
+						rulesRemoved: 0,
+						laborParamsUpdated: 0,
+						laborParamsRemoved: obsoleteLabor.length,
+						formulaInvalidated: formulaChanged,
+					},
+				],
+			);
+			if (mode !== "apply") continue;
+
+			await this.patchWork(config.workId, {
+				streamExecutor: config.streamExecutor,
+				templateVersionId,
+				laborParams: nextLaborParams,
+				...(formulaChanged
+					? {
+							formula: {
+								tokens: nextFormulaTokens,
+								text: tokensToText(nextFormulaTokens),
+							},
+						}
+					: {}),
+			});
+			aggregate.worksUpdated++;
 		}
 
 		if (!options?.skipConsistencyReport) {
@@ -1530,7 +1733,7 @@ export class V2TypicalWorkWriteService {
 				}
 				aggregate.consistencyIssues.push(
 					...collectTypicalWorkSchemaConsistencyIssues({
-						schemaParams,
+						schemaParams: schemaParamsForConsistency,
 						rules: card.rules,
 						laborParamCodes: card.laborParams.map((group) => ({
 							paramCode: group.paramCode,
@@ -1577,4 +1780,33 @@ export class V2TypicalWorkWriteService {
 
 function unique(values: string[]): string[] {
 	return [...new Set(values.filter(Boolean))];
+}
+
+/**
+ * Поле схемы для ссылки с мёртвым schemaFieldUid. Возвращает кандидата только
+ * при однозначном совпадении: одноимённые поля в разных арх-компонентах — это
+ * разные поля, угадывать за админа нельзя.
+ */
+function findUniqueSchemaParamForOrphanRef(
+	ref: { paramCode: string; paramName?: string | null },
+	schemaParams: WorkSchemaParamDef[],
+): WorkSchemaParamDef | null {
+	const byCode = schemaParams.filter(
+		(schemaParam) =>
+			schemaParam.code === ref.paramCode ||
+			schemaParam.sourceKeys?.includes(ref.paramCode),
+	);
+	if (byCode.length > 0) {
+		return byCode.length === 1 ? byCode[0] : null;
+	}
+
+	const refName = stripParamNameSourceKeys(ref.paramName ?? "")
+		.trim()
+		.toLocaleLowerCase("ru");
+	if (!refName) return null;
+	const byName = schemaParams.filter(
+		(schemaParam) =>
+			schemaParam.name.trim().toLocaleLowerCase("ru") === refName,
+	);
+	return byName.length === 1 ? byName[0] : null;
 }

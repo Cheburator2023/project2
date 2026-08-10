@@ -4,44 +4,243 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
 import Editor from "@monaco-editor/react";
-import { useCallback, useState } from "react";
+import {
+	useV2EffectiveFactoryEditorSnapshot,
+	useV2Template,
+	useV2TemplateVersionEditorSnapshot,
+} from "@react-client/common/api/queries/v2-templates";
+import { SegmentBar } from "@react-client/common/muiCustom/SegmentBar";
+import { Flex } from "@react-client/common/primitives/Flex";
+import { useCallback, useMemo, useState } from "react";
 import { useSchemaEditor } from "../SchemaEditorContext";
+import { buildSnapshotChangesReport } from "../schemaEditorEtalonDiff";
 import { downloadSchemaEditorSnapshotJson } from "../schemaEditorSnapshotJson";
 import { V2_TEMPLATE_EDIT_TEST_IDS } from "../../testIds";
 import { PanelChrome } from "../components/PanelChrome";
 
+type JsonPanelTab = "schema" | "works" | "full" | "diff";
+
+const JSON_PANEL_SEGMENTS: Array<{
+	id: JsonPanelTab;
+	label: string;
+	title?: string;
+}> = [
+	{
+		id: "schema",
+		label: "Схема",
+		title: "Редактируемый снепшот jsonSchema / uiSchema / logic",
+	},
+	{
+		id: "works",
+		label: "Типовые работы",
+		title: "Read-only карточки типовых работ активной версии",
+	},
+	{
+		id: "full",
+		label: "Полный dump",
+		title: "Схема + dictionaries + typicalWorks для выгрузки",
+	},
+	{
+		id: "diff",
+		label: "Изменения",
+		title: "Отличия от эталонной заводской схемы",
+	},
+];
+
 export function SchemaJsonPanel({ embedded = false }: { embedded?: boolean }) {
 	const {
 		templateId,
+		templateVersionId,
+		jsonSchema,
+		uiSchema,
+		logic,
 		snapshotMonacoText,
 		setSnapshotMonacoText,
 		monacoError,
 		syncMonacoApply,
 		reloadMonacoFromState,
 	} = useSchemaEditor();
+	const [tab, setTab] = useState<JsonPanelTab>("schema");
 	const [copyNote, setCopyNote] = useState<string | null>(null);
+	const { data: template } = useV2Template(templateId);
 
 	const fillHeight = embedded;
+	const needsServerSnapshot = tab === "works" || tab === "full" || tab === "diff";
+
+	const { data: editorSnapshot, isLoading: editorSnapshotLoading } =
+		useV2TemplateVersionEditorSnapshot(
+			templateId,
+			templateVersionId,
+			// Полный экспорт доступен с любой вкладки — всегда подтягиваем карточки.
+			true,
+		);
+	const { data: etalonSnapshot, isLoading: etalonLoading } =
+		useV2EffectiveFactoryEditorSnapshot(tab === "diff");
+
+	const worksJson = useMemo(
+		() =>
+			JSON.stringify(
+				{
+					templateId,
+					templateVersionId,
+					templateName: template?.name ?? null,
+					typicalWorks: editorSnapshot?.typicalWorks ?? [],
+				},
+				null,
+				"\t",
+			),
+		[
+			editorSnapshot?.typicalWorks,
+			template?.name,
+			templateId,
+			templateVersionId,
+		],
+	);
+
+	const fullJson = useMemo(() => {
+		let schemaPart: {
+			jsonSchema: unknown;
+			uiSchema: unknown;
+			logic: unknown;
+		} = {
+			jsonSchema,
+			uiSchema,
+			logic,
+		};
+		try {
+			const parsed = JSON.parse(snapshotMonacoText) as Record<string, unknown>;
+			if (
+				parsed &&
+				typeof parsed === "object" &&
+				parsed.jsonSchema &&
+				parsed.uiSchema &&
+				parsed.logic
+			) {
+				schemaPart = {
+					jsonSchema: parsed.jsonSchema,
+					uiSchema: parsed.uiSchema,
+					logic: parsed.logic,
+				};
+			}
+		} catch {
+			/* keep constructor state */
+		}
+		return JSON.stringify(
+			{
+				templateId,
+				templateVersionId,
+				templateName: template?.name ?? null,
+				...schemaPart,
+				dictionariesSnapshot: editorSnapshot?.dictionariesSnapshot ?? null,
+				typicalWorks: editorSnapshot?.typicalWorks ?? [],
+			},
+			null,
+			"\t",
+		);
+	}, [
+		editorSnapshot?.dictionariesSnapshot,
+		editorSnapshot?.typicalWorks,
+		jsonSchema,
+		logic,
+		snapshotMonacoText,
+		template?.name,
+		templateId,
+		templateVersionId,
+		uiSchema,
+	]);
+
+	const etalonLabel = useMemo(() => {
+		if (!etalonSnapshot) return "…";
+		const setting = etalonSnapshot.setting;
+		if (setting.source === "builtin") {
+			return setting.builtinSnapshotLabel || "встроенный JSON";
+		}
+		const version =
+			setting.versionNumber != null ? ` v${setting.versionNumber}` : "";
+		return `${setting.templateName ?? setting.templateId}${version}`;
+	}, [etalonSnapshot]);
+
+	/** Только список реальных изменений (без эталона и без side-by-side). */
+	const changesReport = useMemo(() => {
+		if (!etalonSnapshot || !editorSnapshot) return "";
+		return buildSnapshotChangesReport({
+			etalon: {
+				jsonSchema: etalonSnapshot.jsonSchema,
+				uiSchema: etalonSnapshot.uiSchema,
+				logic: etalonSnapshot.logic,
+				dictionariesSnapshot: etalonSnapshot.dictionariesSnapshot,
+				typicalWorks: etalonSnapshot.typicalWorks,
+				workRefIndex: etalonSnapshot.workRefIndex,
+			},
+			current: {
+				jsonSchema: editorSnapshot.jsonSchema,
+				uiSchema: editorSnapshot.uiSchema,
+				logic: editorSnapshot.logic,
+				dictionariesSnapshot: editorSnapshot.dictionariesSnapshot,
+				typicalWorks: editorSnapshot.typicalWorks,
+				workRefIndex: etalonSnapshot.workRefIndex,
+			},
+			etalonLabel,
+		});
+	}, [editorSnapshot, etalonLabel, etalonSnapshot]);
+
+	const hasChanges =
+		Boolean(changesReport) && !changesReport.includes("Отличий нет.");
+
+	const activeText = useMemo(() => {
+		if (tab === "schema") return snapshotMonacoText;
+		if (tab === "works") return worksJson;
+		if (tab === "full") return fullJson;
+		return changesReport;
+	}, [changesReport, fullJson, snapshotMonacoText, tab, worksJson]);
+
+	const readOnly = tab !== "schema";
+	const editorLanguage = tab === "diff" ? "markdown" : "json";
+	const fullExportReady = Boolean(editorSnapshot) && !editorSnapshotLoading;
 
 	const handleDownload = useCallback(() => {
 		const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
 		const idPart = templateId?.slice(0, 8) || "draft";
+		if (tab === "diff") {
+			downloadSchemaEditorSnapshotJson(
+				changesReport,
+				`anketa-changes-${idPart}-${stamp}.md`,
+			);
+			return;
+		}
+		const suffix =
+			tab === "schema" ? "schema" : tab === "works" ? "works" : "full";
 		downloadSchemaEditorSnapshotJson(
-			snapshotMonacoText,
-			`anketa-snapshot-${idPart}-${stamp}.json`,
+			activeText,
+			`anketa-${suffix}-${idPart}-${stamp}.json`,
 		);
-	}, [snapshotMonacoText, templateId]);
+	}, [activeText, changesReport, tab, templateId]);
+
+	const handleFullExport = useCallback(() => {
+		const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+		const idPart = templateId?.slice(0, 8) || "draft";
+		downloadSchemaEditorSnapshotJson(
+			fullJson,
+			`anketa-full-export-${idPart}-${stamp}.json`,
+		);
+	}, [fullJson, templateId]);
 
 	const handleCopy = useCallback(async () => {
 		try {
-			await navigator.clipboard.writeText(snapshotMonacoText);
-			setCopyNote("JSON скопирован в буфер обмена");
+			await navigator.clipboard.writeText(activeText);
+			setCopyNote("Скопировано в буфер обмена");
 			window.setTimeout(() => setCopyNote(null), 2500);
 		} catch {
 			setCopyNote("Не удалось скопировать — скачайте файл");
 			window.setTimeout(() => setCopyNote(null), 2500);
 		}
-	}, [snapshotMonacoText]);
+	}, [activeText]);
+
+	const loadingNote =
+		needsServerSnapshot &&
+		(editorSnapshotLoading || (tab === "diff" && etalonLoading))
+			? "Загрузка editor-snapshot…"
+			: null;
 
 	return (
 		<PanelChrome
@@ -49,21 +248,41 @@ export function SchemaJsonPanel({ embedded = false }: { embedded?: boolean }) {
 			fillHeight={fillHeight}
 			dataTestId={V2_TEMPLATE_EDIT_TEST_IDS.jsonEditor}
 			title="Редактор JSON (снепшот)"
-			description="Один файл как factory-снепшот: jsonSchema + uiSchema + logic. «Применить» подставляет в конструктор; «Скачать» — выгрузка для переноса в хардкод."
+			description="Схема для правки в конструкторе; «Полный экспорт» — схема + dictionaries + typicalWorks для factory bundle."
 			actions={
-				<Box sx={{ display: "flex", gap: 0.5, flexShrink: 0, flexWrap: "wrap" }}>
-					<Button size="small" variant="contained" onClick={syncMonacoApply}>
-						Применить
-					</Button>
-					<Button size="small" onClick={reloadMonacoFromState}>
-						Сбросить
+				<Flex gap={4} flexShrink={0} wrap="wrap">
+					{tab === "schema" ? (
+						<>
+							<Button size="small" variant="contained" onClick={syncMonacoApply}>
+								Применить
+							</Button>
+							<Button size="small" onClick={reloadMonacoFromState}>
+								Сбросить
+							</Button>
+						</>
+					) : null}
+					<Button
+						size="small"
+						variant="contained"
+						color="secondary"
+						startIcon={<FileDownloadOutlinedIcon />}
+						onClick={handleFullExport}
+						disabled={!fullExportReady}
+						title={
+							fullExportReady
+								? "Скачать полный dump: schema + dictionaries + typicalWorks (для publish:factory-typical-works)"
+								: "Загрузка карточек типовых работ…"
+						}
+						data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.jsonFullExport}
+					>
+						Полный экспорт
 					</Button>
 					<Button
 						size="small"
 						variant="outlined"
 						startIcon={<FileDownloadOutlinedIcon />}
 						onClick={handleDownload}
-						title="Скачать целый JSON для переноса в v2-default-anketa.snapshot.json"
+						title="Скачать текущую вкладку"
 						data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.jsonDownload}
 					>
 						Скачать
@@ -71,21 +290,26 @@ export function SchemaJsonPanel({ embedded = false }: { embedded?: boolean }) {
 					<Button size="small" variant="outlined" onClick={handleCopy}>
 						Копировать
 					</Button>
-				</Box>
+				</Flex>
 			}
 		>
-			<Box
-				sx={{
-					flex: fillHeight ? 1 : undefined,
-					minHeight: fillHeight ? 0 : undefined,
-					height: fillHeight ? "100%" : undefined,
-					display: "flex",
-					flexDirection: "column",
-					gap: 1,
-					overflow: "hidden",
-				}}
+			<Flex
+				flexDirection="column"
+				gap={8}
+				flexGrow={fillHeight ? 1 : undefined}
+				minHeight={fillHeight ? "0" : undefined}
+				height={fillHeight ? "100%" : undefined}
+				style={{ overflow: "hidden" }}
 			>
-				{monacoError ? (
+				<Box sx={{ flexShrink: 0 }}>
+					<SegmentBar
+						segments={JSON_PANEL_SEGMENTS}
+						value={tab}
+						onChange={setTab}
+					/>
+				</Box>
+
+				{monacoError && tab === "schema" ? (
 					<Alert severity="error" sx={{ flexShrink: 0 }}>
 						{monacoError}
 					</Alert>
@@ -95,19 +319,69 @@ export function SchemaJsonPanel({ embedded = false }: { embedded?: boolean }) {
 						{copyNote}
 					</Alert>
 				) : null}
-				<Typography
-					variant="caption"
-					color="text.secondary"
-					display="block"
-					sx={{ flexShrink: 0 }}
-					title="Подсказка по JSON-редактору"
-				>
-					Формат:{" "}
-					<code>{`{ "jsonSchema": {…}, "uiSchema": {…}, "logic": { "rules": […] } }`}</code>
-					. Лишние ключи (например dictionariesSnapshot) при «Применить»
-					игнорируются. Чтобы убрать поле — удалите его из jsonSchema и uiSchema,
-					затем «Применить».
-				</Typography>
+				{loadingNote ? (
+					<Alert severity="info" sx={{ flexShrink: 0 }}>
+						{loadingNote}
+					</Alert>
+				) : null}
+
+				{tab === "schema" ? (
+					<Typography
+						variant="caption"
+						color="text.secondary"
+						display="block"
+						sx={{ flexShrink: 0 }}
+						title="Подсказка по JSON-редактору"
+					>
+						Формат:{" "}
+						<code>{`{ "jsonSchema": {…}, "uiSchema": {…}, "logic": { "rules": […] } }`}</code>
+						. Apply не пишет типовые работы — только trio схемы.
+					</Typography>
+				) : null}
+				{tab === "works" ? (
+					<Typography
+						variant="caption"
+						color="text.secondary"
+						display="block"
+						sx={{ flexShrink: 0 }}
+					>
+						Read-only карточки типовых работ активной версии (триггеры, labor,
+						формулы по стримам).
+					</Typography>
+				) : null}
+				{tab === "full" ? (
+					<Typography
+						variant="caption"
+						color="text.secondary"
+						display="block"
+						sx={{ flexShrink: 0 }}
+					>
+						Единый JSON для factory bundle: схема + dictionaries + typicalWorks.
+						Кнопка «Полный экспорт» скачивает его с любой вкладки. Дальше:{" "}
+						<code>
+							npm run publish:factory-typical-works -- dump.json [--write]
+						</code>
+					</Typography>
+				) : null}
+				{tab === "diff" ? (
+					<>
+						<Typography
+							variant="caption"
+							color="text.secondary"
+							display="block"
+							sx={{ flexShrink: 0 }}
+						>
+							Только отличия от эталона ({etalonLabel}): пути и значения. Сам
+							эталон не показывается.
+						</Typography>
+						{!loadingNote && !hasChanges && changesReport ? (
+							<Alert severity="success" sx={{ flexShrink: 0 }}>
+								Отличий нет.
+							</Alert>
+						) : null}
+					</>
+				) : null}
+
 				<Box
 					data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.jsonEditors}
 					sx={{
@@ -117,19 +391,27 @@ export function SchemaJsonPanel({ embedded = false }: { embedded?: boolean }) {
 						"& .monaco-editor": { height: "100% !important" },
 					}}
 				>
+					{/* key=tab: иначе Monaco не подхватывает value при смене вкладки */}
 					<Editor
+						key={tab}
 						height="100%"
-						defaultLanguage="json"
+						defaultLanguage={editorLanguage}
+						language={editorLanguage}
 						options={{
 							minimap: { enabled: false },
 							wordWrap: "on",
 							scrollBeyondLastLine: false,
+							readOnly,
 						}}
-						value={snapshotMonacoText}
-						onChange={(v) => setSnapshotMonacoText(v ?? "")}
+						value={activeText}
+						onChange={
+							tab === "schema"
+								? (v) => setSnapshotMonacoText(v ?? "")
+								: undefined
+						}
 					/>
 				</Box>
-			</Box>
+			</Flex>
 		</PanelChrome>
 	);
 }

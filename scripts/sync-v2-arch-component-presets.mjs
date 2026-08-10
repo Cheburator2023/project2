@@ -56,7 +56,13 @@ function stripUiRoot(ui) {
 		return { uiOptions: {}, uiBranch: undefined };
 	}
 	const clone = structuredClone(ui);
-	const uiOptions = clone["ui:options"] ?? {};
+	const uiOptions = { ...(clone["ui:options"] ?? {}) };
+	/**
+	 * `archBlockUid` — идентичность конкретного блока анкеты, а не шаблона.
+	 * В пресете он бы копировался в каждый новый арх. компонент (дубликаты uid),
+	 * т.к. свежий uid генерируется только когда его нет.
+	 */
+	delete uiOptions.archBlockUid;
 	delete clone["ui:options"];
 	const keys = Object.keys(clone);
 	return {

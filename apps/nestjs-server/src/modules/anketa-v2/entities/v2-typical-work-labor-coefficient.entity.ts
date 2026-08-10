@@ -22,7 +22,7 @@ export class V2TypicalWorkLaborCoefficientEntity {
 	@Column({ name: "param_code", type: "varchar", length: 120 })
 	paramCode: string;
 
-	@Column({ name: "param_name", type: "varchar", length: 255, nullable: true })
+	@Column({ name: "param_name", type: "varchar", length: 1000, nullable: true })
 	paramName: string | null;
 
 	@Column({ name: "value_code", type: "varchar", length: 120, nullable: true })

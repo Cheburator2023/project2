@@ -53,6 +53,17 @@ describe("v2-typical-work-jsonlogic.util", () => {
 		});
 	});
 
+	it("compiles arch-count-only trigger without false param AND", () => {
+		const jl = compileTypicalWorkTriggerRulesToJsonLogic([], {
+			kind: "modelService",
+			steps: [{ count: 1, coefficient: 1 }],
+			combinator: "and",
+		});
+		expect(jl).toEqual({
+			archCountTrigger: ["modelService", [{ count: 1, coefficient: 1 }]],
+		});
+	});
+
 	it("evaluates result JsonLogic with roundStep like token engine", () => {
 		const parsed = parseWorkFormulaText("N × P[x]");
 		const logic = compileTypicalWorkCalculationLogic({
@@ -254,5 +265,47 @@ describe("v2-typical-work-jsonlogic.util", () => {
 			{ paramCode: "p1", paramName: "Сложность реализации", value: 1.5 },
 		]);
 		expect(breakdown.total).toBe(60);
+	});
+
+	it("buildTypicalWorkFormulaBreakdown expands multi-arch max coefficients", () => {
+		const formulaText = "N × коэф(readyPromReports)";
+		const parsed = parseWorkFormulaText(formulaText);
+		expect(parsed.error).toBeNull();
+		const terms = tokensToTermsFormula({
+			tokens: parsed.tokens,
+			text: formulaText,
+		});
+		const breakdown = buildTypicalWorkFormulaBreakdown({
+			formula: terms,
+			formulaText,
+			terms,
+			rounding: defaultWorkRounding(),
+			norm: 33,
+			paramCoefficients: { readyPromReports: 1 },
+			paramNames: {
+				readyPromReports: "Наличие готовых промышленных витрин",
+			},
+			resolveFactorCoeff: (code) => (code === "readyPromReports" ? 1 : 1),
+			coefficient: 1.5,
+			total: 49.5,
+			instanceBreakdown: [
+				{
+					sourceLabel: "вава",
+					index: 0,
+					expanded: "33 × 0.5 = 16.5",
+					total: 16.5,
+				},
+				{
+					sourceLabel: "выавыавы",
+					index: 1,
+					expanded: "33 × 1 = 33",
+					total: 33,
+				},
+			],
+			expandedOverride: "16.5 (вава) + 33 (выавыавы) = 49.5",
+		});
+		expect(breakdown.expanded).toBe("16.5 (вава) + 33 (выавыавы) = 49.5");
+		expect(breakdown.instanceBreakdown).toHaveLength(2);
+		expect(breakdown.total).toBe(49.5);
 	});
 });

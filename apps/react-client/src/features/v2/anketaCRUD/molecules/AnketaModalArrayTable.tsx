@@ -1,8 +1,11 @@
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
+import Collapse from "@mui/material/Collapse";
 import IconButton from "@mui/material/IconButton";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
@@ -15,12 +18,13 @@ import { readAnketaFormContext } from "../utils/anketaFormContext";
 import { isAnketaArchPathReadOnly } from "../utils/anketaPathLock.util";
 import {
 	arrayTableShowsRowActions,
-	adjustTypicalWorkTableColumns,
 	collectTypicalWorkSourceNames,
 	filterTypicalWorkItems,
 	getArrayAtPath,
+	getTypicalWorkFactoryTableColumns,
 	isTypicalWorkArrayPath,
 	resolveArrayTableColumns,
+	schemaItemsLookLikeTypicalWork,
 	sumTypicalWorkTotals,
 	type AnketaArrayTableColumn,
 } from "../utils/anketaModalArrayTableConfig";
@@ -32,6 +36,7 @@ import { useMemo, useState } from "react";
 import MenuItem from "@mui/material/MenuItem";
 import FormControl from "@mui/material/FormControl";
 import { SelectWithPlaceholder } from "@react-client/common/muiCustom/SelectWithPlaceholder";
+import { TypicalWorkFormulaBreakdownView } from "./TypicalWorkFormulaBreakdownView";
 import { TypicalWorkSummaryTotal } from "./TypicalWorkSummaryTotal";
 import { shouldMaskWorkEstimatesForViewerAtPath } from "@smart-anketa/api-contract";
 
@@ -48,28 +53,37 @@ type Props = {
 	sectionTitle: string;
 	/** Подсказка под заголовком (ui:description массива). */
 	sectionHint?: string;
+	/** Явно: блок archComponent=typicalWork (надёжнее path-детекции). */
+	forceTypicalWorkLayout?: boolean;
 };
 
 function gridTemplate(
 	columns: AnketaArrayTableColumn[],
 	showRowActions: boolean,
+	showRowIndex = false,
 ): string {
+	const indexCol = showRowIndex ? "48px " : "";
 	const cols = columns.map((col) => col.width ?? "1fr").join(" ");
-	return showRowActions ? `${cols} 72px` : cols;
+	return showRowActions
+		? `${indexCol}${cols} 72px`
+		: `${indexCol}${cols}`;
 }
 
 function CellValue({
 	column,
 	value,
+	title,
 }: {
 	column: AnketaArrayTableColumn;
 	value: string;
+	title?: string;
 }) {
 	if (column.chip && value !== "—") {
 		return (
 			<Chip
 				size="small"
 				label={value.length > 28 ? `${value.slice(0, 25)}…` : value}
+				title={title}
 				sx={{
 					maxWidth: "100%",
 					bgcolor: "grey.100",
@@ -82,7 +96,13 @@ function CellValue({
 
 	if (column.link && value !== "—") {
 		return (
-			<Stack direction="row" spacing={0.5} alignItems="center" minWidth={0}>
+			<Stack
+				direction="row"
+				spacing={0.5}
+				alignItems="center"
+				minWidth={0}
+				title={title}
+			>
 				<Typography
 					variant="body2"
 					sx={{
@@ -106,6 +126,7 @@ function CellValue({
 		<Typography
 			variant="body2"
 			color={value === "—" ? "text.disabled" : "text.primary"}
+			title={title}
 			sx={{
 				overflow: column.multiline ? "visible" : "hidden",
 				textOverflow: column.multiline ? "clip" : "ellipsis",
@@ -123,20 +144,30 @@ export function AnketaModalArrayTable({
 	pathKey,
 	sectionTitle,
 	sectionHint,
+	forceTypicalWorkLayout = false,
 	formContext,
 }: Props & { formContext: unknown }) {
 	const ctx = readAnketaFormContext(formContext);
-	const columns = resolveArrayTableColumns(
-		pathKey,
-		ctx.previewSchema,
-		ctx.previewUiSchema,
-	);
-	const readOnly = isAnketaArchPathReadOnly(formContext, pathKey);
-	const showRowActions = arrayTableShowsRowActions(pathKey, formContext);
 	const previewUiSchema = ctx.previewUiSchema as
 		| Record<string, unknown>
 		| undefined;
-	const isTypicalWorks = isTypicalWorkArrayPath(pathKey, previewUiSchema);
+	const isTypicalWorks =
+		forceTypicalWorkLayout ||
+		isTypicalWorkArrayPath(pathKey, previewUiSchema) ||
+		schemaItemsLookLikeTypicalWork(
+			ctx.previewSchema,
+			ctx.previewUiSchema,
+			pathKey,
+		);
+	const columns = isTypicalWorks
+		? getTypicalWorkFactoryTableColumns()
+		: resolveArrayTableColumns(
+				pathKey,
+				ctx.previewSchema,
+				ctx.previewUiSchema,
+			);
+	const readOnly = isAnketaArchPathReadOnly(formContext, pathKey);
+	const showRowActions = arrayTableShowsRowActions(pathKey, formContext);
 	const items = useMemo(() => {
 		const rawItems = getArrayAtPath(ctx.formData ?? {}, pathKey);
 		if (!isTypicalWorks) return rawItems;
@@ -153,6 +184,9 @@ export function AnketaModalArrayTable({
 		[isTypicalWorks, items],
 	);
 	const [sourceNameFilter, setSourceNameFilter] = useState<string | null>(null);
+	const [openFormulaByKey, setOpenFormulaByKey] = useState<
+		Record<string, boolean>
+	>({});
 	const visibleItems = useMemo(() => {
 		if (!isTypicalWorks || sourceNames.length <= 1) return items;
 		return filterTypicalWorkItems(items, sourceNameFilter);
@@ -188,11 +222,7 @@ export function AnketaModalArrayTable({
 				bgcolor: "rgba(255, 193, 7, 0.08)",
 			}
 		: undefined;
-	const displayColumns = useMemo(() => {
-		if (!columns) return null;
-		if (!isTypicalWorks) return columns;
-		return adjustTypicalWorkTableColumns(columns, items);
-	}, [columns, isTypicalWorks, items]);
+	const displayColumns = columns;
 
 	const tableTestId = anketaMoleculeTestIdForPath(
 		ANKETA_MOLECULE_TEST_IDS.arrayTable,
@@ -273,7 +303,7 @@ export function AnketaModalArrayTable({
 						))}
 					</Box>
 				)}
-				{isTypicalWorks ? (
+				{isTypicalWorks && visibleItems.length > 1 ? (
 					<TypicalWorkSummaryTotal
 						total={typicalTotal}
 						loading={calculationLoading}
@@ -366,13 +396,18 @@ export function AnketaModalArrayTable({
 						data-test-id={`${tableTestId}--columns-header`}
 						sx={{
 							display: "grid",
-							gridTemplateColumns: gridTemplate(displayColumns, showRowActions),
+							gridTemplateColumns: gridTemplate(
+								displayColumns,
+								showRowActions,
+								isTypicalWorks,
+							),
 							gap: 1,
 							px: 1.5,
 							py: 0.75,
 							minWidth: showRowActions ? 720 : 640,
 						}}
 					>
+						{isTypicalWorks ? <Box /> : null}
 						{displayColumns.map((column) => (
 							<Typography
 								key={column.key}
@@ -391,82 +426,172 @@ export function AnketaModalArrayTable({
 						data-test-id={`${tableTestId}--body`}
 						sx={{ minWidth: showRowActions ? 720 : 640 }}
 					>
-						{visibleItems.map((item, index) => (
-							<Box
-								key={`${pathKey}-${index}`}
-								data-test-id={`${tableTestId}--row--${index}`}
-								sx={{
-									display: "flex",
-									flexDirection: "column",
-									gap: 0.75,
-									px: 1.5,
-									py: 1.25,
-									bgcolor: "grey.50",
-									borderRadius: 1.5,
-									border: "1px solid",
-									borderColor: "divider",
-								}}
-							>
+						{visibleItems.map((item, index) => {
+							const rowKey = `${String(item.workId ?? item.name ?? index)}-${index}`;
+							const formulaOpen = Boolean(openFormulaByKey[rowKey]);
+							const toggleFormula = () => {
+								if (!isTypicalWorks || maskEstimates) return;
+								setOpenFormulaByKey((prev) => ({
+									...prev,
+									[rowKey]: !prev[rowKey],
+								}));
+							};
+							return (
 								<Box
+									key={`${pathKey}-${index}`}
+									data-test-id={`${tableTestId}--row--${index}`}
 									sx={{
-										display: "grid",
-										gridTemplateColumns: gridTemplate(
-											displayColumns,
-											showRowActions,
-										),
-										gap: 1,
-										alignItems: "center",
-										minWidth: showRowActions ? 720 : 640,
+										display: "flex",
+										flexDirection: "column",
+										gap: 0.75,
+										px: 1.5,
+										py: 1.25,
+										bgcolor: formulaOpen ? "action.hover" : "grey.50",
+										borderRadius: 1.5,
+										border: "1px solid",
+										borderColor: "divider",
 									}}
 								>
-									{displayColumns.map((column) => {
-										const rawValue = column.render
-											? column.render(item)
-											: String(item[column.field ?? column.key] ?? "—");
-										const value =
-											maskEstimates &&
-											ESTIMATE_TABLE_COLUMN_KEYS.has(column.key)
-												? "—"
-												: rawValue;
-										return (
-											<CellValue
-												key={column.key}
-												column={column}
-												value={value}
-											/>
-										);
-									})}
-									{showRowActions && !readOnly ? (
-										<Stack
-											direction="row"
-											spacing={0.25}
-											justifyContent="flex-end"
-										>
-											<IconButton
-												size="small"
-												title="Редактировать"
-												data-test-id={`${tableTestId}--edit--${index}`}
-												onClick={() =>
-													ctx.openAnketaModal?.(pathKey, index)
-												}
+									<Box
+										sx={{
+											display: "grid",
+											gridTemplateColumns: gridTemplate(
+												displayColumns,
+												showRowActions,
+												isTypicalWorks,
+											),
+											gap: 1,
+											alignItems: "center",
+											minWidth: showRowActions ? 720 : 640,
+											cursor:
+												isTypicalWorks && !maskEstimates
+													? "pointer"
+													: undefined,
+										}}
+										onClick={
+											isTypicalWorks && !maskEstimates
+												? toggleFormula
+												: undefined
+										}
+										onKeyDown={
+											isTypicalWorks && !maskEstimates
+												? (event) => {
+														if (
+															event.key === "Enter" ||
+															event.key === " "
+														) {
+															event.preventDefault();
+															toggleFormula();
+														}
+													}
+												: undefined
+										}
+										role={
+											isTypicalWorks && !maskEstimates ? "button" : undefined
+										}
+										tabIndex={
+											isTypicalWorks && !maskEstimates ? 0 : undefined
+										}
+										aria-expanded={
+											isTypicalWorks && !maskEstimates
+												? formulaOpen
+												: undefined
+										}
+										title={
+											isTypicalWorks && !maskEstimates
+												? formulaOpen
+													? "Скрыть формулу"
+													: "Показать формулу"
+												: undefined
+										}
+									>
+										{isTypicalWorks ? (
+											<Stack
+												direction="row"
+												spacing={0.25}
+												alignItems="center"
 											>
-												<EditOutlinedIcon fontSize="small" />
-											</IconButton>
-											<IconButton
-												size="small"
-												title="Удалить"
-												data-test-id={`${tableTestId}--delete--${index}`}
-												onClick={() =>
-													ctx.deleteAnketaArrayItem?.(pathKey, index)
-												}
+												{maskEstimates ? null : formulaOpen ? (
+													<ExpandLessIcon
+														fontSize="small"
+														sx={{ color: "text.secondary" }}
+													/>
+												) : (
+													<ExpandMoreIcon
+														fontSize="small"
+														sx={{ color: "text.secondary" }}
+													/>
+												)}
+												<Typography
+													variant="body2"
+													color="text.secondary"
+													sx={{ lineHeight: 1.4 }}
+												>
+													{index + 1}
+												</Typography>
+											</Stack>
+										) : null}
+										{displayColumns.map((column) => {
+											const rawValue = column.render
+												? column.render(item)
+												: String(item[column.field ?? column.key] ?? "—");
+											const value =
+												maskEstimates &&
+												ESTIMATE_TABLE_COLUMN_KEYS.has(column.key)
+													? "—"
+													: rawValue;
+											const title =
+												maskEstimates &&
+												ESTIMATE_TABLE_COLUMN_KEYS.has(column.key)
+													? undefined
+													: column.title?.(item);
+											return (
+												<CellValue
+													key={column.key}
+													column={column}
+													value={value}
+													title={title}
+												/>
+											);
+										})}
+										{showRowActions && !readOnly ? (
+											<Stack
+												direction="row"
+												spacing={0.25}
+												justifyContent="flex-end"
+												onClick={(event) => event.stopPropagation()}
 											>
-												<DeleteOutlineIcon fontSize="small" />
-											</IconButton>
-										</Stack>
+												<IconButton
+													size="small"
+													title="Редактировать"
+													data-test-id={`${tableTestId}--edit--${index}`}
+													onClick={() =>
+														ctx.openAnketaModal?.(pathKey, index)
+													}
+												>
+													<EditOutlinedIcon fontSize="small" />
+												</IconButton>
+												<IconButton
+													size="small"
+													title="Удалить"
+													data-test-id={`${tableTestId}--delete--${index}`}
+													onClick={() =>
+														ctx.deleteAnketaArrayItem?.(pathKey, index)
+													}
+												>
+													<DeleteOutlineIcon fontSize="small" />
+												</IconButton>
+											</Stack>
+										) : null}
+									</Box>
+									{isTypicalWorks && !maskEstimates ? (
+										<Collapse in={formulaOpen} timeout="auto" unmountOnExit>
+											<TypicalWorkFormulaBreakdownView item={item} />
+										</Collapse>
 									) : null}
 								</Box>
-							</Box>
-						))}
+							);
+						})}
 					</Stack>
 				</Box>
 			) : (
@@ -479,7 +604,7 @@ export function AnketaModalArrayTable({
 				</ListEmptyPlaceholder>
 			)}
 
-			{isTypicalWorks ? (
+			{isTypicalWorks && visibleItems.length > 1 ? (
 				<TypicalWorkSummaryTotal
 					total={typicalTotal}
 					loading={calculationLoading}

@@ -21,7 +21,10 @@ build
 dist
 apps/**/*/dist
 apps/**/.ci-packages
-!packages/**/*/dist
+# json-logic-ts всё ещё собирает dist (CJS/ESM engine); api-contract — только src
+!packages/json-logic-ts/dist
+!packages/json-logic-ts/dist/**
+packages/api-contract/dist/
 *.tsbuildinfo
 
 # testing
@@ -51,3 +54,34 @@ next-env.d.ts
 **/reports/*
 nohup.out
 *.timestamp
+
+# ui-test-coverage-loop (local runtime)
+scripts/ui-test-coverage-loop/state.json
+scripts/ui-test-coverage-loop/covered.jsonl
+scripts/ui-test-coverage-loop/coords.local.json
+scripts/ui-test-coverage-loop/*.log
+
+# Python
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+*.egg-info/
+.eggs/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+*.py,cover
+.ipynb_checkpoints/

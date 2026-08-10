@@ -17,13 +17,19 @@ describe("resolveV2QuestionnaireUncertaintyCoefficient", () => {
 	});
 
 	it("keeps legacy Σ + adjustment for group-name risk strings", () => {
+		const config = createDefaultOverallUncertaintyConfig();
 		expect(
-			resolveV2QuestionnaireUncertaintyCoefficient({
-				uncertaintyCalculation: {
-					riskGroup: { sanctions: "Средний", techDebt: "Высокий" },
-					uncertaintyAdjustment: 10,
+			resolveV2QuestionnaireUncertaintyCoefficient(
+				{
+					uncertaintyCalculation: {
+						initiativeTimeline: config.severityLevels[0]!.timelineLabel,
+						initiativeCost: config.severityLevels[0]!.costLabel,
+						riskGroup: { sanctions: "Средний", techDebt: "Высокий" },
+						uncertaintyAdjustment: 10,
+					},
 				},
-			}),
+				{ config },
+			),
 		).toEqual({ calculated: true, coefficient: 1.22 });
 	});
 
@@ -49,7 +55,7 @@ describe("resolveV2QuestionnaireUncertaintyCoefficient", () => {
 		expect(result.coefficient).toBe(1.05);
 	});
 
-	it("manual adjustment fully overrides auto for structured risks", () => {
+	it("manual adjustment is added on top of risk aggregate", () => {
 		const config = createDefaultOverallUncertaintyConfig();
 		expect(
 			resolveV2QuestionnaireUncertaintyCoefficient(
@@ -68,15 +74,122 @@ describe("resolveV2QuestionnaireUncertaintyCoefficient", () => {
 				},
 				{ config },
 			),
-		).toEqual({ calculated: true, coefficient: 1.1 });
+			// ур.5 × макс. вероятность → 0.1; итог = 1 + 0.1 + 10/100 = 1.2
+		).toEqual({ calculated: true, coefficient: 1.2 });
 	});
 
-	it("treats adjustment-only input as calculated", () => {
+	it("treats adjustment-only input as calculated when base is complete", () => {
+		const config = createDefaultOverallUncertaintyConfig();
 		expect(
-			resolveV2QuestionnaireUncertaintyCoefficient({
-				uncertaintyCalculation: { uncertaintyAdjustment: 5 },
-			}),
+			resolveV2QuestionnaireUncertaintyCoefficient(
+				{
+					uncertaintyCalculation: {
+						initiativeTimeline: config.severityLevels[0]!.timelineLabel,
+						initiativeCost: config.severityLevels[0]!.costLabel,
+						uncertaintyAdjustment: 5,
+					},
+				},
+				{ config },
+			),
 		).toEqual({ calculated: true, coefficient: 1.05 });
+	});
+
+	it("keeps risk answers but does not calculate when timeline or cost is cleared", () => {
+		const config = createDefaultOverallUncertaintyConfig();
+		const riskGroup = {
+			sanctions: {
+				probability: PROBABILITY_VALUES[4],
+				goals: INFLUENCE_VALUES[0],
+			},
+		};
+		const withBase = {
+			uncertaintyCalculation: {
+				initiativeTimeline: config.severityLevels[0]!.timelineLabel,
+				initiativeCost: config.severityLevels[0]!.costLabel,
+				riskGroup,
+			},
+		};
+		const calculated = resolveV2QuestionnaireUncertaintyCoefficient(withBase, {
+			config,
+		});
+		expect(calculated.calculated).toBe(true);
+
+		const withoutCost = {
+			uncertaintyCalculation: {
+				initiativeTimeline: config.severityLevels[0]!.timelineLabel,
+				riskGroup,
+			},
+		};
+		expect(
+			resolveV2QuestionnaireUncertaintyCoefficient(withoutCost, { config }),
+		).toEqual({ calculated: false, coefficient: 1 });
+		expect(
+			(withoutCost.uncertaintyCalculation as { riskGroup: unknown }).riskGroup,
+		).toEqual(riskGroup);
+
+		const withoutTimeline = {
+			uncertaintyCalculation: {
+				initiativeCost: config.severityLevels[0]!.costLabel,
+				riskGroup,
+			},
+		};
+		expect(
+			resolveV2QuestionnaireUncertaintyCoefficient(withoutTimeline, {
+				config,
+			}),
+		).toEqual({ calculated: false, coefficient: 1 });
+	});
+
+	it("recalculates when timeline changes while risk answers stay the same", () => {
+		const config = createDefaultOverallUncertaintyConfig();
+		const riskGroup = {
+			sanctions: {
+				probability: PROBABILITY_VALUES[4],
+				goals: INFLUENCE_VALUES[0],
+			},
+		};
+		const low = resolveV2QuestionnaireUncertaintyCoefficient(
+			{
+				uncertaintyCalculation: {
+					initiativeTimeline: config.severityLevels[0]!.timelineLabel,
+					initiativeCost: config.severityLevels[0]!.costLabel,
+					riskGroup,
+				},
+			},
+			{ config },
+		);
+		const high = resolveV2QuestionnaireUncertaintyCoefficient(
+			{
+				uncertaintyCalculation: {
+					initiativeTimeline: config.severityLevels[4]!.timelineLabel,
+					initiativeCost: config.severityLevels[4]!.costLabel,
+					riskGroup,
+				},
+			},
+			{ config },
+		);
+		expect(low.calculated).toBe(true);
+		expect(high.calculated).toBe(true);
+		expect(high.coefficient).toBeGreaterThan(low.coefficient);
+	});
+
+	it("reset of risks and adjustment yields not calculated (coef 1) with base kept", () => {
+		const config = createDefaultOverallUncertaintyConfig();
+		expect(
+			resolveV2QuestionnaireUncertaintyCoefficient(
+				{
+					uncertaintyCalculation: {
+						initiativeTimeline: config.severityLevels[2]!.timelineLabel,
+						initiativeCost: config.severityLevels[2]!.costLabel,
+						riskGroup: {
+							sanctions: "",
+							businessComplexity: "",
+						},
+					},
+				},
+				{ config },
+			),
+		).toEqual({ calculated: false, coefficient: 1 });
 	});
 });
 
@@ -92,10 +205,13 @@ describe("typical work overallUncertainty", () => {
 	});
 
 	it("injects calculated coefficient and overrides configurator value", () => {
+		const config = createDefaultOverallUncertaintyConfig();
 		const paramCoefficients = { overallUncertainty: 2.5, complexity: 1.5 };
 		applyComputedOverallUncertaintyToTypicalWorkParamCoefficients(
 			{
 				uncertaintyCalculation: {
+					initiativeTimeline: config.severityLevels[0]!.timelineLabel,
+					initiativeCost: config.severityLevels[0]!.costLabel,
 					riskGroup: { sanctions: "Средний" },
 					uncertaintyAdjustment: 10,
 				},
@@ -103,6 +219,7 @@ describe("typical work overallUncertainty", () => {
 			paramCoefficients,
 			{
 				formulaParamCodes: ["overallUncertainty"],
+				config,
 			},
 		);
 		expect(paramCoefficients.overallUncertainty).toBe(1.15);

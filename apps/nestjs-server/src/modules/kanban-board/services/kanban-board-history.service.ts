@@ -35,6 +35,7 @@ export class KanbanBoardHistoryService {
 		parentId: string;
 		position: number;
 		boardId: string;
+		createdBy?: string | null;
 		content: KanbanBoardTaskEntity["content"];
 	}): KanbanBoardTaskHistorySnapshot {
 		return kanbanBoardTaskHistorySnapshot(task);
@@ -97,6 +98,16 @@ export class KanbanBoardHistoryService {
 			createdAt: row.createdAt.toISOString(),
 			createdBy: row.createdBy,
 		};
+	}
+
+	async findTaskHistory(
+		taskId: string,
+	): Promise<KanbanBoardTaskHistoryEntryDto[]> {
+		const rows = await this.historyRepository.find({
+			where: { taskId },
+			order: { createdAt: "DESC" },
+		});
+		return rows.map((row) => this.toEntryDto(row));
 	}
 
 	async findBoardHistory(boardId: string): Promise<KanbanBoardHistoryDto> {

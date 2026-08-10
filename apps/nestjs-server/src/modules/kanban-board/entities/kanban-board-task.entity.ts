@@ -41,6 +41,19 @@ export class KanbanBoardTaskEntity {
 	@Column({ type: "varchar", length: 255 })
 	origin!: string;
 
+	/** ISO timestamp создания (как updatedAt — varchar для совместимости с concurrency). */
+	@Column({ name: "created_at", type: "varchar", length: 64 })
+	createdAt!: string;
+
+	/** Имя исполнителя из настроек трекера («Я — исполнитель»), как authorName у комментариев. */
+	@Column({ name: "created_by", type: "varchar", length: 255, nullable: true })
+	createdBy!: string | null;
+
 	@Column({ name: "updated_at", type: "varchar", length: 64 })
 	updatedAt!: string;
+
+	/** Soft-delete: в корзине, если задано (ISO). */
+	@Index()
+	@Column({ name: "deleted_at", type: "varchar", length: 64, nullable: true })
+	deletedAt!: string | null;
 }

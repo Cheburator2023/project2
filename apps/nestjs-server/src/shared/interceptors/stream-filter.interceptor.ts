@@ -32,6 +32,8 @@ type ResponseData =
  *
  * v1: поле `streamExecutor`
  * v2: `formData.generalInfo.implementationStream` (код или подпись)
+ *
+ * Отключение: `STREAM_FILTER_DISABLED=true` (весь реестр без фильтра по департаменту).
  */
 @Injectable()
 export class StreamFilterInterceptor implements NestInterceptor {
@@ -46,7 +48,7 @@ export class StreamFilterInterceptor implements NestInterceptor {
 			[context.getHandler(), context.getClass()],
 		);
 
-		if (!shouldFilter) {
+		if (!shouldFilter || this.streamMappingService.isStreamFilterDisabled()) {
 			return next.handle();
 		}
 

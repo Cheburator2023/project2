@@ -1,8 +1,10 @@
 import {
-	KANBAN_BOARD_DONE_COLUMN_ID,
 	KANBAN_BOARD_TASK_IMAGE_DONE_RETENTION_DAYS,
+	kanbanBoardIsDoneColumn,
 } from "@smart-anketa/api-contract";
 import { join } from "node:path";
+
+export { kanbanBoardIsDoneColumn };
 
 const KANBAN_TASK_IMAGES_DIR_MARKER = "kanban-task-images";
 
@@ -82,13 +84,6 @@ export function kanbanBoardTaskImageRefsEqual(
 ): boolean {
 	if (left.length !== right.length) return false;
 	return left.every((item, index) => item.id === right[index]?.id);
-}
-
-export function kanbanBoardIsDoneColumn(
-	column: Pick<{ id: string; title: string }, "id" | "title">,
-): boolean {
-	if (column.id === KANBAN_BOARD_DONE_COLUMN_ID) return true;
-	return column.title.trim().toLowerCase() === "готово";
 }
 
 export function kanbanBoardTaskImageDoneRetentionDays(

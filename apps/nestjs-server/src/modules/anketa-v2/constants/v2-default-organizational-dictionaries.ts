@@ -1,7 +1,6 @@
 import {
-	V2_IMPLEMENTATION_STREAM_CODES,
 	V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE,
-	V2_IMPLEMENTATION_STREAM_LABELS,
+	buildFactoryAnketaFormStreamDictionaryItems,
 } from "@smart-anketa/api-contract";
 import type { V2DefaultDictionaryDef } from "../utils/v2-schema-dictionary.util";
 
@@ -188,13 +187,8 @@ export const V2_ORGANIZATIONAL_DICTIONARIES: V2DefaultDictionaryDef[] = [
 		name: "Стрим-исполнитель",
 		category: "Организационный",
 		description:
-			"Заводской справочник для поля /generalInfo/implementationStream (в formData — код)",
+			"Справочник формы /generalInfo/implementationStream (в formData — код). 1:1 с select анкеты — только активные элементы. Полный каталог стримов (конструктор/runtime) — таблица v2_stream, UI /admin/streams, API GET /v2/streams.",
 		fieldPointer: "/generalInfo/implementationStream",
-		items: V2_IMPLEMENTATION_STREAM_CODES.map((code, order) => ({
-			code,
-			label: V2_IMPLEMENTATION_STREAM_LABELS[code],
-			order,
-			payload: { storeCode: true, fieldPointer: "/generalInfo/implementationStream" },
-		})),
+		items: buildFactoryAnketaFormStreamDictionaryItems(),
 	},
 ];

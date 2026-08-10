@@ -10,7 +10,9 @@ import {
 	AdminV2GuidePage,
 	AdminV2HistoryPage,
 	AdminV2SchemasPage,
+	AdminV2KeycloakMatrixPage,
 	AdminV2SettingsPage,
+	AdminV2StreamsPage,
 	AdminV2TemplateHistoryPage,
 	AdminV2TypicalWorkDetailPage,
 	AdminV2TypicalWorksPage,
@@ -60,6 +62,7 @@ function adminChildRoutes(): RouteObject[] {
 					path: "dictionaries/:dictionaryId",
 					element: <AdminV2DictionaryDetailPage />,
 				},
+				{ path: "streams", element: <AdminV2StreamsPage /> },
 				{ path: "typical-works", element: <AdminV2TypicalWorksPage /> },
 				{ path: "formulas", element: <AdminV2FormulaRegistryPage /> },
 				{
@@ -68,6 +71,10 @@ function adminChildRoutes(): RouteObject[] {
 				},
 				{ path: "history", element: <AdminV2HistoryPage /> },
 				{ path: "settings", element: <AdminV2SettingsPage /> },
+				{
+					path: "keycloak-matrix",
+					element: <AdminV2KeycloakMatrixPage />,
+				},
 				{
 					path: "templates/:templateId/read",
 					element: <V2TemplatePreviewPage />,
@@ -166,6 +173,10 @@ export function adminLegacyRedirects(): RouteObject[] {
 		{
 			path: "/admin/v2/dictionaries",
 			element: <Navigate to={commonRoutes.adminV2Dictionaries.rootPath} replace />,
+		},
+		{
+			path: "/admin/v2/streams",
+			element: <Navigate to={commonRoutes.adminV2Streams.rootPath} replace />,
 		},
 		{
 			path: "/admin/v2/dictionaries/:dictionaryId",

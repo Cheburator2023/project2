@@ -7,6 +7,7 @@ import type {
 	CalculationItem,
 	TaskTriggerItem,
 } from "@react-client/features/v2/admin_constructor/utils/calculationEngine";
+import type { AnketaViewerAccess } from "../utils/anketaViewerAccess";
 
 export const FinalScoreCard = ({
 	summary,
@@ -19,6 +20,7 @@ export const FinalScoreCard = ({
 	liveFormData,
 	onExportExcel,
 	hideWorkEstimates = false,
+	viewerAccess,
 }: {
 	summary?: V2SummaryFormSlice | null;
 	formData?: Record<string, unknown> | null;
@@ -31,6 +33,8 @@ export const FinalScoreCard = ({
 	onExportExcel?: () => void;
 	/** Валидатор: скрыть оценки работ (§2 уровень B / без оценок). */
 	hideWorkEstimates?: boolean;
+	/** Представитель стрима: цифры только по своему стриму (§2). */
+	viewerAccess?: AnketaViewerAccess;
 }) => {
 	const devCaption =
 		IS_DEV && (calculationItems?.length || taskTriggerItems?.length)
@@ -49,6 +53,7 @@ export const FinalScoreCard = ({
 			liveFormData={hideWorkEstimates ? null : liveFormData}
 			onExportExcel={onExportExcel}
 			hideDetailedEstimates={hideWorkEstimates}
+			viewerAccess={viewerAccess}
 		/>
 	);
 };

@@ -1,5 +1,202 @@
 # Semantic Versioning Changelog
 
+# [1.59.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.58.0...v1.59.0) (2026-08-06)
+
+
+### Features
+
+* enhance schema binding information and UI components ([6921131](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/692113190e4707c098c8bd7d084fd8e7cedd2965))
+
+# [1.58.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.57.0...v1.58.0) (2026-08-05)
+
+
+### Features
+
+* add createdBy field to Kanban tasks and update related functionality ([062df4b](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/062df4b26fbf5166bf898aa9394cf35071d9deb7))
+* add reset functionality and improve uncertainty calculations in TotalUncertaintyModal ([b80df4e](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/b80df4e3cbe7cc3e6583bc0eefa1a2654b4aa7ae))
+
+# [1.57.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.56.0...v1.57.0) (2026-08-03)
+
+
+### Features
+
+* add work estimates stream filter functionality ([5bb939c](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/5bb939c4086747bc92c46fb2f42d0eee44299ef3))
+
+# [1.56.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.55.0...v1.56.0) (2026-08-03)
+
+
+### Bug Fixes
+
+*  проблемы в правилах маскировки ([f3908d4](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/f3908d42c2d5bc6b21d26d502b6961fac5e0c269))
+*  проблемы в правилах маскировки ([8e37419](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/8e37419d9f1a4f32f8c51bf2699d2603ec7cd5cb))
+
+
+### Features
+
+* add comment counting functionality to Kanban board tasks ([f693cc2](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/f693cc258a968a4e83b8827f3b81d742bf4ed979))
+* enhance questionnaire access controls and user permissions ([5390ce2](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/5390ce28826ced45909a166010262d93d49b09b8))
+
+# [1.55.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.54.0...v1.55.0) (2026-08-02)
+
+
+### Features
+
+* add migration to widen typical work formula text and param name fields ([3e852cc](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/3e852cce60808bebad57d0733cb52cdb4722ef5c))
+
+# [1.54.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.53.0...v1.54.0) (2026-08-02)
+
+
+### Features
+
+* implement cleanup script for orphan marker field duplicates ([52682f6](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/52682f687c1954e2f9c6fa0fa7eec768c3111152))
+
+# [1.53.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.52.0...v1.53.0) (2026-08-02)
+
+
+### Features
+
+* add trigger conditions to typical work calculations and enhance viewer access utilities ([28ba6e8](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/28ba6e8802ea0c0183bad1de7152225cd0911549))
+* enhance handling of legacy bindings and improve data integrity in typical work services ([5e8178c](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/5e8178cf5267bf43d9afd471f89bf1f97afec709))
+* enhance labor coefficient handling and schema pointer validation ([8826cf3](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/8826cf312f3c7516625cd286e96792d27b2c8925))
+* enhance typical work schema and improve readonly fields ([66f9681](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/66f96817aa0195edaec46886519a816178a0497f))
+* enhance viewer access controls and update evaluation logic ([4c40b7c](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/4c40b7c6542ac631bb9893075900655f04d6e3fd))
+* improve schema field binding logic and enhance bulk dryRun handling ([9bb2794](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/9bb2794352312ad781298d803a9411353a85ae47))
+
+# [1.52.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.51.0...v1.52.0) (2026-07-31)
+
+
+### Features
+
+* enhance typical works schema and improve evaluation logic ([93b0ece](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/93b0ece4e772766c40b0ccd562d1dee65c4f2e7e))
+
+# [1.51.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.50.0...v1.51.0) (2026-07-31)
+
+
+### Bug Fixes
+
+* prevent resetting form values on reopening TotalUncertaintyModal ([d7a3c85](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/d7a3c85fd471ed97d710b6b54dc003aaea10cfe8))
+* update number formatting in V2BackendCalculationSummary and V2FinalEvaluationPanel ([f128e95](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/f128e95a637f09ed7e1d64d9a465e43213597c07))
+* update uncertainty label in V2FinalEvaluationPanel for clarity ([72a7c25](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/72a7c25e45d4777ab2d955a4c28da8f951d7d9fa))
+
+
+### Features
+
+* add release lock functionality for questionnaire edit on unload ([f6c80c2](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/f6c80c2efa3ddc94bf090cf6ea6f037334277360))
+* enhance logout handling with fallback reload mechanism ([850912d](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/850912d259e4f7782c3475607a6adbabfaa4df9e))
+* enhance schema synchronization for typical works ([413ee8f](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/413ee8fb31bd9ca4d0d46420578e51c3887a173f))
+* enhance typical work handling and add catalog stream mapping ([9878f59](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/9878f59593f3dba31635e5fb22a828eacb7462af))
+* implement questionnaire edit lock functionality ([5012e54](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/5012e54f12221f40cb7b8ef42a1f8e977565e5ad))
+* implement session timeout handling for questionnaire editing ([c9aa9dc](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/c9aa9dc36d2a8213345f739040433b5b1b064d3b))
+* refactor implementation stream handling and introduce v2_stream table ([1c4fa2d](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/1c4fa2d78d27ebae372d6c609277bde165d6b3e2))
+* update schema definitions and enhance deployment channel handling ([97c4642](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/97c464296a57f33a0e37d1ca485704e2d2705541))
+
+# [1.50.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.49.0...v1.50.0) (2026-07-30)
+
+
+### Bug Fixes
+
+* confl fix ([4456156](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/44561562cce500eee80809a0523ef74e07cb78f5))
+* streamline legacy model handling in V2CalculationService and enhance V2FinalEvaluationPanel ([0d3e7de](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/0d3e7de09630547f48f2b72e8c54a2e795d9e533))
+
+
+### Features
+
+* add new scripts for repairing typical works from CSV ([bd360dc](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/bd360dcf41ddea2e1ab8c68b27860e104e720fc2))
+* enhance TotalUncertaintyModal and OverallUncertaintyPanels with adjustment settings and preview functionality ([5ab7ef0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/5ab7ef0c535b4402f15029164fb286f32bd91b6a))
+* enhance typical work trigger handling and arch instance evaluation ([5beaffe](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/5beaffecb1012f4b6b83e3609af39e22e1e95add))
+* implement resizable scales panel in OverallUncertaintyPanel ([f5ea496](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/f5ea4969ebe6698ea7b15549bc98d09f998ddf6d))
+
+# [1.49.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.48.0...v1.49.0) (2026-07-29)
+
+
+### Bug Fixes
+
+* commitlint ([8f5873b](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/8f5873be4842b72edd149648a89fa5a501fb1004))
+* update operator interaction and formula handling in WorkFormulaEditor ([8351d87](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/8351d878412f82f854903fd803cc9d4f57c5291b))
+
+
+### Features
+
+* add new JSON outputs for publishing typical works and enhance schema definitions ([efea929](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/efea9293d894918774f81b2a7b2913cee03ed373))
+* add publishing functionality for typical works in factory bundle ([6784650](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/67846505d8254cddf59631b5b59c6118e11b2e3e))
+
+# [1.48.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.47.1...v1.48.0) (2026-07-28)
+
+
+### Features
+
+* add role compatibility settings and migration for v2 runtime settings ([03b3999](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/03b39994d9a7ff5b23cb85795bc7427780ecad8f))
+* implement group activation handling in schema editor components ([dd779ca](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/dd779cafd3960b2b25dcdb159bc1906714c46edd))
+
+## [1.47.1](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.47.0...v1.47.1) (2026-07-28)
+
+# [1.47.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.46.0...v1.47.0) (2026-07-27)
+
+
+### Features
+
+* add effective factory editor snapshot and template version editor snapshot functionality ([feaecba](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/feaecbaaad81ce619cc374cda6a0b49cceb951e8))
+* enhance stream filtering and role management in Keycloak integration ([3f47659](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/3f4765978517b81158623c63f541d9de6e93e7fd))
+
+# [1.46.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.45.0...v1.46.0) (2026-07-25)
+
+
+### Features
+
+* add Keycloak etalon overlay functionality and enhance role sync service ([5aaa84a](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/5aaa84a6d7b01628acf16019be37e17c63d76d83))
+* enhance Keycloak role management and UI adjustments ([6ddee32](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/6ddee322c1474924752373ca9a5c69824a1d989d))
+* enhance Keycloak role sync service and UI feedback ([9f2fb89](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/9f2fb89f505137d69be4fee1713a0726fa7d1498))
+* enhance user access management with logout functionality ([31d7ee3](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/31d7ee3946e8f31d38e6bf6c68129ded8c8113d9))
+* implement logout overlay functionality and enhance logout experience ([862d465](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/862d4654ed345f1a0dc69dcf8e7722d572117027))
+* remove outdated files related to questionnaire management ([a401b18](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/a401b1811f073edc7e5440d967b7cbb23e16303b))
+* update anketa-v2 snapshots and Keycloak role definitions ([e42405b](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/e42405b26643639fc3c85de24603ccde98be7234))
+* update questionnaire management and improve UI components ([4810846](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/4810846377972d2df8c6db8276f34fe2dd6b1315))
+* update work type labels and coefficients in anketa-v2 snapshots ([6b72e14](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/6b72e1497af3ed35b27541b06cfb5ddfd0861113))
+
+# [1.45.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.44.0...v1.45.0) (2026-07-25)
+
+
+### Features
+
+* add test user provisioning functionality to Keycloak role sync ([ef9e670](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/ef9e6707d623627a408766920d89b0a439cb1fbe))
+
+# [1.44.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.43.0...v1.44.0) (2026-07-24)
+
+
+### Features
+
+* enhance model stream implementation and catalog resolution ([251e64b](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/251e64bceab42127e3876fac5573fdb6ef9be31c))
+* enhance stream catalog integration and payload handling ([a64901d](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/a64901dc1e047650829da44d437694513b37aacf))
+* implement v2 stream catalog management and UI integration ([ed31aff](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/ed31affe775f649d14cb1f58697c8ecd55df86d4))
+
+# [1.43.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.42.0...v1.43.0) (2026-07-24)
+
+
+### Features
+
+* add created_at and created_by fields to kanban entities and update related logic ([0ab241f](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/0ab241f003af47e907561095efa0181d437a4fa1))
+* implement v2 runtime settings for stream filter management ([0b1bffc](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/0b1bffc61628fea73cf93d99894bd25035230e61))
+
+# [1.42.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.41.0...v1.42.0) (2026-07-24)
+
+
+### Features
+
+* add restore functionality for Keycloak role synchronization ([eee790e](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/eee790e02bd86a26c6b6c97d9c5e74814a1c9fc8))
+* implement stream filter toggle and enhance Keycloak role sync ([b5e2a7b](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/b5e2a7b48776dd2d438822984180f9ef5759bfa6))
+
+# [1.41.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.40.0...v1.41.0) (2026-07-24)
+
+
+### Features
+
+* add defaults endpoint and enhance Keycloak role sync functionality ([00744bb](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/00744bb36aec242a866e33567408e2de95b547bf))
+* add V2TemplateSeedService for factory template initialization ([0a5d68d](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/0a5d68d4c2a3e7287929b2a85707efa19dcdb518))
+* enhance Keycloak backup functionality with customizable include options ([237383c](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/237383ca625446c8d6380b9bac7012d7e0295182))
+* enhance Keycloak role synchronization and UI clarity ([3963ed6](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/3963ed6cd6d2699678d791e738a0ce2f97cf2b48))
+* enhance Keycloak role synchronization with AD alias support ([9fb88c1](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/9fb88c12fb37e56d9433f5e2e1d5610079cbe34a))
+* enhance Keycloak role synchronization with nested group resolution ([d2d04e4](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/d2d04e4e40f05ed4aeb34d6c5b598b03e261c4fd))
+
 # [1.40.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.39.0...v1.40.0) (2026-07-24)
 
 

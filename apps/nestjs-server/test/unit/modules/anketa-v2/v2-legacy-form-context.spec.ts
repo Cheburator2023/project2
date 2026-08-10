@@ -40,7 +40,20 @@ describe("v2-legacy-form-context.util", () => {
 			},
 		});
 		expect(ctx.pilotModelRequired).toBe("Да");
+		// Dual-read: каналы ещё могут лежать на modelService в старых анкетах.
 		expect(ctx.deploymentChannels).toEqual(["Батч + Онлайн", "Онлайн"]);
+	});
+
+	it("reads deployment channels from modelsList (canonical)", () => {
+		const ctx = resolveLegacyFormContext({
+			detailInfo: {
+				modelsList: [
+					{ field_jUm5syZf: ["Онлайн"] },
+					{ field_jUm5syZf: ["Батч", "Онлайн"] },
+				],
+			},
+		});
+		expect(ctx.deploymentChannels).toEqual(["Онлайн", "Батч"]);
 	});
 
 	it("counts sourceSystems for dataSourcesCount", () => {
@@ -62,18 +75,27 @@ describe("v2-legacy-form-context.util", () => {
 		expect(ctx.uncertaintyAdjustmentPercent).toBe(15);
 	});
 
-	it("derives readyPromReports from dataMart readyPromReports", () => {
+	it("derives readyPromReports from modelsList readyPromReports", () => {
+		const ctx = resolveLegacyFormContext({
+			detailInfo: {
+				modelsList: [{ readyPromReports: true }, { readyPromReports: false }],
+			},
+		});
+		expect(ctx.readyPromReports).toBe("Да");
+	});
+
+	it("falls back to dataMart readyPromReports for legacy ankety", () => {
 		const ctx = resolveLegacyFormContext({
 			detailInfo: { dataMart: [{ readyPromReports: true }] },
 		});
 		expect(ctx.readyPromReports).toBe("Да");
 	});
 
-	it("derives readyPromReports from legacy dataMart field_lovKvLZc", () => {
+	it("does not treat feature-store checkbox as readyPromReports", () => {
 		const ctx = resolveLegacyFormContext({
 			detailInfo: { dataMart: [{ field_lovKvLZc: true }] },
 		});
-		expect(ctx.readyPromReports).toBe("Да");
+		expect(ctx.readyPromReports).toBe("Нет");
 	});
 
 	it("derives productionAdditionalReports from generalInfo", () => {
@@ -83,11 +105,11 @@ describe("v2-legacy-form-context.util", () => {
 		expect(ctx.productionAdditionalReports).toBe("Не требуется");
 	});
 
-	it("derives productionAdditionalReports from dataMart metricsCount fallback", () => {
+	it("does not derive productionAdditionalReports from dataMart metricsCount", () => {
 		const ctx = resolveLegacyFormContext({
 			detailInfo: { dataMart: [{ metricsCount: 7 }] },
 		});
-		expect(ctx.productionAdditionalReports).toBe("7");
+		expect(ctx.productionAdditionalReports).toBe("1");
 	});
 
 	it("reads assessedInitiativesCount from generalInfo", () => {
@@ -95,6 +117,54 @@ describe("v2-legacy-form-context.util", () => {
 			generalInfo: { assessedInitiativesCount: 5 },
 		});
 		expect(ctx.assessedInitiativesCount).toBe(5);
+	});
+
+	it("prefers semanticRole path over hardcoded generalInfo when schema is moved", () => {
+		const jsonSchema = {
+			type: "object",
+			properties: {
+				elsewhere: {
+					type: "object",
+					properties: {
+						assessedInitiativesCount: { type: "integer" },
+						sourceSystems: {
+							type: "array",
+							items: { type: "object", properties: { name: { type: "string" } } },
+						},
+					},
+				},
+			},
+		};
+		const uiSchema = {
+			elsewhere: {
+				assessedInitiativesCount: {
+					"ui:options": {
+						schemaFieldUid: "field-assessed",
+						semanticRole: "assessedInitiativesCount",
+					},
+				},
+				sourceSystems: {
+					"ui:options": {
+						archComponent: "sourceSystem",
+						archBlockUid: "block-src",
+						semanticRole: "sourceSystems",
+						schemaFieldUid: "field-src",
+					},
+				},
+			},
+		};
+		const ctx = resolveLegacyFormContext(
+			{
+				elsewhere: {
+					assessedInitiativesCount: 7,
+					sourceSystems: [{ name: "A" }, { name: "B" }],
+				},
+				generalInfo: { assessedInitiativesCount: 1 },
+			},
+			{ jsonSchema, uiSchema },
+		);
+		expect(ctx.assessedInitiativesCount).toBe(7);
+		expect(ctx.dataSourcesCount).toBe(2);
 	});
 });
 
@@ -140,16 +210,74 @@ describe("evaluateLegacyV2Summary snapshot sensitivity", () => {
 		);
 	});
 
+	it("maps schema algorithmType enums in stage05", () => {
+		const tabular = evaluateLegacyV2Summary({
+			detailInfo: { modelsList: [{ algorithmType: "Табличные данные" }] },
+		});
+		const cv = evaluateLegacyV2Summary({
+			detailInfo: {
+				modelsList: [{ algorithmType: "Компьютерное зрение" }],
+			},
+		});
+		const audio = evaluateLegacyV2Summary({
+			detailInfo: { modelsList: [{ algorithmType: "Аудио-аналитика" }] },
+		});
+		expect(stageScore(cv, "05. Разработка модели")).toBeGreaterThan(
+			stageScore(tabular, "05. Разработка модели") ?? 0,
+		);
+		expect(stageScore(audio, "05. Разработка модели")).toBeGreaterThan(
+			stageScore(tabular, "05. Разработка модели") ?? 0,
+		);
+	});
+
 	it("changes stage09 when deployment channels are set", () => {
 		const none = evaluateLegacyV2Summary({ generalInfo: { modelService: {} } });
 		const withChannels = evaluateLegacyV2Summary({
-			generalInfo: {
-				modelService: [{ field_jUm5syZf: ["Онлайн", "Батч + Онлайн"] }],
+			detailInfo: {
+				modelsList: [{ field_jUm5syZf: ["Онлайн", "Батч + Онлайн"] }],
 			},
 		});
 		expect(stageScore(none, "09. Адаптация и внедрение")).toBeNull();
 		expect(stageScore(withChannels, "09. Адаптация и внедрение")).toBeGreaterThan(
 			0,
 		);
+	});
+
+	it("deviation = (типовые + нетиповые) / база × 100% from summary.total", () => {
+		const uiSchema = {
+			streamDataSources: {
+				"ui:options": {
+					archComponent: "streamBlock",
+					streamExecutor: "Стрим источников данных",
+				},
+				typicalWorks: {
+					"ui:options": { archComponent: "typicalWork" },
+					items: {},
+				},
+			},
+		};
+		const data = {
+			summary: {
+				typicalTotal: 80,
+				atypicalTotal: 20,
+				total: 100,
+			},
+			streamDataSources: {
+				typicalWorks: [
+					{
+						name: "Work A",
+						estimateHoursPerDay: 50,
+						total: 80,
+						formulaBreakdown: { instanceBreakdown: [{}] },
+					},
+				],
+			},
+			generalInfo: { complexity: "1 — Низкая ×1.00" },
+		};
+		const summary = evaluateLegacyV2Summary(data, { uiSchema });
+		// База = норматив 50; трудоёмкость = summary.total 100 → 200%
+		expect(summary.baseScoreStream).toBe(50);
+		expect(summary.scoreWithComplexityCoeff).toBe(100);
+		expect(summary.deviationFromBaseline).toBe(200);
 	});
 });

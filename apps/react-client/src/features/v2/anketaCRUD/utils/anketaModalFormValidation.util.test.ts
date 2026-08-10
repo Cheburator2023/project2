@@ -5,6 +5,7 @@ import {
 	createAnketaModalCustomValidate,
 	isAnketaModalFormValid,
 	isFilledRequiredValue,
+	listUnfilledRequiredLabelsInBlock,
 	omitUnsetOptionalFields,
 } from "./anketaModalFormValidation.util";
 
@@ -99,6 +100,27 @@ describe("anketaModalFormValidation.util", () => {
 		).toEqual({ name: "CRM" });
 	});
 
+	it("always persists boolean fields as false when unset", () => {
+		const schema: RJSFSchema = {
+			type: "object",
+			properties: {
+				name: { type: "string" },
+				readyPromReports: { type: "boolean" },
+			},
+			required: ["name"],
+		};
+		expect(omitUnsetOptionalFields({ name: "Модель 1" }, schema)).toEqual({
+			name: "Модель 1",
+			readyPromReports: false,
+		});
+		expect(
+			omitUnsetOptionalFields(
+				{ name: "Модель 1", readyPromReports: true },
+				schema,
+			),
+		).toEqual({ name: "Модель 1", readyPromReports: true });
+	});
+
 	it("allows save when required name is set and optional enums are empty strings", () => {
 		expect(
 			isAnketaModalFormValid(
@@ -125,5 +147,51 @@ describe("anketaModalFormValidation.util", () => {
 				{},
 			),
 		).toBe(false);
+	});
+
+	it("lists unfilled required fields in a block including nested objects", () => {
+		const blockSchema: RJSFSchema = {
+			type: "object",
+			properties: {
+				name: { type: "string", title: "Название" },
+				nested: {
+					type: "object",
+					title: "Вложенный",
+					properties: {
+						code: { type: "string", title: "Код" },
+					},
+					required: ["code"],
+				},
+			},
+			required: ["name", "nested"],
+		};
+		expect(listUnfilledRequiredLabelsInBlock(blockSchema, {}, {})).toEqual([
+			"Название",
+			"Вложенный",
+		]);
+		expect(
+			listUnfilledRequiredLabelsInBlock(
+				blockSchema,
+				{ name: "A", nested: {} },
+				{},
+			),
+		).toEqual(["Вложенный: Код"]);
+		expect(
+			listUnfilledRequiredLabelsInBlock(
+				blockSchema,
+				{ name: "A", nested: { code: "x" } },
+				{},
+			),
+		).toEqual([]);
+	});
+
+	it("skips hidden required fields when listing unfilled in block", () => {
+		expect(
+			listUnfilledRequiredLabelsInBlock(
+				nameSchema,
+				{},
+				{ name: { "ui:widget": "hidden" } },
+			),
+		).toEqual([]);
 	});
 });

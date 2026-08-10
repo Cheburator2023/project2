@@ -192,10 +192,15 @@ function readTypicalWorksRootFormTriggerContext(
 export type TypicalWorkTriggerMatchContext = {
 	referencePath?: string;
 	uiSchema?: Record<string, unknown>;
+	jsonSchema?: Record<string, unknown>;
 	schemaParams?: ReadonlyArray<{
 		code: string;
+		name?: string | null;
 		schemaPointer?: string | null;
+		schemaFieldUid?: string | null;
 	}>;
+	/** Предвычисленный индекс uid→path; иначе строится из jsonSchema/uiSchema. */
+	schemaFieldIndex?: import("./v2-schema-field-index.util").V2SchemaFieldIndex | null;
 };
 
 /** Все поля анкеты, релевантные триггерам (без привязки к outputArrayPath). */

@@ -52,7 +52,11 @@ describe("kanban board planning import", () => {
 		expect(parentTask?.content.backlogNumber).toBe(1);
 		expect(parentTask?.content.priority).toBe("high");
 		expect(parentTask?.content.customer).toBe("ДАДМ");
-		expect(parentTask?.content.sprintOutcome).toBe("Релиз");
+		expect(parentTask?.content.description).toContain(
+			"## Ожидаемый результат спринта",
+		);
+		expect(parentTask?.content.description).toContain("Релиз");
+		expect(parentTask?.content.sprintOutcome).toBeUndefined();
 		expect(parentTask?.content.dueDate).toBe("2026-05-26");
 
 		const subtask = result.payload.find((task) =>

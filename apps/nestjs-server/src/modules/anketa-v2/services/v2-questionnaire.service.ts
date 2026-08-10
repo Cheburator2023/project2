@@ -1,13 +1,19 @@
 import {
 	BadRequestException,
 	ConflictException,
+	ForbiddenException,
 	Injectable,
+	Logger,
 	NotFoundException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import {
 	patchV2TypicalWorksLogicRules,
 	buildV2QuestionnaireRegistryConfig,
+	canUserDeleteV2Questionnaire,
+	collectForbiddenV2AnketaWorkflowChanges,
+	resolveV2QuestionnaireDeleteAction,
+	userCanCreateV2Questionnaire,
 	type BulkDeleteV2QuestionnairesResultDto,
 	type CreateV2QuestionnaireRequestDto,
 	type CreateV2QuestionnaireVersionRequestDto,
@@ -50,10 +56,13 @@ type TUserLike = {
 	family_name?: string;
 	preferred_username?: string;
 	email?: string;
+	groups?: string[];
 };
 
 @Injectable()
 export class V2QuestionnaireService {
+	private readonly logger = new Logger(V2QuestionnaireService.name);
+
 	constructor(
 		@InjectRepository(V2QuestionnaireEntity)
 		private readonly questionnaireRepository: Repository<V2QuestionnaireEntity>,
@@ -186,10 +195,20 @@ export class V2QuestionnaireService {
 		};
 	}
 
+	private assertCanCreateQuestionnaire(user?: TUserLike | null): void {
+		const groups = Array.isArray(user?.groups) ? user.groups : [];
+		if (!userCanCreateV2Questionnaire(groups, true)) {
+			throw new ForbiddenException(
+				"Создание анкет доступно только ролям ds_lead, modelops_lead и sacfg",
+			);
+		}
+	}
+
 	async create(
 		dto: CreateV2QuestionnaireRequestDto,
 		user?: TUserLike | null,
 	): Promise<V2QuestionnaireDto> {
+		this.assertCanCreateQuestionnaire(user);
 		const { template, version } = await this.resolveTemplateForCreate(
 			dto.templateId,
 		);
@@ -230,11 +249,11 @@ export class V2QuestionnaireService {
 	async update(
 		id: string,
 		dto: UpdateV2QuestionnaireRequestDto,
+		user?: TUserLike | null,
 	): Promise<V2QuestionnaireDto> {
 		const row = await this.loadWithRelations(id);
-		const currentWorkflow = normalizeV2AnketaWorkflow(
-			migrateV2AnketaFormData(row.formData ?? {}).workflow,
-		);
+		const currentFormData = migrateV2AnketaFormData(row.formData ?? {});
+		const currentWorkflow = normalizeV2AnketaWorkflow(currentFormData.workflow);
 		if (
 			currentWorkflow.globalStatus === "Утверждена" &&
 			(dto.formData !== undefined || dto.finalCoefficient !== undefined)
@@ -247,7 +266,15 @@ export class V2QuestionnaireService {
 			row.calcName = dto.calcName.trim() || row.calcName;
 		}
 		if (dto.formData !== undefined) {
-			row.formData = migrateV2AnketaFormData(dto.formData);
+			const nextFormData = migrateV2AnketaFormData(dto.formData);
+			this.logForbiddenWorkflowChanges(
+				id,
+				row,
+				currentFormData.workflow,
+				nextFormData.workflow,
+				user,
+			);
+			row.formData = nextFormData;
 		}
 		if (dto.finalCoefficient !== undefined) {
 			row.finalCoefficient = dto.finalCoefficient;
@@ -257,6 +284,36 @@ export class V2QuestionnaireService {
 		}
 		await this.questionnaireRepository.save(row);
 		return this.findOne(id);
+	}
+
+	/**
+	 * §1–§4: представитель стрима закрывает только раздел своего стрима.
+	 * Первая итерация — наблюдение: нарушение пишем в лог, сохранение не блокируем.
+	 */
+	private logForbiddenWorkflowChanges(
+		id: string,
+		row: V2QuestionnaireEntity,
+		previousWorkflow: unknown,
+		nextWorkflow: unknown,
+		user?: TUserLike | null,
+	): void {
+		const viewer = buildV2AnketaViewerAccessFromUser(user ?? undefined);
+		const bound = row.boundTemplateVersion;
+		if (!viewer || !bound) return;
+
+		const forbidden = collectForbiddenV2AnketaWorkflowChanges(
+			viewer,
+			mapV2TemplateVersionToDto(bound).uiSchema,
+			previousWorkflow,
+			nextWorkflow,
+		);
+		if (forbidden.length === 0) return;
+
+		this.logger.warn(
+			`Анкета ${id}: пользователь (роли ${viewer.roles.join(", ") || "—"}, ` +
+				`стримы ${viewer.streams.join(", ") || "—"}) изменил статусы вне своего стрима: ` +
+				forbidden.map((change) => `${change.path} (${change.reason})`).join(", "),
+		);
 	}
 
 	/** Фиксация среза (§3.13): Заполнено → Утверждена. */
@@ -283,6 +340,7 @@ export class V2QuestionnaireService {
 		dto: CreateV2QuestionnaireVersionRequestDto,
 		user?: TUserLike | null,
 	): Promise<V2QuestionnaireDto> {
+		this.assertCanCreateQuestionnaire(user);
 		const parent = await this.loadWithRelations(parentId);
 		const siblings = await this.questionnaireRepository.find({
 			where: { seriesId: parent.seriesId },
@@ -318,10 +376,15 @@ export class V2QuestionnaireService {
 		return this.findOne(saved.id);
 	}
 
-	async bulkDelete(ids: string[]): Promise<BulkDeleteV2QuestionnairesResultDto> {
+	async bulkDelete(
+		ids: string[],
+		user?: TUserLike | null,
+	): Promise<BulkDeleteV2QuestionnairesResultDto> {
 		const uniqueIds = [...new Set(ids)];
 		const deletedIds: string[] = [];
+		const deactivatedIds: string[] = [];
 		const failed: BulkDeleteV2QuestionnairesResultDto["failed"] = [];
+		const groups = Array.isArray(user?.groups) ? user.groups : [];
 
 		for (const id of uniqueIds) {
 			try {
@@ -336,8 +399,48 @@ export class V2QuestionnaireService {
 					});
 					continue;
 				}
-				await this.questionnaireRepository.remove(row);
-				deletedIds.push(id);
+
+				const access = canUserDeleteV2Questionnaire(groups, row.formData);
+				if (!access.ok) {
+					failed.push({
+						id,
+						reason: access.reason,
+						message:
+							access.reason === "wrong_stream"
+								? "Удаление доступно только для анкет своего стрима"
+								: "Недостаточно прав для удаления анкеты",
+					});
+					continue;
+				}
+
+				const workflow = normalizeV2AnketaWorkflow(
+					migrateV2AnketaFormData(row.formData ?? {}).workflow,
+				);
+				const resolved = resolveV2QuestionnaireDeleteAction(
+					workflow.globalStatus,
+					row.status,
+				);
+				if (resolved.action === "deny") {
+					failed.push({
+						id,
+						reason: resolved.reason,
+						message:
+							resolved.reason === "already_inactive"
+								? "Анкета уже неактивна"
+								: "Удаление недоступно",
+					});
+					continue;
+				}
+
+				if (resolved.action === "hard_delete") {
+					await this.questionnaireRepository.remove(row);
+					deletedIds.push(id);
+					continue;
+				}
+
+				row.status = "inactive";
+				await this.questionnaireRepository.save(row);
+				deactivatedIds.push(id);
 			} catch {
 				failed.push({
 					id,
@@ -347,7 +450,7 @@ export class V2QuestionnaireService {
 			}
 		}
 
-		return { deletedIds, failed };
+		return { deletedIds, deactivatedIds, failed };
 	}
 
 	async seedTestQuestionnaires(

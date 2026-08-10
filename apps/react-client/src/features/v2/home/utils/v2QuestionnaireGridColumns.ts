@@ -18,12 +18,15 @@ import {
 	v2WorkflowSectionStatusCell,
 } from "../molecules/V2WorkflowStatusCell";
 import { V2SchemaBindingStatusCell } from "../molecules/V2SchemaBindingStatusCell";
+import { V2EditLockStatusCell } from "../molecules/V2EditLockStatusCell";
+import { V2QuestionnaireNameCell } from "../molecules/V2QuestionnaireNameCell";
 import type { V2QuestionnaireGridRow } from "../types/v2QuestionnaireGrid.types";
 import {
 	formatGridCellValue,
 	getFormValue,
 	resolveVersionRow,
 } from "./v2QuestionnaireGridValue";
+import { useQuestionnaireEditLocksStore } from "@react-client/features/v2/anketaCRUD/stores/questionnaireEditLocksStore";
 
 const SET_COLUMN_FILTER = "agSetColumnFilter" as const;
 
@@ -97,6 +100,23 @@ function leafToColDef(leaf: V2RegistryLeafColumn): ColDef<V2QuestionnaireGridRow
 					resolveVersionRow(p.data)?.workflowGlobalStatus ?? null,
 			};
 		}
+		if (leaf.id === "editLock") {
+			return {
+				colId: leaf.id,
+				headerName: leaf.header,
+				minWidth: Math.max(minWidth, 140),
+				resizable: true,
+				...baseFilter,
+				cellRenderer: V2EditLockStatusCell,
+				valueGetter: (p) => {
+					const id = resolveVersionRow(p.data)?.id;
+					if (!id) return null;
+					return useQuestionnaireEditLocksStore.getState().locksById[id]
+						? "Редактируется"
+						: null;
+				},
+			};
+		}
 		if (leaf.id === "createdAt" || leaf.id === "updatedAt") {
 			return {
 				colId: leaf.id,
@@ -106,6 +126,22 @@ function leafToColDef(leaf: V2RegistryLeafColumn): ColDef<V2QuestionnaireGridRow
 				...baseFilter,
 				...dateSetFilterExtras(),
 				valueGetter: (p) => resolveVersionRow(p.data)?.[leaf.id as "createdAt"] ?? "",
+			};
+		}
+		if (leaf.id === "schemaCreatedAt" || leaf.id === "schemaUpdatedAt") {
+			const bindingKey =
+				leaf.id === "schemaCreatedAt"
+					? "boundTemplateVersionCreatedAt"
+					: "boundTemplateVersionUpdatedAt";
+			return {
+				colId: leaf.id,
+				headerName: leaf.header,
+				minWidth,
+				resizable: true,
+				...baseFilter,
+				...dateSetFilterExtras(),
+				valueGetter: (p) =>
+					resolveVersionRow(p.data)?.schemaBinding?.[bindingKey] ?? "",
 			};
 		}
 		if (leaf.id === "finalCoefficient") {
@@ -130,6 +166,17 @@ function leafToColDef(leaf: V2RegistryLeafColumn): ColDef<V2QuestionnaireGridRow
 					const row = resolveVersionRow(p.data);
 					return row?.readableId ?? row?.id ?? "";
 				},
+			};
+		}
+		if (leaf.id === "calcName") {
+			return {
+				colId: leaf.id,
+				headerName: leaf.header,
+				minWidth,
+				resizable: true,
+				...baseFilter,
+				cellRenderer: V2QuestionnaireNameCell,
+				valueGetter: (p) => resolveVersionRow(p.data)?.calcName ?? "",
 			};
 		}
 		if (leaf.id === "schemaBindingStatus") {

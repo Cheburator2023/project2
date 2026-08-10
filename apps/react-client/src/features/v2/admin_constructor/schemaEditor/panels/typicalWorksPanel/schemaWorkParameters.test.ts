@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 import type { RJSFSchema } from "@rjsf/utils";
 import type { V2TypicalWorkParameterDto } from "@smart-anketa/api-contract";
 import {
+	buildLaborCoefficientRowsFromParamValues,
 	buildSchemaWorkParameters,
+	countSameNamedSchemaParams,
 	isSchemaLaborParamCandidate,
+	schemaParamArchCaption,
 	jsonPointerToLogicVarPath,
 	resolveSchemaParamFieldRef,
 	schemaParamIdFromPointer,
@@ -334,6 +337,94 @@ describe("buildSchemaWorkParameters", () => {
 		]);
 	});
 
+	it("includes dataProcess Тип работ (field_yJ51GkCR) as labor param with dictionary values", () => {
+		const dictCode = "v2.detailInfo.dataProcess.workType";
+		const hints: FieldPathHint[] = [
+			{
+				pointer: "/detailInfo/dataProcess/field_yJ51GkCR",
+				key: "field_yJ51GkCR",
+				title: "Тип работ",
+				varPath: "detailInfo.dataProcess.field_yJ51GkCR",
+				schemaFieldUid: "field_68f5a4fa-579f-4b89-b4f3-11214957dffe",
+				dictionaryCode: dictCode,
+				codesPreview: null,
+			},
+		];
+
+		const params = buildSchemaWorkParameters({
+			fieldPathHints: hints,
+			uiSchema: {
+				detailInfo: {
+					dataProcess: {
+						"ui:options": { archComponent: "dataProcess" },
+						field_yJ51GkCR: {
+							"ui:options": {
+								dictionaryCode: dictCode,
+								schemaFieldUid:
+									"field_68f5a4fa-579f-4b89-b4f3-11214957dffe",
+							},
+						},
+					},
+				},
+			},
+			jsonSchema: {
+				type: "object",
+				properties: {
+					detailInfo: {
+						type: "object",
+						properties: {
+							dataProcess: {
+								type: "object",
+								properties: {
+									field_yJ51GkCR: {
+										type: "string",
+										title: "Тип работ",
+										enum: [
+											"Разработка",
+											"Доработка",
+											"Настройка",
+											"Без изменений",
+										],
+									},
+								},
+							},
+						},
+					},
+				},
+			} as RJSFSchema,
+			enumMapByCode: {
+				[dictCode]: {
+					enums: [
+						"Разработка",
+						"Доработка",
+						"Настройка",
+						"Без изменений",
+					],
+					enumNames: [
+						"Разработка",
+						"Доработка",
+						"Настройка",
+						"Без изменений",
+					],
+				},
+			},
+		});
+
+		const param = params.find((p) => p.code === "field_yJ51GkCR");
+		expect(param).toBeDefined();
+		expect(param?.dictionaryCode).toBe(dictCode);
+		expect(param?.values.map((v) => v.label)).toEqual([
+			"Разработка",
+			"Доработка",
+			"Настройка",
+			"Без изменений",
+		]);
+		expect(isSchemaLaborParamCandidate(param!)).toBe(true);
+		expect(
+			buildLaborCoefficientRowsFromParamValues(param!, "Источники данных"),
+		).toHaveLength(4);
+	});
+
 	it("includes dictionary-bound fields without inline enum when dictionary is not loaded", () => {
 		const hints: FieldPathHint[] = [
 			{
@@ -393,6 +484,118 @@ describe("buildSchemaWorkParameters", () => {
 			"v2.detailInfo.sourceSystems.items.field_wuYlhnu0",
 		);
 		expect(param?.values).toEqual([]);
+		expect(param?.textual).not.toBe(true);
+		expect(isSchemaLaborParamCandidate(param!)).toBe(true);
+	});
+
+	it("includes multi-select dictionary fields (array of string) as labor params", () => {
+		const dictCode = "v2.detailInfo.dataMart.tags";
+		const hints: FieldPathHint[] = [
+			{
+				pointer: "/detailInfo/dataMart/tags",
+				key: "tags",
+				title: "Теги витрины",
+				varPath: "detailInfo.dataMart.tags",
+				dictionaryCode: dictCode,
+				codesPreview: null,
+			},
+		];
+
+		const params = buildSchemaWorkParameters({
+			fieldPathHints: hints,
+			uiSchema: {
+				detailInfo: {
+					dataMart: {
+						"ui:options": { archComponent: "dataMart" },
+						tags: {
+							"ui:options": {
+								dictionaryCode: dictCode,
+								multiple: true,
+							},
+						},
+					},
+				},
+			},
+			jsonSchema: {
+				type: "object",
+				properties: {
+					detailInfo: {
+						type: "object",
+						properties: {
+							dataMart: {
+								type: "object",
+								properties: {
+									tags: {
+										type: "array",
+										title: "Теги витрины",
+										items: { type: "string" },
+									},
+								},
+							},
+						},
+					},
+				},
+			} as RJSFSchema,
+			enumMapByCode: {
+				[dictCode]: {
+					enums: ["simple", "complex"],
+					enumNames: ["Простой", "Сложный"],
+				},
+			},
+		});
+
+		const param = params.find((p) => p.code === "tags");
+		expect(param).toBeDefined();
+		expect(param?.dictionaryCode).toBe(dictCode);
+		expect(param?.values.map((v) => v.code)).toEqual(["simple", "complex"]);
+		expect(isSchemaLaborParamCandidate(param!)).toBe(true);
+	});
+
+	it("still excludes plain object arrays without dictionary binding", () => {
+		const hints: FieldPathHint[] = [
+			{
+				pointer: "/detailInfo/sourceSystems",
+				key: "sourceSystems",
+				title: "Системы-источники",
+				varPath: "detailInfo.sourceSystems",
+				dictionaryCode: null,
+				codesPreview: null,
+			},
+		];
+
+		const params = buildSchemaWorkParameters({
+			fieldPathHints: hints,
+			uiSchema: {
+				detailInfo: {
+					sourceSystems: {
+						"ui:options": { archComponent: "sourceSystem" },
+					},
+				},
+			},
+			jsonSchema: {
+				type: "object",
+				properties: {
+					detailInfo: {
+						type: "object",
+						properties: {
+							sourceSystems: {
+								type: "array",
+								title: "Системы-источники",
+								items: {
+									type: "object",
+									properties: {
+										name: { type: "string", title: "Название" },
+									},
+								},
+							},
+						},
+					},
+				},
+			} as RJSFSchema,
+			enumMapByCode: {},
+		});
+
+		expect(params.find((p) => p.code === "sourceSystems")).toBeUndefined();
 	});
 
 	it("includes plain string schema fields without enum or dictionary", () => {
@@ -830,13 +1033,14 @@ describe("schemaLaborParamPickerCaption", () => {
 		).toMatch(/2 значения.*По значениям.*Any-of/i);
 	});
 
-	it("includes schema field path before mode hint", () => {
+	it("includes schema field id and path before mode hint", () => {
 		expect(
 			schemaLaborParamPickerCaption({
 				id: "schema:field",
 				code: "field_8pFvwc-v",
 				name: "Наличие реплики в DAPP",
 				description: "streamDataSources.sourceSystems[].field_8pFvwc-v",
+				schemaPointer: "/streamDataSources/sourceSystems/items/field_8pFvwc-v",
 				values: [
 					{
 						id: "v-true",
@@ -850,7 +1054,7 @@ describe("schemaLaborParamPickerCaption", () => {
 				],
 			}),
 		).toBe(
-			"streamDataSources.sourceSystems[].field_8pFvwc-v · 1 значение · подходит «По значениям» и Any-of",
+			"schema:field · streamDataSources.sourceSystems[].field_8pFvwc-v · 1 значение · подходит «По значениям» и Any-of",
 		);
 	});
 });
@@ -1030,6 +1234,131 @@ describe("triggerRuleGroupKey", () => {
 		];
 		const next = excludeRulesByGroupKey(rules, "type", schemaParams);
 		expect(next).toHaveLength(0);
+	});
+});
+
+describe("archRef параметра схемы", () => {
+	const jsonSchema: RJSFSchema = {
+		type: "object",
+		properties: {
+			detailInfo: {
+				type: "object",
+				properties: {
+					modelService: {
+						type: "object",
+						title: "Модельный сервис",
+						properties: {
+							workType: { type: "string", enum: ["Разработка", "Внедрение"] },
+						},
+					},
+					dataMart: {
+						type: "object",
+						title: "Объект / Витрина данных",
+						properties: {
+							workType: { type: "string", enum: ["Разработка", "Настройка"] },
+						},
+					},
+				},
+			},
+		},
+	};
+
+	function hint(pointer: string, uid: string): FieldPathHint {
+		return {
+			pointer,
+			key: "workType",
+			title: "Тип работ",
+			varPath: pointer.slice(1).replace(/\//g, "."),
+			schemaFieldUid: uid,
+			dictionaryCode: null,
+			codesPreview: null,
+		};
+	}
+
+	const modelServicePointer = "/detailInfo/modelService/workType";
+	const dataMartPointer = "/detailInfo/dataMart/workType";
+
+	function build(uiSchema: Record<string, unknown>) {
+		return buildSchemaWorkParameters({
+			fieldPathHints: [
+				hint(modelServicePointer, "field-ms-worktype"),
+				hint(dataMartPointer, "field-dm-worktype"),
+			],
+			uiSchema,
+			jsonSchema,
+			enumMapByCode: {},
+		});
+	}
+
+	it("берёт archBlockUid арх-блока как стабильный id компонента", () => {
+		const params = build({
+			detailInfo: {
+				modelService: {
+					"ui:options": {
+						archComponent: "modelService",
+						archBlockUid: "block_model_service_v1",
+						schemaFieldUid: "field-ms-block",
+					},
+				},
+			},
+		});
+		const param = params.find(
+			(item) => item.schemaPointer === modelServicePointer,
+		);
+		expect(param?.archRef).toEqual({
+			type: "modelService",
+			label: "Модельный сервис",
+			blockUid: "block_model_service_v1",
+			blockTitle: "Модельный сервис",
+			blockPointer: "/detailInfo/modelService",
+		});
+		expect(schemaParamArchCaption(param)).toBe(
+			"Модельный сервис · modelService · block_model_service_v1",
+		);
+	});
+
+	it("падает на schemaFieldUid блока, когда archBlockUid не проставлен", () => {
+		const params = build({
+			detailInfo: {
+				dataMart: {
+					"ui:options": {
+						archComponent: "dataMart",
+						schemaFieldUid: "field-dm-block",
+					},
+				},
+			},
+		});
+		const param = params.find((item) => item.schemaPointer === dataMartPointer);
+		expect(param?.archRef?.blockUid).toBe("field-dm-block");
+	});
+
+	it("без арх-компонента archRef пуст", () => {
+		const params = build({});
+		expect(params.every((param) => param.archRef === null)).toBe(true);
+		expect(schemaParamArchCaption(params[0])).toBeNull();
+	});
+
+	it("считает одноимённые поля в других арх-компонентах", () => {
+		const params = build({
+			detailInfo: {
+				modelService: {
+					"ui:options": {
+						archComponent: "modelService",
+						archBlockUid: "block_model_service_v1",
+					},
+				},
+				dataMart: {
+					"ui:options": {
+						archComponent: "dataMart",
+						archBlockUid: "block_data_mart_v1",
+					},
+				},
+			},
+		});
+		const param = params.find(
+			(item) => item.schemaPointer === modelServicePointer,
+		);
+		expect(countSameNamedSchemaParams(param, params)).toBe(1);
 	});
 });
 

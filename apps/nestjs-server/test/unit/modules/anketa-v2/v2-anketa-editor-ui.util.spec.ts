@@ -41,14 +41,14 @@ describe("resolveV2AnketaEditorBindings", () => {
 				"detailInfo.sourceSystems",
 				"detailInfo.modelsList",
 				"streamDataSources.field_eCyDEFw3",
-				"streamModelControl.field_QkVbhG-_",
+				"streamModelControl.field_hQeUoQl4",
 			]),
 		);
 
 		expect(bindings.readonlyArrayTablePaths).toEqual(
 			expect.arrayContaining([
 				"detailInfo.detailTypicalTasks",
-				"streamDataSources.sourceTypicalTasks",
+				"streamDataSources.field_u-7AkDrP",
 			]),
 		);
 

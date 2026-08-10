@@ -9,9 +9,29 @@ import type {
 	V2AnketaSectionStatus,
 } from "./v2-anketa-workflow.types";
 
-export const V2_QUESTIONNAIRE_STATUS_VALUES = ["active", "archived"] as const;
+export const V2_QUESTIONNAIRE_STATUS_VALUES = [
+	"active",
+	"archived",
+	"inactive",
+] as const;
 export type V2QuestionnaireStatus =
 	(typeof V2_QUESTIONNAIRE_STATUS_VALUES)[number];
+
+export const V2_QUESTIONNAIRE_STATUS_RU: Record<V2QuestionnaireStatus, string> =
+	{
+		active: "Активная",
+		archived: "Архив",
+		inactive: "Неактивная",
+	};
+
+export function formatV2QuestionnaireStatus(
+	status: V2QuestionnaireStatus | string | null | undefined,
+): string {
+	if (!status) return "";
+	return (
+		V2_QUESTIONNAIRE_STATUS_RU[status as V2QuestionnaireStatus] ?? String(status)
+	);
+}
 
 /** Связь анкеты с версией схемы шаблона на момент создания / редактирования. */
 export const V2_SCHEMA_BINDING_STATUS_VALUES = [
@@ -44,6 +64,10 @@ export type V2SchemaBindingDto = {
 	boundTemplateVersionId: string;
 	boundTemplateVersionNumber: number | null;
 	boundTemplateVersionStatus: string | null;
+	/** Дата создания привязанной версии схемы. */
+	boundTemplateVersionCreatedAt: string | null;
+	/** Дата последнего изменения привязанной версии схемы. */
+	boundTemplateVersionUpdatedAt: string | null;
 	/** Актуальная версия шаблона в админке (если есть). */
 	currentTemplateVersionId: string | null;
 	currentTemplateVersionNumber: number | null;
@@ -118,12 +142,20 @@ export type ExportV2QuestionnairesXlsxRequestDto = {
 
 export type BulkDeleteV2QuestionnairesFailureDto = {
 	id: string;
-	reason: "not_found" | "delete_failed";
+	reason:
+		| "not_found"
+		| "delete_failed"
+		| "forbidden"
+		| "wrong_stream"
+		| "already_inactive";
 	message: string;
 };
 
 export type BulkDeleteV2QuestionnairesResultDto = {
+	/** Полностью удалены (Черновик). */
 	deletedIds: string[];
+	/** Переведены в статус «Неактивная» (Заполнено / Утверждена). */
+	deactivatedIds: string[];
 	failed: BulkDeleteV2QuestionnairesFailureDto[];
 };
 
@@ -144,6 +176,30 @@ export type V2QuestionnaireCommentDto = {
 	/** Автор анкеты — для цветовой дифференциации в UI. */
 	isAnketaAuthor: boolean;
 	createdAt: string;
+};
+
+/** TTL блокировки редактирования анкеты (heartbeat продлевает). */
+export const V2_QUESTIONNAIRE_EDIT_LOCK_TTL_MS = 2 * 60 * 1000;
+
+/**
+ * Бездействие в открытой анкете: снимаем occupancy-lock и показываем экран выхода.
+ * Heartbeat сам по себе не удерживает сессию дольше этого окна без активности.
+ */
+export const V2_QUESTIONNAIRE_EDIT_IDLE_TIMEOUT_MS = 30 * 60 * 1000;
+
+export type V2QuestionnaireEditLockDto = {
+	questionnaireId: string;
+	lockedByLabel: string;
+	lockedByUserId: string | null;
+	expiresAt: string;
+};
+
+export type AcquireV2QuestionnaireEditLockRequestDto = {
+	lockedByLabel: string;
+};
+
+export type V2QuestionnaireEditLocksListDto = {
+	locks: V2QuestionnaireEditLockDto[];
 };
 
 export type CreateV2QuestionnaireCommentRequestDto = {

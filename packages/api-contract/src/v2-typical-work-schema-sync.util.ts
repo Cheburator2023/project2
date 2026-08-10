@@ -12,6 +12,7 @@ import {
 import { schemaEnumValueMatchesRule } from "./v2-template-work-schema-params.util";
 import {
 	formatParamNameWithSourceKeys,
+	parseParamNameSourceKeys,
 	stripParamNameSourceKeys,
 } from "./v2-work-param-source-keys.util";
 import {
@@ -25,6 +26,13 @@ export type V2TypicalWorkSchemaFieldSyncRequestDto = {
 	templateVersionId: string;
 	mode: "dryRun" | "apply";
 	operation: "upsert" | "delete";
+	/**
+	 * Uid-ы полей, которых больше нет в схеме версии. Ссылки работ на них
+	 * считаются непривязанными: иначе поле, пересозданное в конструкторе,
+	 * навсегда остаётся с мёртвой привязкой (матч по коду/имени блокируется
+	 * при заполненном schemaFieldUid).
+	 */
+	staleSchemaFieldUids?: string[];
 	field: {
 		schemaFieldUid: string;
 		previousCode?: string | null;
@@ -36,6 +44,18 @@ export type V2TypicalWorkSchemaFieldSyncRequestDto = {
 	};
 };
 
+/** Работа, которую затронет синхронизация, — для предпросмотра перед apply. */
+export type V2TypicalWorkSchemaSyncAffectedWorkDto = {
+	workId: string;
+	workName: string;
+	streamExecutor: string;
+	rulesUpdated: number;
+	rulesRemoved: number;
+	laborParamsUpdated: number;
+	laborParamsRemoved: number;
+	formulaInvalidated: boolean;
+};
+
 export type V2TypicalWorkSchemaFieldSyncImpactDto = {
 	worksMatched: number;
 	worksUpdated: number;
@@ -44,7 +64,33 @@ export type V2TypicalWorkSchemaFieldSyncImpactDto = {
 	laborParamsUpdated: number;
 	laborParamsRemoved: number;
 	formulasInvalidated: number;
+	affectedWorks: V2TypicalWorkSchemaSyncAffectedWorkDto[];
 };
+
+/** Слияние записей об одной работе, затронутой несколькими полями схемы. */
+export function mergeSchemaSyncAffectedWorks(
+	target: V2TypicalWorkSchemaSyncAffectedWorkDto[],
+	incoming: V2TypicalWorkSchemaSyncAffectedWorkDto[],
+): V2TypicalWorkSchemaSyncAffectedWorkDto[] {
+	const byKey = new Map(
+		target.map((work) => [`${work.workId}:${work.streamExecutor}`, work]),
+	);
+	for (const work of incoming) {
+		const key = `${work.workId}:${work.streamExecutor}`;
+		const existing = byKey.get(key);
+		if (!existing) {
+			byKey.set(key, { ...work });
+			continue;
+		}
+		existing.rulesUpdated += work.rulesUpdated;
+		existing.rulesRemoved += work.rulesRemoved;
+		existing.laborParamsUpdated += work.laborParamsUpdated;
+		existing.laborParamsRemoved += work.laborParamsRemoved;
+		existing.formulaInvalidated =
+			existing.formulaInvalidated || work.formulaInvalidated;
+	}
+	return [...byKey.values()];
+}
 
 export type V2TypicalWorkSchemaBulkSyncResponseDto =
 	V2TypicalWorkSchemaFieldSyncImpactDto & {
@@ -72,6 +118,45 @@ function collectFieldAliasCodes(
 	return aliases;
 }
 
+/**
+ * Сравниваем подписи полей без декоративного префикса «Маркер:» и регистра.
+ * Иначе после правок CSV/factory bulk dryRun на проде вечно предлагает
+ * «обновить типовые работы», хотя смысл привязки не менялся.
+ */
+function normalizeSchemaFieldDisplayName(name: string | null | undefined): string {
+	return stripParamNameSourceKeys(name)
+		.replace(/^Маркер:\s*/i, "")
+		.trim()
+		.toLocaleLowerCase("ru");
+}
+
+/**
+ * Привязка уже соответствует полю схемы: тот же uid, код и отображаемое имя.
+ * В этом случае нельзя переписывать `paramName` (добавлять `@ field_xxx` / алиасы) —
+ * иначе bulk dryRun на нетронутой схеме вечно предлагает «обновить типовые работы».
+ */
+function isSchemaFieldBindingCurrent(
+	ref: {
+		schemaFieldUid?: string | null;
+		paramCode: string;
+		paramName?: string | null;
+	},
+	request: V2TypicalWorkSchemaFieldSyncRequestDto,
+	nextCode: string,
+): boolean {
+	if (ref.schemaFieldUid !== request.field.schemaFieldUid) return false;
+	if (ref.paramCode !== nextCode) return false;
+	const currentDisplay = normalizeSchemaFieldDisplayName(ref.paramName);
+	const nextDisplay = normalizeSchemaFieldDisplayName(
+		request.field.name ?? ref.paramName ?? "",
+	);
+	if (!nextDisplay) return true;
+	// Пустой/битый display (`" @ field|…"` после старого truncate) или
+	// реальное переименование / обрезка varchar — один rewrite, затем equal.
+	if (!currentDisplay) return false;
+	return currentDisplay === nextDisplay;
+}
+
 function formatSyncedParamName(
 	request: V2TypicalWorkSchemaFieldSyncRequestDto,
 	currentName: string | null | undefined,
@@ -82,12 +167,39 @@ function formatSyncedParamName(
 		request.field.name ?? currentName ?? "",
 	).trim();
 	if (!displayName) return currentName ?? null;
+	/**
+	 * Уже накопленные алиасы переносим, а слаг прежнего имени добавляем только при
+	 * реальном переименовании. Иначе каждый прогон подменяет слаг на текущее имя,
+	 * реконсиляция не сходится и bulk dryRun вечно рапортует «схема изменилась».
+	 */
+	const current = parseParamNameSourceKeys(currentName);
+	const currentNorm = normalizeSchemaFieldDisplayName(current.displayName);
+	const nextNorm = normalizeSchemaFieldDisplayName(displayName);
+	if (
+		currentNorm === nextNorm &&
+		(previousCode ?? nextCode) === nextCode &&
+		(current.sourceKeys.length === 0 || current.sourceKeys.includes(nextCode))
+	) {
+		// Код и имя не менялись (в т.ч. только «Маркер:» / регистр) —
+		// не дописываем декоративный `@ code` и лишние алиасы.
+		return currentName ?? null;
+	}
+	const truncationArtifact =
+		Boolean(currentNorm) &&
+		Boolean(nextNorm) &&
+		(nextNorm.startsWith(currentNorm) || currentNorm.startsWith(nextNorm));
 	const aliasCodes = [
 		nextCode,
 		previousCode,
 		request.field.previousCode,
 		...(request.field.aliasCodes ?? []),
-		currentName ? slugParamCode(stripParamNameSourceKeys(currentName)) : null,
+		...current.sourceKeys,
+		// Слаг от обрезанного displayName только размножает мусорные алиасы.
+		!truncationArtifact &&
+		current.displayName &&
+		currentNorm !== nextNorm
+			? slugParamCode(current.displayName)
+			: null,
 	].filter((code): code is string => Boolean(code?.trim()));
 	return formatParamNameWithSourceKeys(displayName, [...new Set(aliasCodes)]);
 }
@@ -100,19 +212,26 @@ function matchesField(
 	},
 	request: V2TypicalWorkSchemaFieldSyncRequestDto,
 ): boolean {
-	if (ref.schemaFieldUid) {
-		return ref.schemaFieldUid === request.field.schemaFieldUid;
+	if (
+		ref.schemaFieldUid &&
+		ref.schemaFieldUid === request.field.schemaFieldUid
+	) {
+		return true;
+	}
+
+	/** Уже привязан к другому живому полю — не перехватывать по коду/имени. */
+	const refUid = ref.schemaFieldUid?.trim();
+	if (refUid && !request.staleSchemaFieldUids?.includes(refUid)) {
+		return false;
 	}
 
 	const aliases = collectFieldAliasCodes(request);
 	if (aliases.has(ref.paramCode)) return true;
 
 	if (request.field.name?.trim() && ref.paramName?.trim()) {
-		const fieldName = stripParamNameSourceKeys(request.field.name)
-			.trim()
-			.toLowerCase();
-		const refName = stripParamNameSourceKeys(ref.paramName).trim().toLowerCase();
-		if (fieldName === refName) return true;
+		const fieldName = normalizeSchemaFieldDisplayName(request.field.name);
+		const refName = normalizeSchemaFieldDisplayName(ref.paramName);
+		if (fieldName && fieldName === refName) return true;
 	}
 
 	return false;
@@ -128,6 +247,9 @@ function reconcileRule(
 	const values = request.field.values;
 	if (values === undefined) {
 		const nextCode = request.field.code ?? rule.paramCode;
+		if (isSchemaFieldBindingCurrent(rule, request, nextCode)) {
+			return rule;
+		}
 		return {
 			...rule,
 			schemaFieldUid: request.field.schemaFieldUid,
@@ -325,15 +447,19 @@ function reconcileLaborParam(
 	if (request.operation === "delete") return null;
 
 	const values = request.field.values;
+	const nextCode = request.field.code ?? group.paramCode;
+	if (values === undefined && isSchemaFieldBindingCurrent(group, request, nextCode)) {
+		return group;
+	}
 	const nextBase = {
 		...group,
 		schemaFieldUid: request.field.schemaFieldUid,
-		paramCode: request.field.code ?? group.paramCode,
+		paramCode: nextCode,
 		paramName:
 			formatSyncedParamName(
 				request,
 				group.paramName,
-				request.field.code ?? group.paramCode,
+				nextCode,
 				group.paramCode,
 			) ?? group.paramName,
 	};
@@ -357,23 +483,51 @@ function reconcileLaborParam(
 		};
 	}
 
+	const matchedExisting = new Set<string>();
+	const synced = values.map((value, index) => {
+		const existing = findMatchingLaborCoefficient(group, value);
+		if (existing) {
+			matchedExisting.add(
+				existing.id ??
+					`${normalizeLaborValueIdentity(existing.valueCode)}\0${normalizeLaborValueIdentity(existing.valueLabel)}`,
+			);
+		}
+		return {
+			id: existing?.id ?? `sync-${index}-${value.code}`,
+			streamExecutor:
+				existing?.streamExecutor ??
+				group.coefficients[0]?.streamExecutor ??
+				"",
+			paramCode: request.field.code ?? group.paramCode,
+			paramName: request.field.name ?? group.paramName,
+			valueCode: normalizeStoredValueCode(value.code, value.label),
+			valueLabel: normalizeStoredValueLabel(value.label),
+			coefficient: existing?.coefficient ?? 1,
+		};
+	});
+	/** Не дропать строки, которых нет в values — иначе bulk/словарь затирает правки админа. */
+	const orphans = group.coefficients.filter((row) => {
+		if (!row.valueCode && !row.valueLabel) return false;
+		const key =
+			row.id ??
+			`${normalizeLaborValueIdentity(row.valueCode)}\0${normalizeLaborValueIdentity(row.valueLabel)}`;
+		if (matchedExisting.has(key)) return false;
+		return !values.some(
+			(value) =>
+				schemaEnumValueMatchesRule(value, {
+					valueCode: row.valueCode,
+					valueLabel: row.valueLabel,
+				}) ||
+				normalizeLaborValueIdentity(row.valueCode) ===
+					normalizeLaborValueIdentity(value.code) ||
+				normalizeLaborValueIdentity(row.valueLabel) ===
+					normalizeLaborValueIdentity(value.label),
+		);
+	});
+
 	return {
 		...nextBase,
-		coefficients: values.map((value, index) => {
-			const existing = findMatchingLaborCoefficient(group, value);
-			return {
-				id: existing?.id ?? `sync-${index}-${value.code}`,
-				streamExecutor:
-					existing?.streamExecutor ??
-					group.coefficients[0]?.streamExecutor ??
-					"",
-				paramCode: request.field.code ?? group.paramCode,
-				paramName: request.field.name ?? group.paramName,
-				valueCode: normalizeStoredValueCode(value.code, value.label),
-				valueLabel: normalizeStoredValueLabel(value.label),
-				coefficient: existing?.coefficient ?? 1,
-			};
-		}),
+		coefficients: dedupeLaborCoefficientsByStoredValue([...synced, ...orphans]),
 	};
 }
 
@@ -391,17 +545,26 @@ function reconcileFormulaTokensForField(
 				invalidated = true;
 				return { ...token, invalid: true };
 			}
+			const nextCode = request.field.code ?? token.paramCode;
+			const nextName =
+				formatSyncedParamName(
+					request,
+					token.paramName,
+					nextCode,
+					token.paramCode,
+				) ?? token.paramName;
+			if (
+				token.paramCode === nextCode &&
+				token.paramName === nextName &&
+				!token.invalid
+			) {
+				return token;
+			}
+			const { invalid: _invalid, ...rest } = token;
 			return {
-				...token,
-				paramCode: request.field.code ?? token.paramCode,
-				paramName:
-					formatSyncedParamName(
-						request,
-						token.paramName,
-						request.field.code ?? token.paramCode,
-						token.paramCode,
-					) ?? token.paramName,
-				invalid: false,
+				...rest,
+				paramCode: nextCode,
+				paramName: nextName,
 			};
 		}),
 		invalidated,
@@ -435,7 +598,7 @@ export function reconcileTypicalWorkCardWithSchemaField(
 	changed: boolean;
 	impact: Omit<
 		V2TypicalWorkSchemaFieldSyncImpactDto,
-		"worksMatched" | "worksUpdated"
+		"worksMatched" | "worksUpdated" | "affectedWorks"
 	>;
 } {
 	const matchingRules = card.rules.filter((rule) =>
@@ -444,6 +607,61 @@ export function reconcileTypicalWorkCardWithSchemaField(
 	const matchingLabor = card.laborParams.filter((group) =>
 		matchesField(group, request),
 	);
+
+	/** Поле схемы не ссылается на эту карточку — не гонять merge/formula. */
+	if (matchingRules.length === 0 && matchingLabor.length === 0) {
+		return {
+			card,
+			changed: false,
+			impact: {
+				rulesUpdated: 0,
+				rulesRemoved: 0,
+				laborParamsUpdated: 0,
+				laborParamsRemoved: 0,
+				formulasInvalidated: 0,
+			},
+		};
+	}
+
+	/**
+	 * Bulk dryRun идёт по каждому полю схемы (в т.ч. десятки дублей workType).
+	 * Если uid+code+имя уже совпадают — не трогаем карточку: иначе
+	 * formatSyncedParamName / mergeLaborParamGroups переписывают aliases и
+	 * формулу на каждом заходе, и редактор вечно предлагает синхронизацию
+	 * даже на только что созданной схеме.
+	 */
+	const bindingsAlreadyCurrent =
+		request.operation === "upsert" &&
+		request.field.values === undefined &&
+		(matchingRules.length > 0 || matchingLabor.length > 0) &&
+		matchingRules.every((rule) =>
+			isSchemaFieldBindingCurrent(
+				rule,
+				request,
+				request.field.code ?? rule.paramCode,
+			),
+		) &&
+		matchingLabor.every((group) =>
+			isSchemaFieldBindingCurrent(
+				group,
+				request,
+				request.field.code ?? group.paramCode,
+			),
+		);
+	if (bindingsAlreadyCurrent) {
+		return {
+			card,
+			changed: false,
+			impact: {
+				rulesUpdated: 0,
+				rulesRemoved: 0,
+				laborParamsUpdated: 0,
+				laborParamsRemoved: 0,
+				formulasInvalidated: 0,
+			},
+		};
+	}
+
 	const rules = card.rules
 		.map((rule) => reconcileRule(rule, request))
 		.filter((rule): rule is V2TypicalWorkRuleDto => rule != null);
@@ -475,11 +693,17 @@ export function reconcileTypicalWorkCardWithSchemaField(
 		formulasInvalidated = 1;
 	}
 
+	/**
+	 * «Изменено» — только когда результат реконсиляции реально отличается от карточки.
+	 * Совпадения по полю (`matchingRules`/`matchingLabor`) недостаточно: bulk dryRun
+	 * идёт по всем полям схемы и иначе помечает как «затронутые» все работы с любой
+	 * привязкой — на нетронутой схеме это даёт ложное предложение синхронизации.
+	 */
 	const changed =
-		matchingRules.length > 0 ||
-		matchingLabor.length > 0 ||
 		formulaReconciled.invalidated ||
 		formulaSanitized.invalidated ||
+		JSON.stringify(rules) !== JSON.stringify(card.rules) ||
+		JSON.stringify(laborParams) !== JSON.stringify(card.laborParams) ||
 		JSON.stringify(formulaTokens) !== JSON.stringify(card.formula.tokens);
 
 	return {

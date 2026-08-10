@@ -13,6 +13,7 @@ import {
 import { getObjectAtPath } from "../utils/anketaArchObjectTableConfig";
 import {
 	appendArchObjectListItem,
+	canAppendArchObjectListItem,
 	isAnketaArchObjectListPath,
 	readArchObjectListAtPath,
 	removeArchObjectListItem,
@@ -22,7 +23,9 @@ import { getArrayAtPath } from "../utils/anketaModalArrayTableConfig";
 import { getObjectUiSlice } from "../utils/anketaSchemaAtPath";
 import type { AnketaModalKind } from "../utils/anketaFormModalPaths";
 import {
+	calculateOverallUncertaintyPreview,
 	createDefaultOverallUncertaintyConfig,
+	mapFormDataToOverallUncertaintyPreview,
 	parseOverallUncertaintyConfigFromLogic,
 	parseUncertaintyRiskFormEntry,
 	resolveV2AnketaArchComponent,
@@ -112,7 +115,7 @@ function buildOverallUncertaintyLabel(
 	const { calculated, coefficient } =
 		resolveV2QuestionnaireUncertaintyCoefficient(formData, { config });
 	if (!calculated) return undefined;
-	return `Средняя ×${coefficient.toFixed(2)}`;
+	return `×${coefficient.toFixed(2)}`;
 }
 
 export function uncertaintyModalDefaults(
@@ -180,15 +183,16 @@ export function uncertaintySummaryText(
 		config?: V2OverallUncertaintyConfig;
 	},
 ): string {
+	const config = resolveUncertaintyConfig(options?.logicRules, options?.config);
+	const { calculated, coefficient } =
+		resolveV2QuestionnaireUncertaintyCoefficient(formData, { config });
+	/** Сначала доменный флаг: без срока/стоимости или после «Сброс» — не показывать stale ×N. */
+	if (!calculated) return "Не рассчитано";
 	const generalInfo = asRecord(formData.generalInfo);
 	if (generalInfo.overallUncertainty) {
 		return toText(generalInfo.overallUncertainty);
 	}
-	const config = resolveUncertaintyConfig(options?.logicRules, options?.config);
-	const { calculated, coefficient } =
-		resolveV2QuestionnaireUncertaintyCoefficient(formData, { config });
-	if (!calculated) return "не рассчитана";
-	return `Средняя ×${coefficient.toFixed(2)}`;
+	return `×${coefficient.toFixed(2)}`;
 }
 
 type ActiveModal =
@@ -282,14 +286,50 @@ export function AnketaFormModals({
 		(path: string, editIndex?: number) => {
 			const kind = modalBindings.modalKindByPath[path];
 			if (!kind) return;
+			if (
+				editIndex == null &&
+				isAnketaArchObjectListPath(path) &&
+				!canAppendArchObjectListItem(formData, path)
+			) {
+				return;
+			}
 			setActiveModal({ kind, path, editIndex });
 		},
-		[modalBindings.modalKindByPath],
+		[formData, modalBindings.modalKindByPath],
 	);
 
 	const openUncertaintyModal = useCallback(() => {
 		setActiveModal({ kind: "uncertainty" });
 	}, []);
+
+	/** Живой предпросмотр итога в модалке — та же методика, что и в расчёте. */
+	const computeUncertaintyBreakdown = useCallback(
+		(values: TotalUncertaintyFormValues) => {
+			const riskGroup: Record<string, unknown> = {};
+			for (const [modalKey, selection] of Object.entries(values.risks)) {
+				const schemaKey =
+					UNCERTAINTY_MODAL_RISK_ID_TO_SCHEMA_KEY[modalKey] ?? modalKey;
+				const probability = selection?.probability?.trim() ?? "";
+				const goals = selection?.goals?.trim() ?? "";
+				riskGroup[schemaKey] =
+					!probability && !goals ? "" : { probability, goals };
+			}
+			const draft = {
+				uncertaintyCalculation: {
+					initiativeTimeline: values.initiativeTimeline || undefined,
+					initiativeCost: values.initiativeCost || undefined,
+					uncertaintyAdjustment:
+						values.totalUncertaintyAdjustment === ""
+							? undefined
+							: Number(values.totalUncertaintyAdjustment.replace(",", ".")),
+					riskGroup,
+				},
+			};
+			const preview = mapFormDataToOverallUncertaintyPreview(draft, config);
+			return calculateOverallUncertaintyPreview(config, preview);
+		},
+		[config],
+	);
 
 	const deleteArrayItem = useCallback(
 		(path: string, index: number) => {
@@ -363,22 +403,27 @@ export function AnketaFormModals({
 					: ((items?.[activeModal.editIndex] as
 							| Record<string, unknown>
 							| undefined) ?? {});
-			const values =
+			const isAtypical =
 				resolveV2AnketaArchComponent(
 					getObjectUiSlice(previewUiSchema, activeModal.path),
-				) === "atypicalWork"
-					? withComputedAtypicalWorkRowTotal(rawValues)
-					: rawValues;
+				) === "atypicalWork";
+			const values = isAtypical
+				? withComputedAtypicalWorkRowTotal(rawValues)
+				: rawValues;
+			const lockedSlice = isAtypical
+				? lockAtypicalWorkCoefficientFields(slice)
+				: slice;
 			const parentNode = resolveSchemaNodeTitle(
 				previewSchema,
 				activeModal.path,
 			);
 			return {
-				...slice,
+				...lockedSlice,
 				values,
 				title:
-					typeof slice.schema.title === "string" && slice.schema.title.trim()
-						? slice.schema.title
+					typeof lockedSlice.schema.title === "string" &&
+					lockedSlice.schema.title.trim()
+						? lockedSlice.schema.title
 						: (parentNode ?? "Элемент"),
 				isArrayModal: true,
 			};
@@ -425,7 +470,7 @@ export function AnketaFormModals({
 		return synced.formData;
 	};
 
-	const handleUncertaintySubmit = (values: TotalUncertaintyFormValues) => {
+	const applyUncertaintyFormValues = (values: TotalUncertaintyFormValues) => {
 		onFormDataChange((prev) => {
 			const currentUncertainty = asRecord(prev.uncertaintyCalculation);
 			const currentRiskGroup = asRecord(currentUncertainty.riskGroup);
@@ -448,17 +493,24 @@ export function AnketaFormModals({
 					? undefined
 					: Number(values.totalUncertaintyAdjustment.replace(",", "."));
 
+			const nextUncertainty: Record<string, unknown> = {
+				...currentUncertainty,
+				initiativeTimeline: values.initiativeTimeline || undefined,
+				initiativeCost:
+					values.initiativeCost === "" ? undefined : values.initiativeCost,
+				riskGroup: nextRiskGroup,
+			};
+			if (adjustment === undefined) {
+				delete nextUncertainty.uncertaintyAdjustment;
+				delete nextUncertainty.field_QCwwo5c5;
+			} else {
+				nextUncertainty.uncertaintyAdjustment = adjustment;
+			}
+
 			const nextFormData = {
 				...prev,
 				generalInfo: { ...asRecord(prev.generalInfo) },
-				uncertaintyCalculation: {
-					...currentUncertainty,
-					initiativeTimeline: values.initiativeTimeline || undefined,
-					initiativeCost:
-						values.initiativeCost === "" ? undefined : values.initiativeCost,
-					uncertaintyAdjustment: adjustment,
-					riskGroup: nextRiskGroup,
-				},
+				uncertaintyCalculation: nextUncertainty,
 			};
 
 			const overallUncertainty = buildOverallUncertaintyLabel(
@@ -483,7 +535,16 @@ export function AnketaFormModals({
 				true,
 			);
 		});
+	};
+
+	const handleUncertaintySubmit = (values: TotalUncertaintyFormValues) => {
+		applyUncertaintyFormValues(values);
 		closeModal();
+	};
+
+	/** «Сброс»: обнулить срок/стоимость/поправку/риски в formData, модалку не закрывать. */
+	const handleUncertaintyReset = (values: TotalUncertaintyFormValues) => {
+		applyUncertaintyFormValues(values);
 	};
 
 	const handleRjsfArrayModalSubmit = (
@@ -546,12 +607,15 @@ export function AnketaFormModals({
 				open={activeModal?.kind === "uncertainty"}
 				onClose={closeModal}
 				onSubmit={handleUncertaintySubmit}
+				onReset={handleUncertaintyReset}
 				defaultValues={uncertaintyModalDefaults(formData)}
 				timelineOptions={scaleOptions.timeline}
 				costOptions={scaleOptions.cost}
 				probabilityOptions={scaleOptions.probability}
 				goalsOptions={scaleOptions.goals}
 				riskGroups={riskGroups}
+				adjustment={config.adjustment}
+				computeBreakdown={computeUncertaintyBreakdown}
 			/>
 			{rjsfModalSlice ? (
 				<AnketaRjsfObjectModal
@@ -580,6 +644,37 @@ export function AnketaFormModals({
 			) : null}
 		</>
 	);
+}
+
+/** Коэффициент нетиповой = общая неопределённость; в модалке только просмотр. */
+function lockAtypicalWorkCoefficientFields<
+	T extends { schema: RJSFSchema; uiSchema: UiSchema },
+>(slice: T): T {
+	const schema = structuredClone(slice.schema);
+	const uiSchema = structuredClone(slice.uiSchema) as UiSchema;
+	const properties =
+		schema.properties &&
+		typeof schema.properties === "object" &&
+		!Array.isArray(schema.properties)
+			? (schema.properties as Record<string, RJSFSchema>)
+			: undefined;
+	if (properties?.coefficient) {
+		properties.coefficient = {
+			...properties.coefficient,
+			readOnly: true,
+		};
+	}
+	const coeffUi =
+		uiSchema.coefficient &&
+		typeof uiSchema.coefficient === "object" &&
+		!Array.isArray(uiSchema.coefficient)
+			? (uiSchema.coefficient as UiSchema)
+			: {};
+	uiSchema.coefficient = {
+		...coeffUi,
+		"ui:readonly": true,
+	};
+	return { ...slice, schema, uiSchema };
 }
 
 function newArrayRowDefaults(

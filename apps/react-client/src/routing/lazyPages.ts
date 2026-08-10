@@ -119,6 +119,13 @@ export const AdminV2DictionariesPage = lazyPage(
 		),
 	"AdminV2DictionariesPage",
 );
+export const AdminV2StreamsPage = lazyPage(
+	() =>
+		import(
+			/* webpackChunkName: "page-admin-streams" */ "@react-client/features/v2/admin/pages/AdminV2StreamsPage"
+		),
+	"AdminV2StreamsPage",
+);
 export const AdminV2DictionaryDetailPage = lazyPage(
 	() =>
 		import(
@@ -167,6 +174,13 @@ export const AdminV2SettingsPage = lazyPage(
 			/* webpackChunkName: "page-admin-settings" */ "@react-client/features/v2/admin/pages/AdminV2SettingsPage"
 		),
 	"AdminV2SettingsPage",
+);
+export const AdminV2KeycloakMatrixPage = lazyPage(
+	() =>
+		import(
+			/* webpackChunkName: "page-admin-keycloak-matrix" */ "@react-client/features/v2/admin/pages/AdminV2KeycloakMatrixPage"
+		),
+	"AdminV2KeycloakMatrixPage",
 );
 export const AdminV2TemplateHistoryPage = lazyPage(
 	() =>
@@ -220,6 +234,13 @@ export const TrackerTasksPage = lazyPage(
 			/* webpackChunkName: "page-tracker-tasks" */ "@react-client/features/tracker/pages/TrackerTasksPage"
 		),
 	"TrackerTasksPage",
+);
+export const TrackerMyTasksPage = lazyPage(
+	() =>
+		import(
+			/* webpackChunkName: "page-tracker-my-tasks" */ "@react-client/features/tracker/pages/TrackerMyTasksPage"
+		),
+	"TrackerMyTasksPage",
 );
 export const TrackerGanttPage = lazyPage(
 	() =>
@@ -276,6 +297,13 @@ export const TrackerBoardHistoryPage = lazyPage(
 			/* webpackChunkName: "page-tracker-board-history" */ "@react-client/features/tracker/pages/TrackerBoardHistoryPage"
 		),
 	"TrackerBoardHistoryPage",
+);
+export const TrackerTrashPage = lazyPage(
+	() =>
+		import(
+			/* webpackChunkName: "page-tracker-trash" */ "@react-client/features/tracker/pages/TrackerTrashPage"
+		),
+	"TrackerTrashPage",
 );
 export const KanbanBoardPage = lazyPage(
 	() =>

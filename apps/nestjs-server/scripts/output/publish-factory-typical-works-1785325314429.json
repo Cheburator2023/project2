@@ -1,0 +1,16 @@
+{
+	"source": "../../llm/anketa-full-export-f115dca2-2026-07-29-11-36-06.json",
+	"templateId": "f115dca2-c73b-4cf1-ae4f-553c2d007014",
+	"templateName": "Схема god 29.07.2026 14:13",
+	"write": false,
+	"report": {
+		"registryWorks": 121,
+		"catalogAdded": 0,
+		"catalogUpdated": 115,
+		"catalogUnchanged": 6,
+		"catalogPreserved": 28,
+		"dropped": [],
+		"legacyStreamCatalogRows": 27
+	},
+	"droppedSample": []
+}

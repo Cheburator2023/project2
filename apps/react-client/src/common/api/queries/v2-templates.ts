@@ -30,7 +30,11 @@ import type {
 	V2TemplateRegistryListResponseDto,
 	V2TemplateVersionDto,
 	UpdateV2FactorySnapshotSettingDto,
+	V2EffectiveFactoryEditorSnapshotDto,
+	V2FactoryPublishTypicalWorksRequestDto,
+	V2FactoryPublishTypicalWorksResponseDto,
 	V2FactorySnapshotSettingDto,
+	V2TemplateVersionEditorSnapshotDto,
 } from "@smart-anketa/api-contract";
 import { useMemo } from "react";
 
@@ -80,6 +84,15 @@ export function invalidateV2TemplateVersions(
 ) {
 	return queryClient.invalidateQueries({
 		queryKey: ["v2-templates", templateId, "versions"],
+	});
+}
+
+/** Сброс кэша полных editor-snapshot (схема + работы) после правок типовых работ. */
+export function invalidateV2EditorSnapshots(queryClient: QueryClient) {
+	return queryClient.invalidateQueries({
+		predicate: (query) =>
+			Array.isArray(query.queryKey) &&
+			query.queryKey.includes("editor-snapshot"),
 	});
 }
 
@@ -303,6 +316,30 @@ export const useV2TemplateVersion = (
 				method: "GET",
 			}),
 		enabled: !!templateId && !!versionId,
+	});
+};
+
+export const useV2TemplateVersionEditorSnapshot = (
+	templateId: string,
+	versionId: string | undefined | null,
+	enabled = true,
+) => {
+	return useQuery<V2TemplateVersionEditorSnapshotDto>({
+		queryKey: [
+			"v2-templates",
+			templateId,
+			"versions",
+			versionId,
+			"editor-snapshot",
+		],
+		queryFn: () =>
+			apiClient<V2TemplateVersionEditorSnapshotDto>({
+				url: `/v2/templates/${templateId}/versions/${versionId}/editor-snapshot`,
+				method: "GET",
+			}),
+		enabled: Boolean(enabled && templateId && versionId),
+		staleTime: 0,
+		refetchOnMount: "always",
 	});
 };
 
@@ -824,29 +861,32 @@ export const useV2DictionaryAsJson = (code: string) => {
 
 /** Загрузка enum для всех указанных кодов словарников одним bulk-запросом. */
 export const useV2DictionaryEnumsMaps = (dictionaryCodes: string[]) => {
+	const codesKey = [
+		...new Set(
+			dictionaryCodes
+				.filter((c) => typeof c === "string" && String(c).trim())
+				.map((c) => String(c).trim()),
+		),
+	]
+		.sort()
+		.join("\0");
 	const uniqueSorted = useMemo(
-		() =>
-			[
-				...new Set(
-					dictionaryCodes.filter(
-						(c) => typeof c === "string" && String(c).trim(),
-					),
-				),
-			].sort(),
-		[dictionaryCodes],
+		() => (codesKey ? codesKey.split("\0") : []),
+		[codesKey],
 	);
 
-	const { data, isPending } = useQuery<BulkV2DictionaryJsonResponseDto>({
-		queryKey: ["v2-dictionaries", "json", "bulk", uniqueSorted],
-		queryFn: () =>
-			apiClient<BulkV2DictionaryJsonResponseDto>({
-				url: "/v2/dictionaries/json/bulk",
-				method: "POST",
-				data: { codes: uniqueSorted },
-			}),
-		enabled: uniqueSorted.length > 0,
-		staleTime: 5 * 60_000,
-	});
+	const { data, isPending, isFetching } =
+		useQuery<BulkV2DictionaryJsonResponseDto>({
+			queryKey: ["v2-dictionaries", "json", "bulk", uniqueSorted],
+			queryFn: () =>
+				apiClient<BulkV2DictionaryJsonResponseDto>({
+					url: "/v2/dictionaries/json/bulk",
+					method: "POST",
+					data: { codes: uniqueSorted },
+				}),
+			enabled: uniqueSorted.length > 0,
+			staleTime: 5 * 60_000,
+		});
 
 	const enumMapByCode = useMemo(() => {
 		const result: Record<string, { enums: string[]; enumNames: string[] }> = {};
@@ -860,7 +900,10 @@ export const useV2DictionaryEnumsMaps = (dictionaryCodes: string[]) => {
 		return result;
 	}, [data, uniqueSorted]);
 
-	return { enumMapByCode, isLoading: isPending, uniqueSorted };
+	// RQ v5: при enabled:false isPending=true без fetch — не считать это загрузкой.
+	const isLoading = uniqueSorted.length > 0 && isPending && isFetching;
+
+	return { enumMapByCode, isLoading, uniqueSorted };
 };
 
 export const useV2FactorySnapshotSetting = () => {
@@ -871,6 +914,19 @@ export const useV2FactorySnapshotSetting = () => {
 				url: "/v2/factory-snapshot",
 				method: "GET",
 			}),
+		staleTime: 30_000,
+	});
+};
+
+export const useV2EffectiveFactoryEditorSnapshot = (enabled = true) => {
+	return useQuery<V2EffectiveFactoryEditorSnapshotDto>({
+		queryKey: ["v2-factory-snapshot", "effective-editor-snapshot"],
+		queryFn: () =>
+			apiClient<V2EffectiveFactoryEditorSnapshotDto>({
+				url: "/v2/factory-snapshot/effective-editor-snapshot",
+				method: "GET",
+			}),
+		enabled,
 		staleTime: 30_000,
 	});
 };
@@ -891,7 +947,25 @@ export const useUpdateV2FactorySnapshotSetting = () => {
 			}),
 		onSuccess: (data) => {
 			queryClient.setQueryData(["v2-factory-snapshot"], data);
+			void queryClient.invalidateQueries({
+				queryKey: ["v2-factory-snapshot", "effective-editor-snapshot"],
+			});
 		},
+	});
+};
+
+export const usePublishV2FactoryTypicalWorks = () => {
+	return useMutation<
+		V2FactoryPublishTypicalWorksResponseDto,
+		Error,
+		V2FactoryPublishTypicalWorksRequestDto
+	>({
+		mutationFn: (dto) =>
+			apiClient<V2FactoryPublishTypicalWorksResponseDto>({
+				url: "/v2/factory-snapshot/publish-typical-works",
+				method: "POST",
+				data: dto,
+			}),
 	});
 };
 

@@ -222,33 +222,54 @@ export class V2TemplateVersionService {
 			userId,
 		);
 		if (!options?.withoutTypicalWorks) {
+			/**
+			 * Сид работ + reconcile — самая тяжёлая часть и может упираться в HTTP timeout.
+			 * Возвращаем draft сразу, а сид выполняем в фоне; UI уже ждёт готовность poll-ом.
+			 */
+			this.logger.log(
+				`Start async typical works seed for template ${templateId} version ${version.id}`,
+			);
 			this.seedTypicalWorksInBackground(templateId, version.id);
 		}
 		return version;
 	}
 
+	private async seedTypicalWorksForVersion(
+		templateId: string,
+		versionId: string,
+	): Promise<void> {
+		await this.typicalWorkSeedService.seedTemplateTypicalWorksFromFactorySnapshot(
+			templateId,
+			versionId,
+		);
+		const setting = await this.factorySnapshotService.getSettingDto();
+		/**
+		 * При клоне с UI-эталона schemaFieldUid уже корректны — reconcile только
+		 * шумит в диффе (переписывает bindings). Для builtin CSV-сида — нужен.
+		 */
+		if (setting.source === "template") {
+			return;
+		}
+		await this.typicalWorkWriteService.reconcileAllSchemaFieldsForVersion(
+			versionId,
+			"apply",
+			{ skipConsistencyReport: true },
+		);
+	}
+
+	/** Фоновый сид (legacy); предпочтительно seedTypicalWorksForVersion. */
 	private seedTypicalWorksInBackground(
 		templateId: string,
 		versionId: string,
 	): void {
-		void (async () => {
-			try {
-				await this.typicalWorkSeedService.seedTemplateTypicalWorksFromFactorySnapshot(
-					templateId,
-					versionId,
-				);
-				await this.typicalWorkWriteService.reconcileAllSchemaFieldsForVersion(
-					versionId,
-					"apply",
-					{ skipConsistencyReport: true },
-				);
-			} catch (error) {
+		void this.seedTypicalWorksForVersion(templateId, versionId).catch(
+			(error) => {
 				this.logger.error(
 					`Background typical works seed failed for template ${templateId} version ${versionId}`,
 					error instanceof Error ? error.stack : String(error),
 				);
-			}
-		})();
+			},
+		);
 	}
 
 	async resetToDefault(

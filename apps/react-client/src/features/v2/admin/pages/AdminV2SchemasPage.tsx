@@ -382,7 +382,10 @@ export function AdminV2SchemasPage() {
 					>
 						{seedMutation.isPending ? "Создание…" : "Сид тестовых анкет"}
 					</Button>
-					<V2AdminButton onClick={() => setCreateDialogOpen(true)}>
+					<V2AdminButton
+						onClick={() => setCreateDialogOpen(true)}
+						data-test-id="admin-btn-add-schema"
+					>
 						Добавить схему
 					</V2AdminButton>
 					<V2AdminButton

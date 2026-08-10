@@ -1,17 +1,19 @@
 import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
-import Stack from "@mui/material/Stack";
+import Divider from "@mui/material/Divider";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { FuzzyAutocomplete } from "@react-client/common/muiCustom/FuzzyAutocomplete";
 import { Header } from "@react-client/common/navigation/organisms/Header";
 import { Flex } from "@react-client/common/primitives/Flex";
+import { Spacer } from "@react-client/common/primitives/Spacer";
 import {
 	useKanbanBoardAssignees,
 	useKanbanBoardSettings,
@@ -28,7 +30,7 @@ import {
 	KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD,
 	KANBAN_BOARD_STATUSES,
 } from "@smart-anketa/api-contract";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 type AssigneeOption = {
 	value: string;
@@ -41,6 +43,28 @@ const parseCapacity = (value: unknown): number | null => {
 	if (Number.isNaN(parsed) || parsed < 0) return null;
 	return parsed;
 };
+
+function SettingsSection({
+	title,
+	description,
+	children,
+}: {
+	title: string;
+	description: string;
+	children: ReactNode;
+}) {
+	return (
+		<Flex flexDirection="column" gap={12}>
+			<Flex flexDirection="column" gap={4}>
+				<Typography variant="h6">{title}</Typography>
+				<Typography variant="body2" color="text.secondary">
+					{description}
+				</Typography>
+			</Flex>
+			{children}
+		</Flex>
+	);
+}
 
 export function TrackerSettingsPage() {
 	const { data: settings, isLoading: settingsLoading } =
@@ -101,6 +125,7 @@ export function TrackerSettingsPage() {
 		}
 		try {
 			await updateSettings.mutateAsync({ defaultSprintCapacityPd: parsed });
+			toast.success("Ёмкость спринта сохранена");
 		} catch {
 			setSaveError("Не удалось сохранить настройки");
 		}
@@ -126,47 +151,15 @@ export function TrackerSettingsPage() {
 	};
 
 	return (
-		<Flex flexDirection="column" flexGrow={1} minHeight="0">
+		<Flex flexDirection="column" flexGrow={1} minHeight="0" height="100%">
 			<Header title="Настройки трекера" />
-			<Flex flexDirection="column" gap={2} flexGrow={1} minHeight="0">
-				<Card padding="20px">
-					<Stack spacing={2} maxWidth={480}>
-						<Typography variant="h6">Планирование спринта</Typography>
-						<Typography variant="body2" color="text.secondary">
-							Ёмкость по умолчанию для новых исполнителей и для тех, у кого не
-							задано индивидуальное значение (как колонка «9» в Excel).
-						</Typography>
-						<Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-							<TextField
-								label="Ёмкость спринта по умолчанию, чд"
-								type="number"
-								value={defaultCapacity}
-								onChange={(event) => setDefaultCapacity(event.target.value)}
-								inputProps={{ min: 0, step: 0.5 }}
-								disabled={settingsLoading}
-								fullWidth
-							/>
-							<Button
-								variant="contained"
-								onClick={() => void handleSaveDefault()}
-								disabled={updateSettings.isPending || settingsLoading}
-								sx={{ alignSelf: { sm: "flex-end" }, minWidth: 140 }}
-							>
-								Сохранить
-							</Button>
-						</Stack>
-						{saveError ? <Alert severity="error">{saveError}</Alert> : null}
-					</Stack>
-				</Card>
-
-				<Card padding="20px">
-					<Stack spacing={2} maxWidth={480}>
-						<Typography variant="h6">Текущий пользователь</Typography>
-						<Typography variant="body2" color="text.secondary">
-							Кто вы в трекере — используется как исполнитель по умолчанию при
-							написании комментариев к задачам. Пока нет привязки к учётной
-							записи, выбор делается вручную.
-						</Typography>
+			<Spacer space={8} />
+			<Card padding="24px" height="100%" overflow="auto">
+				<Flex flexDirection="column" gap={24} maxWidth="720px">
+					<SettingsSection
+						title="Текущий пользователь"
+						description="Кто вы в трекере — для комментариев, блокировки редактирования и «Мои задачи». Если не задано, при создании задачи откроется обязательная форма. Поле «Назначил» в задаче при этом не заполняется автоматически."
+					>
 						<FuzzyAutocomplete<AssigneeOption>
 							label="Я — исполнитель"
 							options={assigneeOptions}
@@ -179,71 +172,96 @@ export function TrackerSettingsPage() {
 							disabled={assigneesLoading || settingsLoading}
 							fullWidth
 						/>
-						<Button
-							variant="contained"
-							onClick={() => void handleSaveCurrentUser()}
-							disabled={updateSettings.isPending || settingsLoading}
-							sx={{ alignSelf: "flex-start", minWidth: 140 }}
-						>
-							Сохранить
-						</Button>
+						<Flex gap={12} wrap="wrap" alignItems="center">
+							<Button
+								variant="contained"
+								onClick={() => void handleSaveCurrentUser()}
+								disabled={updateSettings.isPending || settingsLoading}
+							>
+								Сохранить
+							</Button>
+						</Flex>
 						{userSaveError ? (
 							<Alert severity="error">{userSaveError}</Alert>
 						) : null}
-					</Stack>
-				</Card>
+					</SettingsSection>
 
-				<Card padding="20px">
-					<Stack spacing={2} maxWidth={640}>
-						<Typography variant="h6">Колонки досок</Typography>
-						<Typography variant="body2" color="text.secondary">
-							Заводской набор колонок для новых досок и сброса существующих.
-							Задачи из удалённых колонок переносятся по соответствию старых
-							статусов; неизвестные — во «Входной буфер».
-						</Typography>
-						<Typography variant="body2" component="div">
-							{defaultColumnTitles.map((title) => (
-								<span key={title}>
-									{title}
-									<br />
-								</span>
-							))}
-						</Typography>
-						<Button
-							variant="outlined"
-							color="warning"
-							onClick={() => setConfirmColumnsResetOpen(true)}
-							disabled={resetBoardColumns.isPending}
-							sx={{ alignSelf: "flex-start" }}
+					<Divider />
+
+					<SettingsSection
+						title="Планирование спринта"
+						description="Ёмкость по умолчанию для новых исполнителей и для тех, у кого не задано индивидуальное значение."
+					>
+						<Flex
+							gap={12}
+							wrap="wrap"
+							alignItems="flex-start"
+							sx={{ width: "100%" }}
 						>
-							Применить ко всем доскам
-						</Button>
+							<TextField
+								label="Ёмкость спринта по умолчанию, чд"
+								type="number"
+								value={defaultCapacity}
+								onChange={(event) => setDefaultCapacity(event.target.value)}
+								inputProps={{ min: 0, step: 0.5 }}
+								disabled={settingsLoading}
+								sx={{ flex: "1 1 240px", minWidth: 200 }}
+							/>
+							<Button
+								variant="contained"
+								onClick={() => void handleSaveDefault()}
+								disabled={updateSettings.isPending || settingsLoading}
+								sx={{ mt: { xs: 0, sm: 0.5 } }}
+							>
+								Сохранить
+							</Button>
+						</Flex>
+						{saveError ? <Alert severity="error">{saveError}</Alert> : null}
+					</SettingsSection>
+
+					<Divider />
+
+					<SettingsSection
+						title="Колонки досок"
+						description="Заводской набор колонок для новых досок и сброса существующих. Задачи из удалённых колонок переносятся по соответствию старых статусов; неизвестные — во «Входной буфер»."
+					>
+						<Flex gap={6} wrap="wrap">
+							{defaultColumnTitles.map((title) => (
+								<Chip key={title} size="small" label={title} variant="outlined" />
+							))}
+						</Flex>
+						<Flex gap={12} wrap="wrap" alignItems="center">
+							<Button
+								variant="outlined"
+								color="warning"
+								onClick={() => setConfirmColumnsResetOpen(true)}
+								disabled={resetBoardColumns.isPending}
+							>
+								Применить ко всем доскам
+							</Button>
+						</Flex>
 						{columnsResetNotice ? (
 							<Alert severity="info">{columnsResetNotice}</Alert>
 						) : null}
-					</Stack>
-				</Card>
+					</SettingsSection>
 
-				<Card padding="20px">
-					<Stack spacing={2} maxWidth={560}>
-						<Typography variant="h6">Таблицы реестров</Typography>
-						<Typography variant="body2" color="text.secondary">
-							Порядок и набор колонок сохраняются в браузере автоматически.
-							Сброс вернёт таблицы к исходному виду на всех страницах трекера.
-						</Typography>
-						<Button
-							variant="outlined"
-							onClick={handleResetGridColumns}
-							sx={{ alignSelf: "flex-start" }}
-						>
-							Сбросить колонки всех таблиц
-						</Button>
+					<Divider />
+
+					<SettingsSection
+						title="Таблицы реестров"
+						description="Порядок и набор колонок сохраняются в браузере автоматически. Сброс вернёт таблицы к исходному виду на всех страницах трекера."
+					>
+						<Flex gap={12} wrap="wrap" alignItems="center">
+							<Button variant="outlined" onClick={handleResetGridColumns}>
+								Сбросить колонки всех таблиц
+							</Button>
+						</Flex>
 						{gridResetNotice ? (
 							<Alert severity="info">{gridResetNotice}</Alert>
 						) : null}
-					</Stack>
-				</Card>
-			</Flex>
+					</SettingsSection>
+				</Flex>
+			</Card>
 
 			<Dialog
 				open={confirmColumnsResetOpen}

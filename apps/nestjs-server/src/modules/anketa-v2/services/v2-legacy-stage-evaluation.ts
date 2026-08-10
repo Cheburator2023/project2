@@ -1,11 +1,19 @@
 import {
 	collectAtypicalWorkRowsFromData,
+	collectGeneratedTypicalWorkArrayPaths,
 	isPositiveBinaryFormValue,
 	resolveV2QuestionnaireUncertaintyCoefficient,
 	V2_LEGACY_STAGE_SUMMARY_POINTERS,
 	V2_SOURCE_TYPICAL_TASKS_OUTPUT_PATH,
 	type V2LegacyStageEvaluationDto,
 	buildExecutorStreamWorkSummaryRows,
+	createDefaultDeviationCoefficientsConfig,
+	parseDeviationCoefficientsConfigFromLogic,
+	resolveAlgorithmTypeCoefficient,
+	resolveDeploymentChannelCoefficient,
+	resolveSourceCountCoefficient,
+	type V2DeviationCoefficientsConfig,
+	type V2LogicGraphDto,
 } from "@smart-anketa/api-contract";
 import {
 	V2_PLATFORM_STREAM_NAMES,
@@ -37,7 +45,11 @@ export type V2PlatformStreamRow = {
 export type V2LegacySummaryResult = {
 	baseScoreStream: number;
 	scoreWithComplexityCoeff: number;
-	/** Отклонение в процентах: (adjusted / base − 1) × 100 */
+	/**
+	 * Отклонение от базовой оценки, %:
+	 * (Типовые + Нетиповые) / База × 100,
+	 * где Типовые+Нетиповые = итоговая трудоёмкость по анкете.
+	 */
 	deviationFromBaseline: number;
 	detailedCalculation: V2DetailedCalculationRow[];
 	platformStreams: V2PlatformStreamRow[];
@@ -52,6 +64,13 @@ function percentDeviation(base: number, adjusted: number): number | null {
 	if (!base || !Number.isFinite(base)) return null;
 	if (!adjusted && adjusted !== 0) return null;
 	return roundUp2(((adjusted / base) - 1) * 100);
+}
+
+/** (База×Коэффициенты + Нетиповые) / База × 100% */
+function ratioToBasePercent(base: number, adjusted: number): number | null {
+	if (!base || !Number.isFinite(base)) return null;
+	if (!Number.isFinite(adjusted)) return null;
+	return roundUp2((adjusted / base) * 100);
 }
 
 function readRecord(value: unknown): Record<string, unknown> | undefined {
@@ -99,96 +118,73 @@ function parseComplexityCoeff(complexity: string | undefined): number {
 	return parseLegacyMultiplierLabel(complexity);
 }
 
-function calculateModelsCoefficient(modelsCount: number): number {
+function calculateModelsCoefficient(
+	modelsCount: number,
+	increment: number,
+): number {
 	if (modelsCount < 1) return 1;
 	if (modelsCount === 1) return 1;
-	return 1 + (modelsCount - 1) * 0.75;
+	return 1 + (modelsCount - 1) * increment;
 }
 
-function calculateDataSourceCoefficient(dataSourceCount: number): number {
-	const coefficients: Record<number, number> = {
-		0: 1,
-		1: 1,
-		2: 1.2,
-		3: 1.4,
-		4: 1.6,
-		5: 1.8,
-		6: 2,
-		7: 2.2,
-		8: 2.4,
-		9: 2.6,
-		10: 3,
-	};
-	return coefficients[dataSourceCount] ?? 1;
+function getReadyPromReportsCoefficient(
+	readyPromReports: string,
+	yesCoefficient: number,
+): number {
+	return readyPromReports === "Да" ? yesCoefficient : 1;
 }
 
-function getReadyPromReportsCoefficient(readyPromReports: string): number {
-	return readyPromReports === "Да" ? 0.5 : 1;
-}
-
-function getPilotModelCoefficient(pilotModelRequired: string): number {
-	return pilotModelRequired === "Да" ? 1 : 0;
-}
-
-function getPilotSupportCoefficient(pilotSupportRequired: string): number {
-	return pilotSupportRequired === "Да" ? 1 : 0;
-}
-
-function getAutoMlCoefficient(autoMlRequired: string): number {
-	return autoMlRequired === "Да" ? 1 : 0;
-}
-
-function getProductionAdditionalReportsCoefficient(value: string): number {
+function getProductionAdditionalReportsCoefficient(
+	value: string,
+	increment: number,
+): number {
 	if (value === "Не требуется") return 0;
 	const numValue = Number.parseInt(value, 10);
 	if (!Number.isFinite(numValue) || numValue < 1) return 0;
 	if (numValue === 1) return 1;
-	return 1 + (numValue - 1) * 0.75;
+	return 1 + (numValue - 1) * increment;
 }
 
-const ALGORITHM_TYPE_COEFF: Record<string, number> = {
-	Табличные: 0.75,
-	"Табличные данные": 0.75,
-	"Временные ряды": 1.0,
-	NLP: 1.25,
-	"Текстовая аналитика_Классические модели": 1.25,
-	"Текстовая аналитика_LLM": 1.4,
-	"Аудио Аналитика": 1.6,
-	"Компьютерное зрение_CV": 1.8,
-	CV: 1.8,
-	RL: 2.5,
-	"Оптимизационная задача": 2.5,
-	"Гео-аналитика": 3.0,
-	"Графовая аналитика": 3.5,
-};
+function extractCoefficients(
+	data: Record<string, unknown>,
+	config: V2DeviationCoefficientsConfig,
+	formContextOptions?: { jsonSchema?: unknown; uiSchema?: unknown },
+): Coefficients {
+	const generalInfo = readRecord(data.generalInfo);
+	const detailInfo = readRecord(data.detailInfo);
+	const detailParams =
+		readRecord(detailInfo?.model) ?? readRecord(detailInfo?.parameters);
+	const ctx = resolveLegacyFormContext(data, formContextOptions);
 
-function calculateAlgorithmComplexityCoefficient(
-	algorithmTypes: string[],
-): number {
-	return algorithmTypes.reduce((total, type) => {
-		if (!type || !(type in ALGORITHM_TYPE_COEFF)) return total;
-		return total + (ALGORITHM_TYPE_COEFF[type] ?? 0);
-	}, 0);
-}
-
-function calculateDeploymentChannelCoefficient(channels: string[]): number {
-	const coefficientMap: Record<string, number> = {
-		Батч: 0.5,
-		"Батч+загрузка данных потребителю": 0.75,
-		"Батч + Онлайн": 1.2,
-		Онлайн: 1.0,
-		"Онлайн gpu": 1.25,
-		Стриминг: 1.5,
-		"Мобильные устройства": 1.75,
-		LLM: 2.0,
-		"Гео-сервисы": 2.25,
-		"Внедрение в облаке": 2.5,
-		"Графовая платформа": 3.0,
-		Требуется: 1.0,
+	return {
+		modelsCountCoefficient: calculateModelsCoefficient(
+			ctx.modelsCount,
+			config.modelsCountIncrement,
+		),
+		setupComplexityCoefficient: parseComplexityCoeff(
+			typeof generalInfo?.complexity === "string"
+				? generalInfo.complexity
+				: undefined,
+		),
+		generalUncertaintyCoefficient:
+			resolveV2QuestionnaireUncertaintyCoefficient(data).coefficient,
+		readyPromReportsCoefficient: getReadyPromReportsCoefficient(
+			ctx.readyPromReports,
+			config.readyPromYesCoefficient,
+		),
+		dataSourcesCountCoefficient: resolveSourceCountCoefficient(
+			config,
+			ctx.dataSourcesCount,
+		),
+		algorithmComplexityCoefficient: Math.max(
+			resolveAlgorithmTypeCoefficient(config, ctx.algorithmTypes),
+			Number(detailParams?.algorithmCoeffValue) || 0,
+		) || 1,
+		deploymentChannelsCoefficient: resolveDeploymentChannelCoefficient(
+			config,
+			ctx.deploymentChannels,
+		),
 	};
-	return channels.reduce((total, channel) => {
-		return total + (coefficientMap[channel] ?? 0);
-	}, 0);
 }
 
 // --- Этапы (порт v1 `stages.ts`) ---
@@ -331,43 +327,13 @@ type Coefficients = {
 	deploymentChannelsCoefficient: number;
 };
 
-function extractCoefficients(data: Record<string, unknown>): Coefficients {
-	const generalInfo = readRecord(data.generalInfo);
-	const detailInfo = readRecord(data.detailInfo);
-	const detailParams =
-		readRecord(detailInfo?.model) ?? readRecord(detailInfo?.parameters);
-	const ctx = resolveLegacyFormContext(data);
-
-	return {
-		modelsCountCoefficient: calculateModelsCoefficient(ctx.modelsCount),
-		setupComplexityCoefficient: parseComplexityCoeff(
-			typeof generalInfo?.complexity === "string"
-				? generalInfo.complexity
-				: undefined,
-		),
-		generalUncertaintyCoefficient:
-			resolveV2QuestionnaireUncertaintyCoefficient(data).coefficient,
-		readyPromReportsCoefficient: getReadyPromReportsCoefficient(
-			ctx.readyPromReports,
-		),
-		dataSourcesCountCoefficient: calculateDataSourceCoefficient(
-			ctx.dataSourcesCount,
-		),
-		algorithmComplexityCoefficient: Math.max(
-			calculateAlgorithmComplexityCoefficient(ctx.algorithmTypes),
-			Number(detailParams?.algorithmCoeffValue) || 0,
-		) || 1,
-		deploymentChannelsCoefficient: calculateDeploymentChannelCoefficient(
-			ctx.deploymentChannels,
-		),
-	};
-}
-
 function calculateAllStages(
 	data: Record<string, unknown>,
 	coefficients: Coefficients,
+	config: V2DeviationCoefficientsConfig,
+	formContextOptions?: { jsonSchema?: unknown; uiSchema?: unknown },
 ): Record<V2StageKey, number> {
-	const ctx = resolveLegacyFormContext(data);
+	const ctx = resolveLegacyFormContext(data, formContextOptions);
 	const assessedInitiativesCount = ctx.assessedInitiativesCount;
 
 	const c = coefficients;
@@ -434,6 +400,7 @@ function calculateAllStages(
 			c.generalUncertaintyCoefficient,
 			getProductionAdditionalReportsCoefficient(
 				ctx.productionAdditionalReports,
+				config.productionReportsIncrement,
 			),
 			ctx.productionAdditionalReports,
 		),
@@ -520,10 +487,22 @@ export function evaluateLegacyV2Summary(
 	options?: {
 		sourceTypicalWorksPath?: string | null;
 		uiSchema?: unknown;
+		jsonSchema?: unknown;
+		logic?: V2LogicGraphDto | null;
+		deviationCoefficients?: V2DeviationCoefficientsConfig | null;
 	},
 ): V2LegacySummaryResult {
-	const coefficients = extractCoefficients(data);
-	const stages = calculateAllStages(data, coefficients);
+	const config =
+		options?.deviationCoefficients ??
+		(options?.logic
+			? parseDeviationCoefficientsConfigFromLogic(options.logic.rules)
+			: createDefaultDeviationCoefficientsConfig());
+	const formContextOptions = {
+		jsonSchema: options?.jsonSchema,
+		uiSchema: options?.uiSchema,
+	};
+	const coefficients = extractCoefficients(data, config, formContextOptions);
+	const stages = calculateAllStages(data, coefficients, config, formContextOptions);
 	const generalInfo = readRecord(data.generalInfo);
 	const mlPlatform = readRecord(data.streamMlPlatform ?? data.mlPlatform);
 
@@ -652,16 +631,82 @@ export function evaluateLegacyV2Summary(
 				},
 			];
 
-	const baseScoreStream = roundUp2(baseTotal);
-	const scoreWithComplexityCoeff = roundUp2(adjustedTotal + atypicalAdjusted);
+	// СФЕРА-заголовки (упрощённая формула отклонения):
+	//   Отклонение = (Типовые + Нетиповые) / База × 100%
+	// где Типовые+Нетиповые = итоговая трудоёмкость по анкете
+	//     (с коэффициентами и общей неопределённостью — как в summary.total),
+	//     База = Σ нормативов выбранных типовых работ (без коэффициентов).
+	const worksTotals = resolveStreamWorksTotals(data, platformStreams);
+	const baseScoreStream = worksTotals.typical;
+	const scoreWithComplexityCoeff = resolveLaborIntensityTotal(
+		data,
+		worksTotals,
+	);
+	const deviationFromBaseline =
+		ratioToBasePercent(baseScoreStream, scoreWithComplexityCoeff) ?? 0;
 
 	return {
 		baseScoreStream,
 		scoreWithComplexityCoeff,
-		deviationFromBaseline:
-			percentDeviation(baseScoreStream, scoreWithComplexityCoeff) ?? 0,
+		deviationFromBaseline,
 		detailedCalculation,
 		platformStreams,
+	};
+}
+
+/**
+ * Числитель отклонения = итоговая трудоёмкость:
+ * summary.total, иначе typicalTotal+atypicalTotal (JsonLogic),
+ * иначе сумма по стримам (типовые с коэфф. + нетиповые).
+ */
+function resolveLaborIntensityTotal(
+	data: Record<string, unknown>,
+	worksTotals: { adjustedTypical: number; atypical: number },
+): number {
+	const summary = readRecord(data.summary);
+	const total = Number(summary?.total);
+	if (Number.isFinite(total) && total >= 0) {
+		return roundUp2(total);
+	}
+	const typicalTotal = Number(summary?.typicalTotal);
+	const atypicalTotal = Number(summary?.atypicalTotal);
+	const hasTypical = Number.isFinite(typicalTotal);
+	const hasAtypical = Number.isFinite(atypicalTotal);
+	if (hasTypical || hasAtypical) {
+		return roundUp2((hasTypical ? typicalTotal : 0) + (hasAtypical ? atypicalTotal : 0));
+	}
+	return roundUp2(worksTotals.adjustedTypical + worksTotals.atypical);
+}
+
+/** Суммы типовых/нетиповых по стримам; fallback на summary.* из JsonLogic. */
+function resolveStreamWorksTotals(
+	data: Record<string, unknown>,
+	platformStreams: V2PlatformStreamRow[],
+): { typical: number; adjustedTypical: number; atypical: number } {
+	if (platformStreams.length > 0) {
+		let typical = 0;
+		let adjustedTypical = 0;
+		let atypical = 0;
+		for (const row of platformStreams) {
+			typical += row.baseTypicalScore;
+			adjustedTypical += row.adjustedTypicalScore;
+			atypical += row.atypicalScore;
+		}
+		return {
+			typical: roundUp2(typical),
+			adjustedTypical: roundUp2(adjustedTypical),
+			atypical: roundUp2(atypical),
+		};
+	}
+	const summary = readRecord(data.summary);
+	const typical = Number(summary?.typicalTotal);
+	const atypical = Number(summary?.atypicalTotal);
+	const safeTypical = Number.isFinite(typical) ? roundUp2(typical) : 0;
+	const safeAtypical = Number.isFinite(atypical) ? roundUp2(atypical) : 0;
+	return {
+		typical: safeTypical,
+		adjustedTypical: safeTypical,
+		atypical: safeAtypical,
 	};
 }
 
@@ -677,16 +722,116 @@ export function buildLegacyStageEvaluationMeta(
 	};
 }
 
+function countFilledNamedRows(rows: unknown[]): number {
+	let count = 0;
+	for (const row of rows) {
+		const name = readRecord(row)?.name;
+		if (typeof name === "string" && name.trim()) count += 1;
+	}
+	return count;
+}
+
+/**
+ * Есть ли ответы анкеты, достаточные для публикации СФЕРА-итогов.
+ * Пустая/только что созданная анкета не должна показывать «базу» и «поправку»
+ * от дефолтов modelsCount=1 / dataSourcesCount=1.
+ */
+export function hasLegacySummaryInputs(
+	data: Record<string, unknown>,
+	options?: { jsonSchema?: unknown; uiSchema?: unknown },
+): boolean {
+	const ctx = resolveLegacyFormContext(data, options);
+	if (ctx.modelsList.length > 0) return true;
+	if (ctx.algorithmTypes.length > 0) return true;
+	if (ctx.deploymentChannels.length > 0) return true;
+	if (ctx.autoMlRequired === "Да") return true;
+	if (ctx.pilotModelRequired === "Да") return true;
+	if (ctx.pilotSupportRequired === "Да") return true;
+	if (ctx.readyPromReports === "Да") return true;
+	if (ctx.uncertaintyAdjustmentPercent !== 0) return true;
+
+	const generalInfo = readRecord(data.generalInfo);
+	const detailInfo = readRecord(data.detailInfo);
+	const streamDataSources = readRecord(data.streamDataSources);
+	if (
+		typeof generalInfo?.complexity === "string" &&
+		generalInfo.complexity.trim()
+	) {
+		return true;
+	}
+	if (
+		generalInfo?.createIS != null ||
+		generalInfo?.createService != null ||
+		generalInfo?.pilotNeed != null
+	) {
+		return true;
+	}
+	const sourceRows = [
+		...readArray(detailInfo?.sourceSystems),
+		...readArray(streamDataSources?.sourceSystems),
+	];
+	if (countFilledNamedRows(sourceRows) > 0) return true;
+
+	const atypicalRows = collectAtypicalWorkRowsFromData(data);
+	if (atypicalRows.length > 0) return true;
+
+	const summary = readRecord(data.summary);
+	const typicalTotal = Number(summary?.typicalTotal);
+	const atypicalTotal = Number(summary?.atypicalTotal);
+	if (
+		(Number.isFinite(typicalTotal) && typicalTotal > 0) ||
+		(Number.isFinite(atypicalTotal) && atypicalTotal > 0)
+	) {
+		return true;
+	}
+
+	if (options?.uiSchema) {
+		for (const path of collectGeneratedTypicalWorkArrayPaths(options.uiSchema)) {
+			const rows = readByDotPath(data, path);
+			if (Array.isArray(rows) && countFilledNamedRows(rows) > 0) return true;
+		}
+	}
+
+	return false;
+}
+
 export function applyLegacySummaryToFormData(
 	data: Record<string, unknown>,
 	options?: {
 		sourceTypicalWorksPath?: string | null;
 		uiSchema?: unknown;
+		jsonSchema?: unknown;
+		logic?: V2LogicGraphDto | null;
+		deviationCoefficients?: V2DeviationCoefficientsConfig | null;
 	},
 ): { formData: Record<string, unknown>; legacyStageEvaluation: V2LegacyStageEvaluationDto } {
-	const summary = evaluateLegacyV2Summary(data, options);
 	const next = { ...data };
 	const prevSummary = readRecord(next.summary) ?? {};
+
+	if (!hasLegacySummaryInputs(data, {
+		jsonSchema: options?.jsonSchema,
+		uiSchema: options?.uiSchema,
+	})) {
+		const cleared = { ...prevSummary };
+		delete cleared.baseScoreStream;
+		delete cleared.scoreWithComplexityCoeff;
+		delete cleared.deviationFromBaseline;
+		delete cleared.detailedCalculation;
+		delete cleared.platformStreams;
+		next.summary = cleared;
+		return {
+			formData: next,
+			legacyStageEvaluation: {
+				applied: false,
+				source: "v1_stages",
+				overwrittenPaths: [],
+				stageRowCount: 0,
+				platformStreamCount: 0,
+			},
+		};
+	}
+
+	const summary = evaluateLegacyV2Summary(data, options);
 	next.summary = {
 		...prevSummary,
 		baseScoreStream: summary.baseScoreStream,

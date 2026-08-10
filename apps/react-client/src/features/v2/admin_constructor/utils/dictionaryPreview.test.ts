@@ -146,7 +146,7 @@ describe("parseDictionaryJsonToEnumPair", () => {
 		});
 	});
 
-	it("stores codes for implementationStream dictionary", () => {
+	it("stores codes for implementationStream dictionary 1:1 with items", () => {
 		expect(
 			parseDictionaryJsonToEnumPair(
 				{

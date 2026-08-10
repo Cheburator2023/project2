@@ -12,11 +12,13 @@ import type {
 } from "@smart-anketa/api-contract";
 import {
 	isExecutorStreamPresentInSchema,
+	isV2ModelStreamUmbrellaLabel,
 	normalizeStreamBlockExecutor,
 	resolveLogicStreamDbExecutor,
 	resolveLogicStreamForDbExecutor,
 	resolveStreamBlockExecutorLabel,
 	resolveStreamExecutorForTypicalWorkOutputPath,
+	V2_MODEL_STREAM_EXECUTOR,
 } from "@smart-anketa/api-contract";
 import {
 	useCreateV2TypicalWork,
@@ -25,6 +27,7 @@ import {
 	useV2TypicalWorksList,
 } from "@react-client/common/api/queries/v2-works";
 import { useV2Template } from "@react-client/common/api/queries/v2-templates";
+import { useV2ImplementationStreamCatalog } from "@react-client/common/api/queries/v2-streams";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { parseTypicalWorkDeleteError } from "./typicalWorkPatchErrors";
 import { V2_TEMPLATE_VERSION_QUERY } from "@react-client/routing/common/pathHelpers";
@@ -145,6 +148,8 @@ export function TypicalWorksPanel() {
 	});
 	const createWork = useCreateV2TypicalWork();
 	const bulkDeleteWorks = useBulkDeleteV2TypicalWorks();
+	const { catalog, codes: streamCatalogCodes } =
+		useV2ImplementationStreamCatalog();
 	const {
 		width: sidebarWidth,
 		isResizing: isSidebarResizing,
@@ -153,7 +158,7 @@ export function TypicalWorksPanel() {
 
 	const bindWorkToTypicalWorkBlock = useCallback(
 		(pointer: string, workId: string) => {
-			const catalog = (data?.items ?? []).map((item) => ({
+			const worksCatalog = (data?.items ?? []).map((item) => ({
 				id: item.id,
 				streams: item.streams ?? [],
 			}));
@@ -169,7 +174,7 @@ export function TypicalWorksPanel() {
 						prev as Record<string, unknown>,
 						pointer,
 						workId,
-						catalog,
+						worksCatalog,
 						streamExecutors,
 					) as import("@rjsf/utils").UiSchema,
 				{ recordHistory: false },
@@ -179,13 +184,28 @@ export function TypicalWorksPanel() {
 	);
 
 	const isStreamPresentInSchema = useCallback(
-		(stream: string) => isExecutorStreamPresentInSchema(uiSchema, stream),
-		[uiSchema],
+		(stream: string) =>
+			isExecutorStreamPresentInSchema(uiSchema, stream, catalog),
+		[uiSchema, catalog],
 	);
 
 	const handleCreateStreamBlock = useCallback(
 		(stream: string) => {
-			const code = normalizeStreamBlockExecutor(stream);
+			if (isV2ModelStreamUmbrellaLabel(stream)) {
+				const pointer = placeTypicalWorkInStreamBlock(V2_MODEL_STREAM_EXECUTOR);
+				if (!pointer) {
+					toast.error(
+						`Не удалось создать блок «${V2_MODEL_STREAM_EXECUTOR}» в конструкторе`,
+					);
+					return;
+				}
+				activateMainTab("designer");
+				toast.success(
+					`Добавлен umbrella-блок «${V2_MODEL_STREAM_EXECUTOR}» (detailInfo)`,
+				);
+				return;
+			}
+			const code = normalizeStreamBlockExecutor(stream, catalog);
 			if (!code) {
 				toast.error(`Не удалось сопоставить стрим «${stream}» с кодом implementationStream`);
 				return;
@@ -203,10 +223,17 @@ export function TypicalWorksPanel() {
 			);
 			activateMainTab("designer");
 			toast.success(
-				`Добавлен стримовый блок «${resolveStreamBlockExecutorLabel(code)}»`,
+				`Добавлен стримовый блок «${resolveStreamBlockExecutorLabel(code, catalog)}»`,
 			);
 		},
-		[jsonSchema, uiSchema, handleAddFieldPresetAtParent, activateMainTab],
+		[
+			jsonSchema,
+			uiSchema,
+			handleAddFieldPresetAtParent,
+			placeTypicalWorkInStreamBlock,
+			activateMainTab,
+			catalog,
+		],
 	);
 
 	const [streamExecutor, setStreamExecutor] = useState<string | null>(null);
@@ -219,7 +246,10 @@ export function TypicalWorksPanel() {
 	const [deleteUsageConflict, setDeleteUsageConflict] =
 		useState<ReturnType<typeof parseTypicalWorkDeleteError>>(null);
 
-	const scopeStreams = useMemo(() => resolveScopeStreams(scope), [scope]);
+	const scopeStreams = useMemo(
+		() => resolveScopeStreams(scope, catalog, streamCatalogCodes),
+		[scope, catalog, streamCatalogCodes],
+	);
 
 	useEffect(() => {
 		logSchemaEditorNav("works.panelMounted", {
@@ -240,7 +270,7 @@ export function TypicalWorksPanel() {
 			if (!work) return false;
 
 			const area = work.streams[0]
-				? streamAreaKey(work.streams[0])
+				? streamAreaKey(work.streams[0], catalog)
 				: DEFAULT_LOGIC_STREAM;
 			setScope({ kind: "stream", streams: [area], roles: [] });
 			if (
@@ -303,8 +333,10 @@ export function TypicalWorksPanel() {
 
 	const assignedWorks = useMemo(() => {
 		const items = data?.items ?? [];
-		return items.filter((item) => workMatchesLogicScope(item.streams, scope));
-	}, [data?.items, scope]);
+		return items.filter((item) =>
+			workMatchesLogicScope(item.streams, scope, catalog, streamCatalogCodes),
+		);
+	}, [data?.items, scope, catalog, streamCatalogCodes]);
 
 	const selectedListItem = useMemo(
 		() => assignedWorks.find((item) => item.id === selectedWorkId) ?? null,
@@ -396,9 +428,14 @@ export function TypicalWorksPanel() {
 		}
 		const preferred = pickDefaultStream(selectedListItem);
 		setStreamExecutor(
-			pickStreamForScope(selectedListItem.streams, scopeStreams, preferred),
+			pickStreamForScope(
+				selectedListItem.streams,
+				scopeStreams,
+				preferred,
+				catalog,
+			),
 		);
-	}, [selectedListItem, scopeStreams]);
+	}, [selectedListItem, scopeStreams, catalog]);
 
 	const {
 		data: card,
@@ -462,11 +499,20 @@ export function TypicalWorksPanel() {
 		starterNormValue?: number;
 	}) => {
 		try {
-			const targetCode =
-				normalizeStreamBlockExecutor(
-					payload.streamExecutor ?? scopeStreamExecutor(scope, DEFAULT_LOGIC_STREAM),
-				) ?? DEFAULT_LOGIC_STREAM;
-			const dbStream = resolveLogicStreamDbExecutor(targetCode);
+			const rawExecutor =
+				payload.streamExecutor ??
+				scopeStreamExecutor(scope, DEFAULT_LOGIC_STREAM);
+			const isUmbrella = isV2ModelStreamUmbrellaLabel(rawExecutor);
+			const targetCode = isUmbrella
+				? null
+				: (normalizeStreamBlockExecutor(rawExecutor, catalog) ??
+					DEFAULT_LOGIC_STREAM);
+			const dbStream = isUmbrella
+				? V2_MODEL_STREAM_EXECUTOR
+				: resolveLogicStreamDbExecutor(targetCode!, catalog);
+			const placeExecutor = isUmbrella
+				? V2_MODEL_STREAM_EXECUTOR
+				: targetCode!;
 			const created = await createWork.mutateAsync({
 				name: payload.name,
 				archComponentType: payload.archComponentType,
@@ -484,7 +530,7 @@ export function TypicalWorksPanel() {
 			storeWorkStream(created.id, stream);
 			const bindPointer = searchParams.get(BIND_POINTER_QUERY);
 			const targetPointer = placeTypicalWorkInStreamBlock(
-				targetCode,
+				placeExecutor,
 				bindPointer,
 			);
 			if (targetPointer) {
@@ -511,7 +557,7 @@ export function TypicalWorksPanel() {
 
 	const handleDeleteWorks = async (confirm = false) => {
 		if (!deleteTargets.length) return;
-		const catalog = (data?.items ?? []).map((item) => ({
+		const worksCatalog = (data?.items ?? []).map((item) => ({
 			id: item.id,
 			streams: item.streams ?? [],
 		}));
@@ -542,7 +588,7 @@ export function TypicalWorksPanel() {
 							next = removeWorkIdFromAllTypicalWorkBindings(
 								next,
 								workId,
-								catalog,
+								worksCatalog,
 							);
 						}
 						return next as import("@rjsf/utils").UiSchema;
@@ -691,14 +737,14 @@ export function TypicalWorksPanel() {
 				onClose={() => setAssignOpen(false)}
 				onAssigned={(workId, stream) => {
 					openWorkInStreamsView(workId, stream);
-					const code =
-						resolveLogicStreamForDbExecutor(stream) ??
-						normalizeStreamBlockExecutor(stream);
-					if (code) {
-						const pointer = placeTypicalWorkInStreamBlock(code);
-						if (pointer) {
-							bindWorkToTypicalWorkBlock(pointer, workId);
-						}
+					const placeExecutor = isV2ModelStreamUmbrellaLabel(stream)
+						? V2_MODEL_STREAM_EXECUTOR
+						: (resolveLogicStreamForDbExecutor(stream, catalog) ??
+							normalizeStreamBlockExecutor(stream, catalog) ??
+							stream);
+					const pointer = placeTypicalWorkInStreamBlock(placeExecutor);
+					if (pointer) {
+						bindWorkToTypicalWorkBlock(pointer, workId);
 					}
 				}}
 				onCreateNew={() => {

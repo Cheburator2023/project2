@@ -6,13 +6,14 @@ import type {
 	V2JsonLogicValue,
 	V2LogicGraphDto,
 	V2LogicRuleDto,
-	V2LegacyStageEvaluationDto,
 	V2TaskTriggerItemDto,
 	V2TemplateVersionDto,
 } from "@smart-anketa/api-contract";
 import {
 	clearStaleGeneratedTypicalWorkPaths,
 	dedupeTypicalWorkRowsByWorkId,
+	applyBooleanDefaultsToFormData,
+	ensureGroupActivationDefaults,
 	isCalculationPathActive,
 	mergeTypicalCoefficientContext,
 	parseParamDependencyGraphFromLogic,
@@ -31,10 +32,12 @@ import {
 	resolveStreamsFromSourceSystems,
 	flattenSourceContextValue,
 	resolveSourceTypicalWorksOutputPath,
-	shouldSkipLegacyModelStreamStageSummary,
+	resolveV2QuestionnaireUncertaintyCoefficient,
+	syncAtypicalWorkCoefficientsInFormData,
 	V2_MODEL_STREAM_EXECUTOR,
 	V2_MODEL_STREAM_SOURCE_ARRAY_PATH,
 	V2_SOURCE_SYSTEMS_ARRAY_PATH,
+	resolveCatalogSourceArrayPath,
 	type V2ParamDependencyGraph,
 	type V2ParamDefLike,
 } from "@smart-anketa/api-contract";
@@ -83,6 +86,9 @@ type TaskTriggerPayload = {
 	worksCatalogStream?: string;
 	/** Источник — массив (по умолчанию). */
 	sourceArrayPath?: string;
+	/** Стабильная привязка источника: archComponent / blockUid (path — derived). */
+	sourceArchComponent?: string;
+	sourceBlockUid?: string;
 	/** Источник — один объект (витрина, процесс). */
 	sourceObjectPath?: string;
 	/** Доп. контекст для коэффициентов (напр. modelService при controlTypes). */
@@ -169,8 +175,10 @@ function writeByDotPath(
 	for (let i = 0; i < parts.length - 1; i++) {
 		const k = parts[i] as string;
 		const child = cur[k];
+		// Pseudo-array арх. блоков (modelService и т.п.) нельзя подменять на {}.
+		if (Array.isArray(child)) return data;
 		const cloned =
-			child && typeof child === "object" && !Array.isArray(child)
+			child && typeof child === "object"
 				? { ...(child as Record<string, unknown>) }
 				: {};
 		cur[k] = cloned;
@@ -387,10 +395,38 @@ export class V2CalculationService {
 		const taskTriggers = rules.filter((r) => r.kind === "task_trigger");
 
 		let liveData = migrateV2AnketaFormData({ ...(formData ?? {}) });
+		/** Boolean без третьего «пустого» состояния (unset → false). */
+		liveData = applyBooleanDefaultsToFormData(
+			liveData,
+			options?.jsonSchema as Record<string, unknown> | undefined,
+		);
+		/** Неактивные groupActivatable-стримы (в т.ч. Источники/Контроль по умолчанию). */
+		liveData = ensureGroupActivationDefaults(liveData, options?.uiSchema);
+
+		// Нетиповые работы: коэффициент K из общей неопределённости (раньше только на клиенте).
+		if (options?.uiSchema) {
+			const { coefficient } = resolveV2QuestionnaireUncertaintyCoefficient(
+				liveData,
+				{ config: uncertaintyConfig },
+			);
+			liveData = syncAtypicalWorkCoefficientsInFormData(
+				liveData,
+				options.uiSchema,
+				coefficient,
+			).formData;
+		}
 
 		// 1) task_trigger/generated_rows — материализуем автозадачи до расчёта строк.
 		for (const rule of taskTriggers) {
-			if (!isCalculationPathActive(liveData, rule.targetPath)) continue;
+			if (
+				!isCalculationPathActive(
+					liveData,
+					rule.targetPath,
+					options?.uiSchema,
+				)
+			) {
+				continue;
+			}
 			liveData = await this.applyGeneratedRows(
 				rule,
 				liveData,
@@ -400,12 +436,21 @@ export class V2CalculationService {
 				paramDefs,
 				options?.uiSchema as Record<string, unknown> | undefined,
 				uncertaintyConfig,
+				options?.jsonSchema,
 			);
 		}
 
 		// 2) row_computed — пишем per-row значения.
 		for (const rule of rowComputed) {
-			if (!isCalculationPathActive(liveData, rule.targetPath)) continue;
+			if (
+				!isCalculationPathActive(
+					liveData,
+					rule.targetPath,
+					options?.uiSchema,
+				)
+			) {
+				continue;
+			}
 			liveData = this.applyRowComputed(rule, liveData);
 		}
 
@@ -413,7 +458,15 @@ export class V2CalculationService {
 		const { sorted, cycles } = topoSortComputed(computed);
 		const items: V2CalculationItemDto[] = [];
 		for (const rule of sorted) {
-			if (!isCalculationPathActive(liveData, rule.targetPath)) continue;
+			if (
+				!isCalculationPathActive(
+					liveData,
+					rule.targetPath,
+					options?.uiSchema,
+				)
+			) {
+				continue;
+			}
 			const { item, nextData } = this.applyComputed(rule, liveData);
 			liveData = nextData;
 			items.push(item);
@@ -439,20 +492,21 @@ export class V2CalculationService {
 			};
 		});
 
-		// Legacy E2E — только если нет catalog модельного стрима в snapshot uiSchema.
+		// Итоги: База = Σ нормативов типовых; scoreWithComplexityCoeff = итоговая трудоёмкость
+		// (Типовые+Нетиповые ≈ summary.total); отклонение = (трудоёмкость / База) × 100%.
+		// Не затирает total/typicalTotal/atypicalTotal — merge через spread prevSummary.
 		const sourceTypicalWorksPath = resolveSourceTypicalWorksOutputPath(
 			options?.jsonSchema,
 			options?.uiSchema,
 		);
-		let legacyStageEvaluation: V2LegacyStageEvaluationDto | null = null;
-		if (!shouldSkipLegacyModelStreamStageSummary(options?.uiSchema)) {
-			const legacy = applyLegacySummaryToFormData(liveData, {
-				sourceTypicalWorksPath,
-				uiSchema: options?.uiSchema,
-			});
-			liveData = legacy.formData;
-			legacyStageEvaluation = legacy.legacyStageEvaluation;
-		}
+		const legacy = applyLegacySummaryToFormData(liveData, {
+			sourceTypicalWorksPath,
+			uiSchema: options?.uiSchema,
+			jsonSchema: options?.jsonSchema,
+			logic,
+		});
+		liveData = legacy.formData;
+		const legacyStageEvaluation = legacy.legacyStageEvaluation;
 
 		const validationIssues = evaluateLogicValidationRules(rules, liveData);
 
@@ -511,6 +565,7 @@ export class V2CalculationService {
 		paramDefs: V2ParamDefLike[],
 		uiSchema?: Record<string, unknown>,
 		uncertaintyConfig?: import("@smart-anketa/api-contract").V2OverallUncertaintyConfig,
+		jsonSchema?: unknown,
 	): Promise<Record<string, unknown>> {
 		const payload = (rule.payload ?? {}) as TaskTriggerPayload;
 		if (payload.mode !== "generated_rows") return data;
@@ -555,7 +610,12 @@ export class V2CalculationService {
 					);
 		}
 
-		const sourceRows = this.resolveGeneratedRowSources(data, payload, uiSchema);
+		const sourceRows = this.resolveGeneratedRowSources(
+			data,
+			payload,
+			uiSchema,
+			jsonSchema,
+		);
 		if (sourceRows.length === 0) {
 			return payload.outputMode === "append"
 				? clearRowsGeneratedByRule()
@@ -589,11 +649,14 @@ export class V2CalculationService {
 			(payload.worksCatalogAllArchComponents === true ||
 				catalogStream === V2_MODEL_STREAM_EXECUTOR);
 
-		// Модельный стрим: одна контекстная строка, без fan-out по источникам/моделям.
+		// Fan-out по экземплярам арх-компонента — внутри runtime (per-instance sum).
+		// Снаружи одна контекстная строка, иначе будет двойной масштаб.
 		const effectiveSourceRows =
-			usesCatalog && catalogStream === V2_MODEL_STREAM_EXECUTOR
+			usesCatalog && sourceRows.length > 0
 				? sourceRows.slice(0, 1)
-				: sourceRows;
+				: usesCatalog
+					? [{}]
+					: sourceRows;
 
 		const generated = (
 			await Promise.all(
@@ -795,6 +858,7 @@ export class V2CalculationService {
 		data: Record<string, unknown>,
 		payload: TaskTriggerPayload,
 		uiSchema?: Record<string, unknown>,
+		jsonSchema?: unknown,
 	): unknown[] {
 		const objectPath = payload.sourceObjectPath?.trim();
 		if (objectPath) {
@@ -802,15 +866,27 @@ export class V2CalculationService {
 			if (!obj || typeof obj !== "object" || Array.isArray(obj)) return [];
 			return [obj];
 		}
-		const arrayPath = payload.sourceArrayPath?.trim();
+		const catalogStream = payload.worksCatalogStream?.trim() ?? "";
+		const arrayPath =
+			resolveCatalogSourceArrayPath({
+				jsonSchema,
+				uiSchema,
+				sourceArchComponent: payload.sourceArchComponent,
+				sourceBlockUid: payload.sourceBlockUid,
+				fallbackPath:
+					payload.sourceArrayPath?.trim() ||
+					(payload.worksCatalog && catalogStream === V2_MODEL_STREAM_EXECUTOR
+						? V2_MODEL_STREAM_SOURCE_ARRAY_PATH
+						: null),
+			}) ?? payload.sourceArrayPath?.trim();
 		const outputPath = payload.outputArrayPath?.trim();
 		const referencePath = outputPath || arrayPath || "";
-		const catalogStream = payload.worksCatalogStream?.trim() ?? "";
 
-		// Модельный стрим всегда один контекст (arch-count / формула дают множитель).
+		// Модельный стрим / catalog: один контекст — per-instance fan-out в runtime.
 		if (payload.worksCatalog && catalogStream === V2_MODEL_STREAM_EXECUTOR) {
+			const modelServicePath = arrayPath || V2_MODEL_STREAM_SOURCE_ARRAY_PATH;
 			const modelServiceRows = readFilledArchComponentListRows(
-				readByDotPath(data, V2_MODEL_STREAM_SOURCE_ARRAY_PATH),
+				readByDotPath(data, modelServicePath),
 			);
 			if (modelServiceRows.length > 0) return [modelServiceRows[0]!];
 			if (referencePath) {
@@ -824,6 +900,33 @@ export class V2CalculationService {
 				}
 			}
 			return [{}];
+		}
+
+		// Works catalog (источники и др.): тоже один контекст — экземпляры считает runtime.
+		if (payload.worksCatalog && arrayPath) {
+			const filledFromPath = readFilledArchComponentListRows(
+				readByDotPath(data, arrayPath),
+			);
+			if (filledFromPath.length > 0) return [filledFromPath[0]!];
+
+			const legacyFilled = this.readFilledSourceSystemRows(
+				readByDotPath(data, arrayPath),
+			);
+			if (legacyFilled.length > 0) return [legacyFilled[0]!];
+
+			if (
+				arrayPath === "streamDataSources.sourceSystems" ||
+				arrayPath === V2_SOURCE_SYSTEMS_ARRAY_PATH
+			) {
+				const canonical = this.readFilledSourceSystemRows(
+					readByDotPath(data, V2_SOURCE_SYSTEMS_ARRAY_PATH),
+				);
+				if (canonical.length > 0) return [canonical[0]!];
+				const legacy = this.readFilledSourceSystemRows(
+					readByDotPath(data, "streamDataSources.sourceSystems"),
+				);
+				if (legacy.length > 0) return [legacy[0]!];
+			}
 		}
 
 		if (arrayPath) {

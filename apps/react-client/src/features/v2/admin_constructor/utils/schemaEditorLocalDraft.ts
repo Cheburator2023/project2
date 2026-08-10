@@ -93,7 +93,25 @@ function readSchemaFieldUid(
 	return typeof uid === "string" && uid.trim() ? uid.trim() : null;
 }
 
-/** Добавляет schemaFieldUid legacy-полям до фиксации baseline, чтобы не подсвечивать их как изменённые. */
+function readArchComponent(
+	uiBranch: Record<string, unknown> | undefined,
+): string | null {
+	const opts = uiBranch?.["ui:options"];
+	if (!opts || typeof opts !== "object" || Array.isArray(opts)) return null;
+	const arch = (opts as Record<string, unknown>).archComponent;
+	return typeof arch === "string" && arch.trim() ? arch.trim() : null;
+}
+
+function readArchBlockUid(
+	uiBranch: Record<string, unknown> | undefined,
+): string | null {
+	const opts = uiBranch?.["ui:options"];
+	if (!opts || typeof opts !== "object" || Array.isArray(opts)) return null;
+	const uid = (opts as Record<string, unknown>).archBlockUid;
+	return typeof uid === "string" && uid.trim() ? uid.trim() : null;
+}
+
+/** Добавляет schemaFieldUid / archBlockUid legacy-полям до фиксации baseline. */
 export function ensureSchemaFieldUidsInSnapshot(
 	snapshot: SchemaEditorDraftSnapshot,
 ): SchemaEditorDraftSnapshot {
@@ -104,11 +122,17 @@ export function ensureSchemaFieldUidsInSnapshot(
 	for (const row of listSchemaFields(jsonSchema, "/", 0, ui as UiSchema)) {
 		const leaf = readUiSchemaBranchAtPointer(ui, row.pointer);
 		if (isLayoutGroupUi(readLeafUiOptions(leaf))) continue;
-		if (readSchemaFieldUid(leaf)) continue;
 
-		ui = patchUiOptionsAtPointer(ui, row.pointer, {
-			schemaFieldUid: `field_${crypto.randomUUID()}`,
-		});
+		const patch: Record<string, unknown> = {};
+		if (!readSchemaFieldUid(leaf)) {
+			patch.schemaFieldUid = `field_${crypto.randomUUID()}`;
+		}
+		if (readArchComponent(leaf) && !readArchBlockUid(leaf)) {
+			patch.archBlockUid = `block_${crypto.randomUUID()}`;
+		}
+		if (Object.keys(patch).length === 0) continue;
+
+		ui = patchUiOptionsAtPointer(ui, row.pointer, patch);
 		changed = true;
 	}
 

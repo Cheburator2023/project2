@@ -362,7 +362,7 @@ function FormulaRibbonGap({
 				display: "inline-flex",
 				alignItems: "center",
 				justifyContent: "center",
-				minWidth: 8,
+				minWidth: 12,
 				height: 36,
 				flexShrink: 0,
 				border: "none",
@@ -596,6 +596,9 @@ export function WorkFormulaEditor({
 
 	const insertToken = (token: V2WorkFormulaToken) => {
 		if (readOnly) return;
+		// Закрыть инлайн-редакторы до вставки — иначе blur TextField гоняется с кликом.
+		setEditingNumberIndex(null);
+		setEditingOperatorIndex(null);
 		let index = cursorIndex;
 		let tokens = formula.tokens;
 		if (isFormulaValueOperand(token)) {
@@ -607,6 +610,7 @@ export function WorkFormulaEditor({
 		}
 		const next = insertTokenAt(tokens, index, token);
 		commitTokens(next, index + 1);
+		focusRibbon();
 	};
 
 	const removeTokenAt = (deletedIndex: number) => {
@@ -864,8 +868,30 @@ export function WorkFormulaEditor({
 											}
 											onClick={(event) => {
 												event.stopPropagation();
+												if (readOnly) {
+													setCursor(index + 1);
+													return;
+												}
+												// Оператор — открываем селект по одинарному клику.
+												// Число — только курсор (инлайн-редактор по dblclick:
+												// иначе blur TextField съедает клик по «×» в конце).
+												if (token.kind === "operator") {
+													setEditingNumberIndex(null);
+													setEditingOperatorIndex(index);
+													setCursorIndex(
+														Math.max(0, Math.min(index + 1, formula.tokens.length)),
+													);
+													focusRibbon();
+													return;
+												}
+												setEditingNumberIndex(null);
+												setEditingOperatorIndex(null);
 												setCursor(index + 1);
+											}}
+											onDoubleClick={(event) => {
+												event.stopPropagation();
 												if (readOnly) return;
+												setCursor(index + 1);
 												if (token.kind === "number") {
 													setEditingOperatorIndex(null);
 													setEditingNumberIndex(index);
@@ -890,6 +916,8 @@ export function WorkFormulaEditor({
 														? "Any-of без выбранных значений — отметьте множество в карточке параметра"
 														: isOperator && !readOnly
 															? "Сменить оператор"
+															: token.kind === "number" && !readOnly
+																? "Изменить число (двойной клик)"
 															: (token.kind === "param_coeff" ||
 																		token.kind === "param_anyof") &&
 																  label.subtitle
@@ -1320,7 +1348,11 @@ export function WorkFormulaEditor({
 									data-test-id={TID.workFormulaAddNorm}
 									disabled={arithmeticLocked}
 									variant="contained"
-									onClick={() => insertToken({ kind: "norm" })}
+									onMouseDown={(event) => {
+										if (event.button !== 0) return;
+										event.preventDefault();
+										insertToken({ kind: "norm" });
+									}}
 								>
 									Норма N
 								</Button>
@@ -1329,7 +1361,11 @@ export function WorkFormulaEditor({
 									variant="outlined"
 									color="secondary"
 									disabled={arithmeticLocked}
-									onClick={() => insertToken({ kind: "number", value: 1 })}
+									onMouseDown={(event) => {
+										if (event.button !== 0) return;
+										event.preventDefault();
+										insertToken({ kind: "number", value: 1 });
+									}}
 								>
 									число
 								</Button>
@@ -1339,7 +1375,15 @@ export function WorkFormulaEditor({
 										size="small"
 										variant="outlined"
 										disabled={arithmeticLocked}
-										onClick={() => insertToken({ kind: "operator", op })}
+										data-test-id={`${TID.workFormulaEditor}-op-${
+											op === "*" ? "mul" : op === "/" ? "div" : op
+										}`}
+										onMouseDown={(event) => {
+											// Действие на mousedown: blur TextField числа не успевает съесть клик.
+											if (event.button !== 0) return;
+											event.preventDefault();
+											insertToken({ kind: "operator", op });
+										}}
 										sx={{
 											minWidth: 32,
 											px: 0.5,
@@ -1356,7 +1400,11 @@ export function WorkFormulaEditor({
 									size="small"
 									variant="outlined"
 									disabled={arithmeticLocked}
-									onClick={() => insertToken({ kind: "paren_open" })}
+									onMouseDown={(event) => {
+										if (event.button !== 0) return;
+										event.preventDefault();
+										insertToken({ kind: "paren_open" });
+									}}
 									sx={{ minWidth: 32, borderColor: "#e2e8f0" }}
 								>
 									(
@@ -1365,7 +1413,11 @@ export function WorkFormulaEditor({
 									size="small"
 									variant="outlined"
 									disabled={arithmeticLocked}
-									onClick={() => insertToken({ kind: "paren_close" })}
+									onMouseDown={(event) => {
+										if (event.button !== 0) return;
+										event.preventDefault();
+										insertToken({ kind: "paren_close" });
+									}}
 									sx={{ minWidth: 32, borderColor: "#e2e8f0" }}
 								>
 									)

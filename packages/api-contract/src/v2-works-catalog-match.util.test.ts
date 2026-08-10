@@ -6,6 +6,7 @@ import {
 	isMethodologyPresenceTriggerRule,
 	isSourceTypeTriggerParam,
 	resolveLaborAnyOfCoefficient,
+	resolveByValueLaborParamCoefficientDetails,
 	resolveByValueLaborParamCoefficients,
 	resolveStreamFromSourceType,
 	resolveStreamsFromSourceSystems,
@@ -320,6 +321,59 @@ describe("v2-works-catalog-match.util", () => {
 		).toEqual({ field_dict: 20 });
 	});
 
+	it("sums by-value coefficients across all selected multi-select values", () => {
+		const rows = [
+			{
+				paramCode: "field_jUm5syZf",
+				paramName: "Каналы внедрения @ field_jUm5syZf",
+				valueCode: "батч",
+				valueLabel: "Батч",
+				coefficient: 0.5,
+			},
+			{
+				paramCode: "field_jUm5syZf",
+				paramName: "Каналы внедрения @ field_jUm5syZf",
+				valueCode: "стриминг",
+				valueLabel: "Стриминг",
+				coefficient: 1.5,
+			},
+			{
+				paramCode: "field_jUm5syZf",
+				paramName: "Каналы внедрения @ field_jUm5syZf",
+				valueCode: "llm",
+				valueLabel: "LLM",
+				coefficient: 2,
+			},
+		];
+
+		expect(
+			resolveByValueLaborParamCoefficients(
+				{ field_jUm5syZf: ["Батч", "Стриминг"] },
+				rows,
+			),
+		).toEqual({ field_jUm5syZf: 2 });
+
+		// Один канал — коэффициент этого канала, без изменений поведения.
+		expect(
+			resolveByValueLaborParamCoefficients({ field_jUm5syZf: ["Батч"] }, rows),
+		).toEqual({ field_jUm5syZf: 0.5 });
+
+		const details = resolveByValueLaborParamCoefficientDetails(
+			{ field_jUm5syZf: ["Батч", "Стриминг", "LLM"] },
+			rows,
+		);
+		expect(details.field_jUm5syZf).toMatchObject({
+			value: 4,
+			aggregation: "sum",
+			formulaValueLabel: "(0.5 + 1.5 + 2)",
+		});
+		expect(details.field_jUm5syZf?.parts).toEqual([
+			{ sourceLabel: null, answerLabel: "Батч", coefficient: 0.5 },
+			{ sourceLabel: null, answerLabel: "Стриминг", coefficient: 1.5 },
+			{ sourceLabel: null, answerLabel: "LLM", coefficient: 2 },
+		]);
+	});
+
 	it("treats an absent by-value boolean checkbox as false", () => {
 		expect(
 			resolveByValueLaborParamCoefficients(
@@ -452,6 +506,34 @@ describe("v2-works-catalog-match.util", () => {
 		).toBe(true);
 	});
 
+	it("matches source type by label when stored code is the label", () => {
+		expect(
+			catalogValueMatchesTriggerRule(
+				{ code: "внутренний", label: "Внутренний" },
+				{
+					paramCode: "type",
+					paramName: "Тип системы-источника",
+					valueCode: "Внутренний",
+					valueLabel: "Внутренний",
+				},
+			),
+		).toBe(true);
+	});
+
+	it("matches catalog codes case-insensitively", () => {
+		expect(
+			catalogValueMatchesTriggerRule(
+				{ code: "внутренний", label: "Внутренний" },
+				{
+					paramCode: "type",
+					paramName: "Тип системы-источника",
+					valueCode: "ВНУТРЕННИЙ",
+					valueLabel: null,
+				},
+			),
+		).toBe(true);
+	});
+
 	it("detects broken and methodology-only presence triggers", () => {
 		expect(
 			isBrokenTypicalWorkTriggerRef({ paramCode: "", paramName: "?" }),
@@ -566,6 +648,38 @@ describe("v2-works-catalog-match.util", () => {
 					steps: [{ count: 3, coefficient: 1 }],
 					combinator: "or",
 				},
+			),
+		).toBe(true);
+	});
+
+	it("matches arch-count-only trigger (model stream: Модельный сервис >= 1)", () => {
+		const triggerArchCount = {
+			kind: "modelService" as const,
+			steps: [{ count: 1, coefficient: 1 }],
+			combinator: "and" as const,
+		};
+		expect(
+			typicalWorkRulesMatchSource(
+				[],
+				{},
+				{ generalInfo: { modelService: [{ workType: "x" }] } },
+				triggerArchCount,
+			),
+		).toBe(true);
+		expect(
+			typicalWorkRulesMatchSource(
+				[],
+				{},
+				{ generalInfo: { modelService: [] } },
+				triggerArchCount,
+			),
+		).toBe(false);
+		expect(
+			typicalWorkRulesMatchSource(
+				[],
+				{},
+				{ generalInfo: { modelService: { name: "svc" } } },
+				triggerArchCount,
 			),
 		).toBe(true);
 	});

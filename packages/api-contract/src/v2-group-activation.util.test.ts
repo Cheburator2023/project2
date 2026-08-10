@@ -65,6 +65,62 @@ describe("v2-group-activation.util", () => {
 		expect(isCalculationPathActive(formData, "/summary/total")).toBe(true);
 	});
 
+	it("seeds inactive defaults for Источники данных and Контроль моделей", () => {
+		const ui = {
+			streamDataSources: {
+				"ui:options": { groupActivatable: true, groupActive: false },
+				field_u_7AkDrP: {
+					"ui:options": { archComponent: "typicalWork" },
+				},
+			},
+			streamModelControl: {
+				"ui:options": { groupActivatable: true, groupActive: false },
+				field_G0AoYAl8: {
+					"ui:options": { archComponent: "typicalWork" },
+				},
+			},
+			streamDigitalAgents: {
+				"ui:options": { groupActivatable: true, groupActive: false },
+			},
+		};
+		const seeded = ensureGroupActivationDefaults({}, ui);
+		expect(seeded.groupActivation).toEqual({
+			streamDataSources: false,
+			streamModelControl: false,
+			streamDigitalAgents: false,
+		});
+		// Без uiSchema — по-прежнему блокируем неактивное поддерево.
+		expect(
+			isCalculationPathActive(
+				seeded as Record<string, unknown>,
+				"/streamDataSources/field_u_7AkDrP",
+			),
+		).toBe(false);
+		// Trigger-gated: каталог должен считаться при groupActive=false.
+		expect(
+			isCalculationPathActive(
+				seeded as Record<string, unknown>,
+				"/streamDataSources/field_u_7AkDrP",
+				ui,
+			),
+		).toBe(true);
+		expect(
+			isCalculationPathActive(
+				seeded as Record<string, unknown>,
+				"/streamModelControl/field_G0AoYAl8",
+				ui,
+			),
+		).toBe(true);
+		// Обычная опциональная секция без типовых работ — по-прежнему skip.
+		expect(
+			isCalculationPathActive(
+				seeded as Record<string, unknown>,
+				"/streamDigitalAgents/localParams",
+				ui,
+			),
+		).toBe(false);
+	});
+
 	it("finds trigger-gated activatable ancestor for typical work path", () => {
 		const ui = {
 			streamDataSources: {
@@ -104,7 +160,8 @@ describe("v2-group-activation.util", () => {
 		);
 		expect(activated.groupActivation).toEqual({ streamDataSources: true });
 
-		const deactivated = syncTriggerGatedGroupActivationFromTypicalWorks(
+		// Без строк не форсируем выключение (ручной toggle / «активна по умолчанию»).
+		const kept = syncTriggerGatedGroupActivationFromTypicalWorks(
 			activated,
 			ui,
 			{
@@ -113,6 +170,24 @@ describe("v2-group-activation.util", () => {
 				},
 			},
 		);
-		expect(deactivated.groupActivation).toEqual({ streamDataSources: false });
+		expect(kept.groupActivation).toEqual({ streamDataSources: true });
+	});
+
+	it("does not deactivate manually enabled trigger-gated stream without works", () => {
+		const ui = {
+			streamDataSources: {
+				"ui:options": { groupActivatable: true, groupActive: false },
+				field_typical: {
+					"ui:options": { archComponent: "typicalWork" },
+				},
+			},
+		};
+		const manualOn = setGroupActivationAtPath({}, "streamDataSources", true);
+		const next = syncTriggerGatedGroupActivationFromTypicalWorks(
+			manualOn,
+			ui,
+			{ streamDataSources: { field_typical: [] } },
+		);
+		expect(next.groupActivation).toEqual({ streamDataSources: true });
 	});
 });

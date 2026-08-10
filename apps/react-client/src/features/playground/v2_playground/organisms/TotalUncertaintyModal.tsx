@@ -21,11 +21,19 @@ import {
 import { useV2DictionaryEnumsMaps } from "@react-client/common/api/queries/v2-templates";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { buildUncertaintyModalRiskGroups } from "@react-client/features/v2/anketaCRUD/utils/v2UncertaintyModalConfig";
-import { useEffect, useMemo, useState } from "react";
+import type { V2OverallUncertaintyCalcBreakdown } from "@smart-anketa/api-contract";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const INITIATIVE_TIMELINE_DICTIONARY = "v2.method.21.сроки_инициативы";
 const INITIATIVE_COST_DICTIONARY = "v2.method.22.стоимость_инициативы";
 const UNCERTAINTY_ADJUSTMENT_MAX = 30;
+
+type UncertaintyAdjustmentProps = {
+	minPct: number;
+	maxPct: number;
+	defaultPct: number;
+	hint: string;
+};
 
 export type UncertaintyRiskSelection = {
 	probability: string;
@@ -60,7 +68,9 @@ function buildDictionaryOptions(
 	];
 }
 
-function toSelectOptions(values: string[] | undefined): DictionarySelectOption[] {
+function toSelectOptions(
+	values: string[] | undefined,
+): DictionarySelectOption[] {
 	if (!values || values.length === 0) {
 		return [{ value: "", label: "Не выбрано" }];
 	}
@@ -70,12 +80,20 @@ function toSelectOptions(values: string[] | undefined): DictionarySelectOption[]
 	];
 }
 
-function clampAdjustmentInput(raw: string): string {
+function clampAdjustmentInput(
+	raw: string,
+	minPct: number,
+	maxPct: number,
+): string {
 	const normalized = raw.replace(",", ".").replace(/%/g, "").trim();
 	if (!normalized) return "";
 	const parsed = Number(normalized);
 	if (!Number.isFinite(parsed)) return raw;
-	return String(Math.min(UNCERTAINTY_ADJUSTMENT_MAX, Math.max(0, parsed)));
+	return String(Math.min(maxPct, Math.max(minPct, parsed)));
+}
+
+function isRiskFilled(selection: UncertaintyRiskSelection): boolean {
+	return Boolean(selection.probability.trim() && selection.goals.trim());
 }
 
 function emptyRiskSelection(): UncertaintyRiskSelection {
@@ -86,6 +104,12 @@ type TotalUncertaintyModalProps = {
 	open: boolean;
 	onClose: () => void;
 	onSubmit: (values: TotalUncertaintyFormValues) => void;
+	/**
+	 * Явный полный сброс формы неопределённости в formData
+	 * (срок, стоимость, поправка, риски).
+	 * Если не передан — вызывается onSubmit с очищенными значениями.
+	 */
+	onReset?: (values: TotalUncertaintyFormValues) => void;
 	loading?: boolean;
 	defaultValues?: Partial<TotalUncertaintyFormValues>;
 	/** Шкалы из конфигуратора / схемы (приоритетнее словарей). */
@@ -94,12 +118,19 @@ type TotalUncertaintyModalProps = {
 	probabilityOptions?: string[];
 	goalsOptions?: string[];
 	riskGroups?: Array<{ id: string; label: string; tooltip?: string }>;
+	/** Границы/дефолт/подсказка поля «Поправка» из конфигуратора. */
+	adjustment?: UncertaintyAdjustmentProps;
+	/** Живой предпросмотр итога по методике конфигуратора. */
+	computeBreakdown?: (
+		values: TotalUncertaintyFormValues,
+	) => V2OverallUncertaintyCalcBreakdown;
 };
 
 export const TotalUncertaintyModal = ({
 	open,
 	onClose,
 	onSubmit,
+	onReset,
 	loading = false,
 	defaultValues,
 	timelineOptions: timelineOptionsProp,
@@ -107,11 +138,17 @@ export const TotalUncertaintyModal = ({
 	probabilityOptions: probabilityOptionsProp,
 	goalsOptions: goalsOptionsProp,
 	riskGroups: riskGroupsProp,
+	adjustment,
+	computeBreakdown,
 }: TotalUncertaintyModalProps) => {
 	const riskGroups = useMemo(
 		() => riskGroupsProp ?? buildUncertaintyModalRiskGroups(),
 		[riskGroupsProp],
 	);
+	const adjMin = adjustment?.minPct ?? 0;
+	const adjMax = adjustment?.maxPct ?? UNCERTAINTY_ADJUSTMENT_MAX;
+	const adjHint =
+		adjustment?.hint ?? "Экспертная надбавка, добавляется к агрегату по рискам";
 
 	const { enumMapByCode } = useV2DictionaryEnumsMaps(
 		timelineOptionsProp && costOptionsProp
@@ -157,19 +194,25 @@ export const TotalUncertaintyModal = ({
 		risks: initialRisks,
 	});
 
+	// Сидим форму только при открытии модалки. `defaultValues` с родителя —
+	// новый объект на каждый пересчёт/autosave displayFormData; если держать
+	// его в deps и всегда setValues, незакоммиченные правки сбрасываются.
+	const wasOpenRef = useRef(false);
 	useEffect(() => {
-		if (!open) return;
-		setValues({
-			initiativeTimeline: defaultValues?.initiativeTimeline ?? "",
-			initiativeCost: defaultValues?.initiativeCost ?? "",
-			totalUncertaintyAdjustment:
-				defaultValues?.totalUncertaintyAdjustment ?? "",
-			risks: {
-				...initialRisks,
-				...defaultValues?.risks,
-			},
-		});
-	}, [defaultValues, initialRisks, open]);
+		if (open && !wasOpenRef.current) {
+			setValues({
+				initiativeTimeline: defaultValues?.initiativeTimeline ?? "",
+				initiativeCost: defaultValues?.initiativeCost ?? "",
+				totalUncertaintyAdjustment:
+					defaultValues?.totalUncertaintyAdjustment ?? "",
+				risks: {
+					...initialRisks,
+					...defaultValues?.risks,
+				},
+			});
+		}
+		wasOpenRef.current = open;
+	}, [open, defaultValues, initialRisks]);
 
 	const patchRisk = (
 		riskId: string,
@@ -188,6 +231,30 @@ export const TotalUncertaintyModal = ({
 		}));
 	};
 
+	// Пока сроки и стоимость не выбраны, базовый уровень не определён — риски заблокированы.
+	const risksLocked = !values.initiativeTimeline || !values.initiativeCost;
+	const filledRiskCount = Object.values(values.risks).filter(
+		isRiskFilled,
+	).length;
+	const breakdown = useMemo(
+		() => (computeBreakdown ? computeBreakdown(values) : null),
+		[computeBreakdown, values],
+	);
+
+	/** Полный сброс: срок, стоимость, поправка и ответы по рискам. Сразу в formData. */
+	const handleReset = () => {
+		const cleared: TotalUncertaintyFormValues = {
+			initiativeTimeline: "",
+			initiativeCost: "",
+			totalUncertaintyAdjustment: "",
+			risks: Object.fromEntries(
+				riskGroups.map((risk) => [risk.id, emptyRiskSelection()]),
+			) as Record<string, UncertaintyRiskSelection>,
+		};
+		setValues(cleared);
+		(onReset ?? onSubmit)(cleared);
+	};
+
 	return (
 		<Dialog
 			open={open}
@@ -197,7 +264,11 @@ export const TotalUncertaintyModal = ({
 			PaperProps={{ sx: { borderRadius: 1.5, overflow: "hidden" } }}
 		>
 			<DialogTitle sx={{ pb: 1.5 }}>
-				<Stack direction="row" alignItems="center" justifyContent="space-between">
+				<Stack
+					direction="row"
+					alignItems="center"
+					justifyContent="space-between"
+				>
 					<Typography variant="h5" component="span" sx={{ fontWeight: 600 }}>
 						Расчет общей неопределенности
 					</Typography>
@@ -258,112 +329,187 @@ export const TotalUncertaintyModal = ({
 						type="number"
 						label="Поправка на общую неопределенность"
 						value={values.totalUncertaintyAdjustment}
+						placeholder={String(adjustment?.defaultPct ?? 0)}
 						onChange={(event) =>
 							setValues((prev) => ({
 								...prev,
 								totalUncertaintyAdjustment: clampAdjustmentInput(
 									event.target.value,
+									adjMin,
+									adjMax,
 								),
 							}))
 						}
 						inputProps={{
-							min: 0,
-							max: UNCERTAINTY_ADJUSTMENT_MAX,
+							min: adjMin,
+							max: adjMax,
 							step: 1,
 						}}
 						InputProps={{
-							endAdornment: (
-								<InputAdornment position="end">%</InputAdornment>
-							),
+							endAdornment: <InputAdornment position="end">%</InputAdornment>,
 						}}
-						helperText="Опционально, 0–30%. Если задана — полностью перекрывает автосчёт по рискам"
+						helperText={`Опционально, ${adjMin}–${adjMax}%. ${adjHint}`}
 					/>
 
 					<Divider sx={{ my: 0.5 }} />
 
-					<Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-						Группа рисков
-					</Typography>
-					<Typography variant="caption" color="text.secondary">
-						Отметьте применимые риски: вероятность и влияние на Цели
-					</Typography>
+					<Flex gap={1} alignItems="baseline" justifyContent="space-between">
+						<Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+							Группа рисков
+						</Typography>
+						<Typography variant="caption" color="text.secondary">
+							заполнено {filledRiskCount} из {riskGroups.length}
+						</Typography>
+					</Flex>
 
-					{riskGroups.map((risk) => {
-						const selection = values.risks[risk.id] ?? emptyRiskSelection();
-						return (
-							<Box key={risk.id}>
-								<Flex gap={0.5} alignItems="center" sx={{ mb: 0.5 }}>
-									<Typography variant="body2" color="text.secondary">
-										{risk.label}
-									</Typography>
-									{risk.tooltip ? (
-										<IconButton
-											size="small"
-											title={risk.tooltip}
-											aria-label={risk.tooltip}
-											disableRipple
-											sx={{ p: 0.25, flexShrink: 0, cursor: "help" }}
-										>
-											<InfoOutlineIcon
-												sx={{
-													fontSize: 16,
-													color: "#88888877",
-													pointerEvents: "none",
-												}}
-											/>
-										</IconButton>
-									) : null}
-								</Flex>
-								<Flex gap={1} wrap="wrap">
-									<FormControl sx={{ flex: 1, minWidth: 200 }}>
-										<Select
-											displayEmpty
-											value={selection.probability}
-											onChange={(event: SelectChangeEvent<string>) =>
-												patchRisk(risk.id, "probability", event.target.value)
-											}
-										>
-											{probabilityOptions.map((option) => (
-												<MenuItem
-													key={`p-${option.value || "__empty"}`}
-													value={option.value}
-												>
-													{option.value
-														? `Вероятность: ${option.label}`
-														: "Вероятность: не выбрано"}
-												</MenuItem>
-											))}
-										</Select>
-									</FormControl>
-									<FormControl sx={{ flex: 1, minWidth: 200 }}>
-										<Select
-											displayEmpty
-											value={selection.goals}
-											onChange={(event: SelectChangeEvent<string>) =>
-												patchRisk(risk.id, "goals", event.target.value)
-											}
-										>
-											{goalsOptions.map((option) => (
-												<MenuItem
-													key={`g-${option.value || "__empty"}`}
-													value={option.value}
-												>
-													{option.value
-														? `Цели: ${option.label}`
-														: "Цели: не выбрано"}
-												</MenuItem>
-											))}
-										</Select>
-									</FormControl>
-								</Flex>
-							</Box>
-						);
-					})}
+					<Stack spacing={4.5}>
+						{riskGroups.map((risk) => {
+							const selection = values.risks[risk.id] ?? emptyRiskSelection();
+							return (
+								<Box key={risk.id} sx={{ opacity: risksLocked ? 0.55 : 1 }}>
+									<Flex gap={0.5} alignItems="center" sx={{ mb: 1.5 }}>
+										<Typography variant="body2" color="text.secondary">
+											{risk.label}
+										</Typography>
+										{risk.tooltip ? (
+											<IconButton
+												size="small"
+												title={risk.tooltip}
+												aria-label={risk.tooltip}
+												disableRipple
+												sx={{ p: 0.25, flexShrink: 0, cursor: "help" }}
+											>
+												<InfoOutlineIcon
+													sx={{
+														fontSize: 16,
+														color: "#88888877",
+														pointerEvents: "none",
+													}}
+												/>
+											</IconButton>
+										) : null}
+									</Flex>
+									<Flex gap={2} wrap="wrap">
+										<FormControl sx={{ flex: 1, minWidth: 200 }}>
+											<Select
+												displayEmpty
+												disabled={risksLocked}
+												value={selection.probability}
+												onChange={(event: SelectChangeEvent<string>) =>
+													patchRisk(risk.id, "probability", event.target.value)
+												}
+											>
+												{probabilityOptions.map((option) => (
+													<MenuItem
+														key={`p-${option.value || "__empty"}`}
+														value={option.value}
+													>
+														{option.value
+															? `Вероятность: ${option.label}`
+															: "Вероятность: не выбрано"}
+													</MenuItem>
+												))}
+											</Select>
+										</FormControl>
+										<FormControl sx={{ flex: 1, minWidth: 200 }}>
+											<Select
+												displayEmpty
+												disabled={risksLocked}
+												value={selection.goals}
+												onChange={(event: SelectChangeEvent<string>) =>
+													patchRisk(risk.id, "goals", event.target.value)
+												}
+											>
+												{goalsOptions.map((option) => (
+													<MenuItem
+														key={`g-${option.value || "__empty"}`}
+														value={option.value}
+													>
+														{option.value
+															? `Цели: ${option.label}`
+															: "Цели: не выбрано"}
+													</MenuItem>
+												))}
+											</Select>
+										</FormControl>
+									</Flex>
+								</Box>
+							);
+						})}
+					</Stack>
+					{breakdown || risksLocked ? (
+						<Box
+							sx={{
+								borderRadius: 1.5,
+								bgcolor: "#1c2333",
+								color: "#fff",
+								px: 2,
+								py: 1.5,
+							}}
+						>
+							<Typography
+								variant="caption"
+								sx={{
+									textTransform: "uppercase",
+									letterSpacing: 0.6,
+									opacity: 0.7,
+								}}
+							>
+								Предпросмотр формулы
+							</Typography>
+							{(risksLocked
+								? [
+										"Срок или стоимость инициативы не выбраны → коэффициент 1 (не рассчитано)",
+									]
+								: (breakdown?.formulaLines ?? [])
+							).map((line) => (
+								<Typography
+									key={line}
+									variant="body2"
+									sx={{
+										opacity: 0.92,
+										fontFamily: "ui-monospace, monospace",
+										fontSize: 12,
+										mt: 0.5,
+									}}
+								>
+									{line}
+								</Typography>
+							))}
+							<Flex
+								alignItems="baseline"
+								justifyContent="space-between"
+								sx={{ mt: 1 }}
+							>
+								<Typography variant="caption" sx={{ opacity: 0.7 }}>
+									Общая неопределённость
+								</Typography>
+								<Typography variant="h5" sx={{ fontWeight: 700 }}>
+									{risksLocked
+										? "Не рассчитано"
+										: (breakdown?.coefficient ?? 1)
+												.toFixed(2)
+												.replace(".", ",")}
+								</Typography>
+							</Flex>
+						</Box>
+					) : null}
 				</Stack>
 			</DialogContent>
 
-			<DialogActions sx={{ px: 3, py: 2 }}>
-				<Box sx={{ display: "flex", gap: 1, ml: "auto" }}>
+			<DialogActions
+				sx={{ px: 3, py: 2, justifyContent: "space-between" }}
+			>
+				<Button
+					onClick={handleReset}
+					variant="outlined"
+					color="warning"
+					disabled={loading}
+					title="Сбросить срок, стоимость, поправку и ответы по рискам"
+				>
+					Сброс
+				</Button>
+				<Box sx={{ display: "flex", gap: 1 }}>
 					<Button onClick={onClose} color="inherit" disabled={loading}>
 						ОТМЕНА
 					</Button>

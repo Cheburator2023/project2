@@ -16,6 +16,7 @@ import {
 import { applyKeycloakUserToStore } from "@react-client/common/auth/applyKeycloakUserToStore";
 import { ErrorBoundary } from "@react-client/common/errors/ErrorBoundary";
 import { ErrorPage } from "@react-client/common/errors/pages/ErrorPage";
+import { LogoutOverlay } from "@react-client/common/auth/LogoutOverlay";
 import { performMfeLogout } from "@react-client/common/auth/syncMfeAuth";
 import { queryClient } from "@react-client/common/api/queryClient";
 import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
@@ -84,10 +85,7 @@ interface LayoutProps {
 const App: React.FC<LayoutProps> = (props) => {
 	const { user: rawUser, onLogout, bridged, urlConfig, keycloak } = props;
 	const userMemoKey = keycloakUserMemoKey(rawUser);
-	const user = useMemo(
-		() => normalizeKeycloakUser(rawUser),
-		[userMemoKey],
-	);
+	const user = useMemo(() => normalizeKeycloakUser(rawUser), [userMemoKey]);
 
 	const { setUser, setConfigMap } = useGlobalSettingsStore();
 
@@ -118,6 +116,7 @@ const App: React.FC<LayoutProps> = (props) => {
 					<ErrorBoundary ErrorPage={ErrorPage}>
 						<StyledEngineProvider injectFirst>
 							<Toaster />
+							<LogoutOverlay />
 							<Suspense fallback={<FullScreenLoader height="100vh" />}>
 								<LocalizationProvider dateAdapter={AdapterDateFns}>
 									<AppRoutes onLogout={onLogoutHandler} />

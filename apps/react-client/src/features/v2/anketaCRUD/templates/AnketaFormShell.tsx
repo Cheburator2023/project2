@@ -1,5 +1,9 @@
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import BugReportOutlinedIcon from "@mui/icons-material/BugReportOutlined";
+import SaveIcon from "@mui/icons-material/Save";
+import TaskAltIcon from "@mui/icons-material/TaskAlt";
 import Alert from "@mui/material/Alert";
 import {
 	Box,
@@ -12,9 +16,13 @@ import {
 	DialogTitle,
 	IconButton,
 	Typography,
+	keyframes,
 } from "@mui/material";
 import type { V2SchemaBindingDto } from "@smart-anketa/api-contract";
 import {
+	canUserDeleteV2Questionnaire,
+	canViewerCompleteWholeAnketa,
+	resolveV2QuestionnaireDeleteAction,
 	schemaHasUncertaintyModalWidget,
 	userMasksAllWorkEstimates,
 	V2_ANKETA_GLOBAL_COMPLETE_LABEL,
@@ -28,11 +36,13 @@ import {
 	useState,
 	type ReactNode,
 } from "react";
+import type { QuestionnaireSaveStatus } from "../hooks/useDebouncedQuestionnaireSave";
 import {
 	AnketaGlobalCompleteDialog,
 	type AnketaGlobalCompleteDialogPhase,
 } from "../organisms/AnketaGlobalCompleteDialog";
 import { AnketaCalcNameDialog } from "../organisms/AnketaCalcNameDialog";
+import { AnketaSchemaInfoDialog } from "../organisms/AnketaSchemaInfoDialog";
 import { FinalScoreCard } from "../organisms/FinalScoreCard";
 import { V2AnketaFormWithModals } from "../organisms/V2AnketaFormWithModals";
 import { AnketaCommentsSection } from "../organisms/AnketaCommentsSection";
@@ -49,6 +59,7 @@ import type { AnketaFormContextValue } from "../utils/anketaFormContext";
 import { useAnketaViewerAccess } from "../utils/anketaViewerAccess";
 import { AnketaFormPageLayout } from "./AnketaFormPageLayout";
 import {
+	useBulkDeleteV2Questionnaires,
 	useCreateV2QuestionnaireVersion,
 	useHoldV2Questionnaire,
 	v2QuestionnairesExportXlsx,
@@ -60,8 +71,12 @@ import { v2Routes } from "@react-client/routing/version/v2/routes";
 import { toast } from "@react-client/common/toasts";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { usePermissions } from "@react-client/hooks/usePermissions";
+import { useUserStore } from "@react-client/common/store/userStore";
 import { IS_DEV } from "@react-client/common/constants/dev";
-import { buildQuestionnaireCopyCalcName, stripQuestionnaireCalcNameFromFormData } from "../utils/anketaQuestionnaireMeta.util";
+import {
+	buildQuestionnaireCopyCalcName,
+	stripQuestionnaireCalcNameFromFormData,
+} from "../utils/anketaQuestionnaireMeta.util";
 
 type Engine = V2AnketaSchemaEngine;
 
@@ -73,9 +88,18 @@ type Props = {
 	onSave?: () => void;
 	saveDisabled?: boolean;
 	savePending?: boolean;
+	/** Статус автосохранения (дискетка + индикатор). */
+	saveStatus?: QuestionnaireSaveStatus;
+	saveErrorMessage?: string | null;
+	/** Сообщение о блокировке редактирования другим пользователем. */
+	lockMessage?: string | null;
 	headerExtra?: ReactNode;
 	questionnaireId?: string;
 	questionnaireCalcName?: string;
+	/** Название схемы (шаблона), по которой создана анкета. */
+	templateName?: string | null;
+	/** Статус записи анкеты (active / inactive / archived). */
+	questionnaireStatus?: "active" | "archived" | "inactive";
 	onRenameQuestionnaire?: (calcName: string) => void;
 	renamePending?: boolean;
 	/** Внешняя загрузка (например, form-package с сервера). */
@@ -86,6 +110,43 @@ type Props = {
 	"data-test-id"?: string;
 };
 
+const saveLedPulse = keyframes`
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0.35; }
+`;
+
+function saveStatusLedColor(status: QuestionnaireSaveStatus): string {
+	switch (status) {
+		case "saved":
+			return "success.main";
+		case "error":
+			return "error.main";
+		case "dirty":
+		case "saving":
+			return "warning.main";
+		default:
+			return "action.disabled";
+	}
+}
+
+function saveStatusLabel(
+	status: QuestionnaireSaveStatus,
+	errorMessage?: string | null,
+): string {
+	switch (status) {
+		case "saving":
+			return "Сохранение…";
+		case "saved":
+			return "Сохранено";
+		case "dirty":
+			return "Есть несохранённые изменения";
+		case "error":
+			return errorMessage?.trim() || "Ошибка сохранения";
+		default:
+			return "Автосохранение";
+	}
+}
+
 /** Общая оболочка анкеты: layout по макету + RJSF + итоговая оценка. */
 export function AnketaFormShell({
 	source,
@@ -95,9 +156,14 @@ export function AnketaFormShell({
 	onSave,
 	saveDisabled,
 	savePending,
+	saveStatus = "idle",
+	saveErrorMessage = null,
+	lockMessage = null,
 	headerExtra,
 	questionnaireId,
 	questionnaireCalcName,
+	templateName = null,
+	questionnaireStatus = "active",
 	onRenameQuestionnaire,
 	renamePending = false,
 	loading: externalLoading = false,
@@ -106,8 +172,10 @@ export function AnketaFormShell({
 	"data-test-id": dataTestId = "anketa-form-shell",
 }: Props) {
 	const navigate = useNavigate();
+	const groups = useUserStore((s) => s.groups);
 	const {
 		canCreateCalculation,
+		canDeleteCalculation,
 		canEditCalculation,
 		canExportReports,
 		canWorkflowApprove,
@@ -117,7 +185,9 @@ export function AnketaFormShell({
 
 	const createCopy = useCreateV2QuestionnaireVersion();
 	const holdMutation = useHoldV2Questionnaire();
+	const bulkDelete = useBulkDeleteV2Questionnaires();
 	const [holdDialogOpen, setHoldDialogOpen] = useState(false);
+	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 	const internalEngine = useV2AnketaSchemaEngine(engineProp ? null : source);
 	const engine = engineProp ?? internalEngine;
 	const setFormData = (next: Record<string, unknown>) =>
@@ -142,19 +212,70 @@ export function AnketaFormShell({
 	const permissionReadOnly = questionnaireId
 		? !canEditCalculation
 		: !canCreateCalculation;
-	const effectiveReadOnly =
-		readOnly || globallyLocked || permissionReadOnly;
+	const effectiveReadOnly = readOnly || globallyLocked || permissionReadOnly;
 	const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
 	const [calculationDebugOpen, setCalculationDebugOpen] = useState(false);
 	const [completeDialogPhase, setCompleteDialogPhase] =
 		useState<AnketaGlobalCompleteDialogPhase>("confirm");
 	const [copyNameDialogOpen, setCopyNameDialogOpen] = useState(false);
 	const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+	const [schemaInfoOpen, setSchemaInfoOpen] = useState(false);
+	const canShowSchemaInfo = Boolean(
+		templateName?.trim() ||
+			schemaBinding?.boundTemplateVersionId ||
+			schemaBinding?.boundTemplateVersionNumber != null,
+	);
 	const saveAfterCompleteRef = useRef(false);
 	const openCompleteDialog = useCallback(() => {
 		setCompleteDialogPhase("confirm");
 		setCompleteDialogOpen(true);
 	}, []);
+
+	const deleteAccess = useMemo(
+		() => canUserDeleteV2Questionnaire(groups, engine.formData),
+		[groups, engine.formData],
+	);
+	const deleteResolved = useMemo(
+		() =>
+			resolveV2QuestionnaireDeleteAction(
+				workflow.globalStatus,
+				questionnaireStatus,
+			),
+		[workflow.globalStatus, questionnaireStatus],
+	);
+	const canShowDelete =
+		Boolean(questionnaireId) &&
+		canDeleteCalculation &&
+		deleteAccess.ok &&
+		deleteResolved.action !== "deny";
+	const deleteIsHard = deleteResolved.action === "hard_delete";
+
+	const confirmDelete = useCallback(() => {
+		if (!questionnaireId) return;
+		bulkDelete.mutate(
+			{ ids: [questionnaireId] },
+			{
+				onSuccess: (result) => {
+					setDeleteDialogOpen(false);
+					const failed = result.failed[0];
+					if (failed) {
+						toast.error(failed.message || "Не удалось удалить анкету");
+						return;
+					}
+					if (result.deactivatedIds.includes(questionnaireId)) {
+						toast.success("Анкета переведена в статус «Неактивная»");
+					} else {
+						toast.success("Анкета удалена");
+					}
+					navigate("/v2");
+				},
+				onError: (err) =>
+					toast.error("Ошибка удаления", {
+						description: apiErrorMessage(err),
+					}),
+			},
+		);
+	}, [bulkDelete, navigate, questionnaireId]);
 
 	const closeCompleteDialog = useCallback(() => {
 		setCompleteDialogOpen(false);
@@ -205,8 +326,7 @@ export function AnketaFormShell({
 	}, []);
 
 	const suggestedCopyName = useMemo(
-		() =>
-			buildQuestionnaireCopyCalcName(questionnaireCalcName ?? "Анкета"),
+		() => buildQuestionnaireCopyCalcName(questionnaireCalcName ?? "Анкета"),
 		[questionnaireCalcName],
 	);
 
@@ -233,6 +353,14 @@ export function AnketaFormShell({
 	}, [completeDialogOpen, completeDialogPhase, onSave, workflow.globalStatus]);
 
 	const hideWorkEstimates = userMasksAllWorkEstimates(viewerAccess.roles);
+	/**
+	 * §4: у представителя стрима глобальная кнопка недоступна всегда.
+	 * Гард на фронте дублирует Keycloak-матрицу: до пересинка право может остаться в токене.
+	 */
+	const mayCompleteWholeAnketa =
+		canCompleteAnketa &&
+		(!viewerAccess.applyAccessRules ||
+			canViewerCompleteWholeAnketa(viewerAccess.roles));
 
 	const confirmHold = useCallback(() => {
 		if (!questionnaireId) return;
@@ -299,44 +427,98 @@ export function AnketaFormShell({
 	}, [questionnaireId, canExportReports]);
 
 	const headerLeadingAccessory = useMemo(
-		() =>
-			canRenameQuestionnaire ? (
-				<IconButton
-					size="small"
-					title="Переименовать анкету"
-					aria-label="Переименовать анкету"
-					disabled={renamePending}
-					onClick={() => setRenameDialogOpen(true)}
-					data-test-id={`${dataTestId}--rename`}
-				>
-					<EditOutlinedIcon fontSize="small" />
-				</IconButton>
-			) : null,
-		[canRenameQuestionnaire, dataTestId, renamePending],
+		() => (
+			<Box
+				sx={{
+					display: "inline-flex",
+					alignItems: "center",
+					gap: 1,
+					ml: 0.5,
+					flexShrink: 0,
+				}}
+				data-test-id={`${dataTestId}--leading`}
+			>
+				{canShowSchemaInfo ? (
+					<IconButton
+						size="small"
+						title="Схема анкеты"
+						aria-label="Схема анкеты"
+						onClick={() => setSchemaInfoOpen(true)}
+						data-test-id={`${dataTestId}--schema-info`}
+					>
+						<InfoOutlinedIcon fontSize="small" />
+					</IconButton>
+				) : null}
+				{canRenameQuestionnaire ? (
+					<IconButton
+						size="small"
+						title="Переименовать анкету"
+						aria-label="Переименовать анкету"
+						disabled={renamePending}
+						onClick={() => setRenameDialogOpen(true)}
+						data-test-id={`${dataTestId}--rename`}
+					>
+						<EditOutlinedIcon fontSize="small" />
+					</IconButton>
+				) : null}
+				{onSave && canSaveQuestionnaire ? (
+					<Box
+						component="span"
+						title={saveStatusLabel(saveStatus, saveErrorMessage)}
+						aria-label={saveStatusLabel(saveStatus, saveErrorMessage)}
+						data-test-id={`${dataTestId}--save-led`}
+						sx={{
+							width: 8,
+							height: 8,
+							borderRadius: "50%",
+							bgcolor: saveStatusLedColor(saveStatus),
+							flexShrink: 0,
+							display: "block",
+							mx: 0.5,
+							animation:
+								saveStatus === "saving" || saveStatus === "dirty"
+									? `${saveLedPulse} 1.1s ease-in-out infinite`
+									: "none",
+						}}
+					/>
+				) : null}
+				<AnketaSectionStatusChip kind="global" status={workflow.globalStatus} />
+			</Box>
+		),
+		[
+			canRenameQuestionnaire,
+			canSaveQuestionnaire,
+			canShowSchemaInfo,
+			dataTestId,
+			onSave,
+			renamePending,
+			saveErrorMessage,
+			saveStatus,
+			workflow.globalStatus,
+		],
 	);
 
 	const headerActions = useMemo(
 		() => (
 			<>
-				<AnketaSectionStatusChip kind="global" status={workflow.globalStatus} />
-				{!globallyLocked && canCompleteAnketa ? (
-					<Button
-						variant="contained"
-						size="small"
+				{!globallyLocked && mayCompleteWholeAnketa ? (
+					<IconButton
+						color="primary"
 						disabled={!allSectionsCompleted || effectiveReadOnly}
 						title={
 							allSectionsCompleted
-								? undefined
+								? V2_ANKETA_GLOBAL_COMPLETE_LABEL
 								: "Сначала завершите заполнение всех основных разделов"
 						}
+						aria-label={V2_ANKETA_GLOBAL_COMPLETE_LABEL}
 						onClick={openCompleteDialog}
-						sx={{ fontWeight: 600, whiteSpace: "nowrap" }}
+						data-test-id={`${dataTestId}--complete`}
 					>
-						{V2_ANKETA_GLOBAL_COMPLETE_LABEL}
-					</Button>
+						<TaskAltIcon />
+					</IconButton>
 				) : null}
 				{headerExtra}
-				{IS_DEV && (
+				{/* {IS_DEV && (
 					<Button
 						variant="outlined"
 						size="small"
@@ -347,7 +529,7 @@ export function AnketaFormShell({
 					>
 						Диагностика расчёта
 					</Button>
-				)}
+				)} */}
 				{workflow.globalStatus === "Заполнено" &&
 				canHoldCalculation &&
 				questionnaireId ? (
@@ -378,36 +560,56 @@ export function AnketaFormShell({
 						Создать копию
 					</Button>
 				) : null}
-				{onSave && canSaveQuestionnaire ? (
-					<Button
-						variant="contained"
+				{canShowDelete ? (
+					<IconButton
 						size="small"
+						color="error"
+						title={
+							deleteIsHard ? "Удалить анкету" : "Сделать анкету неактивной"
+						}
+						aria-label={
+							deleteIsHard ? "Удалить анкету" : "Сделать анкету неактивной"
+						}
+						disabled={bulkDelete.isPending}
+						onClick={() => setDeleteDialogOpen(true)}
+						data-test-id={`${dataTestId}--delete`}
+					>
+						<DeleteOutlineIcon fontSize="small" />
+					</IconButton>
+				) : null}
+				{onSave && canSaveQuestionnaire ? (
+					<IconButton
 						onClick={onSave}
 						disabled={saveDisabled || savePending || effectiveReadOnly}
-						startIcon={
-							savePending ? (
-								<CircularProgress size={16} color="inherit" />
-							) : undefined
-						}
-						sx={{ fontWeight: 600, textTransform: "none", whiteSpace: "nowrap" }}
+						title="Сохранить"
+						aria-label="Сохранить"
+						data-test-id={`${dataTestId}--save`}
 					>
-						{isEditingQuestionnaire ? "Сохранить" : "Создать"}
-					</Button>
+						{savePending ? (
+							<CircularProgress size={22} color="inherit" />
+						) : (
+							<SaveIcon />
+						)}
+					</IconButton>
 				) : null}
 			</>
 		),
 		[
 			canSaveQuestionnaire,
 			canWorkflowApprove,
-			canCompleteAnketa,
+			mayCompleteWholeAnketa,
 			canHoldCalculation,
 			canCreateCalculation,
+			canDeleteCalculation,
+			canShowDelete,
+			deleteIsHard,
 			headerExtra,
 			isEditingQuestionnaire,
 			onSave,
-			openCopyNameDialog,
 			saveDisabled,
 			savePending,
+			dataTestId,
+			openCopyNameDialog,
 			effectiveReadOnly,
 			workflow.globalStatus,
 			globallyLocked,
@@ -416,6 +618,8 @@ export function AnketaFormShell({
 			questionnaireId,
 			createCopy.isPending,
 			holdMutation.isPending,
+			bulkDelete.isPending,
+			dataTestId,
 		],
 	);
 
@@ -451,6 +655,11 @@ export function AnketaFormShell({
 						</Typography>
 					) : (
 						<>
+							{lockMessage ? (
+								<Alert severity="warning" sx={{ mb: 2 }}>
+									{lockMessage}
+								</Alert>
+							) : null}
 							{engine.dictionaryEnumsLoading ? (
 								<Alert severity="info" sx={{ mb: 2 }}>
 									Загрузка справочников…
@@ -488,6 +697,7 @@ export function AnketaFormShell({
 							liveFormData={engine.calculationLiveFormData}
 							onExportExcel={onExportExcel}
 							hideWorkEstimates={hideWorkEstimates}
+							viewerAccess={viewerAccess}
 						/>
 					)
 				}
@@ -496,9 +706,7 @@ export function AnketaFormShell({
 				open={completeDialogOpen}
 				phase={completeDialogPhase}
 				onClose={closeCompleteDialog}
-				canSave={
-					Boolean(onSave) && canSaveQuestionnaire && !saveDisabled
-				}
+				canSave={Boolean(onSave) && canSaveQuestionnaire && !saveDisabled}
 				savePending={savePending}
 				hasQuestionnaireId={Boolean(questionnaireId)}
 				createCopyPending={createCopy.isPending}
@@ -566,6 +774,46 @@ export function AnketaFormShell({
 					</Button>
 				</DialogActions>
 			</Dialog>
+			<Dialog
+				open={deleteDialogOpen}
+				onClose={() =>
+					bulkDelete.isPending ? undefined : setDeleteDialogOpen(false)
+				}
+			>
+				<DialogTitle>
+					{deleteIsHard ? "Удалить анкету?" : "Сделать анкету неактивной?"}
+				</DialogTitle>
+				<DialogContent>
+					<DialogContentText>
+						{deleteIsHard
+							? "Анкета будет полностью удалена из реестра. Действие необратимо."
+							: "Анкета останется в реестре со статусом записи «Неактивная»."}
+					</DialogContentText>
+				</DialogContent>
+				<DialogActions>
+					<Button
+						onClick={() => setDeleteDialogOpen(false)}
+						disabled={bulkDelete.isPending}
+					>
+						Отмена
+					</Button>
+					<Button
+						color="error"
+						variant="contained"
+						onClick={confirmDelete}
+						disabled={bulkDelete.isPending}
+					>
+						{bulkDelete.isPending ? (
+							<CircularProgress size={18} color="inherit" />
+						) : deleteIsHard ? (
+							"Удалить"
+						) : (
+							"Сделать неактивной"
+						)}
+					</Button>
+				</DialogActions>
+			</Dialog>
+
 			<AnketaCalcNameDialog
 				open={renameDialogOpen}
 				title="Переименовать анкету"
@@ -578,6 +826,13 @@ export function AnketaFormShell({
 					setRenameDialogOpen(false);
 				}}
 				data-test-id={`${dataTestId}--rename-dialog`}
+			/>
+			<AnketaSchemaInfoDialog
+				open={schemaInfoOpen}
+				onClose={() => setSchemaInfoOpen(false)}
+				templateName={templateName}
+				schemaBinding={schemaBinding}
+				data-test-id={`${dataTestId}--schema-info-dialog`}
 			/>
 		</>
 	);

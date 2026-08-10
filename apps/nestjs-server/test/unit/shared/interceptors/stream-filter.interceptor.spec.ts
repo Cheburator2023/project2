@@ -16,6 +16,7 @@ describe("StreamFilterInterceptor", () => {
 			getAllAndOverride: jest.fn().mockReturnValue(shouldFilter),
 		} as unknown as Reflector;
 		const streamSvc = {
+			isStreamFilterDisabled: jest.fn().mockReturnValue(false),
 			isStreamFilteredUser: jest.fn().mockReturnValue(opts.isFiltered ?? true),
 			getGroupsAfterMapping: jest.fn().mockReturnValue(opts.allowed ?? []),
 		} as unknown as StreamMappingService;
@@ -40,6 +41,28 @@ describe("StreamFilterInterceptor", () => {
 		expect(await lastValueFrom(interceptor.intercept(ctx, next))).toBe(
 			"anything",
 		);
+	});
+
+	it("passes through when STREAM_FILTER_DISABLED via service", async () => {
+		const reflector = {
+			getAllAndOverride: jest.fn().mockReturnValue(true),
+		} as unknown as Reflector;
+		const streamSvc = {
+			isStreamFilterDisabled: jest.fn().mockReturnValue(true),
+			isStreamFilteredUser: jest.fn(),
+			getGroupsAfterMapping: jest.fn(),
+		} as unknown as StreamMappingService;
+		const interceptor = new StreamFilterInterceptor(reflector, streamSvc);
+		const ctx = {
+			getHandler: () => null,
+			getClass: () => null,
+			switchToHttp: () => ({ getRequest: () => ({ user: { groups: ["de"] } }) }),
+		} as any;
+		const next: any = { handle: () => of([{ streamExecutor: "S1" }]) };
+		expect(await lastValueFrom(interceptor.intercept(ctx, next))).toEqual([
+			{ streamExecutor: "S1" },
+		]);
+		expect(streamSvc.isStreamFilteredUser).not.toHaveBeenCalled();
 	});
 
 	it("returns data unchanged when user invalid (no groups)", async () => {

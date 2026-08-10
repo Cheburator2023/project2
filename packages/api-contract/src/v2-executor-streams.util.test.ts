@@ -8,6 +8,7 @@ import {
 	formatV2StreamBlockSectionTitle,
 	isExecutorStreamPresentInSchema,
 	readV2AnketaSectionUiOptions,
+	resolveModelStreamUmbrellaBlockPointer,
 	resolveStreamExecutorForTypicalWorkOutputPath,
 	resolveV2AnketaSectionDisplayTitle,
 	resolveV2AnketaStreamBlockOptions,
@@ -18,10 +19,16 @@ import {
 } from "./v2-stream-block-executor.util";
 import {
 	isV2ExecutorStreamLabel,
+	resolveExecutorScopeDbStreams,
 	typicalWorkAssignedToAnyExecutorStream,
 	typicalWorkAssignedToExecutorStream,
 	V2_EXECUTOR_STREAM_LABELS,
 } from "./v2-executor-streams.util";
+import {
+	V2_MODEL_IMPLEMENTATION_STREAM_CODES,
+	V2_MODEL_STREAM_EXECUTOR,
+	resolveModelStreamCatalogScopeDbStreams,
+} from "./v2-model-stream-typical-works.constants";
 
 describe("v2-executor-streams.util", () => {
 	it("lists seven executor stream labels", () => {
@@ -190,6 +197,35 @@ describe("collectExecutorStreamBlocks", () => {
 		expect(isExecutorStreamPresentInSchema(uiSchema, "ДАДМ")).toBe(false);
 	});
 
+	it("expands umbrella «Модельный стрим» detailInfo to five model child codes", () => {
+		const uiSchema = {
+			detailInfo: {
+				"ui:options": {
+					streamBlock: true,
+					streamExecutor: V2_MODEL_STREAM_EXECUTOR,
+				},
+			},
+		};
+		const blocks = collectExecutorStreamBlocks(uiSchema);
+		expect(blocks).toHaveLength(1);
+		expect(blocks[0]?.pointer).toBe("/detailInfo");
+		expect(blocks[0]?.streamExecutors).toEqual([
+			...V2_MODEL_IMPLEMENTATION_STREAM_CODES,
+		]);
+		expect(
+			isExecutorStreamPresentInSchema(uiSchema, V2_MODEL_STREAM_EXECUTOR),
+		).toBe(true);
+		expect(
+			isExecutorStreamPresentInSchema(
+				uiSchema,
+				V2_IMPLEMENTATION_STREAM.KMBKCB,
+			),
+		).toBe(true);
+		expect(resolveModelStreamUmbrellaBlockPointer(uiSchema)).toBe(
+			"/detailInfo",
+		);
+	});
+
 	it("resolves stream for typicalWork block from explicit option or root stream", () => {
 		const uiSchema = {
 			field_stream: {
@@ -269,5 +305,102 @@ describe("collectExecutorStreamBlocks", () => {
 				V2_IMPLEMENTATION_STREAM.IDSRC,
 			),
 		).toBe(false);
+	});
+
+	it("includes mdlctl DB stream in «Контроль моделей» catalog scope", () => {
+		expect(resolveExecutorScopeDbStreams("Контроль моделей")).toEqual(
+			expect.arrayContaining(["mdlctl", "Контроль моделей"]),
+		);
+		expect(resolveExecutorScopeDbStreams("mdlctl")).toEqual(
+			expect.arrayContaining(["mdlctl", "Контроль моделей"]),
+		);
+		expect(
+			typicalWorkAssignedToExecutorStream(["mdlctl"], "Контроль моделей"),
+		).toBe(true);
+	});
+
+	/**
+	 * Заводские блоки ПиРМ/КМ хранят в `worksCatalogStream` legacy-подпись, а
+	 * назначения новых работ пишутся каноническим именем из каталога `v2_stream`
+	 * (кодом стрима либо его подписью). Без объединения scope такие работы
+	 * не попадают в каталог блока — «добавление работ не работает».
+	 */
+	it("includes stream code and catalog labels in legacy executor label scope", () => {
+		const catalog = [
+			{
+				code: V2_IMPLEMENTATION_STREAM.PIRM,
+				label: "Платформы и Решения для моделирования",
+				isActive: true,
+				order: 1,
+				payload: {
+					dbNames: ["ПиРМ (правила и развитие модели)"],
+					legacyLabels: ["ПиРМ"],
+					v1Labels: [],
+					keycloakAliases: [],
+				},
+			},
+		] as unknown as Parameters<typeof resolveExecutorScopeDbStreams>[1];
+
+		const scope = resolveExecutorScopeDbStreams("ПиРМ", catalog);
+		expect(scope).toEqual(
+			expect.arrayContaining([
+				"ПиРМ",
+				"ПиРМ (правила и развитие модели)",
+				V2_IMPLEMENTATION_STREAM.PIRM,
+				"Платформы и Решения для моделирования",
+			]),
+		);
+		expect(
+			typicalWorkAssignedToExecutorStream(
+				[V2_IMPLEMENTATION_STREAM.PIRM],
+				"ПиРМ",
+				catalog,
+			),
+		).toBe(true);
+		// Без каталога код стрима тоже должен попадать в scope legacy-подписи.
+		expect(resolveExecutorScopeDbStreams("ПиРМ")).toEqual(
+			expect.arrayContaining(["ПиРМ", V2_IMPLEMENTATION_STREAM.PIRM]),
+		);
+	});
+
+	it("expands legacy «Модельный стрим» catalog scope to five model DB streams", () => {
+		const scope = resolveExecutorScopeDbStreams(V2_MODEL_STREAM_EXECUTOR);
+		expect(scope).toEqual(
+			expect.arrayContaining([
+				V2_MODEL_STREAM_EXECUTOR,
+				"Модельные стримы",
+				"Разработка моделей КМБ и КСБ",
+				"Моделирование РБ",
+				"AI-модели партнерств",
+				"Финансовое моделирование",
+				"Моделирование RnD",
+				V2_IMPLEMENTATION_STREAM.KMBKCB,
+				V2_IMPLEMENTATION_STREAM.RB,
+				V2_IMPLEMENTATION_STREAM.PTITPC,
+				V2_IMPLEMENTATION_STREAM.FINMDL,
+				V2_IMPLEMENTATION_STREAM.RND,
+			]),
+		);
+		expect(resolveModelStreamCatalogScopeDbStreams()).toEqual(scope);
+		expect(
+			typicalWorkAssignedToExecutorStream(
+				["Разработка моделей КМБ и КСБ"],
+				V2_MODEL_STREAM_EXECUTOR,
+			),
+		).toBe(true);
+		expect(
+			typicalWorkAssignedToExecutorStream(
+				[V2_MODEL_STREAM_EXECUTOR],
+				V2_IMPLEMENTATION_STREAM.KMBKCB,
+			),
+		).toBe(true);
+		expect(
+			resolveExecutorScopeDbStreams(V2_IMPLEMENTATION_STREAM.KMBKCB),
+		).toEqual(
+			expect.arrayContaining([
+				"Разработка моделей КМБ и КСБ",
+				V2_MODEL_STREAM_EXECUTOR,
+			]),
+		);
 	});
 });

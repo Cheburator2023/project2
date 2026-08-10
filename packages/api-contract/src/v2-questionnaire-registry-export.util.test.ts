@@ -41,6 +41,8 @@ describe("v2-questionnaire-registry-export.util", () => {
 				boundTemplateVersionId: "v1",
 				boundTemplateVersionNumber: 1,
 				boundTemplateVersionStatus: "published",
+				boundTemplateVersionCreatedAt: "2025-12-01T00:00:00.000Z",
+				boundTemplateVersionUpdatedAt: "2025-12-15T00:00:00.000Z",
 				currentTemplateVersionId: "v1",
 				currentTemplateVersionNumber: 1,
 				message: "",

@@ -41,6 +41,7 @@ export const V2_LOGIC_WORKSPACE_TAB_VALUES = [
 	"atypicalWorks",
 	"dependencies",
 	"uncertainty",
+	"deviations",
 	"jsonlogic",
 ] as const;
 

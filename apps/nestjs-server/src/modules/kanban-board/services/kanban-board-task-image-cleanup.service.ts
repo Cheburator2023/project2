@@ -89,6 +89,7 @@ export class KanbanBoardTaskImageCleanupService
 			.createQueryBuilder("task")
 			.where("task.parent_id IN (:...doneParentIds)", { doneParentIds })
 			.andWhere("task.updated_at < :cutoff", { cutoff })
+			.andWhere("task.deleted_at IS NULL")
 			.getMany();
 		if (!tasks.length) {
 			return { taskCount: 0, imageCount: 0 };

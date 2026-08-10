@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { In, IsNull, Repository } from "typeorm";
 import {
@@ -7,27 +7,44 @@ import {
 	applyComputedOverallUncertaintyToTypicalWorkParamCoefficients,
 	buildTypicalWorkFactorCoeffResolver,
 	buildTypicalWorkFormulaBreakdown,
+	buildWorkCoefficientCatalog,
 	computeTypicalWorkFormulaTotal,
 	defaultWorkRounding,
+	describeTypicalWorkTriggerConditions,
+	formDataWithSingleArchInstance,
+	formatEmptyArchInstanceBreakdown,
+	formatNoTriggerMatchingArchInstanceBreakdown,
+	formatPerInstanceBreakdownExpanded,
 	formatTypicalWorkCoefficientDisplay,
 	isWorkCoefficientValueAvailable,
+	listArchComponentInstances,
+	resolveModelServiceSourceLabel,
+	mergeArchInstanceTriggerSource,
 	normalizeStoredFormula,
 	buildLaborCoefficientLookupSource,
+	buildV2SchemaFieldIndex,
 	parseStoredTypicalWorkCalculationLogic,
 	resolveActiveNormOnDate,
+	resolveArchComponentKindFromType,
 	resolveByValueLaborParamCoefficients,
 	resolveLaborAnyOfCoefficient,
 	resolveStreamFromSourceType,
 	resolveExecutorScopeDbStreams,
 	isModelStreamAlwaysActiveWork,
 	isModelStreamAlwaysShownWork,
+	archInstanceMatchesWorkTrigger,
+	matchTypicalWorkAppearanceTriggers,
 	matchTypicalWorkTriggers,
+	hasTypicalWorkTriggersConfigured,
 	normalizeTypicalWorkTriggerRuleForMatch,
 	remapFactoryAllowedWorkIdsToTemplateWorks,
 	type TypicalWorkTriggerMatchInput,
 	type TypicalWorkFormulaBreakdownDto,
+	type TypicalWorkInstanceBreakdownLine,
+	type WorkCoefficientCatalogParam,
 	buildWorkSchemaParamsFromTemplate,
 	remapLaborCoefficientRowsForSchema,
+	resolveTypicalWorkRulesForSourceMatch,
 	resolveWorkSchemaParamForRule,
 	stripParamNameSourceKeys,
 	type TypicalWorkAnyOfLaborParamLike,
@@ -45,7 +62,23 @@ import { V2TypicalWorkVersionConfigEntity } from "../entities/v2-typical-work-ve
 import { V2TypicalWorkEntity } from "../entities/v2-typical-work.entity";
 import { V2TemplateVersionEntity } from "../entities/v2-template-version.entity";
 import { V2TypicalWorkParamCatalogService } from "./v2-typical-work-param-catalog.service";
+import { V2StreamCatalogService } from "./v2-stream-catalog.service";
 import { V2_FACTORY_TEMPLATE_TYPICAL_WORKS_REGISTRY } from "../constants/v2-factory-template-typical-works-registry";
+
+const runtimeLogger = new Logger("V2TypicalWorkRuntime");
+const RUNTIME_LOG_LIMIT = 8;
+
+function isRuntimeDiagnosticsEnabled(): boolean {
+	if (process.env.TYPICAL_WORK_RUNTIME_DIAGNOSTICS === "1") return true;
+	return process.env.NODE_ENV !== "production";
+}
+
+function compactItems(items: string[], limit = RUNTIME_LOG_LIMIT): string {
+	const unique = [...new Set(items)];
+	const visible = unique.slice(0, limit);
+	const extra = unique.length - visible.length;
+	return extra > 0 ? `${visible.join("; ")}; … +${extra}` : visible.join("; ");
+}
 
 export type CatalogGeneratedTask = {
 	taskCode: string;
@@ -94,15 +127,34 @@ type RuntimeWorkContext = {
 	laborParams: V2TypicalWorkLaborParamEntity[];
 	config: V2TypicalWorkVersionConfigEntity | undefined;
 	assignmentByWorkId: Map<string, V2TypicalWorkAssignmentEntity>;
-	coefficientValueCatalog: Awaited<
-		ReturnType<V2TypicalWorkParamCatalogService["listTriggerStatusCatalog"]>
-	>;
+	coefficientValueCatalog: WorkCoefficientCatalogParam[];
 	hiddenParamCodes?: ReadonlySet<string>;
 	schemaParams: WorkSchemaParamDef[];
 	triggersMatch: boolean;
 	alwaysShown: boolean;
 	uncertaintyConfig?: import("@smart-anketa/api-contract").V2OverallUncertaintyConfig;
+	schemaFieldIndex?: import("@smart-anketa/api-contract").V2SchemaFieldIndex | null;
 };
+
+/**
+ * Условия триггера для «Подробного расчёта». Только для работ, которые попали
+ * в расчёт по триггеру: у alwaysShown-работ условия не сработали, и показывать
+ * их как причину появления было бы неверно.
+ */
+function describeWorkTriggerConditions(ctx: RuntimeWorkContext): string | null {
+	if (!ctx.triggersMatch) return null;
+	const assignment = ctx.assignmentByWorkId.get(ctx.work.id);
+	return describeTypicalWorkTriggerConditions({
+		mode:
+			(assignment?.triggerMode as TypicalWorkTriggerMatchInput["mode"]) ??
+			"simple",
+		rules: ctx.rules,
+		triggerArchCount: mapTriggerArchCountFromAssignment(assignment),
+		triggerFormula:
+			(assignment?.triggerFormula as TypicalWorkTriggerMatchInput["triggerFormula"]) ??
+			null,
+	});
+}
 
 function decimalToNumber(value: string | number | null | undefined): number {
 	if (value === null || value === undefined) return 0;
@@ -128,6 +180,7 @@ function mapRuleEntity(rule: V2TypicalWorkRuleEntity): TypicalWorkRuleLike {
 		valueCode: rule.valueCode,
 		valueLabel: rule.valueLabel,
 		values: rule.valueCodes ?? undefined,
+		schemaFieldUid: rule.schemaFieldUid ?? null,
 	});
 }
 
@@ -149,17 +202,13 @@ function resolveParamCoefficients(ctx: RuntimeWorkContext): Record<string, numbe
 	const laborParamsByCode = new Map(
 		ctx.laborParams.map((row) => [row.paramCode, row]),
 	);
-	const laborParamCodes = [
-		...new Set([
-			...ctx.laborParams.map((row) => row.paramCode),
-			...ctx.laborRows.map((row) => row.paramCode),
-		]),
-	];
+	const laborParamCodes = listLaborParamCodes(ctx);
 	const lookupSource = buildLaborCoefficientLookupSource(
 		ctx.source,
 		ctx.formData,
 		ctx.schemaParams,
 		laborParamCodes,
+		{ schemaFieldIndex: ctx.schemaFieldIndex },
 	);
 
 	for (const header of ctx.laborParams) {
@@ -190,17 +239,36 @@ function resolveParamCoefficients(ctx: RuntimeWorkContext): Record<string, numbe
 		valueLabel: string | null;
 		coefficient: number;
 	}> = [];
+	const skippedUnavailable: Array<{
+		paramCode: string;
+		valueLabel: string | null;
+		valueCode: string | null;
+		schemaFieldUid: string | null;
+	}> = [];
 	for (const row of ctx.laborRows) {
 		if (ctx.hiddenParamCodes?.has(row.paramCode)) continue;
 		const header = laborParamsByCode.get(row.paramCode);
 		if (header?.kind === "any_of") continue;
+		const schemaBound = Boolean(header?.schemaFieldUid?.trim());
 		if (
+			!schemaBound &&
 			!isWorkCoefficientValueAvailable(
-				row,
+				{
+					paramCode: row.paramCode,
+					valueCode: row.valueCode,
+					valueLabel: row.valueLabel,
+					schemaFieldUid: header?.schemaFieldUid,
+				},
 				ctx.coefficientValueCatalog,
 				ctx.atDate,
 			)
 		) {
+			skippedUnavailable.push({
+				paramCode: row.paramCode,
+				valueLabel: row.valueLabel,
+				valueCode: row.valueCode,
+				schemaFieldUid: header?.schemaFieldUid ?? null,
+			});
 			continue;
 		}
 		byValueRows.push({
@@ -210,6 +278,17 @@ function resolveParamCoefficients(ctx: RuntimeWorkContext): Record<string, numbe
 			valueLabel: row.valueLabel,
 			coefficient: decimalToNumber(row.coefficient),
 		});
+	}
+	if (skippedUnavailable.length > 0 && isRuntimeDiagnosticsEnabled()) {
+		runtimeLogger.warn(
+			`[${ctx.work.name}] отсечены коэффициенты трудоёмкости (недоступны в справочнике / без привязки к схеме): ${compactItems(
+				skippedUnavailable.map(
+					(row) =>
+						`${row.paramCode}=«${row.valueLabel ?? row.valueCode ?? "—"}»` +
+						(row.schemaFieldUid ? "" : " [no schemaFieldUid]"),
+				),
+			)}`,
+		);
 	}
 	const remappedRows = remapLaborCoefficientRowsForSchema(
 		byValueRows,
@@ -228,6 +307,17 @@ function resolveParamCoefficients(ctx: RuntimeWorkContext): Record<string, numbe
 		if (remapped.paramCode !== original.paramCode) {
 			paramCoefficients[original.paramCode] = value;
 		}
+	}
+
+	const unmatchedByValueParams = [
+		...new Set(byValueRows.map((row) => row.paramCode)),
+	].filter((paramCode) => !Object.hasOwn(paramCoefficients, paramCode));
+	if (unmatchedByValueParams.length > 0 && isRuntimeDiagnosticsEnabled()) {
+		runtimeLogger.warn(
+			`[${ctx.work.name}] ответы анкеты не совпали ни с одной строкой коэффициента (будет ×1): ${compactItems(
+				unmatchedByValueParams,
+			)}. lookupKeys=${Object.keys(lookupSource).slice(0, 12).join(",")}`,
+		);
 	}
 
 	const terms = ctx.config
@@ -255,7 +345,298 @@ function resolveParamCoefficients(ctx: RuntimeWorkContext): Record<string, numbe
 		},
 	);
 
+	const silentDefaultFactors = [...new Set(formulaParamCodes)].filter(
+		(paramCode) =>
+			Boolean(paramCode) &&
+			!Object.hasOwn(paramCoefficients, paramCode) &&
+			laborParamsByCode.get(paramCode)?.kind !== "any_of",
+	);
+	if (silentDefaultFactors.length > 0 && isRuntimeDiagnosticsEnabled()) {
+		runtimeLogger.warn(
+			`[${ctx.work.name}] факторы формулы без коэффициента → ×1: ${compactItems(
+				silentDefaultFactors,
+			)}`,
+		);
+	}
+
 	return paramCoefficients;
+}
+
+function listLaborParamCodes(ctx: RuntimeWorkContext): string[] {
+	return [
+		...new Set([
+			...ctx.laborParams.map((row) => row.paramCode),
+			...ctx.laborRows.map((row) => row.paramCode),
+		]),
+	];
+}
+
+function buildRuntimeFactorCoeffResolver(
+	ctx: RuntimeWorkContext,
+	paramCoefficients: Record<string, number>,
+) {
+	return buildTypicalWorkFactorCoeffResolver({
+		paramCoefficients,
+		anyOfParams: listAnyOfLaborParams(ctx.laborParams),
+		source: buildLaborCoefficientLookupSource(
+			ctx.source,
+			ctx.formData,
+			ctx.schemaParams,
+			listLaborParamCodes(ctx),
+			{ schemaFieldIndex: ctx.schemaFieldIndex },
+		),
+	});
+}
+
+function evaluateWorkInstance(
+	ctx: RuntimeWorkContext,
+	source: Record<string, unknown>,
+	formData: Record<string, unknown>,
+): {
+	total: number | null;
+	paramCoefficients: Record<string, number>;
+	breakdown: TypicalWorkFormulaBreakdownDto;
+} {
+	const instanceCtx: RuntimeWorkContext = {
+		...ctx,
+		source,
+		formData,
+	};
+	const paramCoefficients = resolveParamCoefficients(instanceCtx);
+	const resolveFactorCoeff = buildRuntimeFactorCoeffResolver(
+		instanceCtx,
+		paramCoefficients,
+	);
+	const rounding = resolveRounding(ctx.config);
+	const terms = ctx.config
+		? normalizeStoredFormula(ctx.config.formula, ctx.config.formulaText)
+		: normalizeStoredFormula(null);
+	const paramNames = Object.fromEntries(
+		ctx.laborParams.map((row) => [
+			row.paramCode,
+			stripParamNameSourceKeys(row.paramName).trim() ||
+				row.paramName?.trim() ||
+				row.paramCode,
+		]),
+	);
+	const raw = computeTypicalWorkFormulaTotal({
+		calculationLogic: parseStoredTypicalWorkCalculationLogic(
+			ctx.config?.calculationLogic,
+		),
+		formula: ctx.config?.formula,
+		formulaText: ctx.config?.formulaText,
+		terms,
+		rounding,
+		norm: ctx.normValue,
+		paramCoefficients,
+		source,
+		formData,
+		resolveFactorCoeff,
+	});
+	if (raw == null) {
+		return {
+			total: null,
+			paramCoefficients,
+			breakdown: {
+				symbolic: "N",
+				expanded: "—",
+				factors: [],
+				baseNorm: ctx.normValue,
+				coefficient: 1,
+				total: 0,
+			},
+		};
+	}
+	const total = applyWorkRounding(raw, rounding);
+	const coefficient = ctx.normValue > 0 ? total / ctx.normValue : 1;
+	const breakdown = buildTypicalWorkFormulaBreakdown({
+		calculationLogic: parseStoredTypicalWorkCalculationLogic(
+			ctx.config?.calculationLogic,
+		),
+		formula: ctx.config?.formula,
+		formulaText: ctx.config?.formulaText,
+		terms,
+		rounding,
+		norm: ctx.normValue,
+		paramCoefficients,
+		paramNames,
+		source,
+		formData,
+		resolveFactorCoeff,
+		coefficient,
+		total,
+	});
+	return { total, paramCoefficients, breakdown };
+}
+
+/**
+ * Per-instance: формула на каждый экземпляр archComponentType работы → сумма.
+ * arch_count того же kind принудительно 1 (через formData override / sliced list),
+ * а архкоэф берётся долей `коэф(N) / N` — скидка за объём распределяется по
+ * экземплярам, иначе за N компонентов платятся ровно N нормативов.
+ * В сумму попадают только экземпляры, на которых сработал триггер появления работы.
+ */
+function evaluateWorkAcrossArchInstances(ctx: RuntimeWorkContext): {
+	total: number | null;
+	paramCoefficients: Record<string, number>;
+	instanceBreakdown: TypicalWorkInstanceBreakdownLine[];
+	expandedOverride: string;
+} {
+	const kind = resolveArchComponentKindFromType(ctx.work.archComponentType);
+	const instances = listArchComponentInstances(
+		ctx.formData,
+		ctx.work.archComponentType,
+		{ schemaParams: ctx.schemaParams },
+	);
+
+	const assignment = ctx.assignmentByWorkId.get(ctx.work.id);
+	const triggerInput: TypicalWorkTriggerMatchInput = {
+		mode:
+			(assignment?.triggerMode as TypicalWorkTriggerMatchInput["mode"]) ??
+			"simple",
+		rules: ctx.rules,
+		triggerArchCount: mapTriggerArchCountFromAssignment(assignment),
+		triggerFormula:
+			(assignment?.triggerFormula as TypicalWorkTriggerMatchInput["triggerFormula"]) ??
+			null,
+	};
+	const matchContext = {
+		schemaParams: ctx.schemaParams,
+		schemaFieldIndex: ctx.schemaFieldIndex,
+	};
+
+	/**
+	 * Fan-out kind (Модель / СИ / …) без экземпляров: не обнулять работу сразу.
+	 * Триггер может опираться только на модельный сервис (пример: MVP = Да И
+	 * modelService ≥ 1) — тогда считаем один раз по полному formData.
+	 */
+	if (kind != null && kind !== "modelService" && instances.length === 0) {
+		const appearsWithoutInstances =
+			!hasTypicalWorkTriggersConfigured(triggerInput) ||
+			matchTypicalWorkTriggers(
+				triggerInput,
+				ctx.source,
+				ctx.formData,
+				matchContext,
+			);
+		if (!appearsWithoutInstances) {
+			return {
+				total: 0,
+				paramCoefficients: {},
+				instanceBreakdown: [],
+				expandedOverride: formatEmptyArchInstanceBreakdown(
+					ctx.work.archComponentType,
+				),
+			};
+		}
+		const evaluated = evaluateWorkInstance(ctx, ctx.source, ctx.formData);
+		if (evaluated.total == null) {
+			return {
+				total: null,
+				paramCoefficients: {},
+				instanceBreakdown: [],
+				expandedOverride: "",
+			};
+		}
+		return {
+			total: evaluated.total,
+			paramCoefficients: evaluated.paramCoefficients,
+			instanceBreakdown: [
+				{
+					sourceLabel: resolveModelServiceSourceLabel(ctx.formData, {
+						schemaParams: ctx.schemaParams,
+					}),
+					index: 0,
+					expanded: evaluated.breakdown.expanded,
+					total: evaluated.total,
+				},
+			],
+			expandedOverride: evaluated.breakdown.expanded,
+		};
+	}
+
+	const useBaseSource = kind == null || kind === "modelService";
+	const matched: Array<{
+		instance: (typeof instances)[number];
+		source: Record<string, unknown>;
+	}> = [];
+	let skippedByTrigger = 0;
+
+	for (const instance of instances) {
+		const source = useBaseSource
+			? ctx.source
+			: mergeArchInstanceTriggerSource(kind, ctx.source, instance.row);
+		if (
+			!archInstanceMatchesWorkTrigger({
+				triggerInput,
+				source,
+				formData: formDataWithSingleArchInstance(ctx.formData, kind, instance),
+				matchContext,
+			})
+		) {
+			skippedByTrigger += 1;
+			continue;
+		}
+		matched.push({ instance, source });
+	}
+
+	const instanceBreakdown: TypicalWorkInstanceBreakdownLine[] = [];
+	let sum = 0;
+	let lastCoeffs: Record<string, number> = {};
+	let anyOk = false;
+
+	for (const { instance, source } of matched) {
+		const formData = formDataWithSingleArchInstance(
+			ctx.formData,
+			kind,
+			instance,
+			matched.length,
+		);
+		const evaluated = evaluateWorkInstance(ctx, source, formData);
+		if (evaluated.total == null) continue;
+		anyOk = true;
+		sum += evaluated.total;
+		lastCoeffs = evaluated.paramCoefficients;
+		instanceBreakdown.push({
+			sourceLabel: instance.sourceLabel,
+			index: instance.index,
+			expanded: evaluated.breakdown.expanded,
+			total: evaluated.total,
+		});
+	}
+
+	if (!anyOk) {
+		if (
+			instances.length > 0 &&
+			skippedByTrigger === instances.length &&
+			hasTypicalWorkTriggersConfigured(triggerInput)
+		) {
+			return {
+				total: 0,
+				paramCoefficients: {},
+				instanceBreakdown: [],
+				expandedOverride: formatNoTriggerMatchingArchInstanceBreakdown(
+					ctx.work.archComponentType,
+				),
+			};
+		}
+		return {
+			total: null,
+			paramCoefficients: {},
+			instanceBreakdown: [],
+			expandedOverride: "",
+		};
+	}
+
+	return {
+		total: sum,
+		paramCoefficients: lastCoeffs,
+		instanceBreakdown,
+		expandedOverride: formatPerInstanceBreakdownExpanded(
+			instanceBreakdown,
+			sum,
+		),
+	};
 }
 
 function listAnyOfLaborParams(
@@ -305,6 +686,7 @@ export class V2TypicalWorkRuntimeService {
 		@InjectRepository(V2TemplateVersionEntity)
 		private readonly templateVersionRepository: Repository<V2TemplateVersionEntity>,
 		private readonly paramCatalogService: V2TypicalWorkParamCatalogService,
+		private readonly streamCatalog: V2StreamCatalogService,
 	) {}
 
 	async buildSourceCatalogTasks(
@@ -331,7 +713,8 @@ export class V2TypicalWorkRuntimeService {
 		if (!stream || !archComponentType) return [];
 		if (params.allowedWorkIds?.length === 0) return [];
 
-		const scopeStreams = [...resolveExecutorScopeDbStreams(stream)];
+		const catalog = await this.streamCatalog.getCatalog({ activeOnly: false });
+		const scopeStreams = [...resolveExecutorScopeDbStreams(stream, catalog)];
 		const streamScope =
 			scopeStreams.length > 0 ? scopeStreams : [stream];
 
@@ -422,9 +805,23 @@ export class V2TypicalWorkRuntimeService {
 			}
 		}
 		const assignmentById = new Map(assignments.map((a) => [a.id, a]));
-		const coefficientValueCatalog =
+		const methodologyCatalog =
 			await this.paramCatalogService.listTriggerStatusCatalog(params.atDate);
-		const schemaParams = await this.loadSchemaParams(params.templateVersionId);
+		const {
+			schemaParams,
+			schemaFieldIndex,
+			jsonSchema,
+			uiSchema,
+		} = await this.loadSchemaParams(params.templateVersionId);
+		const coefficientValueCatalog = buildWorkCoefficientCatalog({
+			schemaParams,
+			laborParams: laborParams.map((row) => ({
+				paramCode: row.paramCode,
+				paramName: row.paramName,
+				schemaFieldUid: row.schemaFieldUid,
+			})),
+			methodologyCatalog,
+		});
 
 		const contexts = new Map<string, RuntimeWorkContext>();
 		for (const work of filteredWorks) {
@@ -441,7 +838,10 @@ export class V2TypicalWorkRuntimeService {
 			);
 			if (normValue == null) continue;
 
-			const workRules = (rulesByWork.get(work.id) ?? []).map(mapRuleEntity);
+			const workRules = resolveTypicalWorkRulesForSourceMatch(
+				(rulesByWork.get(work.id) ?? []).map(mapRuleEntity),
+				schemaParams,
+			);
 			const triggerInput: TypicalWorkTriggerMatchInput = {
 				mode:
 					(assignmentByWorkId.get(work.id)?.triggerMode as TypicalWorkTriggerMatchInput["mode"]) ??
@@ -454,11 +854,18 @@ export class V2TypicalWorkRuntimeService {
 					(assignmentByWorkId.get(work.id)?.triggerFormula as TypicalWorkTriggerMatchInput["triggerFormula"]) ??
 					null,
 			};
-			const triggersMatch = matchTypicalWorkTriggers(
+			const triggersMatch = matchTypicalWorkAppearanceTriggers({
 				triggerInput,
-				params.source,
-				params.formData ?? params.source,
-			);
+				archComponentType: work.archComponentType,
+				source: params.source,
+				formData: params.formData ?? params.source,
+				matchContext: {
+					schemaParams,
+					schemaFieldIndex,
+					jsonSchema: jsonSchema ?? undefined,
+					uiSchema: uiSchema ?? undefined,
+				},
+			});
 			const alwaysActive = isModelStreamAlwaysActiveWork(work.id);
 			const alwaysShown =
 				isModelStreamAlwaysShownWork(work.id) || alwaysActive;
@@ -485,11 +892,16 @@ export class V2TypicalWorkRuntimeService {
 				triggersMatch,
 				alwaysShown,
 				uncertaintyConfig: params.uncertaintyConfig,
+				schemaFieldIndex,
 			});
 		}
 
 		const memo = new Map<string, number>();
 		const visiting = new Set<string>();
+		const evaluationByWorkId = new Map<
+			string,
+			ReturnType<typeof evaluateWorkAcrossArchInstances>
+		>();
 
 		const computeTotal = (workId: string): number | null => {
 			if (memo.has(workId)) return memo.get(workId) ?? null;
@@ -502,44 +914,25 @@ export class V2TypicalWorkRuntimeService {
 			}
 
 			visiting.add(workId);
-			const paramCoefficients = resolveParamCoefficients(ctx);
-			const resolveFactorCoeff = buildTypicalWorkFactorCoeffResolver({
-				paramCoefficients,
-				anyOfParams: listAnyOfLaborParams(ctx.laborParams),
-				source: ctx.source,
-			});
-			const rounding = resolveRounding(ctx.config);
 			const terms = ctx.config
 				? normalizeStoredFormula(ctx.config.formula, ctx.config.formulaText)
 				: normalizeStoredFormula(null);
 
 			const transitive = terms.terms.find((t) => t.kind === "transitive");
-			let raw: number | null;
+			let total: number | null;
 			if (transitive?.sourceAssignmentId) {
 				const sourceAssignment = assignmentById.get(transitive.sourceAssignmentId);
-				raw = sourceAssignment
+				total = sourceAssignment
 					? computeTotal(sourceAssignment.workId)
 					: null;
 			} else {
-				raw = computeTypicalWorkFormulaTotal({
-					calculationLogic: parseStoredTypicalWorkCalculationLogic(
-						ctx.config?.calculationLogic,
-					),
-					formula: ctx.config?.formula,
-					formulaText: ctx.config?.formulaText,
-					terms,
-					rounding,
-					norm: ctx.normValue,
-					paramCoefficients,
-					source: ctx.source,
-					formData: ctx.formData,
-					resolveFactorCoeff,
-				});
+				const evaluated = evaluateWorkAcrossArchInstances(ctx);
+				evaluationByWorkId.set(workId, evaluated);
+				total = evaluated.total;
 			}
 
 			visiting.delete(workId);
-			if (raw == null) return null;
-			const total = applyWorkRounding(raw, rounding);
+			if (total == null) return null;
 			memo.set(workId, total);
 			return total;
 		};
@@ -554,15 +947,17 @@ export class V2TypicalWorkRuntimeService {
 				coefficient = total / ctx.normValue;
 			}
 
-			const paramCoefficients = resolveParamCoefficients(ctx);
+			const evaluated =
+				evaluationByWorkId.get(workId) ??
+				evaluateWorkAcrossArchInstances(ctx);
+			const paramCoefficients = evaluated.paramCoefficients;
 			const terms = ctx.config
 				? normalizeStoredFormula(ctx.config.formula, ctx.config.formulaText)
 				: normalizeStoredFormula(null);
-			const resolveFactorCoeff = buildTypicalWorkFactorCoeffResolver({
+			const resolveFactorCoeff = buildRuntimeFactorCoeffResolver(
+				ctx,
 				paramCoefficients,
-				anyOfParams: listAnyOfLaborParams(ctx.laborParams),
-				source: ctx.source,
-			});
+			);
 			const rounding = resolveRounding(ctx.config);
 			const paramNames = Object.fromEntries(
 				ctx.laborParams.map((row) => [
@@ -594,6 +989,9 @@ export class V2TypicalWorkRuntimeService {
 				resolveFactorCoeff,
 				coefficient,
 				total,
+				instanceBreakdown: evaluated.instanceBreakdown,
+				expandedOverride: evaluated.expandedOverride,
+				triggerConditions: describeWorkTriggerConditions(ctx),
 			});
 
 			tasks.push({
@@ -616,16 +1014,42 @@ export class V2TypicalWorkRuntimeService {
 
 	private async loadSchemaParams(
 		templateVersionId: string | null,
-	): Promise<WorkSchemaParamDef[]> {
-		if (!templateVersionId) return [];
+	): Promise<{
+		schemaParams: WorkSchemaParamDef[];
+		schemaFieldIndex: ReturnType<typeof buildV2SchemaFieldIndex> | null;
+		jsonSchema: Record<string, unknown> | null;
+		uiSchema: Record<string, unknown> | null;
+	}> {
+		if (!templateVersionId) {
+			return {
+				schemaParams: [],
+				schemaFieldIndex: null,
+				jsonSchema: null,
+				uiSchema: null,
+			};
+		}
 		const version = await this.templateVersionRepository.findOne({
 			where: { id: templateVersionId },
 		});
-		if (!version) return [];
-		return buildWorkSchemaParamsFromTemplate({
-			jsonSchema: (version.jsonSchema ?? {}) as Record<string, unknown>,
-			uiSchema: (version.uiSchema ?? {}) as Record<string, unknown>,
-		});
+		if (!version) {
+			return {
+				schemaParams: [],
+				schemaFieldIndex: null,
+				jsonSchema: null,
+				uiSchema: null,
+			};
+		}
+		const jsonSchema = (version.jsonSchema ?? {}) as Record<string, unknown>;
+		const uiSchema = (version.uiSchema ?? {}) as Record<string, unknown>;
+		return {
+			schemaParams: buildWorkSchemaParamsFromTemplate({
+				jsonSchema,
+				uiSchema,
+			}),
+			schemaFieldIndex: buildV2SchemaFieldIndex(jsonSchema, uiSchema),
+			jsonSchema,
+			uiSchema,
+		};
 	}
 
 	private async resolveAllowedWorkIdsForTemplate(
@@ -641,28 +1065,48 @@ export class V2TypicalWorkRuntimeService {
 			return [...allowedWorkIds];
 		}
 
-		if (!templateId?.trim()) {
-			return directAssigned.length > 0 ? directAssigned : [...allowedWorkIds];
+		if (templateId?.trim()) {
+			const templateWorks = await this.workRepository.find({
+				where: { templateId: templateId.trim() },
+			});
+			if (templateWorks.length > 0) {
+				const remapped = remapFactoryAllowedWorkIdsToTemplateWorks(
+					allowedWorkIds,
+					templateWorks.map((work) => ({ id: work.id, name: work.name })),
+					V2_FACTORY_TEMPLATE_TYPICAL_WORKS_REGISTRY.works.map((work) => ({
+						id: work.id,
+						name: work.name,
+					})),
+				).filter((id) => assignedWorkIds.has(id));
+				// Ремап покрыл весь список — привязка восстановлена полностью.
+				// Частичный результат означает, что часть id восстановить не удалось,
+				// поэтому решение принимает общая проверка на протухание ниже.
+				if (remapped.length === allowedWorkIds.length) return remapped;
+			}
 		}
 
-		const templateWorks = await this.workRepository.find({
-			where: { templateId: templateId.trim() },
-		});
-		if (templateWorks.length === 0) {
-			return directAssigned.length > 0 ? directAssigned : [...allowedWorkIds];
+		if (directAssigned.length > 0) {
+			// Часть id вне назначений — это либо снятое назначение (легитимное
+			// сужение блока), либо протухший id после пересида каталога с новыми
+			// uuid. Отличаем по факту существования работы: если id вообще нет в
+			// каталоге, урезанному allow-list доверять нельзя — иначе работы
+			// стрима молча пропадают из блока.
+			const missing = allowedWorkIds.filter((id) => !assignedWorkIds.has(id));
+			const existing = await this.workRepository.find({
+				where: { id: In([...missing]) },
+				select: { id: true },
+			});
+			const staleCount = missing.length - existing.length;
+			if (staleCount === 0) return directAssigned;
+			runtimeLogger.warn(
+				`Привязка блока частично устарела: ${staleCount} из ${allowedWorkIds.length} id не найдены в каталоге работ. Фильтр по id отключён, используются назначения стрима.`,
+			);
+			return undefined;
 		}
 
-		const remapped = remapFactoryAllowedWorkIdsToTemplateWorks(
-			allowedWorkIds,
-			templateWorks.map((work) => ({ id: work.id, name: work.name })),
-			V2_FACTORY_TEMPLATE_TYPICAL_WORKS_REGISTRY.works.map((work) => ({
-				id: work.id,
-				name: work.name,
-			})),
-		).filter((id) => assignedWorkIds.has(id));
-
-		if (remapped.length > 0) return remapped;
-		return directAssigned.length > 0 ? directAssigned : [...allowedWorkIds];
+		// Allow-list устарел (id нет среди назначений стрима). Вернуть его как есть
+		// обнулит каталог; `undefined` = без фильтра по id (остаётся filter по assignment).
+		return undefined;
 	}
 }
 

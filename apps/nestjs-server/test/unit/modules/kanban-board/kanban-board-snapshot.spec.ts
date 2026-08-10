@@ -137,6 +137,8 @@ describe("KanbanBoardService importSnapshot", () => {
 				position: 0,
 				content: { title: "Старая версия" },
 				origin: stand,
+				createdAt: now,
+				createdBy: null,
 				updatedAt: now,
 			},
 			{
@@ -148,6 +150,8 @@ describe("KanbanBoardService importSnapshot", () => {
 				position: 0,
 				content: { title: "Удалить меня" },
 				origin: stand,
+				createdAt: now,
+				createdBy: null,
 				updatedAt: now,
 			},
 			{
@@ -159,6 +163,8 @@ describe("KanbanBoardService importSnapshot", () => {
 				position: 0,
 				content: { title: "Локальная задача другого стенда" },
 				origin: "stand-b",
+				createdAt: now,
+				createdBy: null,
 				updatedAt: now,
 			},
 		];
@@ -202,6 +208,11 @@ describe("KanbanBoardService importSnapshot", () => {
 			boardRepo,
 			dataSource,
 			{ get: () => "local-dev" } as any,
+			{ logTaskChanges: jest.fn(), logTaskDiff: jest.fn() } as any,
+			{ syncTasksContentImages: jest.fn() } as any,
+			{ syncTasksContentFiles: jest.fn() } as any,
+			{ countByTaskIds: jest.fn(async () => new Map()) } as any,
+			{ assertEditable: jest.fn() } as any,
 		);
 
 		const result = await service.importSnapshot(exported);

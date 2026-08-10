@@ -9,8 +9,9 @@ import {
 	ParseUUIDPipe,
 	Patch,
 	Post,
+	Put,
+	Query,
 	Res,
-	UseInterceptors,
 } from "@nestjs/common";
 import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
@@ -19,10 +20,13 @@ import type {
 	SeedV2TestQuestionnairesResultDto,
 	V2QuestionnaireCommentDto,
 	V2QuestionnaireDto,
+	V2QuestionnaireEditLockDto,
+	V2QuestionnaireEditLocksListDto,
 	V2QuestionnaireFormPackageDto,
 	V2QuestionnaireRegistryConfigDto,
 } from "@smart-anketa/api-contract";
 import {
+	AcquireV2QuestionnaireEditLockDto,
 	BulkDeleteV2QuestionnairesDto,
 	CreateV2QuestionnaireCommentDto,
 	CreateV2QuestionnaireDto,
@@ -33,10 +37,9 @@ import {
 } from "../dto";
 import { V2QuestionnaireService } from "../services/v2-questionnaire.service";
 import { V2QuestionnaireCommentService } from "../services/v2-questionnaire-comment.service";
+import { V2QuestionnaireEditLockService } from "../services/v2-questionnaire-edit-lock.service";
 import { CurrentUser } from "../../../shared/decorators/user.decorator";
 import { RealmRole } from "../../../shared/decorators/realm-role.decorator";
-import { StreamFilter } from "../../../shared/decorators/stream-filter.decorator";
-import { StreamFilterInterceptor } from "../../../shared/interceptors/stream-filter.interceptor";
 import { Permission } from "../../../shared/types/permissions";
 import { AuditService } from "../../../shared/audit/audit.service";
 import {
@@ -52,13 +55,21 @@ import {
 import { v4 as uuidv4 } from "uuid";
 import { normalizeV2AnketaWorkflow } from "../utils/v2-anketa-workflow.util";
 
+const questionnaireAuditUserId = (
+	user: Record<string, unknown> | undefined,
+): string | null => {
+	if (!user) return null;
+	const id = user.id ?? user.sub ?? user.preferred_username ?? user.login;
+	return typeof id === "string" && id.trim() ? id.trim() : null;
+};
+
 @ApiTags("v2-questionnaires")
 @Controller("v2/questionnaires")
-@UseInterceptors(StreamFilterInterceptor)
 export class V2QuestionnaireController {
     constructor(
         private readonly questionnaireService: V2QuestionnaireService,
         private readonly commentService: V2QuestionnaireCommentService,
+        private readonly editLockService: V2QuestionnaireEditLockService,
         private readonly auditService: AuditService,
     ) {}
 
@@ -71,9 +82,20 @@ export class V2QuestionnaireController {
 		return this.questionnaireService.getRegistryConfig();
 	}
 
+	@Get("edit-locks")
+	@ApiOperation({
+		summary: "Активные блокировки редактирования анкет (для индикации в реестре)",
+	})
+	async listEditLocks(): Promise<V2QuestionnaireEditLocksListDto> {
+		const locks = await this.editLockService.listActive();
+		return { locks };
+	}
+
 	@Get()
-	@StreamFilter()
-	@ApiOperation({ summary: "Реестр анкет v2 (отдельно от реестра схем)" })
+	@ApiOperation({
+		summary:
+			"Реестр анкет v2 (полный список; фильтр по стриму — на UI, см. /v2/runtime-settings/stream-filter)",
+	})
 	async findAll(): Promise<V2QuestionnaireDto[]> {
 		return this.questionnaireService.findAll();
 	}
@@ -344,6 +366,78 @@ export class V2QuestionnaireController {
 		@Param("commentId") commentId: string,
 	): Promise<void> {
 		return this.commentService.delete(id, commentId);
+	}
+
+	@Get(":id/edit-lock")
+	@ApiOperation({ summary: "Текущая блокировка редактирования анкеты" })
+	async getEditLock(
+		@Param("id", ParseUUIDPipe) id: string,
+	): Promise<V2QuestionnaireEditLockDto | null> {
+		return this.editLockService.getLock(id);
+	}
+
+	@Post(":id/edit-lock")
+	@RealmRole(Permission.ANKETA_EDIT_CALCULATION)
+	@ApiOperation({ summary: "Захватить блокировку редактирования анкеты" })
+	async acquireEditLock(
+		@Param("id", ParseUUIDPipe) id: string,
+		@Body() body: AcquireV2QuestionnaireEditLockDto,
+		@CurrentUser() user: Record<string, unknown> | undefined,
+	): Promise<V2QuestionnaireEditLockDto> {
+		return this.editLockService.acquire(id, {
+			label: body.lockedByLabel,
+			userId: questionnaireAuditUserId(user),
+		});
+	}
+
+	@Put(":id/edit-lock")
+	@RealmRole(Permission.ANKETA_EDIT_CALCULATION)
+	@ApiOperation({ summary: "Продлить блокировку редактирования анкеты" })
+	async renewEditLock(
+		@Param("id", ParseUUIDPipe) id: string,
+		@Body() body: AcquireV2QuestionnaireEditLockDto,
+		@CurrentUser() user: Record<string, unknown> | undefined,
+	): Promise<V2QuestionnaireEditLockDto> {
+		return this.editLockService.renew(id, {
+			label: body.lockedByLabel,
+			userId: questionnaireAuditUserId(user),
+		});
+	}
+
+	@Delete(":id/edit-lock")
+	@HttpCode(HttpStatus.NO_CONTENT)
+	@RealmRole(Permission.ANKETA_EDIT_CALCULATION)
+	@ApiOperation({ summary: "Снять блокировку редактирования анкеты" })
+	async releaseEditLock(
+		@Param("id", ParseUUIDPipe) id: string,
+		@Body() body: AcquireV2QuestionnaireEditLockDto,
+		@CurrentUser() user: Record<string, unknown> | undefined,
+	): Promise<void> {
+		return this.editLockService.release(id, {
+			label: body.lockedByLabel,
+			userId: questionnaireAuditUserId(user),
+		});
+	}
+
+	/**
+	 * Отдельный POST для снятия lock при закрытии вкладки (fetch keepalive).
+	 * Только query `lockedByLabel` — simple-request без CORS-preflight на unload.
+	 */
+	@Post(":id/edit-lock/release")
+	@HttpCode(HttpStatus.NO_CONTENT)
+	@RealmRole(Permission.ANKETA_EDIT_CALCULATION)
+	@ApiOperation({
+		summary: "Снять блокировку (unload/beacon)",
+	})
+	async releaseEditLockOnUnload(
+		@Param("id", ParseUUIDPipe) id: string,
+		@Query("lockedByLabel") lockedByLabel: string,
+		@CurrentUser() user: Record<string, unknown> | undefined,
+	): Promise<void> {
+		return this.editLockService.release(id, {
+			label: typeof lockedByLabel === "string" ? lockedByLabel : "",
+			userId: questionnaireAuditUserId(user),
+		});
 	}
 
 	@Post()

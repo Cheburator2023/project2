@@ -18,6 +18,7 @@ export function V2BooleanWidget(props: WidgetProps) {
 	} = props;
 
 	const isDisabled = Boolean(disabled || readonly);
+	const checked = typeof value === "boolean" ? value : false;
 	const title =
 		typeof label === "string" && label.trim()
 			? label
@@ -35,7 +36,7 @@ export function V2BooleanWidget(props: WidgetProps) {
 				control={
 					<Checkbox
 						id={id}
-						checked={Boolean(value)}
+						checked={checked}
 						disabled={isDisabled}
 						onChange={(event) => onChange(event.target.checked)}
 					/>

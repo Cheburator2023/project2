@@ -10,11 +10,12 @@ import Paper from "@mui/material/Paper";
 import Popper from "@mui/material/Popper";
 import Typography from "@mui/material/Typography";
 import { useRef, useState } from "react";
+import { useV2ImplementationStreamCatalog } from "@react-client/common/api/queries/v2-streams";
 import {
 	ALL_LOGIC_WORKS_SCOPE,
-	LOGIC_EXECUTOR_STREAMS,
 	LOGIC_STREAM_BLOCK_ROLES,
 	type LogicWorksScope,
+	buildExecutorStreamPickerRows,
 	isAllLogicWorksScope,
 	isRoleSelectedInScope,
 	isStreamSelectedInScope,
@@ -42,12 +43,23 @@ export function LogicWorksToolbar({
 	onScopeChange,
 }: LogicWorksToolbarProps) {
 	const { uiSchema, typicalWorkSaveDisplay } = useSchemaEditor();
+	const { codes: logicStreams, catalog, umbrellaCatalog } =
+		useV2ImplementationStreamCatalog();
 	const anchorRef = useRef<HTMLButtonElement>(null);
 	const [pickerOpen, setPickerOpen] = useState(false);
 	const scopePresence = scopeStreamsPresentInSchema(
 		uiSchema,
 		scope,
-		(stream) => isExecutorStreamPresentInSchema(uiSchema, stream),
+		(stream) => isExecutorStreamPresentInSchema(uiSchema, stream, catalog),
+	);
+	const pickerRows = buildExecutorStreamPickerRows(
+		logicStreams,
+		umbrellaCatalog.length > 0
+			? umbrellaCatalog.map((entry) => ({
+					value: entry.payload.dbNames[0] ?? entry.label,
+					label: `${entry.label} (зонтик)`,
+				}))
+			: undefined,
 	);
 
 	return (
@@ -95,7 +107,7 @@ export function LogicWorksToolbar({
 						whiteSpace: "nowrap",
 					}}
 				>
-					{scopeLabel(scope)}
+					{scopeLabel(scope, catalog)}
 				</Typography>
 				<Typography component="span" sx={{ fontSize: 11, color: "#aab1c0" }}>
 					▾
@@ -176,20 +188,34 @@ export function LogicWorksToolbar({
 								</Typography>
 							</MenuItem>
 							<Divider sx={{ my: 0.5 }} />
-							{LOGIC_EXECUTOR_STREAMS.map((stream) => {
+							{pickerRows.map((row) => {
+								const stream = row.value;
 								const selected = isStreamSelectedInScope(scope, stream);
 								const present = isExecutorStreamPresentInSchema(
 									uiSchema,
 									stream,
+									catalog,
 								);
+								const label =
+									row.kind === "umbrella"
+										? row.label
+										: streamDisplayLabel(stream, catalog);
 								return (
 									<MenuItem
-										key={stream}
+										key={
+											row.kind === "umbrella"
+												? `umbrella:${stream}`
+												: stream
+										}
 										selected={selected}
 										onClick={() => {
 											onScopeChange(toggleStreamInScope(scope, stream));
 										}}
-										sx={{ borderRadius: 1, py: 0.9 }}
+										sx={{
+											borderRadius: 1,
+											py: 0.9,
+											pl: row.kind === "stream" && row.nested ? 3.5 : 1,
+										}}
 									>
 										<Checkbox
 											checked={selected}
@@ -200,7 +226,7 @@ export function LogicWorksToolbar({
 										<ListItemText
 											primary={
 												<ExecutorStreamMenuRow
-													stream={streamDisplayLabel(stream)}
+													stream={label}
 													color={streamColor(stream)}
 													present={present}
 													selected={selected}

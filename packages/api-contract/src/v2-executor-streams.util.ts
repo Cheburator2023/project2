@@ -4,6 +4,16 @@ import {
 	normalizeStreamBlockExecutors,
 	resolveStreamBlockExecutorScopeStreams,
 } from "./v2-stream-block-executor.util";
+import {
+	resolveModelStreamCatalogScopeDbStreams,
+	V2_MODEL_STREAM_EXECUTOR,
+	isV2ModelImplementationStreamCode,
+} from "./v2-model-stream-typical-works.constants";
+import {
+	resolveModelStreamCatalogScopeFromEntries,
+	type V2ImplementationStreamCatalogEntry,
+} from "./v2-implementation-stream-catalog.util";
+import { isV2ImplementationStreamCode } from "./v2-implementation-streams.util";
 
 export const V2_EXECUTOR_STREAM_LABELS = [
 	"ДАДМ",
@@ -17,8 +27,12 @@ export const V2_EXECUTOR_STREAM_LABELS = [
 
 export type V2ExecutorStreamLabel = (typeof V2_EXECUTOR_STREAM_LABELS)[number];
 
-/** Код справочника v2 для привязки блока к стриму (конструктор). */
-export const V2_EXECUTOR_STREAMS_DICTIONARY_CODE = "v2.streams.executor";
+/**
+ * @deprecated Используйте `V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE`
+ * (`v2.generalInfo.implementationStream`). Константа оставлена для совместимости.
+ */
+export const V2_EXECUTOR_STREAMS_DICTIONARY_CODE =
+	"v2.generalInfo.implementationStream";
 
 /** Заводские ключи корневых блоков → стрим (миграция старых шаблонов). */
 export const V2_LEGACY_STREAM_BLOCK_EXECUTOR: Partial<
@@ -38,6 +52,7 @@ export const V2_DB_STREAM_TO_EXECUTOR_AREA: Record<string, V2ExecutorStreamLabel
 		"ИД. Внутренний": "Источники данных",
 		"ИД. Внешний": "Источники данных",
 		"ПиРМ (правила и развитие модели)": "ПиРМ",
+		mdlctl: "Контроль моделей",
 		"Витрины данных": "ДАДМ",
 		Интеграции: "ДАДМ",
 		"Модельный сервис": "ДАДМ",
@@ -68,18 +83,66 @@ const EXECUTOR_SCOPE_DB_STREAMS: Partial<
 > = {
 	"Источники данных": ["ИД. Внутренний", "ИД. Внешний", "Источники данных"],
 	ПиРМ: ["ПиРМ", "ПиРМ (правила и развитие модели)"],
-	"Модельный стрим": ["Модельный стрим"],
+	"Контроль моделей": ["mdlctl", "Контроль моделей"],
+	"Модельный стрим": resolveModelStreamCatalogScopeDbStreams(),
 };
 
 /** Стримы БД/области UI, в которых ищется назначение работы для блока typicalWork. */
 export function resolveExecutorScopeDbStreams(
 	executorStream: string,
+	catalog?: readonly V2ImplementationStreamCatalogEntry[],
 ): readonly string[] {
 	const trimmed = executorStream.trim();
 	if (!trimmed) return [];
-	if (isV2ExecutorStreamLabel(trimmed)) {
-		return EXECUTOR_SCOPE_DB_STREAMS[trimmed] ?? [trimmed];
+
+	if (
+		trimmed === V2_MODEL_STREAM_EXECUTOR ||
+		trimmed === "Модельные стримы"
+	) {
+		if (catalog?.length) {
+			return resolveModelStreamCatalogScopeFromEntries(catalog);
+		}
+		return resolveModelStreamCatalogScopeDbStreams();
 	}
+
+	if (isV2ExecutorStreamLabel(trimmed)) {
+		if (trimmed === V2_MODEL_STREAM_EXECUTOR && catalog?.length) {
+			return resolveModelStreamCatalogScopeFromEntries(catalog);
+		}
+		/**
+		 * Статическая карта — только legacy DB-имена заводских работ. Назначения,
+		 * созданные из конструктора, пишутся каноническим именем из каталога
+		 * `v2_stream` (код `pirm` / подпись стрима), поэтому scope — объединение:
+		 * иначе новые работы стрима не находятся в блоке с legacy-подписью.
+		 */
+		const scope = [...(EXECUTOR_SCOPE_DB_STREAMS[trimmed] ?? [])];
+		for (const stream of resolveStreamBlockExecutorScopeStreams(
+			trimmed,
+			catalog,
+		)) {
+			if (!scope.includes(stream)) scope.push(stream);
+		}
+		return scope.length > 0 ? scope : [trimmed];
+	}
+
+	// Код / DB-имя модельного стрима → его scope (+ legacy umbrella).
+	const asCode =
+		(isV2ImplementationStreamCode(trimmed) ? trimmed : null) ??
+		normalizeStreamBlockExecutor(trimmed, catalog);
+	if (asCode && isV2ModelImplementationStreamCode(asCode)) {
+		const scoped = [
+			...resolveStreamBlockExecutorScopeStreams(asCode, catalog),
+		];
+		if (!scoped.includes(V2_MODEL_STREAM_EXECUTOR)) {
+			scoped.push(V2_MODEL_STREAM_EXECUTOR);
+		}
+		return scoped;
+	}
+
+	if (normalizeStreamBlockExecutor(trimmed, catalog)) {
+		return resolveStreamBlockExecutorScopeStreams(trimmed, catalog);
+	}
+
 	return [trimmed];
 }
 
@@ -87,21 +150,14 @@ export function resolveExecutorScopeDbStreams(
 export function typicalWorkAssignedToExecutorStream(
 	workStreams: readonly string[],
 	executorStream: string,
+	catalog?: readonly V2ImplementationStreamCatalogEntry[],
 ): boolean {
 	const trimmed = executorStream.trim();
 	if (!trimmed) return false;
-	if (normalizeStreamBlockExecutor(trimmed)) {
-		const scopeStreams = resolveStreamBlockExecutorScopeStreams(trimmed);
-		return workStreams.some(
-			(stream) =>
-				scopeStreams.includes(stream.trim()) ||
-				scopeStreams.includes(resolveExecutorStreamAreaLabel(stream)),
-		);
-	}
-	const scopeStreams = resolveExecutorScopeDbStreams(executorStream);
+	const scopeStreams = resolveExecutorScopeDbStreams(trimmed, catalog);
 	return workStreams.some(
 		(stream) =>
-			scopeStreams.includes(stream) ||
+			scopeStreams.includes(stream.trim()) ||
 			scopeStreams.includes(resolveExecutorStreamAreaLabel(stream)),
 	);
 }
@@ -110,10 +166,11 @@ export function typicalWorkAssignedToExecutorStream(
 export function typicalWorkAssignedToAnyExecutorStream(
 	workStreams: readonly string[],
 	executorStreams: string | readonly string[],
+	catalog?: readonly V2ImplementationStreamCatalogEntry[],
 ): boolean {
-	const executors = normalizeStreamBlockExecutors(executorStreams);
+	const executors = normalizeStreamBlockExecutors(executorStreams, catalog);
 	if (executors.length === 0) return false;
 	return executors.some((executor) =>
-		typicalWorkAssignedToExecutorStream(workStreams, executor),
+		typicalWorkAssignedToExecutorStream(workStreams, executor, catalog),
 	);
 }

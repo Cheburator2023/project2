@@ -100,7 +100,10 @@ export interface KanbanBoardTaskContent {
 	parentTask?: string;
 	/** Заказчик (ручной ввод) */
 	customer?: string;
-	/** Ожидаемый результат спринта */
+	/**
+	 * @deprecated Перенесено в description миграцией
+	 * MergeKanbanSprintOutcomeIntoDescription. Оставлено для чтения старых данных/истории.
+	 */
 	sprintOutcome?: string;
 	sprintId?: string;
 	streamCustomer?: string;
@@ -108,6 +111,43 @@ export interface KanbanBoardTaskContent {
 	subtasks?: KanbanBoardSubtaskItem[];
 	/** Прикреплённые изображения (метаданные; файлы — отдельное хранилище) */
 	images?: KanbanBoardTaskImageRef[];
+	/** Офисные/прочие вложения (скачивание без превью) */
+	files?: KanbanBoardTaskFileRef[];
+	/**
+	 * Целевой стенд задачи (dev / ИФТ / пре-прод / прод).
+	 * Не путать с `origin` записи (изоляция данных между стендами БД).
+	 */
+	stand?: KanbanBoardStandId;
+}
+
+/** Целевой стенд задачи (куда выкатываем / где проверяем). */
+export const KANBAN_BOARD_STANDS = [
+	{ id: "dev", title: "Dev" },
+	{ id: "ift", title: "ИФТ" },
+	{ id: "preprod", title: "Пре-прод" },
+	{ id: "prod", title: "Прод" },
+] as const;
+
+export type KanbanBoardStandId = (typeof KANBAN_BOARD_STANDS)[number]["id"];
+
+export const KANBAN_BOARD_STAND_COLORS: Record<KanbanBoardStandId, string> = {
+	dev: "#2563eb",
+	ift: "#7c3aed",
+	preprod: "#ca8a04",
+	prod: "#dc2626",
+};
+
+export function kanbanBoardStandTitle(
+	id?: KanbanBoardStandId | string,
+): string {
+	return KANBAN_BOARD_STANDS.find((item) => item.id === id)?.title ?? id ?? "";
+}
+
+export function kanbanBoardStandColor(
+	id?: KanbanBoardStandId | string,
+): string {
+	if (!id) return "#64748b";
+	return KANBAN_BOARD_STAND_COLORS[id as KanbanBoardStandId] ?? "#64748b";
 }
 
 /** Метаданные изображения в content задачи */
@@ -123,8 +163,42 @@ export interface KanbanBoardTaskImageRef {
 
 export type KanbanBoardTaskImageDto = KanbanBoardTaskImageRef;
 
+/** Метаданные файла-вложения в content задачи (без превью). */
+export interface KanbanBoardTaskFileRef {
+	id: string;
+	name: string;
+	mimeType: string;
+	byteSize: number;
+	createdAt: string;
+}
+
+export type KanbanBoardTaskFileDto = KanbanBoardTaskFileRef;
+
 /** Макс. размер full-изображения после сжатия на клиенте, байт. */
 export const KANBAN_BOARD_TASK_IMAGE_MAX_FULL_BYTES = 2 * 1024 * 1024;
+
+/** Макс. размер офисного/прочего вложения, байт. */
+export const KANBAN_BOARD_TASK_FILE_MAX_BYTES = 15 * 1024 * 1024;
+
+/** MIME офисных и распространённых документов для вложений задачи. */
+export const KANBAN_BOARD_TASK_FILE_ALLOWED_MIME = [
+	"application/pdf",
+	"application/msword",
+	"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+	"application/vnd.ms-excel",
+	"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+	"application/vnd.ms-powerpoint",
+	"application/vnd.openxmlformats-officedocument.presentationml.presentation",
+	"application/vnd.oasis.opendocument.text",
+	"application/vnd.oasis.opendocument.spreadsheet",
+	"application/vnd.oasis.opendocument.presentation",
+	"application/rtf",
+	"text/plain",
+	"text/csv",
+	"application/csv",
+	"application/vnd.ms-excel.sheet.macroenabled.12",
+	"application/octet-stream",
+] as const;
 
 /** Срок хранения вложений у задач в колонке «Готово», дней. */
 export const KANBAN_BOARD_TASK_IMAGE_DONE_RETENTION_DAYS = 7;
@@ -302,7 +376,21 @@ export interface KanbanBoardTaskRecord {
 	position: number;
 	content: KanbanBoardTaskContent;
 	origin: string;
+	/** ISO; при отсутствии у старых записей сервер подставляет updatedAt. */
+	createdAt?: string;
+	/** Имя исполнителя из настроек трекера («Я — исполнитель»). */
+	createdBy?: string | null;
 	updatedAt: string;
+	/** Soft-delete: задача в корзине (ISO), null — активна. */
+	deletedAt?: string | null;
+	/** Количество комментариев (заполняется при чтении доски). */
+	commentCount?: number;
+}
+
+export interface TrashKanbanBoardColumnTasksResultDto {
+	trashedCount: number;
+	columnId: string;
+	boardId: string;
 }
 
 export interface KanbanBoardProjectDto {
@@ -329,6 +417,8 @@ export interface KanbanBoardBoardDto {
 	sortOrder: number;
 	taskCount: number;
 	createdAt: string;
+	/** Имя из настроек трекера («Я — исполнитель»). */
+	createdBy: string | null;
 	updatedAt: string;
 }
 
@@ -364,6 +454,8 @@ export interface KanbanBoardTaskRegistryDto extends KanbanBoardTaskRecord {
 	customer?: string;
 	sprintTitle?: string;
 	streamCustomer?: string;
+	stand?: KanbanBoardStandId;
+	standTitle?: string;
 }
 
 export interface CreateKanbanBoardProjectRequestDto {
@@ -384,6 +476,8 @@ export interface CreateKanbanBoardBoardRequestDto {
 	slug: string;
 	description?: string | null;
 	sortOrder?: number;
+	/** Имя из настроек трекера («Я — исполнитель»). */
+	createdBy?: string | null;
 }
 
 export interface UpdateKanbanBoardBoardRequestDto {
@@ -399,6 +493,8 @@ export interface CreateKanbanBoardTaskRequestDto {
 	parentId: string;
 	content: KanbanBoardTaskContent;
 	position?: number;
+	/** Имя из настроек трекера («Я — исполнитель»), как authorName у комментариев. */
+	createdBy?: string | null;
 }
 
 export interface UpdateKanbanBoardTaskRequestDto {
@@ -406,6 +502,8 @@ export interface UpdateKanbanBoardTaskRequestDto {
 	parentId?: string;
 	position?: number;
 	content?: KanbanBoardTaskContent;
+	/** Кто назначил / создал задачу (подпись в карточке) */
+	createdBy?: string | null;
 	/** Версия задачи на клиенте; при расхождении — 409, если не forceOverwrite */
 	expectedUpdatedAt?: string;
 	forceOverwrite?: boolean;
@@ -422,7 +520,12 @@ export interface SaveKanbanBoardTasksRequestDto {
 }
 
 export const KANBAN_BOARD_TASK_LOCK_TTL_MS = 2 * 60 * 1000;
-export const KANBAN_BOARD_SYNC_POLL_INTERVAL_MS = 15_000;
+/** Период опроса актуальности задачи на странице редактирования. */
+export const KANBAN_BOARD_SYNC_POLL_INTERVAL_MS = 8_000;
+/** Бездействие на странице задачи → снятие lock и выход. */
+export const KANBAN_BOARD_TASK_EDIT_IDLE_TIMEOUT_MS = 10 * 60 * 1000;
+/** Период опроса статуса lock задачи. */
+export const KANBAN_BOARD_TASK_LOCK_POLL_INTERVAL_MS = 10_000;
 
 export interface KanbanBoardTaskLockDto {
 	taskId: string;
@@ -792,8 +895,12 @@ export interface KanbanBoardItem {
 	type?: string;
 	content?: KanbanBoardNodeContent;
 	origin?: string;
+	taskNumber?: number;
+	createdAt?: string;
+	createdBy?: string | null;
 	/** Версия задачи для optimistic locking на доске */
 	updatedAt?: string;
+	commentCount?: number;
 }
 
 export type KanbanBoardData = {
@@ -806,6 +913,7 @@ export interface KanbanBoardTaskHistorySnapshot {
 	parentId: string;
 	position: number;
 	boardId: string;
+	createdBy?: string | null;
 	content: KanbanBoardTaskContent;
 }
 

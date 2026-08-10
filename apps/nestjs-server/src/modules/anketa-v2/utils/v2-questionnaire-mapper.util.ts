@@ -8,18 +8,34 @@ import { migrateV2AnketaFormData } from "./v2-form-data-migration.util";
 import { V2TemplateEntity } from "../entities/v2-template.entity";
 import { V2TemplateVersionEntity } from "../entities/v2-template-version.entity";
 
+function boundVersionDateFields(
+	boundVersion: V2TemplateVersionEntity | null | undefined,
+): Pick<
+	V2SchemaBindingDto,
+	"boundTemplateVersionCreatedAt" | "boundTemplateVersionUpdatedAt"
+> {
+	return {
+		boundTemplateVersionCreatedAt:
+			boundVersion?.createdAt?.toISOString() ?? null,
+		boundTemplateVersionUpdatedAt:
+			boundVersion?.updatedAt?.toISOString() ?? null,
+	};
+}
+
 export function buildSchemaBinding(
 	template: V2TemplateEntity | null | undefined,
 	boundVersion: V2TemplateVersionEntity | null | undefined,
 	currentVersion: V2TemplateVersionEntity | null | undefined,
 ): V2SchemaBindingDto {
 	const boundId = boundVersion?.id ?? "";
+	const versionDates = boundVersionDateFields(boundVersion);
 	if (!boundVersion?.id) {
 		return {
 			status: "unavailable",
 			boundTemplateVersionId: boundId,
 			boundTemplateVersionNumber: null,
 			boundTemplateVersionStatus: null,
+			...versionDates,
 			currentTemplateVersionId: template?.currentVersionId ?? null,
 			currentTemplateVersionNumber: currentVersion?.versionNumber ?? null,
 			message:
@@ -36,10 +52,10 @@ export function buildSchemaBinding(
 			boundTemplateVersionId: boundVersion.id,
 			boundTemplateVersionNumber: boundVersion.versionNumber,
 			boundTemplateVersionStatus: boundVersion.status,
+			...versionDates,
 			currentTemplateVersionId: currentId,
 			currentTemplateVersionNumber: currentVersion?.versionNumber ?? null,
-			message:
-				"Анкета привязана к актуальной схеме системы. Изменения в админке сразу отражаются при редактировании (если не меняли привязку).",
+			message: "Анкета привязана к актуальной схеме системы",
 		};
 	}
 
@@ -48,12 +64,13 @@ export function buildSchemaBinding(
 		boundTemplateVersionId: boundVersion.id,
 		boundTemplateVersionNumber: boundVersion.versionNumber,
 		boundTemplateVersionStatus: boundVersion.status,
+		...versionDates,
 		currentTemplateVersionId: currentId,
 		currentTemplateVersionNumber: currentVersion?.versionNumber ?? null,
 		message:
 			currentVersion != null
-				? `Анкета создана по схеме v${boundVersion.versionNumber}, в админке актуальна v${currentVersion.versionNumber}. Редактирование использует привязанную схему; для перехода на новую — создайте новую версию анкеты.`
-				: `Анкета привязана к схеме v${boundVersion.versionNumber}; актуальная версия в админке не назначена.`,
+				? `Анкета создана по схеме v${boundVersion.versionNumber}, актуальная версия v${currentVersion.versionNumber}. Редактирование использует привязанную схему; для перехода на новую — создайте новую версию анкеты.`
+				: `Анкета привязана к схеме v${boundVersion.versionNumber}; актуальная версия не назначена.`,
 	};
 }
 

@@ -24,6 +24,7 @@ import {
  * - `v2-factory-template-typical-works.registry.json` — 73 типовые работы эталонной схемы (prod)
  *
  * Обновление схемы: `npm run sync:factory-snapshot -- /path/to/export.json` (из apps/nestjs-server).
+ * Обновление типовых работ: `npm run publish:factory-typical-works -- dump.json [--write]`.
  */
 const SNAPSHOT_FILENAME = "v2-default-anketa.snapshot.json";
 
@@ -66,28 +67,46 @@ function asLogic(value: unknown): V2LogicGraphDto {
 	return { rules: [] };
 }
 
-const file = loadSnapshotPayload();
-const snapshotUiSchema = asUiSchema(file.uiSchema);
-const snapshotJsonSchema = asJsonSchema(file.jsonSchema);
-const strippedSnapshot = stripQuestionnaireCalcNameFromTemplateSnapshot({
-	jsonSchema: snapshotJsonSchema,
-	uiSchema: snapshotUiSchema,
-});
-
-/** Как в v35 export — без applyDictionaryBindings / enrichAnketaLayout. */
-export const V2_DEFAULT_TEMPLATE_SNAPSHOT = {
-	jsonSchema: strippedSnapshot.jsonSchema,
-	uiSchema: strippedSnapshot.uiSchema,
-	logic: asLogic(file.logic),
-	dictionariesSnapshot: (file.dictionariesSnapshot ??
-		({
-			referencedDictionaryCodes: collectDictionaryCodesFromUiSchema(
-				snapshotUiSchema,
-			),
-		} satisfies V2DictionariesSnapshotDto)) as V2DictionariesSnapshotDto,
-	releaseNotes:
-		"Заводская схема V2 — эталон шаблона «Новая схема» (prod export v15, СА 10.07)",
+export type V2DefaultTemplateSnapshot = {
+	jsonSchema: V2JsonSchemaDto;
+	uiSchema: V2UiSchemaDto;
+	logic: V2LogicGraphDto;
+	dictionariesSnapshot: V2DictionariesSnapshotDto;
+	releaseNotes: string;
 };
+
+/**
+ * Читает factory JSON с диска.
+ * Важно для create/reset: nest `watchAssets` копирует `.snapshot.json`, но
+ * модуль не перезагружается — без перечитывания новые схемы остаются на старом
+ * снимке до рестарта процесса.
+ */
+export function loadV2DefaultTemplateSnapshot(): V2DefaultTemplateSnapshot {
+	const file = loadSnapshotPayload();
+	const snapshotUiSchema = asUiSchema(file.uiSchema);
+	const snapshotJsonSchema = asJsonSchema(file.jsonSchema);
+	const strippedSnapshot = stripQuestionnaireCalcNameFromTemplateSnapshot({
+		jsonSchema: snapshotJsonSchema,
+		uiSchema: snapshotUiSchema,
+	});
+	return {
+		jsonSchema: strippedSnapshot.jsonSchema,
+		uiSchema: strippedSnapshot.uiSchema,
+		logic: asLogic(file.logic),
+		dictionariesSnapshot: (file.dictionariesSnapshot ??
+			({
+				referencedDictionaryCodes: collectDictionaryCodesFromUiSchema(
+					snapshotUiSchema,
+				),
+			} satisfies V2DictionariesSnapshotDto)) as V2DictionariesSnapshotDto,
+		releaseNotes:
+			"Заводская схема V2 — эталон шаблона «Новая схема» (prod export v15, СА 10.07)",
+	};
+}
+
+/** Снимок на момент загрузки модуля (тесты / справочники). Для сида схем — `loadV2DefaultTemplateSnapshot`. */
+export const V2_DEFAULT_TEMPLATE_SNAPSHOT: V2DefaultTemplateSnapshot =
+	loadV2DefaultTemplateSnapshot();
 
 const { jsonSchema, uiSchema, dictionariesSnapshot } =
 	V2_DEFAULT_TEMPLATE_SNAPSHOT;

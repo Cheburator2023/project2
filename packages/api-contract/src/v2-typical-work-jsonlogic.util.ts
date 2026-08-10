@@ -36,7 +36,7 @@ import {
 import {
 	resolveArchCountCoeffFromToken,
 	archCountTriggerMatches,
-	formatWorkArchCountKindLabel,
+	formatArchCountCoeffFactorLabel,
 	isTriggerArchCountConfigured,
 	type V2WorkArchCountCoeffStep,
 } from "./v2-work-arch-count-coeff.util";
@@ -243,6 +243,12 @@ export function compileTypicalWorkTriggerRulesToJsonLogic(
 ): V2JsonLogicValue {
 	const hasArch = isTriggerArchCountConfigured(triggerArchCount);
 	if (rules.length === 0 && !hasArch) return false;
+
+	if (rules.length === 0) {
+		return {
+			archCountTrigger: [triggerArchCount!.kind!, triggerArchCount!.steps ?? []],
+		};
+	}
 
 	const paramPart = compileParamRulesToJsonLogic(rules);
 	if (!hasArch) return paramPart;
@@ -776,20 +782,40 @@ export function computeTypicalWorkFormulaTotal(params: {
 	});
 }
 
+export type TypicalWorkFormulaFactorPart = {
+	sourceLabel: string | null;
+	answerLabel: string;
+	coefficient: number;
+};
+
 export type TypicalWorkFormulaFactorLine = {
 	paramCode: string;
 	paramName: string;
 	value: number;
+	valueLabel?: string;
+	aggregation?: "single" | "sum" | "max";
+	parts?: TypicalWorkFormulaFactorPart[];
+};
+
+export type TypicalWorkInstanceBreakdownLine = {
+	sourceLabel: string;
+	index: number;
+	expanded: string;
+	total: number;
 };
 
 /** Разбор формулы типовой работы для «Подробного расчёта». */
 export type TypicalWorkFormulaBreakdownDto = {
+	/** Условия триггера, по которым работа попала в расчёт. */
+	triggerConditions?: string;
 	symbolic: string;
 	expanded: string;
 	factors: TypicalWorkFormulaFactorLine[];
 	baseNorm: number;
 	coefficient: number;
 	total: number;
+	/** Per-instance: строки по каждому экземпляру арх-компонента. */
+	instanceBreakdown?: TypicalWorkInstanceBreakdownLine[];
 };
 
 function formatBreakdownNumber(value: number): string {
@@ -808,11 +834,28 @@ function collectFormulaFactorLines(params: {
 	paramNames?: Record<string, string>;
 	formData?: Record<string, unknown>;
 	resolveFactorCoeff: (paramCode: string) => number;
+	paramCoefficientDetails?: Record<
+		string,
+		{
+			value: number;
+			aggregation: "single" | "sum" | "max";
+			formulaValueLabel: string;
+			parts: TypicalWorkFormulaFactorPart[];
+		}
+	>;
 }): TypicalWorkFormulaFactorLine[] {
 	const seen = new Set<string>();
 	const factors: TypicalWorkFormulaFactorLine[] = [];
 
-	const push = (paramCode: string, paramName: string, value: number) => {
+	const push = (
+		paramCode: string,
+		paramName: string,
+		value: number,
+		extra?: Pick<
+			TypicalWorkFormulaFactorLine,
+			"valueLabel" | "aggregation" | "parts"
+		>,
+	) => {
 		const key = paramCode.trim() || paramName.trim();
 		if (!key || seen.has(key)) return;
 		seen.add(key);
@@ -824,6 +867,9 @@ function collectFormulaFactorLines(params: {
 			paramCode: paramCode.trim() || key,
 			paramName: displayName,
 			value,
+			...(extra?.valueLabel ? { valueLabel: extra.valueLabel } : {}),
+			...(extra?.aggregation ? { aggregation: extra.aggregation } : {}),
+			...(extra?.parts?.length ? { parts: extra.parts } : {}),
 		});
 	};
 
@@ -833,15 +879,23 @@ function collectFormulaFactorLines(params: {
 				params.paramNames?.[token.paramCode]?.trim() ||
 				token.paramName?.trim() ||
 				token.paramCode;
+			const detail = params.paramCoefficientDetails?.[token.paramCode];
 			push(
 				token.paramCode,
 				name,
-				params.resolveFactorCoeff(token.paramCode),
+				detail?.value ?? params.resolveFactorCoeff(token.paramCode),
+				detail
+					? {
+							valueLabel: detail.formulaValueLabel,
+							aggregation: detail.aggregation,
+							parts: detail.parts,
+						}
+					: undefined,
 			);
 			continue;
 		}
 		if (token.kind === "arch_count_coeff") {
-			const name = `Кол-${formatWorkArchCountKindLabel(token.archComponentKind)}`;
+			const name = formatArchCountCoeffFactorLabel(token.archComponentKind);
 			const value = resolveArchCountCoeffFromToken(
 				params.formData ?? {},
 				token.archComponentKind,
@@ -858,10 +912,18 @@ function collectFormulaFactorLines(params: {
 					params.paramNames?.[factor.paramCode]?.trim() ||
 					factor.paramName?.trim() ||
 					factor.paramCode;
+				const detail = params.paramCoefficientDetails?.[factor.paramCode];
 				push(
 					factor.paramCode,
 					name,
-					params.resolveFactorCoeff(factor.paramCode),
+					detail?.value ?? params.resolveFactorCoeff(factor.paramCode),
+					detail
+						? {
+								valueLabel: detail.formulaValueLabel,
+								aggregation: detail.aggregation,
+								parts: detail.parts,
+							}
+						: undefined,
 				);
 			}
 		}
@@ -885,6 +947,19 @@ export function buildTypicalWorkFormulaBreakdown(params: {
 	resolveFactorCoeff: (paramCode: string) => number;
 	coefficient: number;
 	total: number;
+	paramCoefficientDetails?: Record<
+		string,
+		{
+			value: number;
+			aggregation: "single" | "sum" | "max";
+			formulaValueLabel: string;
+			parts: TypicalWorkFormulaFactorPart[];
+		}
+	>;
+	instanceBreakdown?: TypicalWorkInstanceBreakdownLine[];
+	/** Если задан — подменяет expanded (сумма per-instance). */
+	expandedOverride?: string;
+	triggerConditions?: string | null;
 }): TypicalWorkFormulaBreakdownDto {
 	const tokenFormula = resolveVersionConfigTokenFormula(
 		params.formula,
@@ -917,11 +992,16 @@ export function buildTypicalWorkFormulaBreakdown(params: {
 		formData: ctx.formData,
 		resolveFactorCoeff: params.resolveFactorCoeff,
 	});
-	const expanded = valuesFormula
-		? `${valuesFormula} = ${totalLabel}`
-		: `${formatBreakdownNumber(params.norm)} × ${formatBreakdownNumber(params.coefficient)} = ${totalLabel}`;
+	const expanded =
+		params.expandedOverride?.trim() ||
+		(valuesFormula
+			? `${valuesFormula} = ${totalLabel}`
+			: `${formatBreakdownNumber(params.norm)} × ${formatBreakdownNumber(params.coefficient)} = ${totalLabel}`);
 
 	return {
+		...(params.triggerConditions?.trim()
+			? { triggerConditions: params.triggerConditions.trim() }
+			: {}),
 		symbolic,
 		expanded,
 		factors: collectFormulaFactorLines({
@@ -931,9 +1011,13 @@ export function buildTypicalWorkFormulaBreakdown(params: {
 			paramNames: params.paramNames,
 			formData: ctx.formData,
 			resolveFactorCoeff: params.resolveFactorCoeff,
+			paramCoefficientDetails: params.paramCoefficientDetails,
 		}),
 		baseNorm: params.norm,
 		coefficient: params.coefficient,
 		total: params.total,
+		...(params.instanceBreakdown?.length
+			? { instanceBreakdown: params.instanceBreakdown }
+			: {}),
 	};
 }

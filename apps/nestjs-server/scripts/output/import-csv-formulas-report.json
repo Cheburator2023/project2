@@ -1,294 +1,2119 @@
 {
-  "generatedAt": "2026-07-16T10:50:12.038Z",
+  "generatedAt": "2026-08-01T13:49:39.118Z",
   "mode": "dry-run",
-  "csvPath": "../../llm/Смарт-анкета_Модельный стрим.csv",
+  "csvPath": "../../llm/Типовые работы - ПиРМ_2026.08.01.csv",
   "snapshotPath": "/Users/synikolaev/smart_anketa_ui/apps/nestjs-server/src/modules/anketa-v2/constants/v2-factory-typical-works.snapshot.json",
   "counts": {
-    "csvRows": 10,
-    "matched": 0,
-    "unmatched": 10,
+    "csvRows": 34,
+    "matched": 25,
+    "unmatched": 9,
     "skipped": 0,
-    "appended": 0,
+    "appended": 25,
     "transformedSpecialFormulas": 0,
     "unresolvedTriggerRules": 0,
-    "snapshotWithFormula": 78,
-    "patchedThisRun": 0,
-    "alreadyHadFormula": 0
+    "snapshotWithFormula": 155,
+    "patchedThisRun": 25,
+    "alreadyHadFormula": 0,
+    "laborValueAlignment": 103,
+    "triggerRebinds": 36
   },
   "results": [
     {
-      "status": "unmatched_csv",
-      "csvKey": "Модельный стрим|Модельный сервис||01. Постановка задачи.",
-      "csvRow": {
-        "stream": "Модельный стрим",
-        "component": "Модельный сервис",
-        "stage": "",
-        "name": "01. Постановка задачи.",
-        "originalName": "01. Постановка задачи.",
-        "workType": "",
-        "norm": 33,
-        "normRaw": "33",
-        "triggerParams": [],
-        "triggerRules": [],
-        "laborParams": [
-          "Кол-во моделей; Сложность постановки; Общая неопределённость; Наличие готовых промышленных витрин (Необходима продуктивизация)"
-        ],
-        "formulaRaw": "Итог = ОКРУГЛ.ВВЕРХ( 33 × К(Кол-во моделей) × К(Сложность постановки) × К(Общая неопределённость) × К(Наличие готовых промышленных витрин (Необходима продуктивизация)) ; 2 )."
-      },
-      "reason": "unmatched_params:33|К(Кол-во моделей)|К(Сложность постановки)|К(Общая неопределённость)|К(Наличие готовых промышленных витрин (Необходима продуктивизация))"
+      "status": "matched",
+      "csvKey": "ПиРМ|Модельный сервис||Регистрация / обновление сервиса в СУМ, обеспечение продвижения по ЖЦМ, обеспечение хранения артефактов модели",
+      "snapshotIndex": 152,
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1,
+      "unmatchedParams": [],
+      "transformedSpecial": [],
+      "laborCoefficientParams": 0,
+      "triggerRules": 1,
+      "unresolvedTriggers": [],
+      "matchKind": "registry_append",
+      "fuzzyMatchedName": "Регистрация / обновление сервиса в СУМ, обеспечение продвижения по ЖЦМ, обеспечение хранения артефактов модели"
+    },
+    {
+      "status": "matched",
+      "csvKey": "ПиРМ|Модельный сервис||Регистрация / обновление модели в СУРМ, обеспечение присутствия модели на дашборде",
+      "snapshotIndex": 153,
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1,
+      "unmatchedParams": [],
+      "transformedSpecial": [],
+      "laborCoefficientParams": 0,
+      "triggerRules": 1,
+      "unresolvedTriggers": [],
+      "matchKind": "registry_append",
+      "fuzzyMatchedName": "Регистрация / обновление модели в СУРМ, обеспечение присутствия модели на дашборде"
+    },
+    {
+      "status": "matched",
+      "csvKey": "ПиРМ|Модель||Регистрация / обновление версии модели в СУМ",
+      "snapshotIndex": 154,
+      "formulaText": "N * коэф(роль_модели)",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.01,
+      "unmatchedParams": [],
+      "transformedSpecial": [],
+      "laborCoefficientParams": 1,
+      "triggerRules": 1,
+      "unresolvedTriggers": [],
+      "matchKind": "registry_append",
+      "fuzzyMatchedName": "Регистрация / обновление версии модели в СУМ"
+    },
+    {
+      "status": "matched",
+      "csvKey": "ПиРМ|Модельный сервис||Сбор и предоставление данных об аллокации модельного сервиса",
+      "snapshotIndex": 155,
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1,
+      "unmatchedParams": [],
+      "transformedSpecial": [],
+      "laborCoefficientParams": 0,
+      "triggerRules": 1,
+      "unresolvedTriggers": [],
+      "matchKind": "registry_append",
+      "fuzzyMatchedName": "Сбор и предоставление данных об аллокации модельного сервиса"
+    },
+    {
+      "status": "matched",
+      "csvKey": "ПиРМ|Модельный сервис||Создание и актуализация графа преобразования данных, используемых модельным сервисом",
+      "snapshotIndex": 156,
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1,
+      "unmatchedParams": [],
+      "transformedSpecial": [],
+      "laborCoefficientParams": 0,
+      "triggerRules": 1,
+      "unresolvedTriggers": [],
+      "matchKind": "registry_append",
+      "fuzzyMatchedName": "Создание и актуализация графа преобразования данных, используемых модельным сервисом"
+    },
+    {
+      "status": "matched",
+      "csvKey": "ПиРМ|Модельный сервис||Первичное подключение ИС к Репозиторию моделей",
+      "snapshotIndex": 157,
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1,
+      "unmatchedParams": [],
+      "transformedSpecial": [],
+      "laborCoefficientParams": 0,
+      "triggerRules": 1,
+      "unresolvedTriggers": [],
+      "matchKind": "registry_append",
+      "fuzzyMatchedName": "Первичное подключение ИС к Репозиторию моделей"
+    },
+    {
+      "status": "matched",
+      "csvKey": "ПиРМ|Модельный сервис||Организация хранения артефактов модели в Репозитории моделей",
+      "snapshotIndex": 158,
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1,
+      "unmatchedParams": [],
+      "transformedSpecial": [],
+      "laborCoefficientParams": 0,
+      "triggerRules": 1,
+      "unresolvedTriggers": [],
+      "matchKind": "registry_append",
+      "fuzzyMatchedName": "Организация хранения артефактов модели в Репозитории моделей"
+    },
+    {
+      "status": "matched",
+      "csvKey": "ПиРМ|Модельный сервис||Обеспечение переноса артефактов модели между контурами посредством Репозитория моделей",
+      "snapshotIndex": 159,
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1,
+      "unmatchedParams": [],
+      "transformedSpecial": [],
+      "laborCoefficientParams": 0,
+      "triggerRules": 1,
+      "unresolvedTriggers": [],
+      "matchKind": "registry_append",
+      "fuzzyMatchedName": "Обеспечение переноса артефактов модели между контурами посредством Репозитория моделей"
+    },
+    {
+      "status": "matched",
+      "csvKey": "ПиРМ|Модельный сервис||Предоставление данных из СХК через РЕПО",
+      "snapshotIndex": 160,
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1,
+      "unmatchedParams": [],
+      "transformedSpecial": [],
+      "laborCoefficientParams": 0,
+      "triggerRules": 1,
+      "unresolvedTriggers": [],
+      "matchKind": "registry_append",
+      "fuzzyMatchedName": "Предоставление данных из СХК через РЕПО"
+    },
+    {
+      "status": "matched",
+      "csvKey": "ПиРМ|Модель||Выделение ресурсного пула под обучение и применение модели",
+      "snapshotIndex": 161,
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1,
+      "unmatchedParams": [],
+      "transformedSpecial": [],
+      "laborCoefficientParams": 0,
+      "triggerRules": 1,
+      "unresolvedTriggers": [],
+      "matchKind": "registry_append",
+      "fuzzyMatchedName": "Выделение ресурсного пула под обучение и применение модели"
+    },
+    {
+      "status": "matched",
+      "csvKey": "ПиРМ|Модель||Подключение источника данных для обучения модели",
+      "snapshotIndex": 162,
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1,
+      "unmatchedParams": [],
+      "transformedSpecial": [],
+      "laborCoefficientParams": 0,
+      "triggerRules": 1,
+      "unresolvedTriggers": [],
+      "matchKind": "registry_append",
+      "fuzzyMatchedName": "Подключение источника данных для обучения модели"
+    },
+    {
+      "status": "matched",
+      "csvKey": "ПиРМ|Модель||Встраивание и отладка внешнего кода в конвейер AutoML по обучению модели",
+      "snapshotIndex": 163,
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1,
+      "unmatchedParams": [],
+      "transformedSpecial": [],
+      "laborCoefficientParams": 0,
+      "triggerRules": 3,
+      "unresolvedTriggers": [],
+      "matchKind": "registry_append",
+      "fuzzyMatchedName": "Встраивание и отладка внешнего кода в конвейер AutoML по обучению модели"
+    },
+    {
+      "status": "matched",
+      "csvKey": "ПиРМ|Модель||Реализация преобразований данных в конвейере AutoML по обучению модели",
+      "snapshotIndex": 164,
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1,
+      "unmatchedParams": [],
+      "transformedSpecial": [],
+      "laborCoefficientParams": 0,
+      "triggerRules": 3,
+      "unresolvedTriggers": [],
+      "matchKind": "registry_append",
+      "fuzzyMatchedName": "Реализация преобразований данных в конвейере AutoML по обучению модели"
+    },
+    {
+      "status": "matched",
+      "csvKey": "ПиРМ|Модель||Постановка модели на регламентное переобучение",
+      "snapshotIndex": 165,
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1,
+      "unmatchedParams": [],
+      "transformedSpecial": [],
+      "laborCoefficientParams": 0,
+      "triggerRules": 3,
+      "unresolvedTriggers": [],
+      "matchKind": "registry_append",
+      "fuzzyMatchedName": "Постановка модели на регламентное переобучение"
+    },
+    {
+      "status": "matched",
+      "csvKey": "ПиРМ|Модель||Добавление новой ML-библиотеки и/или фреймворка",
+      "snapshotIndex": 166,
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1,
+      "unmatchedParams": [],
+      "transformedSpecial": [],
+      "laborCoefficientParams": 0,
+      "triggerRules": 3,
+      "unresolvedTriggers": [],
+      "matchKind": "registry_append",
+      "fuzzyMatchedName": "Добавление новой ML-библиотеки и/или фреймворка"
+    },
+    {
+      "status": "matched",
+      "csvKey": "ПиРМ|Модельный сервис||Airflow: обеспечение работоспособности и реконфигурация инфраструктуры для настройки DAG",
+      "snapshotIndex": 167,
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1,
+      "unmatchedParams": [],
+      "transformedSpecial": [],
+      "laborCoefficientParams": 0,
+      "triggerRules": 1,
+      "unresolvedTriggers": [],
+      "matchKind": "registry_append",
+      "fuzzyMatchedName": "Airflow: обеспечение работоспособности и реконфигурация инфраструктуры для настройки DAG"
+    },
+    {
+      "status": "matched",
+      "csvKey": "ПиРМ|Объект / Витрина данных||Подключение источника данных",
+      "snapshotIndex": 168,
+      "formulaText": "N * коэф(тип_процесса_обработки_данных)",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.01,
+      "unmatchedParams": [],
+      "transformedSpecial": [],
+      "laborCoefficientParams": 1,
+      "triggerRules": 2,
+      "unresolvedTriggers": [],
+      "matchKind": "registry_append",
+      "fuzzyMatchedName": "Подключение источника данных"
     },
     {
       "status": "unmatched_csv",
-      "csvKey": "Модельный стрим|Система-источник||02. Поиск данных.",
+      "csvKey": "ПиРМ|Объект / Витрина данных||Сохранение объекта сырых данных в Хранилище признаков",
       "csvRow": {
-        "stream": "Модельный стрим",
+        "stream": "ПиРМ",
+        "component": "Объект/Витрина данных",
+        "stage": "",
+        "name": "Сохранение объекта сырых данных в Хранилище признаков",
+        "originalName": "Сохранение объекта сырых данных в Хранилище признаков",
+        "workType": "",
+        "norm": 3,
+        "normRaw": "3",
+        "triggerParams": [
+          "Реализуется в Хранилище признаков",
+          "И",
+          "Требуется сохранять сырые данные в Хранилище признаков"
+        ],
+        "triggerRules": [
+          {
+            "paramName": "Реализуется в Хранилище признаков",
+            "operator": "exists",
+            "values": []
+          },
+          {
+            "paramName": "И",
+            "operator": "exists",
+            "values": []
+          },
+          {
+            "paramName": "Требуется сохранять сырые данные в Хранилище признаков",
+            "operator": "exists",
+            "values": []
+          }
+        ],
+        "laborParams": [
+          "Требуется парсинг сырых данных в Хранилище признаков"
+        ],
+        "formulaRaw": "Итог = ОКРУГЛ.ВВЕРХ( база × К(Парсинг сырых данных) ; 2 ).",
+        "laborCoefficientsRaw": "Требуется парсинг сырых данных: Нет → 1; Да → 3. По умолчанию 1."
+      },
+      "reason": "unmatched_params:Парсинг сырых данных"
+    },
+    {
+      "status": "unmatched_csv",
+      "csvKey": "ПиРМ|Объект / Витрина данных||Разработка Набора признаков",
+      "csvRow": {
+        "stream": "ПиРМ",
+        "component": "Объект/Витрина данных",
+        "stage": "",
+        "name": "Разработка Набора признаков",
+        "originalName": "Разработка Набора признаков",
+        "workType": "",
+        "norm": 0.5,
+        "normRaw": "0,5",
+        "triggerParams": [
+          "Реализуется в Хранилище признаков"
+        ],
+        "triggerRules": [
+          {
+            "paramName": "Реализуется в Хранилище признаков",
+            "operator": "exists",
+            "values": []
+          }
+        ],
+        "laborParams": [
+          "Количество признаков (введённое кол-во умножается на коэффициент диапазона): 1–20 → 1; 21–50 → 0,7; 51–100 → 0,5; >100 → 0,4.",
+          "Количество признаков в Наборе признаков;",
+          "Сложность реализации Набора признаков"
+        ],
+        "formulaRaw": "Итог = ОКРУГЛ.ВВЕРХ( база × Кол-во признаков × К(диапазон) × К(Сложность) ; 2 ).",
+        "laborCoefficientsRaw": "Количество признаков (введённое кол-во умножается на коэффициент диапазона): 1–20 → 1; 21–50 → 0,7; 51–100 → 0,5; >100 → 0,4.\nСложность реализации Набора признаков: Не известно → 1,15; Высокая → 1,25; Средняя → 1; Низкая → 0,75. По умолчанию 1."
+      },
+      "reason": "unmatched_params:Кол-во признаков|диапазон"
+    },
+    {
+      "status": "unmatched_csv",
+      "csvKey": "ПиРМ|Объект / Витрина данных||Регистрация Признака в Хранилище признаков",
+      "csvRow": {
+        "stream": "ПиРМ",
+        "component": "Объект/Витрина данных",
+        "stage": "",
+        "name": "Регистрация Признака в Хранилище признаков",
+        "originalName": "Регистрация Признака в Хранилище признаков",
+        "workType": "",
+        "norm": 0.1,
+        "normRaw": "0,1",
+        "triggerParams": [
+          "Реализуется в Хранилище признаков"
+        ],
+        "triggerRules": [
+          {
+            "paramName": "Реализуется в Хранилище признаков",
+            "operator": "exists",
+            "values": []
+          }
+        ],
+        "laborParams": [
+          "Количество признаков в Наборе признаков"
+        ],
+        "formulaRaw": "Итог = ОКРУГЛ.ВВЕРХ( база × Кол-во признаков × К(диапазон) ; 2 ).",
+        "laborCoefficientsRaw": "Количество признаков (введённое кол-во умножается на коэффициент диапазона): 1–20 → 1; 21–50 → 0,7; 51–100 → 0,5; >100 → 0,4."
+      },
+      "reason": "unmatched_params:Кол-во признаков|диапазон"
+    },
+    {
+      "status": "matched",
+      "csvKey": "ПиРМ|Объект / Витрина данных||Создание контроля качества Признаков в Хранилище признаков",
+      "snapshotIndex": 169,
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1,
+      "unmatchedParams": [],
+      "transformedSpecial": [],
+      "laborCoefficientParams": 0,
+      "triggerRules": 3,
+      "unresolvedTriggers": [],
+      "matchKind": "registry_append",
+      "fuzzyMatchedName": "Создание контроля качества Признаков в Хранилище признаков"
+    },
+    {
+      "status": "unmatched_csv",
+      "csvKey": "ПиРМ|Система-источник||Настройка проекта и типового шаблона разметки",
+      "csvRow": {
+        "stream": "ПиРМ",
         "component": "Система-источник",
         "stage": "",
-        "name": "02. Поиск данных.",
-        "originalName": "02. Поиск данных.",
+        "name": "Настройка проекта и типового шаблона разметки",
+        "originalName": "Настройка проекта и типового шаблона разметки",
         "workType": "",
-        "norm": 15,
-        "normRaw": "15",
+        "norm": 11,
+        "normRaw": "11",
         "triggerParams": [
-          "Наличие готовых промышленных витрин (Необходима продуктивизация)= «Нет» И Кол-во источников для проработки > 0"
+          "Маркер: требуется разметка данных источника"
         ],
         "triggerRules": [
           {
-            "paramName": "Наличие готовых промышленных витрин (Необходима продуктивизация)= «Нет» И Кол-во источников для проработки > 0",
+            "paramName": "Маркер: требуется разметка данных источника",
             "operator": "exists",
             "values": []
           }
         ],
         "laborParams": [
-          "Общая неопределённость; Кол-во источников для проработки; Количество оцениваемых инициатив"
+          "Маркер: сложность настройки шаблона разметки данных и подготовки сырых данных для загрузки"
         ],
-        "formulaRaw": "Итог = ОКРУГЛ.ВВЕРХ( 15 × К(Общая неопределённость) × К(Кол-во источников для проработки) ÷ Кол-во оцениваемых инициатив ; 2 ). При Кол-ве инициатив ≤ 1 — без деления."
+        "formulaRaw": "Итог = ОКРУГЛ.ВВЕРХ( база × К(Сложность настройки шаблона) ; 2 ).",
+        "laborCoefficientsRaw": "Сложность настройки шаблона разметки: норма → 1; средняя → 1,5; высокая → 2. По умолчанию 1."
       },
-      "reason": "unmatched_params:15|К(Общая неопределённость)|К(Кол-во источников для проработки) ÷ Кол-во оцениваемых инициатив"
+      "reason": "unmatched_params:formula-code:сложность_настройки_шаблона_разметки_данных_field_wuylhnu0_сложность_настройки_ш"
     },
     {
       "status": "unmatched_csv",
-      "csvKey": "Модельный стрим|Объект / Витрина данных||04. Построение витрины для разработки.",
+      "csvKey": "ПиРМ|Система-источник||Добавление новой модели для автоматической разметки данных в ИС 1860, настройка Active Learning",
       "csvRow": {
-        "stream": "Модельный стрим",
-        "component": "Объект/Витрина данных",
+        "stream": "ПиРМ",
+        "component": "Система-источник",
         "stage": "",
-        "name": "04. Построение витрины для разработки.",
-        "originalName": "04. Построение витрины для разработки.",
+        "name": "Добавление новой модели для автоматической разметки данных в ИС 1860, настройка Active Learning",
+        "originalName": "Добавление новой модели для автоматической разметки данных в ИС 1860, настройка Active Learning",
         "workType": "",
-        "norm": 51,
-        "normRaw": "51",
+        "norm": 130,
+        "normRaw": "130",
         "triggerParams": [
-          "Наличие готовых промышленных витрин (Необходима продуктивизация) = «Нет»"
+          "Маркер: требуется разметка данных источника",
+          "И",
+          "Маркер: требуется новая модель для автоматической разметки данных"
         ],
         "triggerRules": [
           {
-            "paramName": "Наличие готовых промышленных витрин (Необходима продуктивизация) = «Нет»",
+            "paramName": "Маркер: требуется разметка данных источника",
+            "operator": "exists",
+            "values": []
+          },
+          {
+            "paramName": "И",
+            "operator": "exists",
+            "values": []
+          },
+          {
+            "paramName": "Маркер: требуется новая модель для автоматической разметки данных",
             "operator": "exists",
             "values": []
           }
         ],
         "laborParams": [
-          "Сложность постановки; Общая неопределённость; Количество оцениваемых инициатив"
+          "Маркер: размер новой модели",
+          "доп. библиотеки",
+          "сложность подключения",
+          "конфигурации",
+          "тестирования и отладки модели (вкл. Active Learning и сетевые доступы)"
         ],
-        "formulaRaw": "Итог = ОКРУГЛ.ВВЕРХ( 51 × К(Сложность постановки) × К(Общая неопределённость) ÷ Кол-во оцениваемых инициатив ; 2 ). При Кол-ве инициатив = 0 — без деления."
+        "formulaRaw": "Итог = ОКРУГЛ.ВВЕРХ( база × К(Размер / сложность модели) ; 2 ).",
+        "laborCoefficientsRaw": "Размер / сложность новой модели: норма → 1; средняя → 1,5; высокая → 2. По умолчанию 1."
       },
-      "reason": "unmatched_params:51|К(Сложность постановки)|К(Общая неопределённость) ÷ Кол-во оцениваемых инициатив"
+      "reason": "unmatched_params:Размер / сложность модели"
     },
     {
       "status": "unmatched_csv",
-      "csvKey": "Модельный стрим|Модель||05А. Разработка пилотной модели (MVP)",
+      "csvKey": "ПиРМ|Система-источник||Реализация регламентной загрузки данных в ИС 1860 и/или экспорта размеченных данных в ИС-потребитель",
       "csvRow": {
-        "stream": "Модельный стрим",
-        "component": "Модель",
+        "stream": "ПиРМ",
+        "component": "Система-источник",
         "stage": "",
-        "name": "05А. Разработка пилотной модели (MVP)",
-        "originalName": "05А. Разработка пилотной модели (MVP)",
+        "name": "Реализация регламентной загрузки данных в ИС 1860 и/или экспорта размеченных данных в ИС-потребитель",
+        "originalName": "Реализация регламентной загрузки данных в ИС 1860 и/или экспорта размеченных данных в ИС-потребитель",
         "workType": "",
-        "norm": 40,
-        "normRaw": "40",
+        "norm": 91,
+        "normRaw": "91",
         "triggerParams": [
-          "Необходимость пилота (MVP)"
+          "Маркер: требуется разметка данных источника",
+          "И",
+          "Маркер: требуется регламентный импорт/экспорт данных или отчетности"
         ],
         "triggerRules": [
           {
-            "paramName": "Необходимость пилота (MVP)",
+            "paramName": "Маркер: требуется разметка данных источника",
+            "operator": "exists",
+            "values": []
+          },
+          {
+            "paramName": "И",
+            "operator": "exists",
+            "values": []
+          },
+          {
+            "paramName": "Маркер: требуется регламентный импорт/экспорт данных или отчетности",
             "operator": "exists",
             "values": []
           }
         ],
         "laborParams": [
-          "Кол-во моделей; Сложность постановки; Общая неопределённость; Наличие готовых промышленных витрин (Необходима продуктивизация); Сложность алгоритма/тип ML задачи"
+          "Маркер: сложность реализации интеграции",
+          "правил обработки данных (в т.ч. конфиденциальных) и настройки режима обмена данными"
         ],
-        "formulaRaw": "Итог = ОКРУГЛ.ВВЕРХ( 40 × К(Кол-во моделей) × К(Сложность постановки) × К(Общая неопределённость) × К(Наличие готовых промышленных витрин (Необходима продуктивизация)) × К(Сложность алгоритма/тип ML задачи) ; 2 )."
+        "formulaRaw": "Итог = ОКРУГЛ.ВВЕРХ( база × К(Сложность интеграции) ; 2 ).",
+        "laborCoefficientsRaw": "Сложность реализации интеграции: норма → 1; средняя → 1,25; высокая → 1,5. По умолчанию 1."
       },
-      "reason": "unmatched_params:40|К(Кол-во моделей)|К(Сложность постановки)|К(Общая неопределённость)|К(Наличие готовых промышленных витрин (Необходима продуктивизация))|К(Сложность алгоритма/тип ML задачи)"
+      "reason": "unmatched_params:Сложность интеграции"
     },
     {
       "status": "unmatched_csv",
-      "csvKey": "Модельный стрим|Модель||05. Разработка модели.",
+      "csvKey": "ПиРМ|Система-источник||Развертывание отдельного экземпляра ИС 1860 под конфиденциальные данные",
       "csvRow": {
-        "stream": "Модельный стрим",
-        "component": "Модель",
+        "stream": "ПиРМ",
+        "component": "Система-источник",
         "stage": "",
-        "name": "05. Разработка модели.",
-        "originalName": "05. Разработка модели.",
+        "name": "Развертывание отдельного экземпляра ИС 1860 под конфиденциальные данные",
+        "originalName": "Развертывание отдельного экземпляра ИС 1860 под конфиденциальные данные",
         "workType": "",
-        "norm": 37,
-        "normRaw": "37",
-        "triggerParams": [],
-        "triggerRules": [],
-        "laborParams": [
-          "Кол-во моделей; Сложность постановки; Общая неопределённость; Наличие готовых промышленных витрин (Необходима продуктивизация); Сложность алгоритма/тип ML задачи"
-        ],
-        "formulaRaw": "Итог = ОКРУГЛ.ВВЕРХ( 37 × К(Кол-во моделей) × К(Сложность постановки) × К(Общая неопределённость) × К(Наличие готовых промышленных витрин (Необходима продуктивизация)) × К(Сложность алгоритма/тип ML задачи) ; 2 )."
-      },
-      "reason": "unmatched_params:37|К(Кол-во моделей)|К(Сложность постановки)|К(Общая неопределённость)|К(Наличие готовых промышленных витрин (Необходима продуктивизация))|К(Сложность алгоритма/тип ML задачи)"
-    },
-    {
-      "status": "unmatched_csv",
-      "csvKey": "Модельный стрим|Модель||AutoML: разработка",
-      "csvRow": {
-        "stream": "Модельный стрим",
-        "component": "Модель",
-        "stage": "",
-        "name": "AutoML: разработка",
-        "originalName": "AutoML: разработка",
-        "workType": "",
-        "norm": 68,
-        "normRaw": "68",
+        "norm": 251,
+        "normRaw": "251",
         "triggerParams": [
-          "Необходимость AutoML = «Да»"
+          "Маркер: требуются специальные условия хранения и обработки конфиденциальных данных",
+          "не поддерживаемые коммунальным сервисом"
         ],
         "triggerRules": [
           {
-            "paramName": "Необходимость AutoML = «Да»",
+            "paramName": "Маркер: требуются специальные условия хранения и обработки конфиденциальных данных",
+            "operator": "exists",
+            "values": []
+          },
+          {
+            "paramName": "не поддерживаемые коммунальным сервисом",
             "operator": "exists",
             "values": []
           }
         ],
         "laborParams": [
-          "Кол-во моделей; Сложность постановки; Общая неопределённость"
+          "Маркер: правила обработки данных (в т.ч. конфиденциальных)",
+          "режим обмена данными",
+          "сложность развёртывания отдельного инстанса и наличие доп. доработок"
         ],
-        "formulaRaw": "Итог = ОКРУГЛ.ВВЕРХ( 68 × К(Кол-во моделей) × К(Сложность постановки) × К(Общая неопределённость) ; 2 )."
+        "formulaRaw": "Итог = ОКРУГЛ.ВВЕРХ( база × К(Правила / сложность развёртывания) ; 2 ).",
+        "laborCoefficientsRaw": "Правила обработки данных / сложность развёртывания инстанса: норма → 1; средняя → 1,5; высокая → 1,75. По умолчанию 1."
       },
-      "reason": "unmatched_params:68|К(Кол-во моделей)|К(Сложность постановки)|К(Общая неопределённость)"
+      "reason": "unmatched_params:Правила / сложность развёртывания"
     },
     {
       "status": "unmatched_csv",
-      "csvKey": "Модельный стрим|Модельный сервис||05B. Пилотирование модели.",
+      "csvKey": "ПиРМ|Модельный сервис||Ручная обработка результатов автоматизированной разметки обращений клиентов в случае низкой степени уверенности модели",
       "csvRow": {
-        "stream": "Модельный стрим",
+        "stream": "ПиРМ",
         "component": "Модельный сервис",
         "stage": "",
-        "name": "05B. Пилотирование модели.",
-        "originalName": "05B. Пилотирование модели.",
+        "name": "Ручная обработка результатов автоматизированной разметки обращений клиентов в случае низкой степени уверенности модели",
+        "originalName": "Ручная обработка результатов автоматизированной разметки обращений клиентов в случае низкой степени уверенности модели",
         "workType": "",
-        "norm": 34,
-        "normRaw": "34",
+        "norm": 103,
+        "normRaw": "103",
         "triggerParams": [
-          "Необходимость поддержки проведения пилота = «Да»"
+          "Маркер: требуется ручная обработка результатов автоматизированной разметки данных"
         ],
         "triggerRules": [
           {
-            "paramName": "Необходимость поддержки проведения пилота = «Да»",
+            "paramName": "Маркер: требуется ручная обработка результатов автоматизированной разметки данных",
             "operator": "exists",
             "values": []
           }
         ],
         "laborParams": [
-          "Общая неопределённость; Наличие готовых промышленных витрин (Необходима продуктивизация)"
+          "Маркер: сложность развёртывания отдельного инстанса ручной разметки голосов и наличие доп. доработок"
         ],
-        "formulaRaw": "Итог = ОКРУГЛ.ВВЕРХ( 34 × К(Общая неопределённость) × К(Наличие готовых промышленных витрин (Необходима продуктивизация)) ; 2 )."
+        "formulaRaw": "Итог = ОКРУГЛ.ВВЕРХ( база × К(Сложность развёртывания) ; 2 ).",
+        "laborCoefficientsRaw": "Сложность развёртывания инстанса Ручной разметки голосов: без доработок → 1; незначительные доработки → 1,25; значительные доработки → 1,5. По умолчанию 1."
       },
-      "reason": "unmatched_params:34|К(Общая неопределённость)|К(Наличие готовых промышленных витрин (Необходима продуктивизация))"
+      "reason": "unmatched_params:formula-code:сложность_разв_ртывания_отдельного_инстанса_и_наличие_доп_доработок"
     },
     {
       "status": "unmatched_csv",
-      "csvKey": "Модельный стрим|Объект / Витрина данных||07. Разработка витрины для применения модели.",
+      "csvKey": "ПиРМ|Модельный сервис||Визуализация результатов работы модельного сервиса",
       "csvRow": {
-        "stream": "Модельный стрим",
-        "component": "Объект/Витрина данных",
-        "stage": "",
-        "name": "07. Разработка витрины для применения модели.",
-        "originalName": "07. Разработка витрины для применения модели.",
-        "workType": "",
-        "norm": 56,
-        "normRaw": "56",
-        "triggerParams": [
-          "Необходимость продуктивизации и количество дополнительных витрин ≠ «Не требуется»"
-        ],
-        "triggerRules": [
-          {
-            "paramName": "Необходимость продуктивизации и количество дополнительных витрин ≠ «Не требуется»",
-            "operator": "exists",
-            "values": []
-          }
-        ],
-        "laborParams": [
-          "Количество оцениваемых инициатив; Сложность постановки; Общая неопределённость; Необходимость продуктивизации и количество дополнительных витрин"
-        ],
-        "formulaRaw": "Итог = ОКРУГЛ.ВВЕРХ( 56 × К(Сложность постановки) × К(Общая неопределённость) × К(Необходимость продуктивизации и кол-во доп. витрин) ÷ Кол-во оцениваемых инициатив ; 2 ). При Кол-ве инициатив = 0 — без деления."
-      },
-      "reason": "unmatched_params:56|К(Сложность постановки)|К(Общая неопределённость)|К(Необходимость продуктивизации и кол-во доп. витрин) ÷ Кол-во оцениваемых инициатив"
-    },
-    {
-      "status": "unmatched_csv",
-      "csvKey": "Модельный стрим|Модельный сервис||09. Адаптация и внедрение модели.",
-      "csvRow": {
-        "stream": "Модельный стрим",
+        "stream": "ПиРМ",
         "component": "Модельный сервис",
         "stage": "",
-        "name": "09. Адаптация и внедрение модели.",
-        "originalName": "09. Адаптация и внедрение модели.",
+        "name": "Визуализация результатов работы модельного сервиса",
+        "originalName": "Визуализация результатов работы модельного сервиса",
         "workType": "",
-        "norm": 50,
-        "normRaw": "50",
+        "norm": 289,
+        "normRaw": "289",
         "triggerParams": [
-          "Каналы внедрения ≠ Пусто"
+          "Требуется визуализация результатов работы модельного сервиса в SuperSet"
         ],
         "triggerRules": [
           {
-            "paramName": "Каналы внедрения ≠ Пусто",
+            "paramName": "Требуется визуализация результатов работы модельного сервиса в SuperSet",
             "operator": "exists",
             "values": []
           }
         ],
         "laborParams": [
-          "Кол-во моделей; Сложность постановки; Общая неопределённость; Сложность алгоритма/тип ML задачи; Каналы внедрения"
+          "SuperSet: сложность развёртывания отдельного инстанса",
+          "наличие доп. доработок",
+          "способ загрузки данных (вручную / по интеграции)"
         ],
-        "formulaRaw": "Итог = ОКРУГЛ.ВВЕРХ( 50 × К(Кол-во моделей) × К(Сложность постановки) × К(Общая неопределённость) × К(Сложность алгоритма/тип ML задачи) × К(Каналы внедрения) ; 2 )."
+        "formulaRaw": "Итог = ОКРУГЛ.ВВЕРХ( база × К(Сложность развёртывания Суперсета) ; 2 ).",
+        "laborCoefficientsRaw": "Сложность развёртывания инстанса Суперсета: без интеграций и без Clickhouse → 0,65; с интеграцией и Clickhouse → 1; с интеграцией, Clickhouse и доработкой → 1,2. По умолчанию 1."
       },
-      "reason": "unmatched_params:50|К(Кол-во моделей)|К(Сложность постановки)|К(Общая неопределённость)|К(Сложность алгоритма/тип ML задачи)|К(Каналы внедрения)"
+      "reason": "unmatched_params:Сложность развёртывания Суперсета"
     },
     {
-      "status": "unmatched_csv",
-      "csvKey": "Модельный стрим|Модель||AutoML: внедрение",
-      "csvRow": {
-        "stream": "Модельный стрим",
-        "component": "Модель",
-        "stage": "",
-        "name": "AutoML: внедрение",
-        "originalName": "AutoML: внедрение",
-        "workType": "",
-        "norm": 68,
-        "normRaw": "68",
-        "triggerParams": [
-          "Необходимость AutoML = «Да»"
-        ],
-        "triggerRules": [
-          {
-            "paramName": "Необходимость AutoML = «Да»",
-            "operator": "exists",
-            "values": []
-          }
-        ],
-        "laborParams": [
-          "Кол-во моделей; Сложность постановки; Общая неопределённость"
-        ],
-        "formulaRaw": "Итог = ОКРУГЛ.ВВЕРХ( 68 × К(Кол-во моделей) × К(Сложность постановки) × К(Общая неопределённость) ; 2 )."
-      },
-      "reason": "unmatched_params:68|К(Кол-во моделей)|К(Сложность постановки)|К(Общая неопределённость)"
+      "status": "matched",
+      "csvKey": "ПиРМ|Модель||Загрузка моделей или библиотек в контур банка",
+      "snapshotIndex": 170,
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1,
+      "unmatchedParams": [],
+      "transformedSpecial": [],
+      "laborCoefficientParams": 0,
+      "triggerRules": 1,
+      "unresolvedTriggers": [],
+      "matchKind": "registry_append",
+      "fuzzyMatchedName": "Загрузка моделей или библиотек в контур банка"
+    },
+    {
+      "status": "matched",
+      "csvKey": "ПиРМ|Модельный сервис||Добавление оборудования в кластер SSDP",
+      "snapshotIndex": 171,
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1,
+      "unmatchedParams": [],
+      "transformedSpecial": [],
+      "laborCoefficientParams": 0,
+      "triggerRules": 1,
+      "unresolvedTriggers": [],
+      "matchKind": "registry_append",
+      "fuzzyMatchedName": "Добавление оборудования в кластер SSDP"
+    },
+    {
+      "status": "matched",
+      "csvKey": "ПиРМ|Модельный сервис||Настройка публикаций и бэкендов модельных сервисов на коммунальных HAPROXY балансировщиках",
+      "snapshotIndex": 172,
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1,
+      "unmatchedParams": [],
+      "transformedSpecial": [],
+      "laborCoefficientParams": 0,
+      "triggerRules": 1,
+      "unresolvedTriggers": [],
+      "matchKind": "registry_append",
+      "fuzzyMatchedName": "Настройка публикаций и бэкендов модельных сервисов на коммунальных HAPROXY балансировщиках"
+    },
+    {
+      "status": "matched",
+      "csvKey": "ПиРМ|Модельный сервис||Выделение ресурсного пула под обучение и исполнение модели",
+      "snapshotIndex": 173,
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1,
+      "unmatchedParams": [],
+      "transformedSpecial": [],
+      "laborCoefficientParams": 0,
+      "triggerRules": 1,
+      "unresolvedTriggers": [],
+      "matchKind": "registry_append",
+      "fuzzyMatchedName": "Выделение ресурсного пула под обучение и исполнение модели"
+    },
+    {
+      "status": "matched",
+      "csvKey": "ПиРМ|Модельный сервис||Контроль соблюдения архитектурных требований ПИМ и использования коммунальных ресурсов",
+      "snapshotIndex": 174,
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1,
+      "unmatchedParams": [],
+      "transformedSpecial": [],
+      "laborCoefficientParams": 0,
+      "triggerRules": 1,
+      "unresolvedTriggers": [],
+      "matchKind": "registry_append",
+      "fuzzyMatchedName": "Контроль соблюдения архитектурных требований ПИМ и использования коммунальных ресурсов"
+    },
+    {
+      "status": "matched",
+      "csvKey": "ПиРМ|Модельный сервис||Кастомизация конфигурации оркестратора",
+      "snapshotIndex": 175,
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1,
+      "unmatchedParams": [],
+      "transformedSpecial": [],
+      "laborCoefficientParams": 0,
+      "triggerRules": 1,
+      "unresolvedTriggers": [],
+      "matchKind": "registry_append",
+      "fuzzyMatchedName": "Кастомизация конфигурации оркестратора"
+    },
+    {
+      "status": "matched",
+      "csvKey": "ПиРМ|Модельный сервис||Настройка kafka и тракта логирования для нового потребителя",
+      "snapshotIndex": 176,
+      "formulaText": "N",
+      "roundingMode": "CEIL",
+      "roundingStep": 0.1,
+      "unmatchedParams": [],
+      "transformedSpecial": [],
+      "laborCoefficientParams": 0,
+      "triggerRules": 1,
+      "unresolvedTriggers": [],
+      "matchKind": "registry_append",
+      "fuzzyMatchedName": "Настройка kafka и тракта логирования для нового потребителя"
+    }
+  ],
+  "laborValueAlignment": [
+    {
+      "kind": "drop_value_by_override",
+      "work": "Планирование и работа с бэклогом",
+      "component": "Система-источник",
+      "paramName": "NDA",
+      "value": "Не требуется"
+    },
+    {
+      "kind": "drop_value_by_override",
+      "work": "Поиск и анализ источника(ов) и данных",
+      "component": "Система-источник",
+      "paramName": "NDA",
+      "value": "Не требуется"
+    },
+    {
+      "kind": "drop_value_by_override",
+      "work": "Подготовка АЗ для заключения NDA, согласование содержания NDA",
+      "component": "Система-источник",
+      "paramName": "NDA",
+      "value": "Не требуется"
+    },
+    {
+      "kind": "drop_value_by_override",
+      "work": "Доработка внутренней документации и информационных ресурсов группы",
+      "component": "Система-источник",
+      "paramName": "NDA",
+      "value": "Не требуется"
+    },
+    {
+      "kind": "drop_value_by_override",
+      "work": "Планирование и работа с бэклогом",
+      "component": "Система-источник",
+      "paramName": "NDA",
+      "value": "Не требуется"
+    },
+    {
+      "kind": "drop_value_by_override",
+      "work": "Подготовка АЗ для заключения NDA, согласование содержания NDA",
+      "component": "Система-источник",
+      "paramName": "NDA",
+      "value": "Не требуется"
+    },
+    {
+      "kind": "drop_value_by_override",
+      "work": "Планирование и работа с бэклогом",
+      "component": "Система-источник",
+      "paramName": "NDA",
+      "value": "Не требуется"
+    },
+    {
+      "kind": "drop_value_by_override",
+      "work": "Подготовка АЗ для заключения NDA, согласование содержания NDA",
+      "component": "Система-источник",
+      "paramName": "NDA",
+      "value": "Не требуется"
+    },
+    {
+      "kind": "drop_value_by_override",
+      "work": "Интервьюирование заказчика, подтверждение финансирования и обработка RDS",
+      "component": "Процесс обработки данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно"
+    },
+    {
+      "kind": "drop_value_by_override",
+      "work": "Планирование и работа с бэклогом",
+      "component": "Процесс обработки данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно"
+    },
+    {
+      "kind": "drop_value_by_override",
+      "work": "Планирование и работа с бэклогом",
+      "component": "Процесс обработки данных",
+      "paramName": "NDA",
+      "value": "Не требуется"
+    },
+    {
+      "kind": "drop_value_by_override",
+      "work": "Сбор и анализ требований",
+      "component": "Процесс обработки данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно"
+    },
+    {
+      "kind": "drop_value_by_override",
+      "work": "Составление модели данных s2t",
+      "component": "Процесс обработки данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно"
+    },
+    {
+      "kind": "drop_value_by_override",
+      "work": "Составление ТР",
+      "component": "Процесс обработки данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно"
+    },
+    {
+      "kind": "drop_value_by_override",
+      "work": "Подготовка АЗ для заключения NDA, согласование содержания NDA",
+      "component": "Процесс обработки данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно"
+    },
+    {
+      "kind": "drop_value_by_override",
+      "work": "Подготовка АЗ для заключения NDA, согласование содержания NDA",
+      "component": "Процесс обработки данных",
+      "paramName": "NDA",
+      "value": "Не требуется"
+    },
+    {
+      "kind": "drop_value_by_override",
+      "work": "Согласование интеграции с ИБ и ЮБ",
+      "component": "Процесс обработки данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно"
+    },
+    {
+      "kind": "drop_value_by_override",
+      "work": "Согласование АР, участие в Тестировании и ПСИ",
+      "component": "Процесс обработки данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно"
+    },
+    {
+      "kind": "drop_value_by_override",
+      "work": "Доработка внутренней документации и информационных ресурсов группы",
+      "component": "Процесс обработки данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно"
+    },
+    {
+      "kind": "drop_value_by_override",
+      "work": "Планирование и работа с бэклогом",
+      "component": "Объект / Витрина данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно"
+    },
+    {
+      "kind": "drop_value_by_override",
+      "work": "Работа над артефактом АР",
+      "component": "Объект / Витрина данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно"
+    },
+    {
+      "kind": "drop_value_by_override",
+      "work": "Работа над артефактами ТПиС, ПМИ",
+      "component": "Объект / Витрина данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно"
+    },
+    {
+      "kind": "drop_value_by_override",
+      "work": "Работы по разворачиванию и настройке новой инфраструктуры",
+      "component": "Объект / Витрина данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно"
+    },
+    {
+      "kind": "drop_value_by_override",
+      "work": "Согласование артефактов и заведение заявок на доступы",
+      "component": "Объект / Витрина данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно"
+    },
+    {
+      "kind": "drop_value_by_override",
+      "work": "Разработка Решения",
+      "component": "Объект / Витрина данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно"
+    },
+    {
+      "kind": "drop_value_by_override",
+      "work": "Тестирование и отладка Решения",
+      "component": "Объект / Витрина данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно"
+    },
+    {
+      "kind": "drop_value_by_override",
+      "work": "Проведение ИФТ Решения",
+      "component": "Объект / Витрина данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно"
+    },
+    {
+      "kind": "drop_value_by_override",
+      "work": "Проведение Тестирования Решения и ПСИ",
+      "component": "Объект / Витрина данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно"
+    },
+    {
+      "kind": "drop_value_by_override",
+      "work": "Вывод Решения в Промышленную эксплуатацию",
+      "component": "Объект / Витрина данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно"
+    },
+    {
+      "kind": "drop_value_by_override",
+      "work": "Доработка внутренней документации и информационных ресурсов группы",
+      "component": "Объект / Витрина данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно"
+    },
+    {
+      "kind": "drop_value_by_override",
+      "work": "Планирование и работа с бэклогом",
+      "component": "Система-источник",
+      "paramName": "Тип работ",
+      "value": "Неизвестно"
+    },
+    {
+      "kind": "drop_value_by_override",
+      "work": "Постановка источника на мониторинг",
+      "component": "Система-источник",
+      "paramName": "Тип работ",
+      "value": "Неизвестно"
+    },
+    {
+      "kind": "drop_value_by_override",
+      "work": "Доработка внутренней документации и информационных ресурсов группы",
+      "component": "Система-источник",
+      "paramName": "Тип работ",
+      "value": "Неизвестно"
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Реализация оперативного контроля",
+      "component": "Модельный сервис",
+      "paramName": "Регуляторные требования",
+      "value": "4",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Реализация оперативного контроля",
+      "component": "Модельный сервис",
+      "paramName": "Регуляторные требования",
+      "value": "5",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Реализация оперативного контроля",
+      "component": "Модельный сервис",
+      "paramName": "Регуляторные требования",
+      "value": "1",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Реализация оперативного контроля",
+      "component": "Модельный сервис",
+      "paramName": "Регуляторные требования",
+      "value": "2",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Реализация оперативного контроля",
+      "component": "Модельный сервис",
+      "paramName": "Регуляторные требования",
+      "value": "3",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Реализация аналитического контроля",
+      "component": "Модельный сервис",
+      "paramName": "Регуляторные требования",
+      "value": "4",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Реализация аналитического контроля",
+      "component": "Модельный сервис",
+      "paramName": "Регуляторные требования",
+      "value": "5",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Реализация аналитического контроля",
+      "component": "Модельный сервис",
+      "paramName": "Регуляторные требования",
+      "value": "1",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Реализация аналитического контроля",
+      "component": "Модельный сервис",
+      "paramName": "Регуляторные требования",
+      "value": "2",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Реализация аналитического контроля",
+      "component": "Модельный сервис",
+      "paramName": "Регуляторные требования",
+      "value": "3",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Реализация контроля модельных значений",
+      "component": "Модельный сервис",
+      "paramName": "Регуляторные требования",
+      "value": "4",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Реализация контроля модельных значений",
+      "component": "Модельный сервис",
+      "paramName": "Регуляторные требования",
+      "value": "5",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Реализация контроля модельных значений",
+      "component": "Модельный сервис",
+      "paramName": "Регуляторные требования",
+      "value": "1",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Реализация контроля модельных значений",
+      "component": "Модельный сервис",
+      "paramName": "Регуляторные требования",
+      "value": "2",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Реализация контроля модельных значений",
+      "component": "Модельный сервис",
+      "paramName": "Регуляторные требования",
+      "value": "3",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "drop_value_by_override",
+      "work": "Реализация процесса загрузки внутренних данных в Платформу данных для целей моделирования",
+      "component": "Процесс обработки данных",
+      "paramName": "Тип работ",
+      "value": "Неизвестно"
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Постановка задачи",
+      "component": "Модель",
+      "paramName": "Регуляторные требования",
+      "value": "1",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Постановка задачи",
+      "component": "Модель",
+      "paramName": "Регуляторные требования",
+      "value": "2",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Постановка задачи",
+      "component": "Модель",
+      "paramName": "Регуляторные требования",
+      "value": "3",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Постановка задачи",
+      "component": "Модель",
+      "paramName": "Регуляторные требования",
+      "value": "4",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Постановка задачи",
+      "component": "Модель",
+      "paramName": "Регуляторные требования",
+      "value": "5",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Построение витрины для разработки",
+      "component": "Объект / Витрина данных",
+      "paramName": "Регуляторные требования",
+      "value": "1",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Построение витрины для разработки",
+      "component": "Объект / Витрина данных",
+      "paramName": "Регуляторные требования",
+      "value": "2",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Построение витрины для разработки",
+      "component": "Объект / Витрина данных",
+      "paramName": "Регуляторные требования",
+      "value": "3",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Построение витрины для разработки",
+      "component": "Объект / Витрина данных",
+      "paramName": "Регуляторные требования",
+      "value": "4",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Построение витрины для разработки",
+      "component": "Объект / Витрина данных",
+      "paramName": "Регуляторные требования",
+      "value": "5",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Разработка пилотной модели (MVP)",
+      "component": "Модель",
+      "paramName": "Регуляторные требования",
+      "value": "1",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Разработка пилотной модели (MVP)",
+      "component": "Модель",
+      "paramName": "Регуляторные требования",
+      "value": "2",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Разработка пилотной модели (MVP)",
+      "component": "Модель",
+      "paramName": "Регуляторные требования",
+      "value": "3",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Разработка пилотной модели (MVP)",
+      "component": "Модель",
+      "paramName": "Регуляторные требования",
+      "value": "4",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Разработка пилотной модели (MVP)",
+      "component": "Модель",
+      "paramName": "Регуляторные требования",
+      "value": "5",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Разработка модели",
+      "component": "Модель",
+      "paramName": "Регуляторные требования",
+      "value": "1",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Разработка модели",
+      "component": "Модель",
+      "paramName": "Регуляторные требования",
+      "value": "2",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Разработка модели",
+      "component": "Модель",
+      "paramName": "Регуляторные требования",
+      "value": "3",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Разработка модели",
+      "component": "Модель",
+      "paramName": "Регуляторные требования",
+      "value": "4",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Разработка модели",
+      "component": "Модель",
+      "paramName": "Регуляторные требования",
+      "value": "5",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "разработка",
+      "component": "Модель",
+      "paramName": "Регуляторные требования",
+      "value": "1",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "разработка",
+      "component": "Модель",
+      "paramName": "Регуляторные требования",
+      "value": "2",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "разработка",
+      "component": "Модель",
+      "paramName": "Регуляторные требования",
+      "value": "3",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "разработка",
+      "component": "Модель",
+      "paramName": "Регуляторные требования",
+      "value": "4",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "разработка",
+      "component": "Модель",
+      "paramName": "Регуляторные требования",
+      "value": "5",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Разработка витрины для применения модели",
+      "component": "Объект / Витрина данных",
+      "paramName": "Регуляторные требования",
+      "value": "1",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Разработка витрины для применения модели",
+      "component": "Объект / Витрина данных",
+      "paramName": "Регуляторные требования",
+      "value": "2",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Разработка витрины для применения модели",
+      "component": "Объект / Витрина данных",
+      "paramName": "Регуляторные требования",
+      "value": "3",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Разработка витрины для применения модели",
+      "component": "Объект / Витрина данных",
+      "paramName": "Регуляторные требования",
+      "value": "4",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Разработка витрины для применения модели",
+      "component": "Объект / Витрина данных",
+      "paramName": "Регуляторные требования",
+      "value": "5",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Адаптация и внедрение модели",
+      "component": "Модель",
+      "paramName": "Регуляторные требования",
+      "value": "1",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Адаптация и внедрение модели",
+      "component": "Модель",
+      "paramName": "Регуляторные требования",
+      "value": "2",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Адаптация и внедрение модели",
+      "component": "Модель",
+      "paramName": "Регуляторные требования",
+      "value": "3",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Адаптация и внедрение модели",
+      "component": "Модель",
+      "paramName": "Регуляторные требования",
+      "value": "4",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Адаптация и внедрение модели",
+      "component": "Модель",
+      "paramName": "Регуляторные требования",
+      "value": "5",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Адаптация и внедрение модели",
+      "component": "Модель",
+      "paramName": "Каналы внедрения",
+      "value": "Не требуется",
+      "formValues": [
+        "Батч",
+        "Батч + загрузка данных потребителю",
+        "Батч + Онлайн",
+        "Онлайн",
+        "Онлайн gpu",
+        "Стриминг",
+        "Мобильные устройства",
+        "LLM",
+        "Гео-сервисы",
+        "Внедрение в облаке",
+        "Графовая платформа"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "внедрение",
+      "component": "Модель",
+      "paramName": "Регуляторные требования",
+      "value": "1",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "внедрение",
+      "component": "Модель",
+      "paramName": "Регуляторные требования",
+      "value": "2",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "внедрение",
+      "component": "Модель",
+      "paramName": "Регуляторные требования",
+      "value": "3",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "внедрение",
+      "component": "Модель",
+      "paramName": "Регуляторные требования",
+      "value": "4",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "внедрение",
+      "component": "Модель",
+      "paramName": "Регуляторные требования",
+      "value": "5",
+      "formValues": [
+        "1 — Проведение регулярной валидации Регулятором нормативно не установлено",
+        "2 — Проведение регулярной валидации Регулятором нормативно не установлено. Модель оценки риска",
+        "3 — Проведение регулярной валидации Регулятором нормативно не установлено. Заказчик запрашивает проведение первичной валидации модели",
+        "4 — Банком не планируется предоставление Модели Регулятору, но регулярная валидация установлена Регулятором",
+        "5 — Банком планируется предоставление Модели Регулятору для одобрения к использованию"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Регистрация / обновление версии модели в СУМ",
+      "component": "Модель",
+      "paramName": "Роль модели",
+      "value": "Основная",
+      "formValues": [
+        "Обычная",
+        "Оркестратор"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Регистрация / обновление версии модели в СУМ",
+      "component": "Модель",
+      "paramName": "Роль модели",
+      "value": "Вспомогательная",
+      "formValues": [
+        "Обычная",
+        "Оркестратор"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Регистрация / обновление версии модели в СУМ",
+      "component": "Модель",
+      "paramName": "Роль модели",
+      "value": "Ансамбль",
+      "formValues": [
+        "Обычная",
+        "Оркестратор"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Добавление новой модели для автоматической разметки данных в ИС 1860, настройка Active Learning",
+      "component": "Система-источник",
+      "paramName": "Размер модели разметки данных",
+      "value": "Маленькая",
+      "formValues": [
+        "Точечное",
+        "Малое",
+        "Среднее",
+        "Большое",
+        "Масштабное"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Добавление новой модели для автоматической разметки данных в ИС 1860, настройка Active Learning",
+      "component": "Система-источник",
+      "paramName": "Размер модели разметки данных",
+      "value": "Средняя",
+      "formValues": [
+        "Точечное",
+        "Малое",
+        "Среднее",
+        "Большое",
+        "Масштабное"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Добавление новой модели для автоматической разметки данных в ИС 1860, настройка Active Learning",
+      "component": "Система-источник",
+      "paramName": "Размер модели разметки данных",
+      "value": "Большая",
+      "formValues": [
+        "Точечное",
+        "Малое",
+        "Среднее",
+        "Большое",
+        "Масштабное"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Визуализация результатов работы модельного сервиса",
+      "component": "Модельный сервис",
+      "paramName": "Тип БД для BI-системы",
+      "value": "PostgreSQL",
+      "formValues": [
+        "Векторные",
+        "Графовые",
+        "Временные ряды и события",
+        "Документо-ориентированные",
+        "Специализированные"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Визуализация результатов работы модельного сервиса",
+      "component": "Модельный сервис",
+      "paramName": "Тип БД для BI-системы",
+      "value": "ClickHouse",
+      "formValues": [
+        "Векторные",
+        "Графовые",
+        "Временные ряды и события",
+        "Документо-ориентированные",
+        "Специализированные"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Визуализация результатов работы модельного сервиса",
+      "component": "Модельный сервис",
+      "paramName": "Способ загрузки данных в BI-систему",
+      "value": "Вручную",
+      "formValues": [
+        "Ручной",
+        "Автоматизированный"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Визуализация результатов работы модельного сервиса",
+      "component": "Модельный сервис",
+      "paramName": "Способ загрузки данных в BI-систему",
+      "value": "По интеграции",
+      "formValues": [
+        "Ручной",
+        "Автоматизированный"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Загрузка моделей или библиотек в контур банка",
+      "component": "Модель",
+      "paramName": "Размер модели разметки данных",
+      "value": "Маленькая",
+      "formValues": [
+        "Точечное",
+        "Малое",
+        "Среднее",
+        "Большое",
+        "Масштабное"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Загрузка моделей или библиотек в контур банка",
+      "component": "Модель",
+      "paramName": "Размер модели разметки данных",
+      "value": "Средняя",
+      "formValues": [
+        "Точечное",
+        "Малое",
+        "Среднее",
+        "Большое",
+        "Масштабное"
+      ]
+    },
+    {
+      "kind": "value_absent_in_form",
+      "work": "Загрузка моделей или библиотек в контур банка",
+      "component": "Модель",
+      "paramName": "Размер модели разметки данных",
+      "value": "Большая",
+      "formValues": [
+        "Точечное",
+        "Малое",
+        "Среднее",
+        "Большое",
+        "Масштабное"
+      ]
+    }
+  ],
+  "triggerRebinds": [
+    {
+      "kind": "trigger_binding_not_found",
+      "work": "Регистрация / обновление сервиса в СУМ, обеспечение продвижения по ЖЦМ, обеспечение хранения артефактов модели",
+      "paramName": "Создание архитектурного компонента «Модельный сервис»"
+    },
+    {
+      "kind": "trigger_binding_not_found",
+      "work": "Регистрация / обновление модели в СУРМ, обеспечение присутствия модели на дашборде",
+      "paramName": "Создание архитектурного компонента «Модельный сервис»"
+    },
+    {
+      "kind": "trigger_binding_not_found",
+      "work": "Регистрация / обновление версии модели в СУМ",
+      "paramName": "Создание архитектурного компонента «Модель»"
+    },
+    {
+      "kind": "trigger_binding_not_found",
+      "work": "Сбор и предоставление данных об аллокации модельного сервиса",
+      "paramName": "Создание архитектурного компонента «Модельный сервис»"
+    },
+    {
+      "kind": "trigger_binding_not_found",
+      "work": "Создание и актуализация графа преобразования данных, используемых модельным сервисом",
+      "paramName": "Создание архитектурного компонента «Модельный сервис»"
+    },
+    {
+      "kind": "rebind_trigger",
+      "work": "Первичное подключение ИС к Репозиторию моделей",
+      "paramName": "Первичное подключение ИС к РЕПО",
+      "paramCode": "field_imxB4YEd"
+    },
+    {
+      "kind": "rebind_trigger",
+      "work": "Организация хранения артефактов модели в Репозитории моделей",
+      "paramName": "Хранение артефактов в РЕПО",
+      "paramCode": "field_kkbRs50S"
+    },
+    {
+      "kind": "rebind_trigger",
+      "work": "Обеспечение переноса артефактов модели между контурами посредством Репозитория моделей",
+      "paramName": "Перекладка артефактов между контурами посредством РЕПО",
+      "paramCode": "field_r66ph-79"
+    },
+    {
+      "kind": "rebind_trigger",
+      "work": "Предоставление данных из СХК через РЕПО",
+      "paramName": "Использование данных СХК через РЕПО",
+      "paramCode": "field_Y2S_XRAQ"
+    },
+    {
+      "kind": "rebind_trigger",
+      "work": "Выделение ресурсного пула под обучение и применение модели",
+      "paramName": "Необходимость AutoML",
+      "paramCode": "autoML"
+    },
+    {
+      "kind": "rebind_trigger",
+      "work": "Подключение источника данных для обучения модели",
+      "paramName": "Необходимость AutoML",
+      "paramCode": "autoML"
+    },
+    {
+      "kind": "rebind_trigger",
+      "work": "Встраивание и отладка внешнего кода в конвейер AutoML по обучению модели",
+      "paramName": "Необходимость AutoML",
+      "paramCode": "autoML"
+    },
+    {
+      "kind": "trigger_binding_not_found",
+      "work": "Встраивание и отладка внешнего кода в конвейер AutoML по обучению модели",
+      "paramName": "И"
+    },
+    {
+      "kind": "rebind_trigger",
+      "work": "Встраивание и отладка внешнего кода в конвейер AutoML по обучению модели",
+      "paramName": "AutoML: встраивание внешнего кода",
+      "paramCode": "field_58TkWuwu"
+    },
+    {
+      "kind": "rebind_trigger",
+      "work": "Реализация преобразований данных в конвейере AutoML по обучению модели",
+      "paramName": "Необходимость AutoML",
+      "paramCode": "autoML"
+    },
+    {
+      "kind": "trigger_binding_not_found",
+      "work": "Реализация преобразований данных в конвейере AutoML по обучению модели",
+      "paramName": "И"
+    },
+    {
+      "kind": "rebind_trigger",
+      "work": "Реализация преобразований данных в конвейере AutoML по обучению модели",
+      "paramName": "AutoML: требуется преобразование данных",
+      "paramCode": "field_CeBkWcQc"
+    },
+    {
+      "kind": "rebind_trigger",
+      "work": "Постановка модели на регламентное переобучение",
+      "paramName": "Необходимость AutoML",
+      "paramCode": "autoML"
+    },
+    {
+      "kind": "trigger_binding_not_found",
+      "work": "Постановка модели на регламентное переобучение",
+      "paramName": "И"
+    },
+    {
+      "kind": "rebind_trigger",
+      "work": "Постановка модели на регламентное переобучение",
+      "paramName": "AutoML: требуется постановка на регламент",
+      "paramCode": "field_S23CbRXp"
+    },
+    {
+      "kind": "rebind_trigger",
+      "work": "Добавление новой ML-библиотеки и/или фреймворка",
+      "paramName": "Необходимость AutoML",
+      "paramCode": "autoML"
+    },
+    {
+      "kind": "trigger_binding_not_found",
+      "work": "Добавление новой ML-библиотеки и/или фреймворка",
+      "paramName": "И"
+    },
+    {
+      "kind": "rebind_trigger",
+      "work": "Добавление новой ML-библиотеки и/или фреймворка",
+      "paramName": "AutoML: требуется новая библиотека",
+      "paramCode": "field_S41Rqt5E"
+    },
+    {
+      "kind": "trigger_binding_not_found",
+      "work": "Airflow: обеспечение работоспособности и реконфигурация инфраструктуры для настройки DAG",
+      "paramName": "Создание архитектурного компонента «Модельный сервис»"
+    },
+    {
+      "kind": "rebind_trigger",
+      "work": "Подключение источника данных",
+      "paramName": "Реализуется в Хранилище признаков",
+      "paramCode": "field_lovKvLZc"
+    },
+    {
+      "kind": "trigger_binding_not_found",
+      "work": "Подключение источника данных",
+      "paramName": "Хранилище признаков: подключение нового источника данных"
+    },
+    {
+      "kind": "rebind_trigger",
+      "work": "Создание контроля качества Признаков в Хранилище признаков",
+      "paramName": "Реализуется в Хранилище признаков",
+      "paramCode": "field_lovKvLZc"
+    },
+    {
+      "kind": "trigger_binding_not_found",
+      "work": "Создание контроля качества Признаков в Хранилище признаков",
+      "paramName": "И"
+    },
+    {
+      "kind": "rebind_trigger",
+      "work": "Создание контроля качества Признаков в Хранилище признаков",
+      "paramName": "Требуется контроль качества Признаков",
+      "paramCode": "field_rZeUo8a_"
+    },
+    {
+      "kind": "trigger_binding_not_found",
+      "work": "Загрузка моделей или библиотек в контур банка",
+      "paramName": "Требуется новая библиотека / базовая модель"
+    },
+    {
+      "kind": "trigger_binding_not_found",
+      "work": "Добавление оборудования в кластер SSDP",
+      "paramName": "Требуется расширение инфраструктуры кластера SSDP"
+    },
+    {
+      "kind": "rebind_trigger",
+      "work": "Настройка публикаций и бэкендов модельных сервисов на коммунальных HAPROXY балансировщиках",
+      "paramName": "Тип работ",
+      "paramCode": "field_yJ51GkCR"
+    },
+    {
+      "kind": "rebind_trigger",
+      "work": "Выделение ресурсного пула под обучение и исполнение модели",
+      "paramName": "Тип работ",
+      "paramCode": "field_yJ51GkCR"
+    },
+    {
+      "kind": "rebind_trigger",
+      "work": "Контроль соблюдения архитектурных требований ПИМ и использования коммунальных ресурсов",
+      "paramName": "Тип работ",
+      "paramCode": "field_yJ51GkCR"
+    },
+    {
+      "kind": "trigger_binding_not_found",
+      "work": "Кастомизация конфигурации оркестратора",
+      "paramName": "Требуется оркестратор ПИМ"
+    },
+    {
+      "kind": "trigger_binding_not_found",
+      "work": "Настройка kafka и тракта логирования для нового потребителя",
+      "paramName": "Требуется логирование ПИМ"
     }
   ]
 }

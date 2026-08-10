@@ -25,8 +25,8 @@ export function isMeaningfulAnketaFieldValue(value: unknown): boolean {
 
 function text(item: Record<string, unknown>, field: string): string {
 	const value = item[field];
+	if (typeof value === "boolean") return value ? "Да" : "Нет";
 	if (value == null || value === "") return "—";
-	if (typeof value === "boolean") return value ? "Да" : "—";
 	if (Array.isArray(value)) {
 		return value.length > 0 ? value.map(String).join(", ") : "—";
 	}

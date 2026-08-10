@@ -1,6 +1,8 @@
+import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
 import MuiDrawer, { drawerClasses } from "@mui/material/Drawer";
+import IconButton from "@mui/material/IconButton";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { styled, useColorScheme } from "@mui/material/styles";
@@ -13,6 +15,10 @@ import {
 	getKeycloakUserDisplayName,
 	getKeycloakUserInitial,
 } from "@react-client/common/auth/keycloakUserText.util";
+import { beginLogoutOverlay } from "@react-client/common/auth/logoutOverlayState";
+import { usePermissions } from "@react-client/hooks/usePermissions";
+import { getAccessiblePages } from "@react-client/routing/accessiblePages";
+import { performMfeLogout } from "@react-client/common/auth/syncMfeAuth";
 
 const drawerWidth = 260;
 
@@ -37,7 +43,7 @@ const DrawerWrapper = styled(Card)(() => ({
 	"& > div ": {
 		display: "flex",
 		flexDirection: "column",
-	}
+	},
 }));
 
 export function SideMenu({
@@ -51,6 +57,8 @@ export function SideMenu({
 	const { mode } = useColorScheme();
 	const displayName = getKeycloakUserDisplayName(user);
 	const userInitial = getKeycloakUserInitial(user);
+	const permissions = usePermissions();
+	const noAccessiblePages = getAccessiblePages(permissions).length === 0;
 
 	return (
 		<Drawer variant="persistent" open={open} data-test-id="side-menu--Drawer-0">
@@ -77,7 +85,14 @@ export function SideMenu({
 					</svg>
 				</Flex>
 
-				<Box sx={{ overflow: "auto", flex: 1, display: "flex", flexDirection: "column" }}>
+				<Box
+					sx={{
+						overflow: "auto",
+						flex: 1,
+						display: "flex",
+						flexDirection: "column",
+					}}
+				>
 					<MenuContent />
 				</Box>
 
@@ -100,18 +115,47 @@ export function SideMenu({
 					<Box sx={{ mr: "auto", minWidth: 0 }}>
 						<Typography
 							variant="body2"
-							sx={{ fontWeight: 500, lineHeight: "16px", fontFamily: "inherit" }}
+							sx={{
+								fontWeight: 500,
+								lineHeight: "16px",
+								fontFamily: "inherit",
+							}}
 							noWrap
 						>
 							{displayName}
 						</Typography>
 						{user?.email && (
-							<Typography variant="caption" color="text.secondary" noWrap display="block">
+							<Typography
+								variant="caption"
+								color="text.secondary"
+								noWrap
+								display="block"
+							>
 								{user.email}
 							</Typography>
 						)}
 					</Box>
-					<OptionsMenu onLogout={onLogout} />
+					{noAccessiblePages ? (
+						<IconButton
+							size="small"
+							color="primary"
+							onClick={() => {
+								beginLogoutOverlay();
+								if (onLogout) {
+									onLogout();
+									return;
+								}
+								performMfeLogout();
+							}}
+							aria-label="Выйти из системы"
+							title="Выйти из системы"
+							data-test-id="side-menu--logout-no-access"
+						>
+							<LogoutRoundedIcon fontSize="small" />
+						</IconButton>
+					) : (
+						<OptionsMenu onLogout={onLogout} />
+					)}
 				</Stack>
 			</DrawerWrapper>
 		</Drawer>

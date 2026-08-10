@@ -11,12 +11,14 @@ import TableCell from "@mui/material/TableCell";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
+import FormatListBulletedIcon from "@mui/icons-material/FormatListBulleted";
 import type {
 	V2TypicalWorkCardDto,
 	V2TypicalWorkRuleDto,
 	V2WorkRuleOperator,
 } from "@smart-anketa/api-contract";
 import { resolveActiveNormOnDate } from "@smart-anketa/api-contract";
+import { Flex } from "@react-client/common/primitives/Flex";
 import { SelectWithPlaceholder } from "@react-client/common/muiCustom/SelectWithPlaceholder";
 import { WorkFormulaEditor } from "./WorkFormulaEditor";
 import { triggerStatusColors } from "./typicalWorksUi";
@@ -134,9 +136,22 @@ export function TypicalWorkCardView({
 }: TypicalWorkCardViewProps) {
 	if (loading) {
 		return (
-			<Box sx={{ p: embedded ? 2 : 4, display: "flex", justifyContent: "center" }}>
-				<CircularProgress size={28} />
-			</Box>
+			<Flex
+				flexDirection="column"
+				alignItems="center"
+				justifyContent="center"
+				flexGrow={1}
+				height="100%"
+				minHeight="0"
+				width="100%"
+				gap={10}
+				style={{ padding: embedded ? 16 : 24 }}
+			>
+				<CircularProgress size={32} />
+				<Typography variant="body2" color="text.secondary">
+					Загрузка типовой работы…
+				</Typography>
+			</Flex>
 		);
 	}
 
@@ -150,9 +165,46 @@ export function TypicalWorkCardView({
 
 	if (!card) {
 		return (
-			<Alert severity="info" sx={{ m: embedded ? 0 : 2 }}>
-				Выберите работу в списке слева.
-			</Alert>
+			<Flex
+				flexDirection="column"
+				alignItems="center"
+				justifyContent="center"
+				flexGrow={1}
+				height="100%"
+				minHeight="0"
+				width="100%"
+				gap={12}
+				style={{ padding: embedded ? 24 : 32 }}
+			>
+				<Flex
+					alignItems="center"
+					justifyContent="center"
+					style={{
+						width: 64,
+						height: 64,
+						borderRadius: 16,
+						background: "#eef2f8",
+						color: "#8a93a3",
+					}}
+				>
+					<FormatListBulletedIcon sx={{ fontSize: 30 }} />
+				</Flex>
+				<Typography
+					variant="subtitle1"
+					fontWeight={700}
+					sx={{ color: "#1d2435", textAlign: "center" }}
+				>
+					Работа не выбрана
+				</Typography>
+				<Typography
+					variant="body2"
+					color="text.secondary"
+					sx={{ maxWidth: 360, textAlign: "center", lineHeight: 1.5 }}
+				>
+					Выберите типовую работу в списке слева, чтобы открыть параметры,
+					триггеры и формулу.
+				</Typography>
+			</Flex>
 		);
 	}
 

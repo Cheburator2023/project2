@@ -1,5 +1,11 @@
 import type { CustomValidator, RJSFSchema, UiSchema } from "@rjsf/utils";
 import { validatorRu } from "@react-client/common/forms/rjsfLocaleRu";
+import {
+	applyBooleanDefaultsToObject,
+	isV2AnketaHiddenUiNode,
+	readV2AnketaSectionUiOptions,
+	resolveGroupIsActive,
+} from "@smart-anketa/api-contract";
 
 const REQUIRED_EMPTY_MESSAGE = "Поле обязательно для заполнения";
 
@@ -64,9 +70,10 @@ export function omitUnsetOptionalFields(
 	formData: Record<string, unknown>,
 	schema: RJSFSchema,
 ): Record<string, unknown> {
+	const withBooleans = applyBooleanDefaultsToObject(formData, schema);
 	const required = new Set(collectRequiredFieldKeys(schema));
 	const next: Record<string, unknown> = {};
-	for (const [key, value] of Object.entries(formData)) {
+	for (const [key, value] of Object.entries(withBooleans)) {
 		if (!required.has(key) && isUnsetOptionalValue(value)) {
 			continue;
 		}
@@ -77,6 +84,14 @@ export function omitUnsetOptionalFields(
 			continue;
 		}
 		next[key] = value;
+	}
+	// Boolean keys from schema may be missing in formData entries loop above —
+	// applyBooleanDefaults already put them on withBooleans.
+	for (const [key, value] of Object.entries(withBooleans)) {
+		const prop = readPropSchema(schema, key);
+		if (prop?.type === "boolean" && typeof value === "boolean") {
+			next[key] = value;
+		}
 	}
 	return next;
 }
@@ -143,4 +158,139 @@ export function getAnketaModalFormErrors(
 		undefined,
 		uiSchema,
 	);
+}
+
+function asDataObject(data: unknown): Record<string, unknown> | null {
+	if (!data || typeof data !== "object" || Array.isArray(data)) return null;
+	return data as Record<string, unknown>;
+}
+
+function isObjectLikeSchema(schema: RJSFSchema | undefined): boolean {
+	if (!schema) return false;
+	if (schema.type === "object") return true;
+	return Boolean(
+		schema.properties &&
+			typeof schema.properties === "object" &&
+			!Array.isArray(schema.properties),
+	);
+}
+
+function fieldLabel(schema: RJSFSchema | undefined, key: string): string {
+	const title = schema?.title;
+	return typeof title === "string" && title.trim() ? title.trim() : key;
+}
+
+function readChildUi(
+	uiSchema: UiSchema | undefined,
+	key: string,
+): UiSchema | undefined {
+	const node = uiSchema?.[key];
+	if (!node || typeof node !== "object" || Array.isArray(node)) return undefined;
+	return node as UiSchema;
+}
+
+type BlockRequiredCtx = {
+	/** Абсолютный dotted-path текущего object в formData. */
+	absolutePath?: string;
+	rootFormData?: Record<string, unknown>;
+	rootUiSchema?: UiSchema;
+};
+
+function isInactiveActivatableGroup(
+	absolutePath: string,
+	childUi: UiSchema | undefined,
+	ctx: BlockRequiredCtx | undefined,
+): boolean {
+	if (!ctx?.rootFormData || !ctx.rootUiSchema) return false;
+	if (readV2AnketaSectionUiOptions(childUi).groupActivatable !== true) {
+		return false;
+	}
+	return !resolveGroupIsActive(
+		absolutePath,
+		ctx.rootUiSchema,
+		ctx.rootFormData,
+	);
+}
+
+/**
+ * Незаполненные required в блоке/объекте (рекурсивно по вложенным object).
+ * Скрытые ui: и неактивные activatable-группы пропускаются.
+ */
+export function listUnfilledRequiredLabelsInBlock(
+	schema: RJSFSchema,
+	data: unknown,
+	uiSchema?: UiSchema,
+	ctx?: BlockRequiredCtx,
+): string[] {
+	const props = schema.properties;
+	if (!props || typeof props !== "object" || Array.isArray(props)) return [];
+	const propMap = props as Record<string, RJSFSchema>;
+	const dataObj = asDataObject(data) ?? {};
+	const missing: string[] = [];
+	const requiredKeys = new Set(collectRequiredFieldKeys(schema));
+	const absolutePath = ctx?.absolutePath ?? "";
+
+	const visitObject = (
+		key: string,
+		propSchema: RJSFSchema,
+		value: unknown,
+		childUi: UiSchema | undefined,
+		required: boolean,
+	) => {
+		const childAbs = absolutePath ? `${absolutePath}.${key}` : key;
+		if (isV2AnketaHiddenUiNode(childUi)) return;
+		if (isInactiveActivatableGroup(childAbs, childUi, ctx)) return;
+
+		const label = fieldLabel(propSchema, key);
+
+		if (required && !isFilledRequiredValue(value)) {
+			missing.push(label);
+			return;
+		}
+
+		if (!isObjectLikeSchema(propSchema)) return;
+		const nested = asDataObject(value);
+		if (!nested) {
+			if (required) missing.push(label);
+			return;
+		}
+		const nestedMissing = listUnfilledRequiredLabelsInBlock(
+			propSchema,
+			nested,
+			childUi,
+			{ ...ctx, absolutePath: childAbs },
+		);
+		for (const item of nestedMissing) {
+			missing.push(`${label}: ${item}`);
+		}
+	};
+
+	for (const key of requiredKeys) {
+		visitObject(
+			key,
+			propMap[key] ?? { type: "string" },
+			dataObj[key],
+			readChildUi(uiSchema, key),
+			true,
+		);
+	}
+
+	for (const [key, propSchema] of Object.entries(propMap)) {
+		if (requiredKeys.has(key)) continue;
+		if (!isObjectLikeSchema(propSchema)) continue;
+		const value = dataObj[key];
+		if (!asDataObject(value)) continue;
+		visitObject(key, propSchema, value, readChildUi(uiSchema, key), false);
+	}
+
+	return missing;
+}
+
+export function hasUnfilledRequiredInBlock(
+	schema: RJSFSchema,
+	data: unknown,
+	uiSchema?: UiSchema,
+	ctx?: BlockRequiredCtx,
+): boolean {
+	return listUnfilledRequiredLabelsInBlock(schema, data, uiSchema, ctx).length > 0;
 }

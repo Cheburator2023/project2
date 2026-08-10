@@ -196,7 +196,7 @@ export const calculatorGuideSections: GuideSection[] = [
 				bullets: [
 					"Один редактор с целым снепшотом: { jsonSchema, uiSchema, logic } — тот же каркас, что factory v2-default-anketa.snapshot.json.",
 					"«Применить» валидирует JSON и подставляет в конструктор; «Сбросить» откатывает текст к текущему состоянию редактора.",
-					"«Скачать» / «Копировать» — выгрузка одного файла, чтобы перенести правки пользователей 1в1 в хардкод-снепшот.",
+					"«Полный экспорт» — схема + dictionaries + typicalWorks (для `npm run publish:factory-typical-works`). «Скачать» / «Копировать» — текущая вкладка.",
 					"Лишние ключи (dictionariesSnapshot и т.п.) при применении игнорируются.",
 				],
 			},

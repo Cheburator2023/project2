@@ -1,11 +1,12 @@
-#!/usr/bin/env node
+#!/usr/bin/env npx tsx
 /**
  * Заливка ролей и групп Смарт-Анкеты в Keycloak под матрицу F-05
  * (ТИС 2026-07, llm/feature_roles_fresh/требования_матрица_ролей.csv).
  *
  * Делает:
  *  1) создаёт недостающие realm roles anketa_* (в т.ч. anketa_complete_anketa);
- *  2) создаёт недостающие группы из TARGET (в т.ч. /sacfg, nested lead-подгруппы);
+ *  2) создаёт недостающие группы (папки + AD-листы `{stand}sum_*`;
+ *     не создаёт голые `/auditorib`, `/appadmin`, `/stream_view_all`);
  *  3) выставляет anketa_* realm-role mappings канонических групп ровно по TARGET.
  *
  * НЕ делает:
@@ -17,15 +18,14 @@
  *   KC_URL=https://keycloak-….local/auth KC_REALM=cym \
  *   KC_ADMIN=admin KC_ADMIN_PASS=… \
  *   STAND_PREFIX=test_ \   # optional: test_ | dev_ | prod_ | empty
- *   node scripts/keycloak-remap-anketa-group-roles.mjs           # dry-run
+ *   npx tsx scripts/keycloak-remap-anketa-group-roles.mjs           # dry-run
  *   … --apply
  */
-import { createRequire } from "node:module";
-
-const require = createRequire(import.meta.url);
-const {
+import {
 	expandV2KeycloakTargetsWithAdAliases,
-} = require("../packages/api-contract/dist/cjs/v2-ad-domain-groups.util.js");
+	resolveV2KeycloakGroupPath,
+	shouldEnsureV2KeycloakGroupPath,
+} from "../packages/api-contract/src/v2-ad-domain-groups.util.ts";
 
 const KC = (process.env.KC_URL || "").replace(/\/$/, "");
 const REALM = process.env.KC_REALM || "cym";
@@ -38,7 +38,7 @@ const APPLY = process.argv.includes("--apply");
 /** path → desired anketa* realm roles (canonical lowercase groups). */
 const TARGET = {
 	"/ds": ["anketa_view_all_calculations", "anketa_export_reports"],
-	"/ds/ds_lead": [
+	"/ds_lead": [
 		"anketa_view_all_calculations",
 		"anketa_create_calculation",
 		"anketa_edit_calculation",
@@ -48,7 +48,7 @@ const TARGET = {
 		"anketa_complete_anketa",
 	],
 	"/de": ["anketa_view_all_calculations", "anketa_export_reports"],
-	"/de/de_lead": [
+	"/de_lead": [
 		"anketa_view_all_calculations",
 		"anketa_edit_calculation",
 		"anketa_export_reports",
@@ -56,7 +56,7 @@ const TARGET = {
 		"anketa_complete_anketa",
 	],
 	"/modelops": ["anketa_view_all_calculations", "anketa_export_reports"],
-	"/modelops/modelops_lead": [
+	"/modelops_lead": [
 		"anketa_view_all_calculations",
 		"anketa_create_calculation",
 		"anketa_edit_calculation",
@@ -68,7 +68,7 @@ const TARGET = {
 	"/business_customer": [],
 	"/mipm": ["anketa_view_all_calculations", "anketa_export_reports"],
 	"/validator": ["anketa_view_all_calculations", "anketa_export_reports"],
-	"/validator/validator_lead": [
+	"/validator_lead": [
 		"anketa_view_all_calculations",
 		"anketa_export_reports",
 	],
@@ -96,9 +96,10 @@ const TARGET = {
 		"anketa_export_reports",
 	],
 	/**
-	 * Прикладной администратор: AD sum_appadmin → /appadmin.
+	 * Прикладной администратор: группы `/appadmin` нет.
+	 * Ключ разворачивается в AD-лист `/admin_it/{stand}sum_appadmin`.
 	 * Админка в UI/API — по доменной группе appadmin/sacfg, без anketa_admin_*.
-	 * /admin_it* — legacy, anketa_* снимаем.
+	 * Родитель `/admin_it*` без anketa_* (роли только на leaf).
 	 */
 	"/appadmin": [
 		"anketa_view_all_calculations",
@@ -116,6 +117,9 @@ const TARGET = {
 		"anketa_export_reports",
 		"anketa_audit_view",
 	],
+	/**
+	 * Группы `/auditorib` нет — только `/auditor/{stand}sum_auditorib`.
+	 */
 	"/auditorib": [
 		"anketa_view_all_calculations",
 		"anketa_export_reports",
@@ -140,13 +144,14 @@ const TARGET = {
 	],
 	"/sarep": [
 		"anketa_view_all_calculations",
-		"anketa_create_calculation",
 		"anketa_edit_calculation",
 		"anketa_delete_calculation",
 		"anketa_export_reports",
 		"anketa_workflow_approve",
 		"anketa_complete_anketa",
 	],
+	/** Bypass stream separation — только `/{stand}sum_stream_view_all`, не `/stream_view_all`. */
+	"/stream_view_all": [],
 };
 
 const EFFECTIVE_TARGET = expandV2KeycloakTargetsWithAdAliases(
@@ -170,7 +175,9 @@ function collectGroupPathsToEnsure(target) {
 	);
 }
 
-const GROUPS_TO_ENSURE = collectGroupPathsToEnsure(EFFECTIVE_TARGET);
+const GROUPS_TO_ENSURE = collectGroupPathsToEnsure(EFFECTIVE_TARGET).filter(
+	(path) => shouldEnsureV2KeycloakGroupPath(path),
+);
 
 const ROLES_TO_ENSURE = [
 	"anketa_view_all_calculations",
@@ -336,8 +343,11 @@ function sortUniq(arr) {
 
 	console.log("\n== Ensure groups (create-only, никого не удаляем) ==");
 	for (const path of GROUPS_TO_ENSURE) {
-		if (byPath[path]) {
-			console.log(`  ok ${path}`);
+		const existing = resolveV2KeycloakGroupPath(path, Object.keys(byPath));
+		if (existing) {
+			console.log(
+				existing === path ? `  ok ${path}` : `  ok ${path} → ${existing}`,
+			);
 			continue;
 		}
 		console.log(`  CREATE ${path}`);
@@ -349,7 +359,10 @@ function sortUniq(arr) {
 				await api(t, "POST", "/groups", { name });
 			} else {
 				const parentPath = `/${parts.slice(0, -1).join("/")}`;
-				const parent = byPath[parentPath];
+				const resolvedParent =
+					resolveV2KeycloakGroupPath(parentPath, Object.keys(byPath)) ||
+					parentPath;
+				const parent = byPath[resolvedParent];
 				if (!parent?.id) {
 					throw new Error(`cannot create ${path}: missing parent ${parentPath}`);
 				}
@@ -364,12 +377,21 @@ function sortUniq(arr) {
 	}
 
 	console.log("\n== Group role mappings ==");
+	const remappedIds = new Set();
 	for (const [path, desired] of Object.entries(EFFECTIVE_TARGET)) {
-		const g = byPath[path];
+		const resolved =
+			resolveV2KeycloakGroupPath(path, Object.keys(byPath)) || path;
+		const g = byPath[resolved];
 		if (!g) {
 			console.log(`  MISSING group ${path}`);
 			continue;
 		}
+		if (remappedIds.has(g.id)) {
+			if (resolved !== path) console.log(`  skip alias ${path} → ${resolved}`);
+			continue;
+		}
+		remappedIds.add(g.id);
+		const label = resolved === path ? path : `${path} → ${resolved}`;
 		const current = (
 			(await api(t, "GET", `/groups/${g.id}/role-mappings/realm`)) || []
 		).map((r) => r.name);
@@ -379,10 +401,10 @@ function sortUniq(arr) {
 		const toAdd = want.filter((n) => !have.includes(n));
 		const toRemove = have.filter((n) => !want.includes(n));
 		if (!toAdd.length && !toRemove.length) {
-			console.log(`  ok ${path}`);
+			console.log(`  ok ${label}`);
 			continue;
 		}
-		console.log(`  ${path}`);
+		console.log(`  ${label}`);
 		if (toAdd.length) console.log(`    + ${toAdd.join(", ")}`);
 		if (toRemove.length) console.log(`    - ${toRemove.join(", ")}`);
 		if (!APPLY) continue;
