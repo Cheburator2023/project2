@@ -17,6 +17,8 @@ import { AbortInterceptor } from "./shared/interceptors/abort.interceptor";
 import { MiddlewareModule } from "./shared/middleware/middleware.module";
 import { LoggingInterceptor } from "./shared/interceptors/logging.interceptor";
 import { RetryInterceptor } from "./shared/interceptors/retry.interceptor";
+import {AuditModule} from "./shared/audit/audit.module";
+import {SharedModule} from "./shared/shared.module";
 
 @Module({
 	imports: [
@@ -33,9 +35,10 @@ import { RetryInterceptor } from "./shared/interceptors/retry.interceptor";
 		AnketaV2Module,
 		KanbanBoardModule,
 		MiddlewareModule,
+        SharedModule,
+        AuditModule,
 	],
 	providers: [
-		CustomLogger,
 		// AuthGuard
 		{
 			provide: "DELEGATE_GUARD_AUTH",
