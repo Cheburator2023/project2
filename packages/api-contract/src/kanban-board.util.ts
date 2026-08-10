@@ -13,6 +13,7 @@ import {
 	KANBAN_BOARD_DONE_COLUMN_ID,
 	KANBAN_BOARD_INPUT_BUFFER_COLUMN_ID,
 	KANBAN_BOARD_LEGACY_COLUMN_ID_MAP,
+	KANBAN_BOARD_STANDS,
 	KANBAN_BOARD_STATUSES,
 	KANBAN_BOARD_SUBTASK_STATUSES,
 	kanbanBoardAssigneeRoleTitle,
@@ -316,6 +317,36 @@ export function normalizeKanbanBoardTaskContent(
 		} else {
 			next.images = undefined;
 		}
+	}
+	if (content.files !== undefined) {
+		if (content.files.length) {
+			next.files = content.files
+				.filter(
+					(item) =>
+						item &&
+						typeof item.id === "string" &&
+						typeof item.name === "string",
+				)
+				.map((item) => ({
+					id: item.id,
+					name: item.name.trim().slice(0, 255) || "file",
+					mimeType:
+						typeof item.mimeType === "string" && item.mimeType.trim()
+							? item.mimeType.trim().slice(0, 128)
+							: "application/octet-stream",
+					byteSize: Math.max(0, Math.round(item.byteSize ?? 0)),
+					createdAt: item.createdAt ?? new Date().toISOString(),
+				}));
+			if (!next.files.length) next.files = undefined;
+		} else {
+			next.files = undefined;
+		}
+	}
+	if (next.stand !== undefined) {
+		const standId = String(next.stand).trim().toLowerCase();
+		next.stand = KANBAN_BOARD_STANDS.some((item) => item.id === standId)
+			? (standId as KanbanBoardTaskContent["stand"])
+			: undefined;
 	}
 	if (next.roleEstimates) {
 		const cleaned: KanbanBoardRoleEstimates = {};

@@ -12,6 +12,7 @@ import { KanbanBoardTaskEntity } from "../entities/kanban-board-task.entity";
 import { KanbanBoardEntity } from "../entities/kanban-board.entity";
 import { KanbanBoardHistoryService } from "./kanban-board-history.service";
 import { KanbanBoardTaskImageService } from "./kanban-board-task-image.service";
+import { KanbanBoardTaskFileService } from "./kanban-board-task-file.service";
 import { KanbanBoardTaskCommentService } from "./kanban-board-task-comment.service";
 import { KanbanBoardTaskLockService } from "./kanban-board-task-lock.service";
 import type { KanbanBoardTaskLockHolder } from "./kanban-board-task-lock.service";
@@ -55,6 +56,7 @@ export class KanbanBoardService {
 		private readonly configService: ConfigService,
 		private readonly historyService: KanbanBoardHistoryService,
 		private readonly taskImageService: KanbanBoardTaskImageService,
+		private readonly taskFileService: KanbanBoardTaskFileService,
 		private readonly taskCommentService: KanbanBoardTaskCommentService,
 		private readonly taskLockService: KanbanBoardTaskLockService,
 	) {}
@@ -82,6 +84,7 @@ export class KanbanBoardService {
 			order: { parentId: "ASC", position: "ASC" },
 		});
 		await this.taskImageService.syncTasksContentImages(rows);
+		await this.taskFileService.syncTasksContentFiles(rows);
 		const commentCounts = await this.taskCommentService.countByTaskIds(
 			rows.map((row) => row.id),
 		);

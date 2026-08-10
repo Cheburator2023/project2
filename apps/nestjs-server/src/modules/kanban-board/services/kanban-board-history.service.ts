@@ -100,6 +100,16 @@ export class KanbanBoardHistoryService {
 		};
 	}
 
+	async findTaskHistory(
+		taskId: string,
+	): Promise<KanbanBoardTaskHistoryEntryDto[]> {
+		const rows = await this.historyRepository.find({
+			where: { taskId },
+			order: { createdAt: "DESC" },
+		});
+		return rows.map((row) => this.toEntryDto(row));
+	}
+
 	async findBoardHistory(boardId: string): Promise<KanbanBoardHistoryDto> {
 		const board = await this.boardRepository.findOne({
 			where: { id: boardId },

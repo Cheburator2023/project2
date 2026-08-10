@@ -150,10 +150,6 @@ export function KanbanTaskCommentsSection({ taskId, disabled }: Props) {
 
 	return (
 		<Flex flexDirection="column" gap={12}>
-			<Typography variant="subtitle1" fontWeight={700}>
-				Активность
-			</Typography>
-
 			{commentsQuery.isLoading ? (
 				<Flex justifyContent="center" padding="16px 0">
 					<CircularProgress size={24} />

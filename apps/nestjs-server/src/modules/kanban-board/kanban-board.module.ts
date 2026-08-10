@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { KanbanBoardTaskEntity } from "./entities/kanban-board-task.entity";
 import { KanbanBoardTaskImageEntity } from "./entities/kanban-board-task-image.entity";
+import { KanbanBoardTaskFileEntity } from "./entities/kanban-board-task-file.entity";
 import { KanbanBoardTaskCommentEntity } from "./entities/kanban-board-task-comment.entity";
 import { KanbanBoardProjectEntity } from "./entities/kanban-board-project.entity";
 import { KanbanBoardEntity } from "./entities/kanban-board.entity";
@@ -16,6 +17,7 @@ import { KanbanBoardController } from "./controllers/kanban-board.controller";
 import { KanbanBoardService } from "./services/kanban-board.service";
 import { KanbanBoardRegistryService } from "./services/kanban-board-registry.service";
 import { KanbanBoardTaskImageService } from "./services/kanban-board-task-image.service";
+import { KanbanBoardTaskFileService } from "./services/kanban-board-task-file.service";
 import { KanbanBoardTaskCommentService } from "./services/kanban-board-task-comment.service";
 import { KanbanBoardTaskLockService } from "./services/kanban-board-task-lock.service";
 import { KanbanBoardTaskLockEntity } from "./entities/kanban-board-task-lock.entity";
@@ -36,6 +38,7 @@ import { KanbanBoardHistoryService } from "./services/kanban-board-history.servi
 			KanbanBoardStreamEntity,
 			KanbanBoardTaskEntity,
 			KanbanBoardTaskImageEntity,
+			KanbanBoardTaskFileEntity,
 			KanbanBoardTaskCommentEntity,
 			KanbanBoardTaskLockEntity,
 			KanbanBoardSettingsEntity,
@@ -47,6 +50,7 @@ import { KanbanBoardHistoryService } from "./services/kanban-board-history.servi
 		KanbanBoardService,
 		KanbanBoardRegistryService,
 		KanbanBoardTaskImageService,
+		KanbanBoardTaskFileService,
 		KanbanBoardTaskCommentService,
 		KanbanBoardTaskLockService,
 		KanbanBoardTaskImageCleanupService,
@@ -56,6 +60,7 @@ import { KanbanBoardHistoryService } from "./services/kanban-board-history.servi
 		KanbanBoardService,
 		KanbanBoardRegistryService,
 		KanbanBoardTaskImageService,
+		KanbanBoardTaskFileService,
 		KanbanBoardTaskCommentService,
 		KanbanBoardTaskLockService,
 		KanbanBoardHistoryService,

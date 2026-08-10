@@ -7,6 +7,7 @@ import type {
 } from "./kanban-board.types";
 import {
 	kanbanBoardPriorityTitle,
+	kanbanBoardStandTitle,
 	kanbanBoardSubtaskIsDone,
 	kanbanBoardSubtaskStatusTitle,
 	kanbanBoardTaskTypeTitle,
@@ -168,6 +169,21 @@ const CONTENT_FIELDS: ReadonlyArray<{
 				.map((item) => formatKanbanBoardHistoryValue(item) ?? "—")
 				.join(", ");
 		},
+	},
+	{
+		key: "files",
+		label: "Файлы",
+		format: (value) => {
+			if (!Array.isArray(value) || !value.length) return null;
+			return value
+				.map((item) => formatKanbanBoardHistoryValue(item) ?? "—")
+				.join(", ");
+		},
+	},
+	{
+		key: "stand",
+		label: "Стенд",
+		format: (value) => kanbanBoardStandTitle(String(value ?? "")),
 	},
 ];
 

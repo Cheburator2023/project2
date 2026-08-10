@@ -2,6 +2,7 @@ import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
 import AttachFileOutlinedIcon from "@mui/icons-material/AttachFileOutlined";
 import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
 import ChatBubbleOutlineOutlinedIcon from "@mui/icons-material/ChatBubbleOutlineOutlined";
+import HourglassBottomOutlinedIcon from "@mui/icons-material/HourglassBottomOutlined";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import KeyboardDoubleArrowUpIcon from "@mui/icons-material/KeyboardDoubleArrowUp";
@@ -16,8 +17,11 @@ import { KanbanHighlightedText } from "@react-client/features/kanban-board/compo
 import { KanbanTaskCardSubtasks } from "@react-client/features/kanban-board/components/KanbanSubtasksChecklist";
 import { KanbanTaskImagesSection } from "@react-client/features/kanban-board/components/KanbanTaskImagesSection";
 import {
+	kanbanBoardEffectiveEstimatePd,
 	kanbanBoardPriorityColor,
 	kanbanBoardPriorityTitle,
+	kanbanBoardStandColor,
+	kanbanBoardStandTitle,
 	kanbanBoardSubtasksProgress,
 	kanbanBoardTaskAssignees,
 	kanbanBoardTaskTypeColor,
@@ -167,6 +171,11 @@ export function KanbanTaskBoardCard({
 	const dueLabel = formatCardDate(content?.dueDate);
 	const progress = kanbanBoardSubtasksProgress(content);
 	const imageCount = content?.images?.length ?? 0;
+	const fileCount = content?.files?.length ?? 0;
+	const attachmentCount = imageCount + fileCount;
+	const estimatePd = content
+		? kanbanBoardEffectiveEstimatePd(content)
+		: undefined;
 	const tags: Array<{ label: string; color: string }> = [];
 	if (content?.taskType) {
 		tags.push({
@@ -178,6 +187,12 @@ export function KanbanTaskBoardCard({
 		tags.push({
 			label: kanbanBoardWorkTypeTitle(content.workType),
 			color: kanbanBoardWorkTypeColor(content.workType),
+		});
+	}
+	if (content?.stand) {
+		tags.push({
+			label: kanbanBoardStandTitle(content.stand),
+			color: kanbanBoardStandColor(content.stand),
 		});
 	}
 
@@ -354,15 +369,22 @@ export function KanbanTaskBoardCard({
 									icon={<AccessTimeOutlinedIcon sx={{ fontSize: 14 }} />}
 								/>
 							) : null}
+							{estimatePd !== undefined ? (
+								<MetaStat
+									title="Оценка, чд"
+									value={`${estimatePd} чд`}
+									icon={<HourglassBottomOutlinedIcon sx={{ fontSize: 14 }} />}
+								/>
+							) : null}
 							<MetaStat
 								title="Комментарии"
 								value={commentCount}
 								icon={<ChatBubbleOutlineOutlinedIcon sx={{ fontSize: 14 }} />}
 							/>
-							{imageCount > 0 ? (
+							{attachmentCount > 0 ? (
 								<MetaStat
 									title="Вложения"
-									value={imageCount}
+									value={attachmentCount}
 									icon={<AttachFileOutlinedIcon sx={{ fontSize: 14 }} />}
 								/>
 							) : null}

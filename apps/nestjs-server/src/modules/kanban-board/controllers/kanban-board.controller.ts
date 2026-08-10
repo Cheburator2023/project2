@@ -49,8 +49,10 @@ import type {
 	KanbanBoardTaskRecord,
 	KanbanBoardTaskRegistryDto,
 	KanbanBoardTaskImageDto,
+	KanbanBoardTaskFileDto,
 	KanbanBoardTaskCommentDto,
 	CreateKanbanBoardTaskCommentRequestDto,
+	KanbanBoardTaskHistoryEntryDto,
 	AcquireKanbanBoardTaskLockRequestDto,
 	KanbanBoardTaskLockDto,
 	SaveKanbanBoardTasksRequestDto,
@@ -71,6 +73,7 @@ import type {
 import type { Response } from "express";
 import { KanbanBoardRegistryService } from "../services/kanban-board-registry.service";
 import { KanbanBoardTaskImageService } from "../services/kanban-board-task-image.service";
+import { KanbanBoardTaskFileService } from "../services/kanban-board-task-file.service";
 import { KanbanBoardTaskCommentService } from "../services/kanban-board-task-comment.service";
 import { KanbanBoardTaskLockService } from "../services/kanban-board-task-lock.service";
 import {
@@ -98,6 +101,7 @@ export class KanbanBoardController {
 		private readonly kanbanBoardService: KanbanBoardService,
 		private readonly registryService: KanbanBoardRegistryService,
 		private readonly taskImageService: KanbanBoardTaskImageService,
+		private readonly taskFileService: KanbanBoardTaskFileService,
 		private readonly taskCommentService: KanbanBoardTaskCommentService,
 		private readonly taskLockService: KanbanBoardTaskLockService,
 		private readonly historyService: KanbanBoardHistoryService,
@@ -651,6 +655,82 @@ export class KanbanBoardController {
 		@Param("imageId") imageId: string,
 	): Promise<void> {
 		return this.taskImageService.delete(taskId, imageId);
+	}
+
+	@Get("tasks/:taskId/files")
+	async listTaskFiles(
+		@Param("taskId") taskId: string,
+	): Promise<KanbanBoardTaskFileDto[]> {
+		return this.taskFileService.listForTask(taskId);
+	}
+
+	@Post("tasks/:taskId/files")
+	@UseInterceptors(
+		FileInterceptor("file", {
+			limits: {
+				fileSize: 15 * 1024 * 1024,
+				files: 1,
+			},
+		}),
+	)
+	@ApiConsumes("multipart/form-data")
+	async uploadTaskFile(
+		@Param("taskId") taskId: string,
+		@UploadedFile()
+		file:
+			| {
+					buffer: Buffer;
+					originalname?: string;
+					mimetype?: string;
+			  }
+			| undefined,
+		@Body()
+		body: {
+			name?: string;
+			mimeType?: string;
+		},
+	): Promise<KanbanBoardTaskFileDto> {
+		if (!file?.buffer?.length) {
+			throw new BadRequestException(
+				"Передайте file (multipart/form-data). Макс. 15 МБ.",
+			);
+		}
+		return this.taskFileService.upload(taskId, {
+			originalName: body.name ?? file.originalname ?? "file",
+			mimeType: body.mimeType ?? file.mimetype ?? "application/octet-stream",
+			data: file.buffer,
+		});
+	}
+
+	@Get("tasks/:taskId/files/:fileId")
+	async getTaskFile(
+		@Param("taskId") taskId: string,
+		@Param("fileId") fileId: string,
+		@Res() res: Response,
+	): Promise<void> {
+		const file = await this.taskFileService.readFile(taskId, fileId);
+		res.setHeader("Content-Type", file.mimeType);
+		res.setHeader(
+			"Content-Disposition",
+			`attachment; filename*=UTF-8''${encodeURIComponent(file.fileName)}`,
+		);
+		res.setHeader("Cache-Control", "private, max-age=86400");
+		res.end(file.buffer);
+	}
+
+	@Delete("tasks/:taskId/files/:fileId")
+	async deleteTaskFile(
+		@Param("taskId") taskId: string,
+		@Param("fileId") fileId: string,
+	): Promise<void> {
+		return this.taskFileService.delete(taskId, fileId);
+	}
+
+	@Get("tasks/:taskId/history")
+	async listTaskHistory(
+		@Param("taskId") taskId: string,
+	): Promise<KanbanBoardTaskHistoryEntryDto[]> {
+		return this.historyService.findTaskHistory(taskId);
 	}
 
 	@Get("tasks/:taskId/comments")

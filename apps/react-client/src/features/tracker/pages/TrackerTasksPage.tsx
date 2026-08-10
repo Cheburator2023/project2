@@ -15,6 +15,7 @@ import {
 	TrackerTaskAssigneeRolesChips,
 	TrackerTaskCurrentAssigneeChip,
 	TrackerTaskOriginChip,
+	TrackerTaskStandChip,
 	TrackerTaskPriorityChip,
 	TrackerTaskSprintChip,
 	TrackerTaskStatusChip,
@@ -242,9 +243,23 @@ export function TrackerTasksPage() {
 					) : null,
 			},
 			{
-				colId: "origin",
+				colId: "stand",
 				headerName: "Стенд",
 				width: 120,
+				valueGetter: (params) =>
+					params.data?.standTitle ?? params.data?.content?.stand ?? "",
+				cellRenderer: (params: ICellRendererParams<KanbanBoardTaskRegistryDto>) =>
+					params.data ? (
+						<TrackerTaskStandChip
+							stand={params.data.stand ?? params.data.content?.stand}
+							standTitle={params.data.standTitle}
+						/>
+					) : null,
+			},
+			{
+				colId: "origin",
+				headerName: "Стенд данных",
+				width: 130,
 				valueGetter: (params) => params.data?.origin ?? "",
 				cellRenderer: (params: ICellRendererParams<KanbanBoardTaskRegistryDto>) =>
 					params.data ? <TrackerTaskOriginChip origin={params.data.origin} /> : null,

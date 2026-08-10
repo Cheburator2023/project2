@@ -111,6 +111,43 @@ export interface KanbanBoardTaskContent {
 	subtasks?: KanbanBoardSubtaskItem[];
 	/** Прикреплённые изображения (метаданные; файлы — отдельное хранилище) */
 	images?: KanbanBoardTaskImageRef[];
+	/** Офисные/прочие вложения (скачивание без превью) */
+	files?: KanbanBoardTaskFileRef[];
+	/**
+	 * Целевой стенд задачи (dev / ИФТ / пре-прод / прод).
+	 * Не путать с `origin` записи (изоляция данных между стендами БД).
+	 */
+	stand?: KanbanBoardStandId;
+}
+
+/** Целевой стенд задачи (куда выкатываем / где проверяем). */
+export const KANBAN_BOARD_STANDS = [
+	{ id: "dev", title: "Dev" },
+	{ id: "ift", title: "ИФТ" },
+	{ id: "preprod", title: "Пре-прод" },
+	{ id: "prod", title: "Прод" },
+] as const;
+
+export type KanbanBoardStandId = (typeof KANBAN_BOARD_STANDS)[number]["id"];
+
+export const KANBAN_BOARD_STAND_COLORS: Record<KanbanBoardStandId, string> = {
+	dev: "#2563eb",
+	ift: "#7c3aed",
+	preprod: "#ca8a04",
+	prod: "#dc2626",
+};
+
+export function kanbanBoardStandTitle(
+	id?: KanbanBoardStandId | string,
+): string {
+	return KANBAN_BOARD_STANDS.find((item) => item.id === id)?.title ?? id ?? "";
+}
+
+export function kanbanBoardStandColor(
+	id?: KanbanBoardStandId | string,
+): string {
+	if (!id) return "#64748b";
+	return KANBAN_BOARD_STAND_COLORS[id as KanbanBoardStandId] ?? "#64748b";
 }
 
 /** Метаданные изображения в content задачи */
@@ -126,8 +163,42 @@ export interface KanbanBoardTaskImageRef {
 
 export type KanbanBoardTaskImageDto = KanbanBoardTaskImageRef;
 
+/** Метаданные файла-вложения в content задачи (без превью). */
+export interface KanbanBoardTaskFileRef {
+	id: string;
+	name: string;
+	mimeType: string;
+	byteSize: number;
+	createdAt: string;
+}
+
+export type KanbanBoardTaskFileDto = KanbanBoardTaskFileRef;
+
 /** Макс. размер full-изображения после сжатия на клиенте, байт. */
 export const KANBAN_BOARD_TASK_IMAGE_MAX_FULL_BYTES = 2 * 1024 * 1024;
+
+/** Макс. размер офисного/прочего вложения, байт. */
+export const KANBAN_BOARD_TASK_FILE_MAX_BYTES = 15 * 1024 * 1024;
+
+/** MIME офисных и распространённых документов для вложений задачи. */
+export const KANBAN_BOARD_TASK_FILE_ALLOWED_MIME = [
+	"application/pdf",
+	"application/msword",
+	"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+	"application/vnd.ms-excel",
+	"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+	"application/vnd.ms-powerpoint",
+	"application/vnd.openxmlformats-officedocument.presentationml.presentation",
+	"application/vnd.oasis.opendocument.text",
+	"application/vnd.oasis.opendocument.spreadsheet",
+	"application/vnd.oasis.opendocument.presentation",
+	"application/rtf",
+	"text/plain",
+	"text/csv",
+	"application/csv",
+	"application/vnd.ms-excel.sheet.macroenabled.12",
+	"application/octet-stream",
+] as const;
 
 /** Срок хранения вложений у задач в колонке «Готово», дней. */
 export const KANBAN_BOARD_TASK_IMAGE_DONE_RETENTION_DAYS = 7;
@@ -383,6 +454,8 @@ export interface KanbanBoardTaskRegistryDto extends KanbanBoardTaskRecord {
 	customer?: string;
 	sprintTitle?: string;
 	streamCustomer?: string;
+	stand?: KanbanBoardStandId;
+	standTitle?: string;
 }
 
 export interface CreateKanbanBoardProjectRequestDto {

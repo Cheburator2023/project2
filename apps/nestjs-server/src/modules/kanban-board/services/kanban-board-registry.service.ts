@@ -21,6 +21,7 @@ import {
 	kanbanBoardTaskAssigneeRoleTitles,
 	kanbanBoardTaskAssignees,
 	kanbanBoardTaskAssigneesTitle,
+	kanbanBoardStandTitle,
 	kanbanBoardTaskTypeTitle,
 	kanbanBoardWorkTypeTitle,
 	isKanbanBoardAssigneeRoleId,
@@ -101,6 +102,7 @@ import {
 } from "../utils/kanban-board-planning-import-registry.util";
 import { buildMeta } from "../utils/kanban-board-snapshot.util";
 import { KanbanBoardTaskImageService } from "./kanban-board-task-image.service";
+import { KanbanBoardTaskFileService } from "./kanban-board-task-file.service";
 import { KanbanBoardTaskLockService } from "./kanban-board-task-lock.service";
 import { KanbanBoardHistoryService } from "./kanban-board-history.service";
 import { assertKanbanBoardTaskVersion } from "../utils/kanban-board-task-edit.util";
@@ -130,6 +132,7 @@ export class KanbanBoardRegistryService {
 		private readonly settingsRepository: Repository<KanbanBoardSettingsEntity>,
 		private readonly kanbanBoardService: KanbanBoardService,
 		private readonly taskImageService: KanbanBoardTaskImageService,
+		private readonly taskFileService: KanbanBoardTaskFileService,
 		private readonly taskLockService: KanbanBoardTaskLockService,
 		private readonly historyService: KanbanBoardHistoryService,
 	) {}
@@ -957,6 +960,7 @@ export class KanbanBoardRegistryService {
 		rows: KanbanBoardTaskEntity[],
 	): Promise<KanbanBoardTaskRegistryDto[]> {
 		await this.taskImageService.syncTasksContentImages(rows);
+		await this.taskFileService.syncTasksContentFiles(rows);
 		const columnTitles = await this.loadColumnTitleMap(
 			rows.map((row) => row.boardId),
 		);
@@ -1980,6 +1984,10 @@ export class KanbanBoardRegistryService {
 				? sprintTitles.get(content.sprintId) ?? content.sprintId
 				: undefined,
 			streamCustomer: content.streamCustomer,
+			stand: content.stand,
+			standTitle: content.stand
+				? kanbanBoardStandTitle(content.stand)
+				: undefined,
 		};
 	}
 
@@ -2198,6 +2206,7 @@ export class KanbanBoardRegistryService {
 
 	private async repairTaskImagesContent(task: KanbanBoardTaskEntity): Promise<void> {
 		await this.taskImageService.syncTaskContentImages(task);
+		await this.taskFileService.syncTaskContentFiles(task);
 	}
 
 	private async validateTaskContent(

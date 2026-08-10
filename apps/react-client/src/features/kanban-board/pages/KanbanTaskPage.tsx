@@ -18,9 +18,11 @@ import { ru } from "date-fns/locale";
 import {
 	KANBAN_BOARD_PRIORITIES,
 	KANBAN_BOARD_HEAP_BOARD_ID,
+	KANBAN_BOARD_STANDS,
 	KANBAN_BOARD_TASK_TYPES,
 	KANBAN_BOARD_WORK_TYPES,
 	kanbanBoardPriorityColor,
+	kanbanBoardStandColor,
 	kanbanBoardTaskAssignees,
 	kanbanBoardTaskTypeColor,
 	kanbanBoardWorkTypeColor,
@@ -51,6 +53,7 @@ import {
 	useKanbanBoardSettings,
 	useKanbanBoardStreams,
 	useKanbanBoardTaskByRef,
+	useKanbanBoardTaskFiles,
 	useKanbanBoardTaskImages,
 	useKanbanBoardTasksRegistry,
 	useUpdateKanbanBoardTask,
@@ -62,7 +65,8 @@ import {
 import { KanbanRoleEstimatesFields } from "@react-client/features/kanban-board/components/KanbanRoleEstimatesFields";
 import { KanbanSubtasksChecklist } from "@react-client/features/kanban-board/components/KanbanSubtasksChecklist";
 import { KanbanTaskImagesSection } from "@react-client/features/kanban-board/components/KanbanTaskImagesSection";
-import { KanbanTaskCommentsSection } from "@react-client/features/kanban-board/components/KanbanTaskCommentsSection";
+import { KanbanTaskFilesSection } from "@react-client/features/kanban-board/components/KanbanTaskFilesSection";
+import { KanbanTaskActivitySection } from "@react-client/features/kanban-board/components/KanbanTaskActivitySection";
 import { KanbanPageStatus } from "@react-client/features/kanban-board/components/KanbanPageStatus";
 import {
 	KanbanTaskDetailRow,
@@ -201,6 +205,9 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	const taskImagesQuery = useKanbanBoardTaskImages(
 		!isCreate ? taskId : undefined,
 	);
+	const taskFilesQuery = useKanbanBoardTaskFiles(
+		!isCreate ? taskId : undefined,
+	);
 	const boardIdFromTask = taskByRefQuery.data?.boardId ?? "";
 	const boardIdFromQuery = searchParams.get("boardId") ?? "";
 
@@ -221,6 +228,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	const [currentAssignee, setCurrentAssignee] = useState("");
 	const [taskType, setTaskType] = useState("");
 	const [workType, setWorkType] = useState("");
+	const [stand, setStand] = useState("");
 	const [estimatePd, setEstimatePd] = useState("");
 	const [roleEstimates, setRoleEstimates] = useState<KanbanBoardRoleEstimates>(
 		{},
@@ -329,6 +337,16 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 		[],
 	);
 
+	const standOptions = useMemo(
+		() =>
+			KANBAN_BOARD_STANDS.map((option) => ({
+				value: option.id,
+				label: option.title,
+				color: kanbanBoardStandColor(option.id),
+			})),
+		[],
+	);
+
 	const sprintOptions = useMemo(
 		() =>
 			(sprintsQuery.data ?? []).map((item) => ({
@@ -379,6 +397,9 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	const taskImages = taskImagesQuery.isLoading
 		? (task?.content.images ?? [])
 		: (taskImagesQuery.data ?? []);
+	const taskFiles = taskFilesQuery.isLoading
+		? (task?.content.files ?? [])
+		: (taskFilesQuery.data ?? []);
 
 	useEffect(() => {
 		if (boardId) {
@@ -494,6 +515,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 		setCurrentAssignee(task.content.currentAssignee ?? "");
 		setTaskType(task.content.taskType ?? "");
 		setWorkType(task.content.workType ?? "");
+		setStand(task.content.stand ?? "");
 		setEstimatePd(
 			task.content.estimatePd !== undefined
 				? String(task.content.estimatePd)
@@ -563,6 +585,9 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 			workType: workType
 				? (workType as KanbanBoardTaskContent["workType"])
 				: undefined,
+			stand: stand
+				? (stand as KanbanBoardTaskContent["stand"])
+				: undefined,
 			roleEstimates: Object.keys(roleEstimates).length
 				? roleEstimates
 				: undefined,
@@ -577,6 +602,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 			streamCustomer: streamCustomer.trim() || undefined,
 			subtasks: subtasks.length ? subtasks : undefined,
 			images: taskImages.length ? taskImages : undefined,
+			files: taskFiles.length ? taskFiles : undefined,
 		});
 	};
 
@@ -594,6 +620,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 				createdByName,
 				taskType,
 				workType,
+				stand,
 				estimatePd,
 				roleEstimates,
 				dueDate,
@@ -615,6 +642,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 			createdByName,
 			taskType,
 			workType,
+			stand,
 			estimatePd,
 			roleEstimates,
 			dueDate,
@@ -1038,7 +1066,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 
 							{!isCreate && taskId ? (
 								<KanbanTaskSectionCard>
-									<KanbanTaskCommentsSection
+									<KanbanTaskActivitySection
 										taskId={taskId}
 										disabled={formLocked}
 									/>
@@ -1098,6 +1126,19 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 											onChange={setPriority}
 											fullWidth
 											disabled={formLocked}
+										/>
+									</Box>
+								</KanbanTaskDetailRow>
+								<KanbanTaskDetailRow label="Стенд">
+									<Box sx={{ textAlign: "left" }}>
+										<KanbanTaskSelectField
+											label=""
+											value={stand}
+											options={standOptions}
+											onChange={setStand}
+											fullWidth
+											disabled={formLocked}
+											emptyLabel="— не выбран —"
 										/>
 									</Box>
 								</KanbanTaskDetailRow>
@@ -1195,7 +1236,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 										{estimatePd.trim() ? `${estimatePd} чд` : "—"}
 									</Typography>
 								</KanbanTaskDetailRow>
-								{(taskType || workType) && (
+								{(taskType || workType || stand) && (
 									<KanbanTaskDetailRow label="Метки">
 										<Flex gap={4} wrap="wrap" justifyContent="flex-end">
 											{taskType ? (
@@ -1227,6 +1268,19 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 															0.12,
 														),
 														color: kanbanBoardWorkTypeColor(workType),
+													}}
+												/>
+											) : null}
+											{stand ? (
+												<Chip
+													size="small"
+													label={
+														standOptions.find((o) => o.value === stand)
+															?.label ?? stand
+													}
+													sx={{
+														bgcolor: alpha(kanbanBoardStandColor(stand), 0.12),
+														color: kanbanBoardStandColor(stand),
 													}}
 												/>
 											) : null}
@@ -1346,14 +1400,22 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 
 							<KanbanTaskSectionCard title="Вложения">
 								{!isCreate && taskId ? (
-									<KanbanTaskImagesSection
-										taskId={taskId}
-										images={taskImages}
-										disabled={formLocked}
-									/>
+									<Flex flexDirection="column" gap={16}>
+										<KanbanTaskImagesSection
+											taskId={taskId}
+											images={taskImages}
+											disabled={formLocked}
+										/>
+										<KanbanTaskFilesSection
+											taskId={taskId}
+											files={taskFiles}
+											disabled={formLocked}
+										/>
+									</Flex>
 								) : (
 									<Alert severity="info">
-										Изображения можно прикрепить после создания задачи
+										Изображения и документы можно прикрепить после создания
+										задачи
 									</Alert>
 								)}
 							</KanbanTaskSectionCard>

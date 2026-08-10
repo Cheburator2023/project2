@@ -4,6 +4,7 @@ import {
 	KANBAN_BOARD_ROLE_ESTIMATE_FIELDS,
 	kanbanBoardEffectiveEstimatePd,
 	kanbanBoardPriorityTitle,
+	kanbanBoardStandTitle,
 	kanbanBoardTaskAssignees,
 } from "@smart-anketa/api-contract";
 
@@ -31,7 +32,8 @@ const TASK_EXPORT_COLUMNS = [
 	{ header: "Родитель", key: "parentTask", width: 24 },
 	{ header: "Спринт", key: "sprint", width: 18 },
 	{ header: "Стрим", key: "stream", width: 18 },
-	{ header: "Стенд", key: "origin", width: 12 },
+	{ header: "Стенд", key: "stand", width: 12 },
+	{ header: "Стенд данных", key: "origin", width: 14 },
 	{ header: "Создал", key: "createdBy", width: 18 },
 	{ header: "Создано", key: "createdAt", width: 22 },
 	{ header: "Обновлено", key: "updatedAt", width: 22 },
@@ -112,6 +114,9 @@ function taskToExportRow(task: KanbanBoardTaskRegistryDto): Record<string, strin
 		parentTask: task.parentTask ?? "",
 		sprint: task.sprintTitle ?? "",
 		stream: task.streamCustomer ?? "",
+		stand:
+			task.standTitle ??
+			(task.content.stand ? kanbanBoardStandTitle(task.content.stand) : ""),
 		origin: task.origin,
 		createdBy: task.createdBy ?? "",
 		createdAt: task.createdAt ?? "",

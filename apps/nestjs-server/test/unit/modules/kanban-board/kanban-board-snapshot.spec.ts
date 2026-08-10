@@ -210,6 +210,7 @@ describe("KanbanBoardService importSnapshot", () => {
 			{ get: () => "local-dev" } as any,
 			{ logTaskChanges: jest.fn(), logTaskDiff: jest.fn() } as any,
 			{ syncTasksContentImages: jest.fn() } as any,
+			{ syncTasksContentFiles: jest.fn() } as any,
 			{ countByTaskIds: jest.fn(async () => new Map()) } as any,
 			{ assertEditable: jest.fn() } as any,
 		);
