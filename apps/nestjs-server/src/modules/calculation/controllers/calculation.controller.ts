@@ -55,7 +55,7 @@ import { AuditService } from "../../../shared/audit/audit.service";
 import {
     AUDIT_EVENT_SUMD_CREATEANKETA,
     AUDIT_EVENT_SUMD_SAVEANKETA,
-    AUDIT_EVENT_SUMD_EXPORT,
+    AUDIT_EVENT_SUMD_EXPORTLISTANKET,
 } from "../../../shared/audit/audit.constants";
 import { v4 as uuidv4 } from "uuid";
 
@@ -647,7 +647,7 @@ export class CalculationController {
         const initiator = this.buildInitiator(user);
 
         this.auditService.sendEvent(
-            AUDIT_EVENT_SUMD_EXPORT,
+            AUDIT_EVENT_SUMD_EXPORTLISTANKET,
             "START",
             correlationId,
             initiator,
@@ -699,7 +699,7 @@ export class CalculationController {
 			);
 
             this.auditService.sendEvent(
-                AUDIT_EVENT_SUMD_EXPORT,
+                AUDIT_EVENT_SUMD_EXPORTLISTANKET,
                 "SUCCESS",
                 correlationId,
                 initiator,
@@ -718,7 +718,7 @@ export class CalculationController {
                 },
             );
             this.auditService.sendEvent(
-                AUDIT_EVENT_SUMD_EXPORT,
+                AUDIT_EVENT_SUMD_EXPORTLISTANKET,
                 "FAILURE",
                 correlationId,
                 initiator,
