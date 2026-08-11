@@ -7,7 +7,10 @@ export const V2_ANKETA_GLOBAL_STATUS_VALUES = [
 export type V2AnketaGlobalStatus =
 	(typeof V2_ANKETA_GLOBAL_STATUS_VALUES)[number];
 
-/** Локальный статус раздела (линейный, без отката). */
+/**
+ * Локальный статус раздела.
+ * Откат «Заполнено» → «Создано» допускается при изменении состава работ в блоке.
+ */
 export const V2_ANKETA_SECTION_STATUS_VALUES = [
 	"Создано",
 	"В работе",

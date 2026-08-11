@@ -20,12 +20,16 @@ import { mapCalculationResult } from "@react-client/features/v2/admin_constructo
 import { readSummaryFromFormData } from "@react-client/features/v2/admin_constructor/utils/readSummaryFromFormData";
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import { mergeAnketaDisplayFormData } from "../utils/mergeAnketaDisplayFormData";
-import { ensureAnketaFormDataWithWorkflow } from "./useAnketaWorkflow";
+import {
+	ensureAnketaFormDataWithWorkflow,
+	resetSectionOnWorksCompositionChange,
+} from "./useAnketaWorkflow";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
 	collectGeneratedTypicalWorkArrayPaths,
 	applyBooleanDefaultsToFormData,
 	ensureGroupActivationDefaults,
+	listChangedTypicalWorkCompositionPaths,
 	resolveAnketaCalculationLogic,
 	syncTriggerGatedGroupActivationFromTypicalWorks,
 	resolveV2QuestionnaireUncertaintyCoefficient,
@@ -181,14 +185,30 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 		[calculationResult],
 	);
 
+	const prevTypicalLiveRef = useRef<Record<string, unknown> | null>(null);
+
 	useEffect(() => {
 		if (!mappedCalculation?.liveFormData) return;
+		const live = mappedCalculation.liveFormData;
+		const previousLive = prevTypicalLiveRef.current;
+		prevTypicalLiveRef.current = live;
+		const changedPaths =
+			previousLive == null
+				? []
+				: listChangedTypicalWorkCompositionPaths(
+						previousLive,
+						live,
+						uiSchema,
+					);
 		setFormData((prev) => {
-			const next = syncTriggerGatedGroupActivationFromTypicalWorks(
+			let next = syncTriggerGatedGroupActivationFromTypicalWorks(
 				prev,
 				uiSchema,
-				mappedCalculation.liveFormData,
+				live,
 			);
+			for (const path of changedPaths) {
+				next = resetSectionOnWorksCompositionChange(next, path);
+			}
 			return next === prev ? prev : next;
 		});
 	}, [mappedCalculation?.liveFormData, uiSchema]);

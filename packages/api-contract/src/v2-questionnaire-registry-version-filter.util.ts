@@ -29,11 +29,11 @@ function isActiveEntity(status: string | null | undefined): boolean {
 }
 
 /**
- * Актуальные: по каждой серии — строка с максимальным номером версии
- * среди активных entity (рабочая или последняя утверждённая, если новой версии нет).
+ * Актуальные: по каждой серии — единственная активная entity
+ * (макс. номер версии среди status=active). Без активных — серия не показывается.
  *
- * Утверждённые: по каждой серии — последняя версия со статусом «Утверждена»
- * (активная entity; неактивные срезы не показываем).
+ * Утверждённые: последняя версия со статусом «Утверждена» по серии,
+ * в т.ч. неактивный исторический срез после создания новой версии.
  */
 export function filterV2QuestionnairesByRegistryVersionMode<
 	T extends VersionFilterRow,
@@ -48,11 +48,8 @@ export function filterV2QuestionnairesByRegistryVersionMode<
 
 	const picked: T[] = [];
 	for (const seriesRows of bySeries.values()) {
-		const activeRows = seriesRows.filter((r) => isActiveEntity(r.status));
-		const pool = activeRows.length > 0 ? activeRows : seriesRows;
-
 		if (mode === "approved") {
-			const approved = pool.filter(
+			const approved = seriesRows.filter(
 				(r) => r.workflowGlobalStatus === "Утверждена",
 			);
 			if (approved.length === 0) continue;
@@ -63,8 +60,12 @@ export function filterV2QuestionnairesByRegistryVersionMode<
 			continue;
 		}
 
-		pool.sort((a, b) => versionNumber(b.version) - versionNumber(a.version));
-		if (pool[0]) picked.push(pool[0]);
+		const activeRows = seriesRows.filter((r) => isActiveEntity(r.status));
+		if (activeRows.length === 0) continue;
+		activeRows.sort(
+			(a, b) => versionNumber(b.version) - versionNumber(a.version),
+		);
+		picked.push(activeRows[0]!);
 	}
 
 	return picked;

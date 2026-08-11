@@ -395,7 +395,6 @@ export class V2QuestionnaireService {
 		const parent = await this.loadWithRelations(parentId);
 		const siblings = await this.questionnaireRepository.find({
 			where: { seriesId: parent.seriesId },
-			select: ["version"],
 		});
 		const maxVersion = siblings.reduce((max, s) => {
 			const n = Number.parseInt(s.version, 10);
@@ -403,6 +402,15 @@ export class V2QuestionnaireService {
 		}, 0);
 		const nextVersion = String(maxVersion + 1);
 		const readableId = `V2-${parent.seriesId}-v${nextVersion}`;
+
+		/** В серии активна только одна версия — предыдущие уходят в исторический срез. */
+		const toDeactivate = siblings.filter((s) => s.status === "active");
+		for (const row of toDeactivate) {
+			row.status = "inactive";
+		}
+		if (toDeactivate.length > 0) {
+			await this.questionnaireRepository.save(toDeactivate);
+		}
 
 		const entity = this.questionnaireRepository.create({
 			calcName: dto.calcName?.trim() || parent.calcName,

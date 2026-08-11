@@ -51,6 +51,7 @@ import {
 import { AnketaRjsfObjectModal } from "./AnketaRjsfObjectModal";
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import {
+	resetSectionOnWorksCompositionChange,
 	touchSectionForPathInFormData,
 	touchSectionInFormData,
 } from "../hooks/useAnketaWorkflow";
@@ -334,13 +335,19 @@ export function AnketaFormModals({
 	const deleteArrayItem = useCallback(
 		(path: string, index: number) => {
 			onFormDataChange((prev) => {
+				const arch = resolveV2AnketaArchComponent(
+					getObjectUiSlice(previewUiSchema, path),
+				);
 				const updated = isAnketaArchObjectListPath(path)
 					? removeArchObjectListItem(prev, path, index)
 					: removeAtFormPath(prev, path, index);
+				if (arch === "atypicalWork") {
+					return resetSectionOnWorksCompositionChange(updated, path);
+				}
 				return touchSectionForPathInFormData(updated, path);
 			});
 		},
-		[onFormDataChange],
+		[onFormDataChange, previewUiSchema],
 	);
 
 	const deleteObject = useCallback(
@@ -572,6 +579,10 @@ export function AnketaFormModals({
 				: editIndex == null
 					? appendAtFormPath(prev, path, rowValues)
 					: updateAtFormPath(prev, path, editIndex, rowValues);
+			/** Состав нетиповых: add/remove сбрасывает готовность блока; правка строки — нет. */
+			if (arch === "atypicalWork" && editIndex == null) {
+				return resetSectionOnWorksCompositionChange(updated, path);
+			}
 			return touchSectionForPathInFormData(updated, path);
 		});
 		closeModal();

@@ -7,6 +7,7 @@ import {
 	holdQuestionnaire,
 	isAnketaFormPathLocked,
 	isAnketaGloballyLocked,
+	resetFilledWorkflowForWorksPath,
 } from "./v2-anketa-workflow.util";
 import { collectRequiredWorkflowTargets } from "./v2-anketa-section-ui.util";
 
@@ -42,6 +43,29 @@ describe("isAnketaFormPathLocked", () => {
 		const approved = { ...draft, globalStatus: "Утверждена" as const };
 		expect(canHoldQuestionnaire(approved)).toBe(false);
 		expect(holdQuestionnaire(approved)).toBe(approved);
+	});
+
+	it("resetFilledWorkflowForWorksPath reopens filled section to Создано", () => {
+		const workflow = {
+			...createDefaultV2AnketaWorkflow(),
+			globalStatus: "Заполнено" as const,
+			sections: {
+				...createDefaultV2AnketaWorkflow().sections,
+				detailInfo: "Заполнено" as const,
+			},
+		};
+		const next = resetFilledWorkflowForWorksPath(
+			workflow,
+			"detailInfo.detailAtypicalTasks",
+		);
+		expect(next.sections.detailInfo).toBe("Создано");
+		expect(next.globalStatus).toBe("Черновик");
+		expect(
+			resetFilledWorkflowForWorksPath(
+				{ ...workflow, globalStatus: "Утверждена" },
+				"detailInfo.detailAtypicalTasks",
+			),
+		).toEqual({ ...workflow, globalStatus: "Утверждена" });
 	});
 
 	it("locks nested paths inside a completed main section", () => {

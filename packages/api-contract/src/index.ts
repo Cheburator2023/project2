@@ -25,6 +25,7 @@ export * from "./v2-data-transfer.types";
 export * from "./ui-tooltip.util";
 export * from "./v2-anketa-workflow.types";
 export * from "./v2-anketa-workflow.util";
+export * from "./v2-anketa-works-composition.util";
 export * from "./v2-executor-streams.util";
 export * from "./v2-implementation-streams.util";
 export * from "./v2-implementation-stream-catalog.util";

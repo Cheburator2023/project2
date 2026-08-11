@@ -1,7 +1,4 @@
 import {
-	allRequiredSectionsCompleted,
-	collectRequiredWorkflowTargetsForViewer,
-	completeGlobalQuestionnaire,
 	completePanelSection,
 	completeSection,
 	createDefaultV2AnketaWorkflow,
@@ -9,6 +6,7 @@ import {
 	mainSectionIdForFormPath,
 	markSectionInProgress,
 	normalizeV2AnketaWorkflow,
+	resetFilledWorkflowForWorksPath,
 	type V2AnketaMainSectionId,
 	type V2AnketaViewerAccessContext,
 	type V2AnketaWorkflowDto,
@@ -48,29 +46,27 @@ export function touchSectionForPathInFormData(
 	return touchSectionInFormData(formData, sectionId);
 }
 
+/** Сброс «Заполнено» → «Создано» при изменении состава работ + перевод в «В работе». */
+export function resetSectionOnWorksCompositionChange(
+	formData: Record<string, unknown>,
+	path: string,
+): Record<string, unknown> {
+	const workflow = readWorkflowFromFormData(formData);
+	const reset = resetFilledWorkflowForWorksPath(workflow, path);
+	const base = reset === workflow ? formData : withWorkflow(formData, reset);
+	return touchSectionForPathInFormData(base, path);
+}
+
 export function useAnketaWorkflow(
 	formData: Record<string, unknown>,
 	setFormData: (next: Record<string, unknown>) => void,
-	uiSchema?: unknown,
-	viewerAccess?: V2AnketaViewerAccessContext & {
+	_uiSchema?: unknown,
+	_viewerAccess?: V2AnketaViewerAccessContext & {
 		applyAccessRules?: boolean;
 	},
 ) {
 	const workflow = useMemo(() => readWorkflowFromFormData(formData), [formData]);
 	const globallyLocked = isAnketaGloballyLocked(workflow);
-	const requiredTargets = useMemo(() => {
-		if (!uiSchema) return undefined;
-		return collectRequiredWorkflowTargetsForViewer(
-			uiSchema,
-			formData,
-			viewerAccess,
-			{ applyAccessRules: viewerAccess?.applyAccessRules !== false },
-		);
-	}, [uiSchema, formData, viewerAccess]);
-	const allSectionsCompleted = useMemo(
-		() => allRequiredSectionsCompleted(workflow, requiredTargets),
-		[workflow, requiredTargets],
-	);
 
 	const setWorkflow = useCallback(
 		(next: V2AnketaWorkflowDto, baseFormData?: Record<string, unknown>) => {
@@ -106,13 +102,6 @@ export function useAnketaWorkflow(
 		[formData, setFormData],
 	);
 
-	const completeGlobalFill = useCallback(() => {
-		const current = readWorkflowFromFormData(formData);
-		const next = completeGlobalQuestionnaire(current, requiredTargets);
-		if (next === current) return;
-		setFormData(withWorkflow(formData, next));
-	}, [formData, requiredTargets, setFormData]);
-
 	const isSectionLocked = useCallback(
 		(sectionId: V2AnketaMainSectionId) =>
 			globallyLocked || workflow.sections[sectionId] === "Заполнено",
@@ -122,11 +111,9 @@ export function useAnketaWorkflow(
 	return {
 		workflow,
 		globallyLocked,
-		allSectionsCompleted,
 		completeMainSection,
 		completePanelSectionByPath,
 		touchMainSection,
-		completeGlobalFill,
 		isSectionLocked,
 	};
 }

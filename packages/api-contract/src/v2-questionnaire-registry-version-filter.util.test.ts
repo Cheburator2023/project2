@@ -7,7 +7,7 @@ describe("filterV2QuestionnairesByRegistryVersionMode", () => {
 			id: "a1",
 			seriesId: "s1",
 			version: "1",
-			status: "active",
+			status: "inactive",
 			workflowGlobalStatus: "Утверждена",
 		},
 		{
@@ -31,15 +31,22 @@ describe("filterV2QuestionnairesByRegistryVersionMode", () => {
 			status: "active",
 			workflowGlobalStatus: "Черновик",
 		},
+		{
+			id: "d1",
+			seriesId: "s4",
+			version: "1",
+			status: "inactive",
+			workflowGlobalStatus: "Утверждена",
+		},
 	];
 
-	it("actual mode picks latest active version per series", () => {
+	it("actual mode picks only active versions (one per series)", () => {
 		const out = filterV2QuestionnairesByRegistryVersionMode(rows, "actual");
 		expect(out.map((r) => r.id).sort()).toEqual(["a2", "b1", "c1"]);
 	});
 
-	it("approved mode picks latest approved version per series only", () => {
+	it("approved mode picks latest approved including inactive historical slices", () => {
 		const out = filterV2QuestionnairesByRegistryVersionMode(rows, "approved");
-		expect(out.map((r) => r.id).sort()).toEqual(["a1", "b1"]);
+		expect(out.map((r) => r.id).sort()).toEqual(["a1", "b1", "d1"]);
 	});
 });

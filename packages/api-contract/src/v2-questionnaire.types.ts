@@ -154,7 +154,7 @@ export type BulkDeleteV2QuestionnairesFailureDto = {
 export type BulkDeleteV2QuestionnairesResultDto = {
 	/** Полностью удалены (Черновик). */
 	deletedIds: string[];
-	/** Переведены в статус «Неактивная» (Заполнено / Утверждена). */
+	/** Переведены в статус «Неактивная» (утверждённый срез). */
 	deactivatedIds: string[];
 	failed: BulkDeleteV2QuestionnairesFailureDto[];
 };

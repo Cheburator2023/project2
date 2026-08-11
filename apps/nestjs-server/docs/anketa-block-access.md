@@ -137,9 +137,9 @@ F-05 §2: жёсткий фильтр действует на **список а�
 
 `generalInfo` и `detailInfo` перечислены в `V2_ANKETA_SHARED_SECTION_KEYS`: `detailInfo` помечен стрим-блоком модельных стримов, поэтому по общему правилу попал бы в «чужие» и стал бы read-only.
 
-Реализация: `isV2AnketaPathEditableForViewer` (поля и арх-панели), `canViewerCompleteAnketaSection` (кнопка раздела), `canViewerCompleteWholeAnketa` (глобальная кнопка). Право `anketa_complete_anketa` у `/sarep` снято в `v2-keycloak-f05-sync.ts`; `anketa_workflow_approve` оставлено — оно нужно для закрытия своего раздела.
+Реализация: `isV2AnketaPathEditableForViewer` (поля и арх-панели), `canViewerCompleteAnketaSection` (кнопка раздела). Глобальное «Завершить заполнение анкеты» снято с UI; фиксация среза — «Утвердить оценку по анкете» (`saprg` / `anketa_hold`). Право `anketa_complete_anketa` у `/sarep` снято в `v2-keycloak-f05-sync.ts`; `anketa_workflow_approve` оставлено — оно нужно для закрытия своего раздела.
 
-В 1-й итерации у `sarep` также нет создания и удаления анкет: в F-05 у `/sarep` нет `anketa_create_calculation` / `anketa_delete_calculation`; дополнительно доменный запрет в `userCanCreateV2Questionnaire` / `userHasV2QuestionnaireDeleteRole` (UI + API), чтобы остаточные KK-роли не открывали кнопки.
+В 1-й итерации у `sarep` нет создания анкеты с нуля и удаления: в F-05 у `/sarep` нет `anketa_create_calculation` / `anketa_delete_calculation`; дополнительно доменный запрет в `userCanCreateV2Questionnaire` / `userHasV2QuestionnaireDeleteRole`. **Копия** немодельной анкеты (новый ID) разрешена через `anketa_edit_calculation` + `canUserCopyV2Questionnaire` (модельные стримы ЖЦМ — запрет).
 
 Сервер (`V2QuestionnaireService.update`) сверяет переходы workflow через `collectForbiddenV2AnketaWorkflowChanges` и **логирует** нарушения, не блокируя сохранение. Правки данных на сервере не сверяются: клиент сохраняет `displayFormData` целиком, включая пересчитанные движком типовые работы, поэтому дифф поддеревьев давал бы ложные срабатывания на автосохранении.
 

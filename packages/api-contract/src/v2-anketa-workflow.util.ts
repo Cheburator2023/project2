@@ -161,7 +161,10 @@ export function completePanelSection(
 	};
 }
 
-/** Глобальное «Заполнено» — только когда все разделы подтверждены (кнопка в шапке). */
+/**
+ * Legacy: перевод в глобальное «Заполнено».
+ * UI-действие убрано; оставлено для seed/тестов и уже сохранённых анкет.
+ */
 export function completeGlobalQuestionnaire(
 	workflow: V2AnketaWorkflowDto,
 	requiredTargets?: readonly V2AnketaRequiredWorkflowTarget[],
@@ -169,6 +172,60 @@ export function completeGlobalQuestionnaire(
 	if (isAnketaGloballyLocked(workflow)) return workflow;
 	if (!allRequiredSectionsCompleted(workflow, requiredTargets)) return workflow;
 	return { ...workflow, globalStatus: "Заполнено" };
+}
+
+/**
+ * Сброс готовности блока при изменении состава типовых/нетиповых работ:
+ * «Заполнено» → «Создано». Утверждённую анкету не трогаем.
+ */
+export function resetFilledWorkflowForWorksPath(
+	workflow: V2AnketaWorkflowDto,
+	pathKey: string,
+): V2AnketaWorkflowDto {
+	if (isAnketaGloballyLocked(workflow)) return workflow;
+	const trimmed = pathKey.trim();
+	if (!trimmed) return workflow;
+
+	let next: V2AnketaWorkflowDto = workflow;
+	let changed = false;
+
+	const mainSectionId = mainSectionIdForFormPath(trimmed);
+	if (mainSectionId && next.sections[mainSectionId] === "Заполнено") {
+		next = {
+			...next,
+			sections: { ...next.sections, [mainSectionId]: "Создано" },
+		};
+		changed = true;
+	}
+
+	const panelSections = next.panelSections;
+	if (panelSections) {
+		let bestPanel: string | null = null;
+		for (const [panelPath, status] of Object.entries(panelSections)) {
+			if (status !== "Заполнено") continue;
+			if (trimmed === panelPath || trimmed.startsWith(`${panelPath}.`)) {
+				if (!bestPanel || panelPath.length > bestPanel.length) {
+					bestPanel = panelPath;
+				}
+			}
+		}
+		if (bestPanel) {
+			next = {
+				...next,
+				panelSections: {
+					...next.panelSections,
+					[bestPanel]: "Создано",
+				},
+			};
+			changed = true;
+		}
+	}
+
+	if (!changed) return workflow;
+	if (next.globalStatus === "Заполнено") {
+		next = { ...next, globalStatus: "Черновик" };
+	}
+	return next;
 }
 
 /**
