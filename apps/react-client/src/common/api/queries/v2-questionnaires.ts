@@ -153,6 +153,42 @@ export const useHoldV2Questionnaire = () => {
 	});
 };
 
+export const useBulkHoldV2Questionnaires = () => {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: (body: { ids: string[] }) =>
+			apiClient<{
+				heldIds: string[];
+				failed: Array<{ id: string; reason: string; message: string }>;
+			}>({
+				url: "/v2/questionnaires/bulk-hold",
+				method: "POST",
+				data: body,
+			}),
+		onSuccess: () => qc.invalidateQueries({ queryKey: ROOT_KEY }),
+	});
+};
+
+export const useCreateV2QuestionnaireCopy = () => {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			id,
+			body,
+		}: {
+			id: string;
+			body: CreateV2QuestionnaireVersionRequestDto;
+		}) =>
+			apiClient<V2QuestionnaireDto>({
+				url: `/v2/questionnaires/${id}/copy`,
+				method: "POST",
+				data: body,
+				timeout: API_ENTITY_CREATE_TIMEOUT_MS,
+			}),
+		onSuccess: () => qc.invalidateQueries({ queryKey: ROOT_KEY }),
+	});
+};
+
 export const useBulkDeleteV2Questionnaires = () => {
 	const qc = useQueryClient();
 	return useMutation({

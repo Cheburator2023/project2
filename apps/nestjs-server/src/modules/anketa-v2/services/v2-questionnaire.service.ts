@@ -10,6 +10,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import {
 	patchV2TypicalWorksLogicRules,
 	buildV2QuestionnaireRegistryConfig,
+	canUserCopyV2Questionnaire,
 	canUserDeleteV2Questionnaire,
 	collectForbiddenV2AnketaWorkflowChanges,
 	resolveV2QuestionnaireDeleteAction,
@@ -204,6 +205,26 @@ export class V2QuestionnaireService {
 		}
 	}
 
+	private assertCanCopyQuestionnaire(
+		user: TUserLike | null | undefined,
+		formData: unknown,
+	): void {
+		const groups = Array.isArray(user?.groups) ? user.groups : [];
+		const access = canUserCopyV2Questionnaire(groups, formData, {
+			hasCreatePermission: true,
+			hasEditPermission: true,
+		});
+		if (access.ok) return;
+		if (access.reason === "model_anketa_for_sarep") {
+			throw new ForbiddenException(
+				"Представитель стрима может создавать копию только немодельных анкет",
+			);
+		}
+		throw new ForbiddenException(
+			"Копирование анкет доступно ролям ds_lead, modelops_lead, sacfg и представителю стрима (только немодельные)",
+		);
+	}
+
 	async create(
 		dto: CreateV2QuestionnaireRequestDto,
 		user?: TUserLike | null,
@@ -316,23 +337,53 @@ export class V2QuestionnaireService {
 		);
 	}
 
-	/** Фиксация среза (§3.13): Заполнено → Утверждена. */
+	/** Утверждение оценки: любой статус → Утверждена (независимо от готовности разделов). */
 	async hold(id: string): Promise<V2QuestionnaireDto> {
 		const row = await this.loadWithRelations(id);
+		if (row.status === "inactive" || row.status === "archived") {
+			throw new ConflictException(
+				"Нельзя утвердить неактивную или архивную анкету",
+			);
+		}
 		const formData = migrateV2AnketaFormData(row.formData ?? {});
 		const workflow = normalizeV2AnketaWorkflow(formData.workflow);
-		if (workflow.globalStatus !== "Заполнено") {
-			throw new ConflictException(
-				"Фиксация среза доступна только для анкеты в статусе «Заполнено»",
-			);
+		if (workflow.globalStatus === "Утверждена") {
+			throw new ConflictException("Анкета уже утверждена");
 		}
 		const next = holdQuestionnaire(workflow);
 		if (next === workflow) {
-			throw new ConflictException("Не удалось зафиксировать срез анкеты");
+			throw new ConflictException("Не удалось утвердить оценку по анкете");
 		}
 		row.formData = { ...formData, workflow: next };
 		await this.questionnaireRepository.save(row);
 		return this.findOne(id);
+	}
+
+	async bulkHold(
+		ids: string[],
+	): Promise<{
+		heldIds: string[];
+		failed: Array<{ id: string; reason: string; message: string }>;
+	}> {
+		const uniqueIds = [...new Set(ids)];
+		const heldIds: string[] = [];
+		const failed: Array<{ id: string; reason: string; message: string }> = [];
+		for (const id of uniqueIds) {
+			try {
+				await this.hold(id);
+				heldIds.push(id);
+			} catch (error) {
+				failed.push({
+					id,
+					reason: "hold_failed",
+					message:
+						error instanceof Error
+							? error.message
+							: "Не удалось утвердить оценку",
+				});
+			}
+		}
+		return { heldIds, failed };
 	}
 
 	async createNewVersion(
@@ -365,6 +416,56 @@ export class V2QuestionnaireService {
 			formData: migrateV2AnketaFormData(
 				resetWorkflowForCopy(dto.formData ?? { ...parent.formData }),
 			),
+			finalCoefficient:
+				dto.finalCoefficient !== undefined
+					? dto.finalCoefficient
+					: parent.finalCoefficient,
+			author: this.authorName(user),
+		});
+
+		const saved = await this.questionnaireRepository.save(entity);
+		return this.findOne(saved.id);
+	}
+
+	/**
+	 * Копия для похожей инициативы: новая серия, версия 1, данные с сбросом
+	 * статусов разделов.
+	 */
+	async createCopy(
+		parentId: string,
+		dto: CreateV2QuestionnaireVersionRequestDto,
+		user?: TUserLike | null,
+	): Promise<V2QuestionnaireDto> {
+		const parent = await this.loadWithRelations(parentId);
+		const sourceFormData = migrateV2AnketaFormData(
+			dto.formData ?? { ...parent.formData },
+		);
+		this.assertCanCopyQuestionnaire(user, sourceFormData);
+		const seriesId = this.generateSeriesId();
+		const versionLabel = "1";
+		const readableId = `V2-${seriesId}-v${versionLabel}`;
+		const calcName = dto.calcName?.trim() || parent.calcName;
+		if (!calcName) {
+			throw new ConflictException({
+				errors: [
+					{
+						path: "calcName",
+						message: "Название анкеты обязательно",
+					},
+				],
+			});
+		}
+
+		const entity = this.questionnaireRepository.create({
+			calcName,
+			status: "active",
+			version: versionLabel,
+			seriesId,
+			parentQuestionnaireId: parent.id,
+			readableId,
+			templateId: parent.templateId,
+			boundTemplateVersionId: parent.boundTemplateVersionId,
+			formData: migrateV2AnketaFormData(resetWorkflowForCopy(sourceFormData)),
 			finalCoefficient:
 				dto.finalCoefficient !== undefined
 					? dto.finalCoefficient

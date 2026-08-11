@@ -23,7 +23,6 @@ import {
 	kanbanBoardStandColor,
 	kanbanBoardStandTitle,
 	kanbanBoardSubtasksProgress,
-	kanbanBoardTaskAssignees,
 	kanbanBoardTaskTypeColor,
 	kanbanBoardTaskTypeTitle,
 	kanbanBoardWorkTypeColor,
@@ -163,10 +162,8 @@ export function KanbanTaskBoardCard({
 }) {
 	const displayTitle = title ?? content?.title ?? "";
 	const description = content?.description?.trim();
-	const assignee =
-		content?.currentAssignee?.trim() ||
-		kanbanBoardTaskAssignees(content ?? { title: "" })[0] ||
-		"";
+	/** Только «текущий исполнитель» — без fallback на assignees. */
+	const assignee = content?.currentAssignee?.trim() || "";
 	const createdLabel = formatCardDate(createdAt);
 	const dueLabel = formatCardDate(content?.dueDate);
 	const progress = kanbanBoardSubtasksProgress(content);

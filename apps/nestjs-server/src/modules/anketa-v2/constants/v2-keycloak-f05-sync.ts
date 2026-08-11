@@ -129,9 +129,10 @@ export const V2_KEYCLOAK_GROUP_ROLE_TARGET: Record<string, readonly string[]> = 
 	],
 	/**
 	 * Представитель стрима вне ЖЦМ (1-я итерация): без create/delete и без
-	 * `anketa_complete_anketa` — анкету не создаёт, не удаляет и не завершает
-	 * целиком. `anketa_workflow_approve` нужен, чтобы закрывать раздел своего
-	 * стрима.
+	 * `anketa_complete_anketa` — анкету с нуля не создаёт, не удаляет и не
+	 * завершает целиком. Копия немодельной анкеты — через `anketa_edit` +
+	 * доменный `canUserCopyV2Questionnaire`. `anketa_workflow_approve` — чтобы
+	 * закрывать раздел своего стрима.
 	 */
 	"/sarep": [
 		"anketa_view_all_calculations",

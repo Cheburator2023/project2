@@ -197,12 +197,19 @@ export class KanbanBoardService {
 			for (const task of prepared) {
 				const prev = existingById.get(task.id);
 				if (prev?.content) {
+					const columnChanged = prev.parentId !== task.parentId;
 					task.content = normalizeKanbanBoardTaskContent({
 						...prev.content,
 						...task.content,
 						...(task.content.images !== undefined
 							? { images: task.content.images }
 							: { images: prev.content.images }),
+						// Смена колонки / явный сброс с клиента (""): без текущего исполнителя.
+						...(columnChanged ||
+						task.content.currentAssignee === "" ||
+						task.content.currentAssignee === null
+							? { currentAssignee: undefined }
+							: {}),
 					});
 				}
 				const entity = this.fromRecord(task);

@@ -123,6 +123,45 @@ export function normalizeKanbanBoardData(board: KanbanBoardData): KanbanBoardDat
 	return next;
 }
 
+/**
+ * При смене колонки (статуса) на доске сбрасывает `currentAssignee`.
+ * Перестановка внутри колонки не затрагивается.
+ *
+ * Важно: пишем `""`, а не `undefined` — иначе ключ пропадает в JSON
+ * и серверный merge с prev.content возвращает старого исполнителя.
+ */
+export function clearKanbanBoardCurrentAssigneeOnColumnChange(
+	prev: KanbanBoardData,
+	next: KanbanBoardData,
+): KanbanBoardData {
+	let changed = false;
+	const result: KanbanBoardData = { ...next };
+
+	for (const columnId of next.root?.children ?? []) {
+		const column = next[columnId];
+		if (!column) continue;
+		for (const cardId of column.children) {
+			const card = next[cardId];
+			const prevCard = prev[cardId];
+			if (!card || !prevCard) continue;
+			if (prevCard.parentId === card.parentId) continue;
+			const content = card.content as KanbanBoardTaskContent | undefined;
+			if (!content) continue;
+			if (!content.currentAssignee?.trim()) continue;
+			changed = true;
+			result[cardId] = {
+				...card,
+				content: {
+					...content,
+					currentAssignee: "",
+				},
+			};
+		}
+	}
+
+	return changed ? result : next;
+}
+
 export function fromBoardData(
 	board: KanbanBoardData,
 	stand: string,
@@ -347,6 +386,10 @@ export function normalizeKanbanBoardTaskContent(
 		next.stand = KANBAN_BOARD_STANDS.some((item) => item.id === standId)
 			? (standId as KanbanBoardTaskContent["stand"])
 			: undefined;
+	}
+	if (typeof next.currentAssignee === "string") {
+		const trimmed = next.currentAssignee.trim();
+		next.currentAssignee = trimmed || undefined;
 	}
 	if (next.roleEstimates) {
 		const cleaned: KanbanBoardRoleEstimates = {};

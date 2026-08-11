@@ -1,3 +1,4 @@
+import ContentCopyOutlinedIcon from "@mui/icons-material/ContentCopyOutlined";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -9,6 +10,7 @@ import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
+import IconButton from "@mui/material/IconButton";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
@@ -1046,9 +1048,27 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 										/>
 									</Box>
 								</Flex>
-								<Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
-									Описание
-								</Typography>
+								<Flex
+									alignItems="center"
+									justifyContent="space-between"
+									gap={8}
+									sx={{ mb: 1 }}
+								>
+									<Typography variant="subtitle2" fontWeight={700}>
+										Описание
+									</Typography>
+									<IconButton
+										size="small"
+										disabled={!description.trim()}
+										onClick={() => {
+											void navigator.clipboard.writeText(description);
+										}}
+										aria-label="Копировать описание"
+										title="Копировать текст"
+									>
+										<ContentCopyOutlinedIcon fontSize="small" />
+									</IconButton>
+								</Flex>
 								<TrackerMarkdownEditor
 									value={description}
 									onChange={setDescription}

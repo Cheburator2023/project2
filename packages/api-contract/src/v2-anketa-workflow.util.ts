@@ -99,14 +99,15 @@ export function allRequiredSectionsCompleted(
 	);
 }
 
-/** Анкета заблокирована для правок (заполнена или зафиксирован срез). */
+/**
+ * Анкета заблокирована для правок целиком.
+ * После отказа от глобального «Завершить заполнение» блокирует только
+ * утверждённый срез; разделы по-прежнему лочатся через section/panel status.
+ */
 export function isAnketaGloballyLocked(
 	workflow: Pick<V2AnketaWorkflowDto, "globalStatus">,
 ): boolean {
-	return (
-		workflow.globalStatus === "Заполнено" ||
-		workflow.globalStatus === "Утверждена"
-	);
+	return workflow.globalStatus === "Утверждена";
 }
 
 export function markSectionInProgress(
@@ -170,12 +171,22 @@ export function completeGlobalQuestionnaire(
 	return { ...workflow, globalStatus: "Заполнено" };
 }
 
-/** Фиксация среза (§3.13): Заполнено → Утверждена. */
+/**
+ * Утверждение оценки (фиксация среза): любой статус → Утверждена,
+ * независимо от готовности разделов. Уже утверждённую не трогаем.
+ */
 export function holdQuestionnaire(
 	workflow: V2AnketaWorkflowDto,
 ): V2AnketaWorkflowDto {
-	if (workflow.globalStatus !== "Заполнено") return workflow;
+	if (workflow.globalStatus === "Утверждена") return workflow;
 	return { ...workflow, globalStatus: "Утверждена" };
+}
+
+/** Можно ли утвердить текущую версию (ещё не утверждена). */
+export function canHoldQuestionnaire(
+	workflow: Pick<V2AnketaWorkflowDto, "globalStatus">,
+): boolean {
+	return workflow.globalStatus !== "Утверждена";
 }
 
 export function mainSectionIdForFormPath(
@@ -222,7 +233,7 @@ export function isAnketaFormPathLocked(
 export const V2_ANKETA_GLOBAL_COMPLETE_LABEL =
 	"Завершить заполнение анкеты";
 
-export const V2_ANKETA_HOLD_LABEL = "Зафиксировать срез";
+export const V2_ANKETA_HOLD_LABEL = "Утвердить оценку по анкете";
 
 export const V2_ANKETA_SECTION_COMPLETE_LABELS: Record<
 	V2AnketaMainSectionId,

@@ -1,3 +1,4 @@
+import ContentCopyOutlinedIcon from "@mui/icons-material/ContentCopyOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import SendIcon from "@mui/icons-material/Send";
 import Alert from "@mui/material/Alert";
@@ -21,6 +22,17 @@ import { FuzzyAutocomplete } from "@react-client/common/muiCustom/FuzzyAutocompl
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { useEffect, useMemo, useState } from "react";
+
+async function copyTextToClipboard(text: string): Promise<boolean> {
+	const value = text.trim();
+	if (!value) return false;
+	try {
+		await navigator.clipboard.writeText(value);
+		return true;
+	} catch {
+		return false;
+	}
+}
 
 const AUTHOR_CHIP_COLORS = [
 	"#2563eb",
@@ -191,20 +203,33 @@ export function KanbanTaskCommentsSection({ taskId, disabled }: Props) {
 												{formatCommentTime(comment.createdAt)}
 											</Typography>
 										</Flex>
-										<IconButton
-											size="small"
-											disabled={isBusy}
-											onClick={() =>
-												void deleteComment.mutateAsync({
-													taskId,
-													commentId: comment.id,
-												})
-											}
-											aria-label="Удалить комментарий"
-											title="Удалить"
-										>
-											<DeleteOutlineIcon fontSize="small" />
-										</IconButton>
+										<Flex alignItems="center" gap={2} flexShrink={0}>
+											<IconButton
+												size="small"
+												disabled={!comment.body.trim()}
+												onClick={() => {
+													void copyTextToClipboard(comment.body);
+												}}
+												aria-label="Копировать комментарий"
+												title="Копировать текст"
+											>
+												<ContentCopyOutlinedIcon fontSize="small" />
+											</IconButton>
+											<IconButton
+												size="small"
+												disabled={isBusy}
+												onClick={() =>
+													void deleteComment.mutateAsync({
+														taskId,
+														commentId: comment.id,
+													})
+												}
+												aria-label="Удалить комментарий"
+												title="Удалить"
+											>
+												<DeleteOutlineIcon fontSize="small" />
+											</IconButton>
+										</Flex>
 									</Flex>
 									<Typography
 										variant="body2"

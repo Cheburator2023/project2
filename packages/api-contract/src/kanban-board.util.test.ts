@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	boardsEquivalent,
+	clearKanbanBoardCurrentAssigneeOnColumnChange,
 	defaultKanbanBoardColumns,
 	fromBoardData,
 	kanbanBoardEffectiveEstimatePd,
@@ -105,6 +106,61 @@ describe("kanban board role estimates", () => {
 			title: "Task updated again",
 		});
 		expect(titleOnly.images).toBeUndefined();
+	});
+});
+
+describe("clearKanbanBoardCurrentAssigneeOnColumnChange", () => {
+	it("clears currentAssignee only when column changes", () => {
+		const prev = sampleBoard();
+		prev["task-1"] = {
+			...prev["task-1"],
+			content: {
+				title: "Demo",
+				priority: "medium",
+				currentAssignee: "Иванов",
+			},
+		};
+		const next: KanbanBoardData = {
+			...prev,
+			todo: {
+				...prev.todo,
+				children: [],
+				totalChildrenCount: 0,
+			},
+			dev_wip: {
+				...prev.dev_wip,
+				children: ["task-1"],
+				totalChildrenCount: 1,
+			},
+			"task-1": {
+				...prev["task-1"],
+				parentId: "dev_wip",
+				content: {
+					title: "Demo",
+					priority: "medium",
+					currentAssignee: "Иванов",
+				},
+			},
+		};
+
+		const cleared = clearKanbanBoardCurrentAssigneeOnColumnChange(prev, next);
+		expect(
+			(cleared["task-1"].content as { currentAssignee?: string })
+				.currentAssignee,
+		).toBe("");
+		expect(
+			JSON.parse(
+				JSON.stringify(
+					(cleared["task-1"].content as { currentAssignee?: string }),
+				),
+			).currentAssignee,
+		).toBe("");
+
+		const sameColumn = clearKanbanBoardCurrentAssigneeOnColumnChange(prev, prev);
+		expect(
+			(sameColumn["task-1"].content as { currentAssignee?: string })
+				.currentAssignee,
+		).toBe("Иванов");
 	});
 });
 

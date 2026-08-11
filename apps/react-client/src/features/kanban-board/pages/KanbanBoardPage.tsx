@@ -25,6 +25,7 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+	clearKanbanBoardCurrentAssigneeOnColumnChange,
 	fromBoardData,
 	normalizeKanbanBoardData,
 	toBoardData,
@@ -833,9 +834,36 @@ export function KanbanBoardPage() {
 								}}
 								onCardMove={(move) => {
 									if (isSavingBoard || !standId || viewFiltered) return;
-									const nextBoard = normalizeKanbanBoardData(
-										dropHandler(move, board as BoardData) as KanbanBoardData,
+									const prevBoard = board as KanbanBoardData;
+									// dropHandler мутирует children колонок — снимок parentId до дропа.
+									const prevParentByCardId = new Map<string, string | null>();
+									for (const columnId of prevBoard.root?.children ?? []) {
+										const column = prevBoard[columnId];
+										if (!column) continue;
+										for (const cardId of column.children) {
+											prevParentByCardId.set(
+												cardId,
+												prevBoard[cardId]?.parentId ?? columnId,
+											);
+										}
+									}
+									const movedBoard = normalizeKanbanBoardData(
+										dropHandler(move, prevBoard as BoardData) as KanbanBoardData,
 									);
+									const prevSnapshot: KanbanBoardData = {
+										...prevBoard,
+										root: prevBoard.root,
+									};
+									for (const [cardId, parentId] of prevParentByCardId) {
+										const card = prevSnapshot[cardId];
+										if (!card) continue;
+										prevSnapshot[cardId] = { ...card, parentId };
+									}
+									const nextBoard =
+										clearKanbanBoardCurrentAssigneeOnColumnChange(
+											prevSnapshot,
+											movedBoard,
+										);
 									persistBoard(nextBoard);
 								}}
 							/>

@@ -120,7 +120,10 @@ export class V2QuestionnaireController {
         );
 
         try {
-            const result = await this.questionnaireService.bulkDelete(body.ids);
+            const result = await this.questionnaireService.bulkDelete(
+                body.ids,
+                user as never,
+            );
 
             for (const id of result.deletedIds) {
                 this.auditService.sendEvent(
@@ -602,11 +605,69 @@ export class V2QuestionnaireController {
         }
     }
 
+    @Post("bulk-hold")
+    @HttpCode(200)
+    @RealmRole(Permission.ANKETA_HOLD)
+    @ApiOperation({
+        summary: "Массовое утверждение оценки по анкетам (saprg / ДАДМ)",
+    })
+    async bulkHold(
+        @Body() body: BulkDeleteV2QuestionnairesDto,
+        @CurrentUser() user: Record<string, unknown> | undefined,
+    ): Promise<{
+        heldIds: string[];
+        failed: Array<{ id: string; reason: string; message: string }>;
+    }> {
+        const correlationId = uuidv4();
+        const initiator = this.buildInitiator(user);
+        this.auditService.sendEvent(
+            AUDIT_EVENT_SUMD_HOLDANKETA,
+            "START",
+            correlationId,
+            initiator,
+            { ids: body.ids },
+        );
+        try {
+            const result = await this.questionnaireService.bulkHold(body.ids);
+            for (const id of result.heldIds) {
+                this.auditService.sendEvent(
+                    AUDIT_EVENT_SUMD_HOLDANKETA,
+                    "SUCCESS",
+                    uuidv4(),
+                    initiator,
+                    { questionnaireId: id },
+                );
+            }
+            for (const failed of result.failed) {
+                this.auditService.sendEvent(
+                    AUDIT_EVENT_SUMD_HOLDANKETA,
+                    "FAILURE",
+                    uuidv4(),
+                    initiator,
+                    {
+                        questionnaireId: failed.id,
+                        errorMessage: failed.message,
+                    },
+                );
+            }
+            return result;
+        } catch (error) {
+            this.auditService.sendEvent(
+                AUDIT_EVENT_SUMD_HOLDANKETA,
+                "FAILURE",
+                correlationId,
+                initiator,
+                { ids: body.ids, errorMessage: (error as Error).message },
+            );
+            throw error;
+        }
+    }
+
     @Post(":id/hold")
     @HttpCode(200)
     @RealmRole(Permission.ANKETA_HOLD)
     @ApiOperation({
-        summary: "Зафиксировать срез анкеты (Заполнено → Утверждена)",
+        summary: "Утвердить оценку по анкете (статус «Утверждена»)",
     })
     async hold(
         @Param("id", ParseUUIDPipe) id: string,
@@ -692,6 +753,60 @@ export class V2QuestionnaireController {
             throw error;
         }
     }
+
+	@Post(":id/copy")
+	@RealmRole(Permission.ANKETA_EDIT_CALCULATION)
+	@ApiOperation({
+		summary:
+			"Копия анкеты для похожей инициативы (новая серия, версия 1). Create-роли — любая; sarep — только немодельные.",
+	})
+	async createCopy(
+		@Param("id", ParseUUIDPipe) id: string,
+		@Body() body: CreateV2QuestionnaireVersionDto,
+		@CurrentUser() user: Record<string, unknown> | undefined,
+	): Promise<V2QuestionnaireDto> {
+		const correlationId = uuidv4();
+		const initiator = this.buildInitiator(user);
+		this.auditService.sendEvent(
+			AUDIT_EVENT_SUMD_CREATEANKETA,
+			"START",
+			correlationId,
+			initiator,
+			{ sourceQuestionnaireId: id, mode: "copy" },
+		);
+		try {
+			const result = await this.questionnaireService.createCopy(
+				id,
+				body,
+				user as never,
+			);
+			this.auditService.sendEvent(
+				AUDIT_EVENT_SUMD_CREATEANKETA,
+				"SUCCESS",
+				correlationId,
+				initiator,
+				{
+					questionnaireId: result.id,
+					sourceQuestionnaireId: id,
+					mode: "copy",
+				},
+			);
+			return result;
+		} catch (error) {
+			this.auditService.sendEvent(
+				AUDIT_EVENT_SUMD_CREATEANKETA,
+				"FAILURE",
+				correlationId,
+				initiator,
+				{
+					sourceQuestionnaireId: id,
+					mode: "copy",
+					errorMessage: (error as Error).message,
+				},
+			);
+			throw error;
+		}
+	}
 
     private buildInitiator(
         user: Record<string, unknown> | undefined,

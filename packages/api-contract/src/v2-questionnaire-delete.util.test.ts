@@ -127,10 +127,13 @@ describe("resolveV2QuestionnaireDeleteAction", () => {
 		});
 	});
 
-	it("deactivates filled and approved questionnaires", () => {
+	it("hard deletes non-approved questionnaires including Заполнено", () => {
 		expect(resolveV2QuestionnaireDeleteAction("Заполнено", "active")).toEqual({
-			action: "deactivate",
+			action: "hard_delete",
 		});
+	});
+
+	it("deactivates approved questionnaires", () => {
 		expect(resolveV2QuestionnaireDeleteAction("Утверждена", "active")).toEqual({
 			action: "deactivate",
 		});

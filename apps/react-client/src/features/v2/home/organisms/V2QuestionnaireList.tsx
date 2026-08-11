@@ -2,6 +2,7 @@ import DownloadIcon from "@mui/icons-material/Download";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
+import TaskAltIcon from "@mui/icons-material/TaskAlt";
 import {
 	Button,
 	Divider,
@@ -14,6 +15,8 @@ import {
 	Popover,
 	Stack,
 	TextField,
+	ToggleButton,
+	ToggleButtonGroup,
 	Typography,
 	styled,
 	useColorScheme,
@@ -21,6 +24,7 @@ import {
 } from "@mui/material";
 import {
 	useBulkDeleteV2Questionnaires,
+	useBulkHoldV2Questionnaires,
 	useV2QuestionnaireEditLocks,
 	useV2QuestionnaireRegistryConfig,
 	useV2Questionnaires,
@@ -82,9 +86,14 @@ import { agGridIconSet } from "@react-client/theme/ag-grid/agGridIconSet";
 import { useUserStore } from "@react-client/common/store/userStore";
 import { useV2StreamFilterSetting } from "@react-client/common/api/queries/v2-runtime-settings";
 import {
+	canHoldQuestionnaire,
 	canUserDeleteV2Questionnaire,
+	filterV2QuestionnairesByRegistryVersionMode,
 	filterV2QuestionnairesByUserStreamGroups,
 	userHasV2QuestionnaireDeleteRole,
+	V2_ANKETA_HOLD_LABEL,
+	V2_QUESTIONNAIRE_REGISTRY_VERSION_MODE_LABELS,
+	type V2QuestionnaireRegistryVersionMode,
 } from "@smart-anketa/api-contract";
 import { logV2RegistryStreamDebug } from "../utils/logV2RegistryStreamDebug";
 import {
@@ -377,14 +386,19 @@ export function V2QuestionnaireList() {
 		canCreateCalculation,
 		canDeleteCalculation,
 		canExportReports,
+		canHoldCalculation,
 	} = usePermissions();
 	const bulkDelete = useBulkDeleteV2Questionnaires();
+	const bulkHold = useBulkHoldV2Questionnaires();
 	const { data: registryConfig, isLoading: isRegistryConfigLoading } =
 		useV2QuestionnaireRegistryConfig();
 	const [selectedVersions, setSelectedVersions] = useState<
 		V2QuestionnaireVersionRow[]
 	>([]);
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+	const [holdDialogOpen, setHoldDialogOpen] = useState(false);
+	const [registryVersionMode, setRegistryVersionMode] =
+		useState<V2QuestionnaireRegistryVersionMode>("actual");
 	const [isExporting, setIsExporting] = useState(false);
 	const [headerMenuAnchor, setHeaderMenuAnchor] =
 		useState<HTMLElement | null>(null);
@@ -444,7 +458,7 @@ export function V2QuestionnaireList() {
 	const deModelopsViewAllStreams =
 		streamFilterSetting.data?.deModelopsViewAllStreams ?? true;
 
-	const filteredQuestionnaires = useMemo(
+	const streamFilteredQuestionnaires = useMemo(
 		() =>
 			filterV2QuestionnairesByUserStreamGroups(
 				questionnaires ?? [],
@@ -453,6 +467,15 @@ export function V2QuestionnaireList() {
 				{ deModelopsViewAllStreams },
 			),
 		[questionnaires, groups, streamFilterEnabled, deModelopsViewAllStreams],
+	);
+
+	const filteredQuestionnaires = useMemo(
+		() =>
+			filterV2QuestionnairesByRegistryVersionMode(
+				streamFilteredQuestionnaires,
+				registryVersionMode,
+			),
+		[streamFilteredQuestionnaires, registryVersionMode],
 	);
 
 	useEffect(() => {
@@ -475,6 +498,11 @@ export function V2QuestionnaireList() {
 		isLoading,
 		streamFilterSetting.isLoading,
 	]);
+
+	useEffect(() => {
+		setSelectedVersions([]);
+		gridRef.current?.api?.deselectAll();
+	}, [registryVersionMode]);
 
 	const rowData = useMemo<V2QuestionnaireVersionRow[]>(() => {
 		if (!filteredQuestionnaires.length) return [];
@@ -696,6 +724,53 @@ export function V2QuestionnaireList() {
 		[navigate, isExporting, handleExportXlsx],
 	);
 
+	const holdableSelectedIds = useMemo(
+		() =>
+			selectedVersions
+				.filter((row) =>
+					canHoldQuestionnaire({
+						globalStatus: row.workflowGlobalStatus ?? "Черновик",
+					}),
+				)
+				.map((row) => row.id),
+		[selectedVersions],
+	);
+
+	const runBulkHold = useCallback(() => {
+		if (!holdableSelectedIds.length) {
+			toast.error("Среди выбранных нет анкет, доступных для утверждения");
+			return;
+		}
+		bulkHold.mutate(
+			{ ids: holdableSelectedIds },
+			{
+				onSuccess: (result) => {
+					setHoldDialogOpen(false);
+					setSelectedVersions([]);
+					gridRef.current?.api?.deselectAll();
+					const held = result.heldIds.length;
+					const failed = result.failed.length;
+					if (held > 0) {
+						toast.success(
+							failed > 0
+								? `Утверждено: ${held}, ошибок: ${failed}`
+								: `Утверждено оценок: ${held}`,
+						);
+					} else if (failed > 0) {
+						toast.error(
+							result.failed[0]?.message ??
+								"Не удалось утвердить выбранные анкеты",
+						);
+					}
+				},
+				onError: (err) =>
+					toast.error("Ошибка утверждения", {
+						description: apiErrorMessage(err),
+					}),
+			},
+		);
+	}, [bulkHold, holdableSelectedIds]);
+
 	const runBulkDelete = useCallback(() => {
 		const ids = selectedVersions
 			.filter((row) => canUserDeleteV2Questionnaire(groups, row.formData).ok)
@@ -740,6 +815,32 @@ export function V2QuestionnaireList() {
 		);
 	}, [bulkDelete, groups, selectedVersions]);
 
+	const versionModeToggle = (
+		<ToggleButtonGroup
+			exclusive
+			size="small"
+			value={registryVersionMode}
+			onChange={(_e, next: V2QuestionnaireRegistryVersionMode | null) => {
+				if (next) setRegistryVersionMode(next);
+			}}
+			aria-label="Режим версий в реестре"
+			data-test-id="anketa-registry-version-mode"
+		>
+			<ToggleButton
+				value="actual"
+				title="Последняя актуальная версия каждой анкеты"
+			>
+				{V2_QUESTIONNAIRE_REGISTRY_VERSION_MODE_LABELS.actual}
+			</ToggleButton>
+			<ToggleButton
+				value="approved"
+				title="Последняя утверждённая версия каждой анкеты"
+			>
+				{V2_QUESTIONNAIRE_REGISTRY_VERSION_MODE_LABELS.approved}
+			</ToggleButton>
+		</ToggleButtonGroup>
+	);
+
 	return (
 		<Flex
 			flexDirection="column"
@@ -777,6 +878,7 @@ export function V2QuestionnaireList() {
 							}}
 						>
 							<Flex flexDirection="column" gap={10} width="100%">
+								{versionModeToggle}
 								<SearchInput
 									gridApi={gridApi}
 									placeholder="Поиск по реестру"
@@ -820,6 +922,25 @@ export function V2QuestionnaireList() {
 										</Button>
 									</>
 								) : null}
+								{canHoldCalculation ? (
+									<Button
+										variant="contained"
+										size="small"
+										fullWidth
+										startIcon={<TaskAltIcon />}
+										disabled={
+											!holdableSelectedIds.length || bulkHold.isPending
+										}
+										title={V2_ANKETA_HOLD_LABEL}
+										onClick={() => {
+											setHeaderMenuAnchor(null);
+											setHoldDialogOpen(true);
+										}}
+										data-test-id="anketa-registry-bulk-hold"
+									>
+										{V2_ANKETA_HOLD_LABEL} ({holdableSelectedIds.length})
+									</Button>
+								) : null}
 								{canDeleteInRegistry ? (
 									<Button
 										variant="outlined"
@@ -830,7 +951,7 @@ export function V2QuestionnaireList() {
 										disabled={
 											!selectedVersions.length || bulkDelete.isPending
 										}
-										title="Черновик — полное удаление; Заполнено/Утверждена — статус «Неактивная». Руководители DS·ModelOps — свой стрим; конфигуратор — все."
+										title="Неутверждённые — полное удаление; утверждённые — статус «Неактивная»."
 										onClick={() => {
 											setHeaderMenuAnchor(null);
 											setDeleteDialogOpen(true);
@@ -864,6 +985,7 @@ export function V2QuestionnaireList() {
 						flexShrink={0}
 						minWidth="0"
 					>
+						{versionModeToggle}
 						<Flex width="280px" minWidth="200px" flexShrink={0}>
 							<SearchInput
 								gridApi={gridApi}
@@ -904,6 +1026,22 @@ export function V2QuestionnaireList() {
 									</Button>
 								</>
 							) : null}
+							{canHoldCalculation ? (
+								<Button
+									variant="contained"
+									size="small"
+									startIcon={<TaskAltIcon />}
+									disabled={
+										!holdableSelectedIds.length || bulkHold.isPending
+									}
+									title={V2_ANKETA_HOLD_LABEL}
+									onClick={() => setHoldDialogOpen(true)}
+									data-test-id="anketa-registry-bulk-hold"
+									sx={{ whiteSpace: "nowrap" }}
+								>
+									{V2_ANKETA_HOLD_LABEL} ({holdableSelectedIds.length})
+								</Button>
+							) : null}
 							{canDeleteInRegistry ? (
 								<Button
 									variant="outlined"
@@ -913,7 +1051,7 @@ export function V2QuestionnaireList() {
 									disabled={
 										!selectedVersions.length || bulkDelete.isPending
 									}
-									title="Черновик — полное удаление; Заполнено/Утверждена — статус «Неактивная». Руководители DS·ModelOps — свой стрим; конфигуратор — все."
+									title="Неутверждённые — полное удаление; утверждённые — статус «Неактивная»."
 									onClick={() => setDeleteDialogOpen(true)}
 								>
 									Удалить выбранные ({selectedVersions.length})
@@ -936,16 +1074,46 @@ export function V2QuestionnaireList() {
 				)}
 			</Header>
 			<Dialog
+				open={holdDialogOpen}
+				onClose={() =>
+					bulkHold.isPending ? undefined : setHoldDialogOpen(false)
+				}
+			>
+				<DialogTitle>{V2_ANKETA_HOLD_LABEL}</DialogTitle>
+				<DialogContent>
+					<DialogContentText>
+						Будет утверждено версий: {holdableSelectedIds.length}. Каждая
+						перейдёт в статус «Утверждена» и будет заблокирована для
+						заполнения. Чтобы внести изменения позже, создайте новую версию.
+					</DialogContentText>
+				</DialogContent>
+				<DialogActions>
+					<Button
+						onClick={() => setHoldDialogOpen(false)}
+						disabled={bulkHold.isPending}
+					>
+						Отмена
+					</Button>
+					<Button
+						variant="contained"
+						disabled={bulkHold.isPending || !holdableSelectedIds.length}
+						onClick={runBulkHold}
+					>
+						{bulkHold.isPending ? "Утверждение…" : "Подтвердить"}
+					</Button>
+				</DialogActions>
+			</Dialog>
+			<Dialog
 				open={deleteDialogOpen}
 				onClose={() => setDeleteDialogOpen(false)}
 			>
 				<DialogTitle>Удалить выбранные анкеты?</DialogTitle>
 				<DialogContent>
 					<DialogContentText>
-						Будет обработано записей: {selectedVersions.length}. Черновики
-						удаляются из реестра безвозвратно; анкеты в статусе «Заполнено» или
-						«Утверждена» переводятся в статус записи «Неактивная». Действие
-						применяется только к анкетам, доступным вашей роли и стриму.
+						Будет обработано записей: {selectedVersions.length}. Неутверждённые
+						анкеты удаляются из реестра безвозвратно; утверждённые переводятся в
+						статус записи «Неактивная» (срез сохраняется). Действие применяется
+						только к анкетам, доступным вашей роли и стриму.
 					</DialogContentText>
 				</DialogContent>
 				<DialogActions>

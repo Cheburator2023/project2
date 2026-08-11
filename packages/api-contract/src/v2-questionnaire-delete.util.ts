@@ -131,7 +131,10 @@ export function canUserDeleteV2Questionnaire(
 	return { ok: true };
 }
 
-/** Черновик → полное удаление; Заполнено/Утверждена → неактивная запись. */
+/**
+ * Неутверждённые (Черновик / Заполнено / …) → полное удаление.
+ * Утверждённые → деактивация (срез сохраняется).
+ */
 export function resolveV2QuestionnaireDeleteAction(
 	workflowGlobalStatus: V2AnketaGlobalStatus | string | null | undefined,
 	entityStatus: V2QuestionnaireStatus,
@@ -141,12 +144,8 @@ export function resolveV2QuestionnaireDeleteAction(
 	if (entityStatus === "inactive" || entityStatus === "archived") {
 		return { action: "deny", reason: "already_inactive" };
 	}
-	if (
-		workflowGlobalStatus == null ||
-		workflowGlobalStatus === "" ||
-		workflowGlobalStatus === "Черновик"
-	) {
-		return { action: "hard_delete" };
+	if (workflowGlobalStatus === "Утверждена") {
+		return { action: "deactivate" };
 	}
-	return { action: "deactivate" };
+	return { action: "hard_delete" };
 }

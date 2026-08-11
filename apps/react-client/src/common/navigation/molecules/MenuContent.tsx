@@ -247,17 +247,26 @@ function SmartAnketaSections({ pathname }: { pathname: string }) {
 			{canAccessTracker ? (
 				<>
 					<Divider sx={{ my: 1 }} />
-					<NavSection
-						title={commonNavbarGroups.tracker.title}
-						homeLabel={commonRoutes.trackerProjects.name}
-						homePath={commonRoutes.trackerProjects.rootPath}
-						nestedItems={getTrackerNavbarItems().filter(
-							(route) =>
-								route.rootPath !== commonRoutes.trackerProjects.rootPath,
-						)}
-						pathname={pathname}
-						indent={sectionIndent}
-					/>
+					{/* Все пункты трекера равноправны — порядок только из navbar.order */}
+					<Box sx={{ display: "block", mb: 0.2 }}>
+						<ListItemButton disabled sx={{ pl: 1 + sectionIndent }}>
+							<ListItemText secondary={commonNavbarGroups.tracker.title} />
+						</ListItemButton>
+						<List disablePadding sx={{ py: 0 }}>
+							{getTrackerNavbarItems().map((route) => (
+								<NavLinkItem
+									key={route.rootPath}
+									to={route.rootPath}
+									selected={
+										pathname === route.rootPath ||
+										pathname.startsWith(`${route.rootPath}/`)
+									}
+									primary={route.name}
+									pl={2 + sectionIndent}
+								/>
+							))}
+						</List>
+					</Box>
 				</>
 			) : null}
 

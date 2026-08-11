@@ -17,23 +17,25 @@ export function KanbanTaskActivitySection({ taskId, disabled }: Props) {
 
 	return (
 		<Flex flexDirection="column" gap={8}>
-			<SegmentBar<ActivityTab>
-				value={tab}
-				onChange={setTab}
-				data-test-id="kanban-task-activity-tabs"
-				segments={[
-					{
-						id: "comments",
-						label: "Комментарии",
-						"data-test-id": "kanban-task-tab-comments",
-					},
-					{
-						id: "history",
-						label: "История",
-						"data-test-id": "kanban-task-tab-history",
-					},
-				]}
-			/>
+			<div>
+				<SegmentBar<ActivityTab>
+					value={tab}
+					onChange={setTab}
+					data-test-id="kanban-task-activity-tabs"
+					segments={[
+						{
+							id: "comments",
+							label: "Комментарии",
+							"data-test-id": "kanban-task-tab-comments",
+						},
+						{
+							id: "history",
+							label: "История",
+							"data-test-id": "kanban-task-tab-history",
+						},
+					]}
+				/>
+			</div>
 			<Spacer space={4} />
 			{tab === "comments" ? (
 				<KanbanTaskCommentsSection taskId={taskId} disabled={disabled} />

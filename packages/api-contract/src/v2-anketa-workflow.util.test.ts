@@ -1,21 +1,47 @@
 import { describe, expect, it } from "vitest";
 import {
 	allRequiredSectionsCompleted,
+	canHoldQuestionnaire,
 	completeGlobalQuestionnaire,
 	createDefaultV2AnketaWorkflow,
+	holdQuestionnaire,
 	isAnketaFormPathLocked,
+	isAnketaGloballyLocked,
 } from "./v2-anketa-workflow.util";
 import { collectRequiredWorkflowTargets } from "./v2-anketa-section-ui.util";
 
 describe("isAnketaFormPathLocked", () => {
-	it("locks all paths when questionnaire is globally completed", () => {
+	it("does not lock paths when global status is only «Заполнено»", () => {
 		const workflow = {
 			...createDefaultV2AnketaWorkflow(),
 			globalStatus: "Заполнено" as const,
 		};
+		expect(isAnketaGloballyLocked(workflow)).toBe(false);
+		expect(isAnketaFormPathLocked(workflow, "detailInfo.detailAtypicalTasks")).toBe(
+			false,
+		);
+	});
+
+	it("locks all paths when questionnaire is approved («Утверждена»)", () => {
+		const workflow = {
+			...createDefaultV2AnketaWorkflow(),
+			globalStatus: "Утверждена" as const,
+		};
+		expect(isAnketaGloballyLocked(workflow)).toBe(true);
 		expect(isAnketaFormPathLocked(workflow, "detailInfo.detailAtypicalTasks")).toBe(
 			true,
 		);
+	});
+
+	it("holdQuestionnaire approves from any non-approved status", () => {
+		const draft = createDefaultV2AnketaWorkflow();
+		expect(canHoldQuestionnaire(draft)).toBe(true);
+		expect(holdQuestionnaire(draft).globalStatus).toBe("Утверждена");
+		const filled = { ...draft, globalStatus: "Заполнено" as const };
+		expect(holdQuestionnaire(filled).globalStatus).toBe("Утверждена");
+		const approved = { ...draft, globalStatus: "Утверждена" as const };
+		expect(canHoldQuestionnaire(approved)).toBe(false);
+		expect(holdQuestionnaire(approved)).toBe(approved);
 	});
 
 	it("locks nested paths inside a completed main section", () => {

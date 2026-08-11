@@ -1,9 +1,8 @@
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
-import BugReportOutlinedIcon from "@mui/icons-material/BugReportOutlined";
+import ContentCopyOutlinedIcon from "@mui/icons-material/ContentCopyOutlined";
 import SaveIcon from "@mui/icons-material/Save";
-import TaskAltIcon from "@mui/icons-material/TaskAlt";
 import Alert from "@mui/material/Alert";
 import {
 	Box,
@@ -20,27 +19,21 @@ import {
 } from "@mui/material";
 import type { V2SchemaBindingDto } from "@smart-anketa/api-contract";
 import {
+	canHoldQuestionnaire,
+	canUserCopyV2Questionnaire,
 	canUserDeleteV2Questionnaire,
-	canViewerCompleteWholeAnketa,
 	resolveV2QuestionnaireDeleteAction,
 	schemaHasUncertaintyModalWidget,
 	userMasksAllWorkEstimates,
-	V2_ANKETA_GLOBAL_COMPLETE_LABEL,
 	V2_ANKETA_HOLD_LABEL,
 } from "@smart-anketa/api-contract";
 import {
 	useCallback,
-	useEffect,
 	useMemo,
-	useRef,
 	useState,
 	type ReactNode,
 } from "react";
 import type { QuestionnaireSaveStatus } from "../hooks/useDebouncedQuestionnaireSave";
-import {
-	AnketaGlobalCompleteDialog,
-	type AnketaGlobalCompleteDialogPhase,
-} from "../organisms/AnketaGlobalCompleteDialog";
 import { AnketaCalcNameDialog } from "../organisms/AnketaCalcNameDialog";
 import { AnketaSchemaInfoDialog } from "../organisms/AnketaSchemaInfoDialog";
 import { FinalScoreCard } from "../organisms/FinalScoreCard";
@@ -60,7 +53,7 @@ import { useAnketaViewerAccess } from "../utils/anketaViewerAccess";
 import { AnketaFormPageLayout } from "./AnketaFormPageLayout";
 import {
 	useBulkDeleteV2Questionnaires,
-	useCreateV2QuestionnaireVersion,
+	useCreateV2QuestionnaireCopy,
 	useHoldV2Questionnaire,
 	v2QuestionnairesExportXlsx,
 } from "@react-client/common/api/queries/v2-questionnaires";
@@ -72,7 +65,7 @@ import { toast } from "@react-client/common/toasts";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { usePermissions } from "@react-client/hooks/usePermissions";
 import { useUserStore } from "@react-client/common/store/userStore";
-import { IS_DEV } from "@react-client/common/constants/dev";
+import { Permission } from "@react-client/types/roles";
 import {
 	buildQuestionnaireCopyCalcName,
 	stripQuestionnaireCalcNameFromFormData,
@@ -179,11 +172,11 @@ export function AnketaFormShell({
 		canEditCalculation,
 		canExportReports,
 		canWorkflowApprove,
-		canCompleteAnketa,
 		canHoldCalculation,
+		hasPermission,
 	} = usePermissions();
 
-	const createCopy = useCreateV2QuestionnaireVersion();
+	const createCopy = useCreateV2QuestionnaireCopy();
 	const holdMutation = useHoldV2Questionnaire();
 	const bulkDelete = useBulkDeleteV2Questionnaires();
 	const [holdDialogOpen, setHoldDialogOpen] = useState(false);
@@ -192,15 +185,12 @@ export function AnketaFormShell({
 	const engine = engineProp ?? internalEngine;
 	const setFormData = (next: Record<string, unknown>) =>
 		engine.setFormData(next);
-	/** Ролевая видимость блоков: скрытые секции не входят в allSectionsCompleted. */
 	const viewerAccess = useAnketaViewerAccess(!debouncePreviewInputs);
 	const {
 		workflow,
 		globallyLocked,
-		allSectionsCompleted,
 		completeMainSection,
 		touchMainSection,
-		completeGlobalFill,
 		isSectionLocked,
 	} = useAnketaWorkflow(
 		engine.formData,
@@ -213,10 +203,7 @@ export function AnketaFormShell({
 		? !canEditCalculation
 		: !canCreateCalculation;
 	const effectiveReadOnly = readOnly || globallyLocked || permissionReadOnly;
-	const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
 	const [calculationDebugOpen, setCalculationDebugOpen] = useState(false);
-	const [completeDialogPhase, setCompleteDialogPhase] =
-		useState<AnketaGlobalCompleteDialogPhase>("confirm");
 	const [copyNameDialogOpen, setCopyNameDialogOpen] = useState(false);
 	const [renameDialogOpen, setRenameDialogOpen] = useState(false);
 	const [schemaInfoOpen, setSchemaInfoOpen] = useState(false);
@@ -225,11 +212,6 @@ export function AnketaFormShell({
 			schemaBinding?.boundTemplateVersionId ||
 			schemaBinding?.boundTemplateVersionNumber != null,
 	);
-	const saveAfterCompleteRef = useRef(false);
-	const openCompleteDialog = useCallback(() => {
-		setCompleteDialogPhase("confirm");
-		setCompleteDialogOpen(true);
-	}, []);
 
 	const deleteAccess = useMemo(
 		() => canUserDeleteV2Questionnaire(groups, engine.formData),
@@ -277,12 +259,6 @@ export function AnketaFormShell({
 		);
 	}, [bulkDelete, navigate, questionnaireId]);
 
-	const closeCompleteDialog = useCallback(() => {
-		setCompleteDialogOpen(false);
-		setCompleteDialogPhase("confirm");
-		saveAfterCompleteRef.current = false;
-	}, []);
-
 	const handleCreateCopy = useCallback(
 		(calcName: string) => {
 			if (!questionnaireId) return;
@@ -300,7 +276,6 @@ export function AnketaFormShell({
 					onSuccess: (created) => {
 						toast.success("Создана копия анкеты");
 						setCopyNameDialogOpen(false);
-						closeCompleteDialog();
 						navigate(
 							`/v2/${v2Routes.calculationPreview.rootPath.replace(":id", created.id)}`,
 						);
@@ -312,13 +287,7 @@ export function AnketaFormShell({
 				},
 			);
 		},
-		[
-			closeCompleteDialog,
-			createCopy,
-			engine.displayFormData,
-			navigate,
-			questionnaireId,
-		],
+		[createCopy, engine.displayFormData, navigate, questionnaireId],
 	);
 
 	const openCopyNameDialog = useCallback(() => {
@@ -333,48 +302,45 @@ export function AnketaFormShell({
 	/** Переименование доступно на любой стадии (в т.ч. «Заполнено» / read-only). */
 	const canRenameQuestionnaire = Boolean(onRenameQuestionnaire);
 
-	const finalizeComplete = useCallback(
-		(withSave: boolean) => {
-			saveAfterCompleteRef.current = withSave;
-			completeGlobalFill();
-		},
-		[completeGlobalFill],
-	);
-
-	useEffect(() => {
-		if (!completeDialogOpen || completeDialogPhase !== "confirm") return;
-		if (workflow.globalStatus !== "Заполнено") return;
-
-		setCompleteDialogPhase("next");
-		if (saveAfterCompleteRef.current) {
-			saveAfterCompleteRef.current = false;
-			onSave?.();
-		}
-	}, [completeDialogOpen, completeDialogPhase, onSave, workflow.globalStatus]);
-
 	const hideWorkEstimates = userMasksAllWorkEstimates(viewerAccess.roles);
-	/**
-	 * §4: у представителя стрима глобальная кнопка недоступна всегда.
-	 * Гард на фронте дублирует Keycloak-матрицу: до пересинка право может остаться в токене.
-	 */
-	const mayCompleteWholeAnketa =
-		canCompleteAnketa &&
-		(!viewerAccess.applyAccessRules ||
-			canViewerCompleteWholeAnketa(viewerAccess.roles));
 
 	const confirmHold = useCallback(() => {
 		if (!questionnaireId) return;
 		holdMutation.mutate(questionnaireId, {
 			onSuccess: () => {
-				toast.success("Срез анкеты зафиксирован");
+				toast.success("Оценка по анкете утверждена");
 				setHoldDialogOpen(false);
 			},
 			onError: (err) =>
-				toast.error("Не удалось зафиксировать срез", {
+				toast.error("Не удалось утвердить оценку", {
 					description: apiErrorMessage(err),
 				}),
 		});
 	}, [holdMutation, questionnaireId]);
+
+	const canShowHold =
+		Boolean(questionnaireId) &&
+		canHoldCalculation &&
+		canHoldQuestionnaire(workflow);
+
+	const canShowNewVersion =
+		Boolean(questionnaireId) &&
+		canCreateCalculation &&
+		(workflow.globalStatus === "Утверждена" ||
+			workflow.globalStatus === "Заполнено");
+
+	const copyAccess = useMemo(
+		() =>
+			canUserCopyV2Questionnaire(groups, engine.formData, {
+				hasCreatePermission: hasPermission(
+					Permission.ANKETA_CREATE_CALCULATION,
+				),
+				hasEditPermission: canEditCalculation,
+			}),
+		[groups, engine.formData, hasPermission, canEditCalculation],
+	);
+
+	const canShowCopy = Boolean(questionnaireId) && copyAccess.ok;
 
 	const anketaFormContext = useMemo((): AnketaFormContextValue => {
 		// Только page-level overrides; formData/schema/ui берёт V2AnketaFormWithModals из engine.
@@ -501,61 +467,48 @@ export function AnketaFormShell({
 	const headerActions = useMemo(
 		() => (
 			<>
-				{!globallyLocked && mayCompleteWholeAnketa ? (
-					<IconButton
-						color="primary"
-						disabled={!allSectionsCompleted || effectiveReadOnly}
-						title={
-							allSectionsCompleted
-								? V2_ANKETA_GLOBAL_COMPLETE_LABEL
-								: "Сначала завершите заполнение всех основных разделов"
-						}
-						aria-label={V2_ANKETA_GLOBAL_COMPLETE_LABEL}
-						onClick={openCompleteDialog}
-						data-test-id={`${dataTestId}--complete`}
-					>
-						<TaskAltIcon />
-					</IconButton>
-				) : null}
 				{headerExtra}
-				{/* {IS_DEV && (
-					<Button
-						variant="outlined"
-						size="small"
-						startIcon={<BugReportOutlinedIcon />}
-						onClick={() => setCalculationDebugOpen(true)}
-						title="Показать поля, коэффициенты, правила и результаты расчёта"
-						sx={{ whiteSpace: "nowrap" }}
-					>
-						Диагностика расчёта
-					</Button>
-				)} */}
-				{workflow.globalStatus === "Заполнено" &&
-				canHoldCalculation &&
-				questionnaireId ? (
+				{canShowHold ? (
 					<Button
 						variant="contained"
 						color="primary"
 						size="small"
 						disabled={holdMutation.isPending}
-						title="Зафиксировать срез: статус «Утверждена», анкета станет неизменяемой"
+						title="Утвердить оценку: статус «Утверждена», версия станет неизменяемой"
 						onClick={() => setHoldDialogOpen(true)}
 						sx={{ fontWeight: 600, whiteSpace: "nowrap" }}
+						data-test-id={`${dataTestId}--hold`}
 					>
 						{V2_ANKETA_HOLD_LABEL}
 					</Button>
 				) : null}
-				{(workflow.globalStatus === "Заполнено" ||
-					workflow.globalStatus === "Утверждена") &&
-				questionnaireId &&
-				canCreateCalculation ? (
+				{canShowNewVersion ? (
+					<Button
+						variant="outlined"
+						size="small"
+						title="Создать новую версию для корректировки (тот же ID, версия +1)"
+						onClick={() => {
+							if (!questionnaireId) return;
+							navigate(
+								`/v2/${v2Routes.calculationNewVersion.rootPath.replace(":id", questionnaireId)}`,
+							);
+						}}
+						sx={{ textTransform: "none", whiteSpace: "nowrap" }}
+						data-test-id={`${dataTestId}--new-version`}
+					>
+						Создать новую версию
+					</Button>
+				) : null}
+				{canShowCopy ? (
 					<Button
 						variant="outlined"
 						size="small"
 						disabled={createCopy.isPending}
-						title="Создать копию анкеты в статусе «Черновик»"
+						startIcon={<ContentCopyOutlinedIcon />}
+						title="Создать копию как новую анкету (новый ID, версия 1). Представитель стрима — только немодельные анкеты."
 						onClick={openCopyNameDialog}
 						sx={{ textTransform: "none", whiteSpace: "nowrap" }}
+						data-test-id={`${dataTestId}--copy`}
 					>
 						Создать копию
 					</Button>
@@ -597,10 +550,9 @@ export function AnketaFormShell({
 		[
 			canSaveQuestionnaire,
 			canWorkflowApprove,
-			mayCompleteWholeAnketa,
-			canHoldCalculation,
-			canCreateCalculation,
-			canDeleteCalculation,
+			canShowHold,
+			canShowNewVersion,
+			canShowCopy,
 			canShowDelete,
 			deleteIsHard,
 			headerExtra,
@@ -610,16 +562,11 @@ export function AnketaFormShell({
 			savePending,
 			dataTestId,
 			openCopyNameDialog,
-			effectiveReadOnly,
-			workflow.globalStatus,
-			globallyLocked,
-			allSectionsCompleted,
-			openCompleteDialog,
+			navigate,
 			questionnaireId,
 			createCopy.isPending,
 			holdMutation.isPending,
 			bulkDelete.isPending,
-			dataTestId,
 		],
 	);
 
@@ -702,30 +649,6 @@ export function AnketaFormShell({
 					)
 				}
 			/>
-			<AnketaGlobalCompleteDialog
-				open={completeDialogOpen}
-				phase={completeDialogPhase}
-				onClose={closeCompleteDialog}
-				canSave={Boolean(onSave) && canSaveQuestionnaire && !saveDisabled}
-				savePending={savePending}
-				hasQuestionnaireId={Boolean(questionnaireId)}
-				createCopyPending={createCopy.isPending}
-				onConfirmComplete={() => finalizeComplete(false)}
-				onConfirmCompleteAndSave={() => finalizeComplete(true)}
-				onSave={() => onSave?.()}
-				onCreateCopy={openCopyNameDialog}
-				onNewVersion={() => {
-					if (!questionnaireId) return;
-					closeCompleteDialog();
-					navigate(
-						`/v2/${v2Routes.calculationNewVersion.rootPath.replace(":id", questionnaireId)}`,
-					);
-				}}
-				onGoToRegistry={() => {
-					closeCompleteDialog();
-					navigate("/v2");
-				}}
-			/>
 			<V2CalculationDebugDialog
 				open={calculationDebugOpen}
 				onClose={() => setCalculationDebugOpen(false)}
@@ -750,8 +673,8 @@ export function AnketaFormShell({
 				<DialogTitle>{V2_ANKETA_HOLD_LABEL}</DialogTitle>
 				<DialogContent>
 					<DialogContentText>
-						Анкета перейдёт в статус «Утверждена» и станет неизменяемой
-						историческим срезом. Для следующего периода создайте копию.
+						Версия анкеты перейдёт в статус «Утверждена» и будет заблокирована
+						для заполнения. Чтобы внести изменения, создайте новую версию.
 					</DialogContentText>
 				</DialogContent>
 				<DialogActions>
@@ -769,7 +692,7 @@ export function AnketaFormShell({
 						{holdMutation.isPending ? (
 							<CircularProgress size={18} color="inherit" />
 						) : (
-							"Зафиксировать"
+							V2_ANKETA_HOLD_LABEL
 						)}
 					</Button>
 				</DialogActions>
