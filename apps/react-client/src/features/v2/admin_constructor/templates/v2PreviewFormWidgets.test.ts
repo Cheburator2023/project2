@@ -9,6 +9,10 @@ describe("v2AnketaFormWidgets", () => {
 		expect(v2AnketaFormWidgets.text).toBe(TextFieldCustomWidget);
 		expect(v2AnketaFormWidgets.TextWidget).toBe(TextFieldCustomWidget);
 		expect(v2AnketaFormWidgets.textarea).toBeTypeOf("function");
+		expect(v2AnketaFormWidgets.string_markdown).toBeTypeOf("function");
+		expect(v2AnketaFormWidgets.V2MarkdownModalWidget).toBe(
+			v2AnketaFormWidgets.string_markdown,
+		);
 		expect(v2AnketaFormWidgets.updown).toBe(NumberInputWidget);
 		expect(v2AnketaFormWidgets.UpDownWidget).toBe(NumberInputWidget);
 		expect(v2AnketaFormWidgets.checkbox).toBe(V2BooleanWidget);

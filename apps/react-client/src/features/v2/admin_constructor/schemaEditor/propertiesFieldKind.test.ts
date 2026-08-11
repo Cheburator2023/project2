@@ -63,6 +63,16 @@ describe("resolveCanvasCategoryChips", () => {
 			colorKey: "string-textarea",
 		});
 	});
+
+	it("labels markdown string as строка·markdown", () => {
+		const schema: RJSFSchema = { type: "string", title: "Описание задачи" };
+		const ui = { "ui:widget": "string_markdown" };
+
+		expect(resolveCanvasFieldTypeChipLabel(schema, ui)).toEqual({
+			label: "строка·markdown",
+			colorKey: "string_markdown",
+		});
+	});
 });
 
 describe("resolvePrimitiveFieldTypeVariant", () => {
@@ -72,6 +82,14 @@ describe("resolvePrimitiveFieldTypeVariant", () => {
 		expect(resolvePrimitiveFieldTypeVariant(schema, undefined, "textarea")).toBe(
 			"string-textarea",
 		);
+	});
+
+	it("maps string_markdown widget to string_markdown", () => {
+		const schema: RJSFSchema = { type: "string", title: "Описание задачи" };
+
+		expect(
+			resolvePrimitiveFieldTypeVariant(schema, undefined, "string_markdown"),
+		).toBe("string_markdown");
 	});
 
 	it("maps dictionary multi to dictionary-list", () => {

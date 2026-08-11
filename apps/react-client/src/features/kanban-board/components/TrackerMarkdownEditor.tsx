@@ -130,32 +130,63 @@ export function TrackerMarkdownEditor({
 					height: 100% !important;
 					flex: 1 1 auto;
 					min-height: 0;
+					min-width: 0;
+					overflow: hidden;
 				}
 				.tracker-md-editor .w-md-editor-content {
 					flex: 1 1 auto;
 					min-height: 0;
+					min-width: 0;
 					height: auto !important;
-					display: flex;
-					flex-direction: column;
-					overflow: hidden;
+					position: relative;
+					/* Не даём длинной строке раздувать контейнер поверх absolute-preview. */
+					overflow: hidden !important;
 				}
-				.tracker-md-editor .w-md-editor-input,
-				.tracker-md-editor .w-md-editor-area {
-					flex: 1 1 auto;
-					min-height: 0;
+				/* Live: библиотека — input 50% + preview absolute right 50%. Жёстко клипим input. */
+				.tracker-md-editor.w-md-editor-show-live .w-md-editor-input,
+				.tracker-md-editor.w-md-editor-show-live .w-md-editor-area {
+					width: 50% !important;
+					max-width: 50% !important;
 					height: 100% !important;
-					width: 100%;
-					overflow: hidden;
+					overflow: hidden !important;
+					box-sizing: border-box !important;
+				}
+				.tracker-md-editor.w-md-editor-show-edit .w-md-editor-input,
+				.tracker-md-editor.w-md-editor-show-edit .w-md-editor-area {
+					width: 100% !important;
+					max-width: 100% !important;
+					overflow: hidden !important;
+				}
+				.tracker-md-editor .w-md-editor-preview {
+					overflow: auto !important;
+					word-break: break-word;
+					overflow-wrap: anywhere;
+					z-index: 2;
+					background-color: var(--md-editor-background-color, #fff);
+				}
+				.tracker-md-editor .w-md-editor-preview .wmde-markdown,
+				.tracker-md-editor .w-md-editor-preview .wmde-markdown * {
+					overflow-wrap: anywhere !important;
+					word-break: break-word !important;
+					max-width: 100%;
 				}
 				.tracker-md-editor .w-md-editor-text {
 					height: 100% !important;
 					min-height: 100% !important;
+					width: 100% !important;
+					max-width: 100% !important;
 					box-sizing: border-box;
+					overflow-x: hidden !important;
+					overflow-y: auto !important;
+					/* Библиотека ставит keep-all — из‑за этого длинные латиница/цифры не ломаются. */
+					word-break: break-all !important;
+					overflow-wrap: anywhere !important;
+					white-space: pre-wrap !important;
 				}
 				.tracker-md-editor .w-md-editor-text-pre,
 				.tracker-md-editor .w-md-editor-text-pre > code,
 				.tracker-md-editor .w-md-editor-text-input,
-				.tracker-md-editor .w-md-editor-text-input > textarea {
+				.tracker-md-editor textarea.w-md-editor-text-input {
 					font-family: ${EDITOR_FONT} !important;
 					font-size: 14px !important;
 					line-height: 20px !important;
@@ -163,22 +194,40 @@ export function TrackerMarkdownEditor({
 					word-spacing: normal !important;
 					tab-size: 2 !important;
 					white-space: pre-wrap !important;
+					/* break-all надёжнее break-word для <textarea> без пробелов */
+					word-break: break-all !important;
+					overflow-wrap: anywhere !important;
+					word-wrap: break-word !important;
+					max-width: 100% !important;
+					box-sizing: border-box !important;
 				}
-				.tracker-md-editor .w-md-editor-text-input {
+				.tracker-md-editor .w-md-editor-text-input,
+				.tracker-md-editor textarea.w-md-editor-text-input {
 					position: absolute !important;
 					inset: 0 !important;
 					top: 0 !important;
 					left: 0 !important;
 					width: 100% !important;
+					max-width: 100% !important;
 					height: 100% !important;
-					overflow: auto !important;
+					overflow-x: hidden !important;
+					overflow-y: auto !important;
 					box-sizing: border-box !important;
 					-webkit-text-fill-color: inherit !important;
+				}
+				.tracker-md-editor .w-md-editor-text-pre {
+					overflow: hidden !important;
+					max-width: 100% !important;
 				}
 				.tracker-md-editor .w-md-editor-text-pre > code {
 					padding: 0 !important;
 					background: transparent !important;
 					border: 0 !important;
+					display: block !important;
+					max-width: 100% !important;
+					word-break: break-all !important;
+					overflow-wrap: anywhere !important;
+					white-space: pre-wrap !important;
 				}
 				.tracker-md-editor .w-md-editor-toolbar {
 					padding: 6px 8px;
@@ -221,6 +270,14 @@ export function TrackerMarkdownEditor({
 					disabled,
 					readOnly: disabled,
 					spellCheck: true,
+					// Inline fallback: часть браузеров слабо уважает word-break только из stylesheet у textarea.
+					style: {
+						whiteSpace: "pre-wrap",
+						wordBreak: "break-all",
+						overflowWrap: "anywhere",
+						maxWidth: "100%",
+						boxSizing: "border-box",
+					},
 				}}
 				previewOptions={{
 					components: {

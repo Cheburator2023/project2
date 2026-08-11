@@ -272,8 +272,16 @@ export function FieldDefaultValueControl({
 			<TextField
 				fullWidth
 				size="small"
-				multiline={primitiveTypeVariant === "string-textarea"}
-				minRows={primitiveTypeVariant === "string-textarea" ? 2 : undefined}
+				multiline={
+					primitiveTypeVariant === "string-textarea" ||
+					primitiveTypeVariant === "string_markdown"
+				}
+				minRows={
+					primitiveTypeVariant === "string-textarea" ||
+					primitiveTypeVariant === "string_markdown"
+						? 2
+						: undefined
+				}
 				label="Значение по умолчанию"
 				disabled={disabled}
 				value={formatDefaultForInput(currentDefault)}

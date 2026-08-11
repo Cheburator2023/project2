@@ -30,6 +30,7 @@ export const CANVAS_CATEGORY_CHIP_COLORS = {
 export const CANVAS_TYPE_CHIP_COLORS: Record<string, string> = {
 	string: "#0D9488",
 	"string-textarea": "#14B8A6",
+	string_markdown: "#0E7490",
 	"string-dictionary": "#0F766E",
 	"dictionary-list": "#B45309",
 	integer: "#4F46E5",
@@ -166,6 +167,7 @@ export const FIELD_PRESETS: PalettePreset[] = [
 export const PRIMITIVE_FIELD_TYPE_OPTIONS = [
 	{ id: "string", title: "Строка" },
 	{ id: "string-textarea", title: "Строка (textarea)" },
+	{ id: "string_markdown", title: "Строка (markdown)" },
 	{ id: "string-dictionary", title: "Строка / справочник" },
 	{ id: "dictionary-list", title: "Мультисправочник" },
 	...FIELD_PRESETS.filter((fp) =>
@@ -286,6 +288,10 @@ export const WIDGET_PRESETS: Array<{ label: string; value: string }> = [
 	{
 		label: "Неопределённость — V2UncertaintyModalWidget",
 		value: "V2UncertaintyModalWidget",
+	},
+	{
+		label: "Markdown — string_markdown",
+		value: "string_markdown",
 	},
 	{
 		label: "Сложность алгоритма — AlgorithmComplexityWidget",

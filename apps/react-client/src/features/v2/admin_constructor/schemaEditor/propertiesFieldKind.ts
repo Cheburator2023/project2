@@ -93,6 +93,14 @@ export function isTextareaStringField(
 	return uiWidget === "textarea";
 }
 
+export function isMarkdownStringField(
+	resolvedField: RJSFSchema | undefined,
+	uiWidget?: string,
+): boolean {
+	if (resolveSchemaNodeType(resolvedField) !== "string") return false;
+	return uiWidget === "string_markdown" || uiWidget === "V2MarkdownModalWidget";
+}
+
 export function resolvePrimitiveFieldTypeVariant(
 	resolvedField: RJSFSchema | undefined,
 	uiOptions: Record<string, unknown> | undefined,
@@ -103,6 +111,9 @@ export function resolvePrimitiveFieldTypeVariant(
 	}
 	if (isDictionaryStringField(resolvedField, uiOptions, uiWidget)) {
 		return "string-dictionary";
+	}
+	if (isMarkdownStringField(resolvedField, uiWidget)) {
+		return "string_markdown";
 	}
 	if (isTextareaStringField(resolvedField, uiWidget)) {
 		return "string-textarea";
@@ -132,6 +143,9 @@ export function resolveCanvasFieldTypeChipLabel(
 	}
 	if (isDictionaryStringField(resolvedField, uiOptions, uiWidget)) {
 		return { label: "строка·справочник", colorKey: "string-dictionary" };
+	}
+	if (isMarkdownStringField(resolvedField, uiWidget)) {
+		return { label: "строка·markdown", colorKey: "string_markdown" };
 	}
 	if (isTextareaStringField(resolvedField, uiWidget)) {
 		return { label: "строка·textarea", colorKey: "string-textarea" };

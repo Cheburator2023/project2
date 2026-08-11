@@ -4,6 +4,7 @@ import { NumberInputWidget } from "@react-client/common/forms/widgets/NumberInpu
 import { TextFieldCustomWidget } from "@react-client/common/forms/widgets/TextFieldCustomWidget";
 import { UniversalDependencyWidget } from "@react-client/common/forms/widgets/UniversalDependencyWidget";
 import { V2BooleanWidget } from "@react-client/common/forms/widgets/V2BooleanWidget";
+import { V2MarkdownModalWidget } from "@react-client/features/v2/anketaCRUD/widgets/V2MarkdownModalWidget";
 import { V2UncertaintyModalWidget } from "@react-client/features/v2/anketaCRUD/widgets/V2UncertaintyModalWidget";
 import { createElement } from "react";
 import type { RegistryWidgetsType, WidgetProps } from "@rjsf/utils";
@@ -32,6 +33,8 @@ export const v2AnketaFormWidgets: RegistryWidgetsType = {
 	text: TextFieldCustomWidget,
 	TextareaWidget,
 	textarea: TextareaWidget,
+	string_markdown: V2MarkdownModalWidget,
+	V2MarkdownModalWidget,
 	NumberInputWidget,
 	UpDownWidget: NumberInputWidget,
 	updown: NumberInputWidget,
