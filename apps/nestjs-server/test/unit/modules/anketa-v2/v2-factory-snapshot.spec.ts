@@ -271,9 +271,8 @@ describe("v2 factory snapshot", () => {
 		]);
 
 		/**
-		 * Витрина зависит только от количества метрик: «Тип работ» давал
-		 * коэффициент 1 при любом значении и складывался с метриками, из-за
-		 * чего оценка удваивалась (22 × (1 + 1.2) вместо 22 × 1.2).
+		 * Витрина: надбавка за метрики как в CSV (+0 / +0.2 / +0.4),
+		 * формула Оценка = база × (1 + К).
 		 */
 		const stage212Vitrina = byName("витрины внутренних данных");
 		expect(stage212Vitrina?.norm).toBe(22);
@@ -284,11 +283,13 @@ describe("v2 factory snapshot", () => {
 			),
 		).toEqual(["Количество метрик"]);
 		expect(stage212Vitrina?.laborCoefficients?.[0]?.values).toEqual([
-			expect.objectContaining({ label: "до 20 метрик", coefficient: 1 }),
-			expect.objectContaining({ label: "20–50 метрик", coefficient: 1.2 }),
-			expect.objectContaining({ label: ">50 метрик", coefficient: 1.4 }),
+			expect.objectContaining({ label: "до 20 метрик", coefficient: 0 }),
+			expect.objectContaining({ label: "20–50 метрик", coefficient: 0.2 }),
+			expect.objectContaining({ label: ">50 метрик", coefficient: 0.4 }),
 		]);
-		expect(stage212Vitrina?.formulaText).toBe("N × коэф(field_28IPlEQu)");
+		expect(stage212Vitrina?.formulaText).toBe(
+			"N × (1 + коэф(field_28IPlEQu))",
+		);
 	});
 
 	it("dictionariesSnapshot из v35", () => {

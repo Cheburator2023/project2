@@ -275,9 +275,8 @@ function collectLaborCoefficientLookup(
 		)
 		.map((value) => ({
 			label: value.label,
-			// CSV задаёт K=1 для диапазона по умолчанию, справочник хранит
-			// именно добавку к базе (0 / 0.2 / 0.4).
-			coefficient: 1 + value.coeff,
+			// CSV: Оценка = база × (1 + К); справочник хранит добавку 0 / 0.2 / 0.4.
+			coefficient: value.coeff,
 		}));
 	if (metricValues.length > 0) {
 		byParam.set(normalizeParamLabel("Количество метрик"), {

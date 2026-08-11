@@ -6,12 +6,12 @@ import {
 } from "./v2-numeric-labor-range.util";
 
 describe("v2-numeric-labor-range.util", () => {
-	it("returns metrics range preset", () => {
+	it("returns metrics range preset as surcharge (+0 / +0.2 / +0.4)", () => {
 		const rows = resolveNumericLaborPresetRows("Количество метрик");
-		expect(rows?.map((row) => row.valueLabel)).toEqual([
-			"до 20 метрик",
-			"20–50 метрик",
-			">50 метрик",
+		expect(rows).toEqual([
+			{ valueCode: "do_20", valueLabel: "до 20 метрик", coefficient: 0 },
+			{ valueCode: "20_50", valueLabel: "20–50 метрик", coefficient: 0.2 },
+			{ valueCode: "over_50", valueLabel: ">50 метрик", coefficient: 0.4 },
 		]);
 	});
 

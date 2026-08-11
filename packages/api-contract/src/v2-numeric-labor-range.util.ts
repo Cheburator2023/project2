@@ -4,10 +4,11 @@ export type NumericLaborRangePreset = {
 	coefficient: number;
 };
 
+/** Надбавка к базе: Оценка = N × (1 + К). CSV: до 20→+0; 20–50→+0.2; >50→+0.4. */
 export const METRICS_COUNT_LABOR_RANGES: NumericLaborRangePreset[] = [
-	{ valueCode: "do_20", valueLabel: "до 20 метрик", coefficient: 1 },
-	{ valueCode: "20_50", valueLabel: "20–50 метрик", coefficient: 1.2 },
-	{ valueCode: "over_50", valueLabel: ">50 метрик", coefficient: 1.4 },
+	{ valueCode: "do_20", valueLabel: "до 20 метрик", coefficient: 0 },
+	{ valueCode: "20_50", valueLabel: "20–50 метрик", coefficient: 0.2 },
+	{ valueCode: "over_50", valueLabel: ">50 метрик", coefficient: 0.4 },
 ];
 
 const INTEGER_RANGE_DEFAULT: NumericLaborRangePreset[] = [

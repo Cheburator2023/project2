@@ -9981,22 +9981,22 @@
           "values": [
             {
               "label": "до 20 метрик",
-              "coefficient": 1
+              "coefficient": 0
             },
             {
               "label": "20–50 метрик",
-              "coefficient": 1.2
+              "coefficient": 0.2
             },
             {
               "label": ">50 метрик",
-              "coefficient": 1.4
+              "coefficient": 0.4
             }
           ],
           "paramCode": "field_28IPlEQu",
           "schemaFieldUid": "field_e03806f6-01f4-44ee-835a-e9e5bae8f6c6"
         }
       ],
-      "formulaText": "N × коэф(field_28IPlEQu)",
+      "formulaText": "N × (1 + коэф(field_28IPlEQu))",
       "roundingMode": "CEIL",
       "roundingStep": 0.1,
       "triggerArchCount": null,
