@@ -18,9 +18,6 @@ import { V2TemplateVersionService } from "./v2-template-version.service";
 /** Защита от раздутого Excel dimension (часто 1M+ пустых строк). */
 const MAX_SHEET_ROWS = 20_000;
 const MAX_SHEET_COLS = 64;
-/** Сброс TypeORM identity map каждые N insert'ов. */
-const CREATE_FLUSH_EVERY = 25;
-
 export type V2MasterRegistryIssueRowDto = {
 	masterRow: number;
 	masterNo: string;
@@ -171,7 +168,6 @@ export class V2MasterRegistryImportService {
 					options.templateId,
 				);
 
-			let createdSinceFlush = 0;
 			for (const row of parsed.rows) {
 				if (masterRowFilter && !masterRowFilter.has(row.masterRow)) {
 					continue;
@@ -206,11 +202,6 @@ export class V2MasterRegistryImportService {
 						id: dto.id,
 						calcName: dto.calcName,
 					});
-					createdSinceFlush += 1;
-					if (createdSinceFlush >= CREATE_FLUSH_EVERY) {
-						this.questionnaireService.clearPersistenceCache();
-						createdSinceFlush = 0;
-					}
 				} catch (error) {
 					const message =
 						error instanceof Error
@@ -227,7 +218,6 @@ export class V2MasterRegistryImportService {
 					});
 				}
 			}
-			this.questionnaireService.clearPersistenceCache();
 		}
 
 		return {

@@ -400,11 +400,6 @@ export class V2QuestionnaireService {
 		return { id: saved.id, calcName: saved.calcName };
 	}
 
-	/** Сброс identity map TypeORM после пачки insert'ов. */
-	clearPersistenceCache(): void {
-		this.questionnaireRepository.manager.clear(V2QuestionnaireEntity);
-	}
-
 	resolveTemplateForCreatePublic(templateId?: string) {
 		return this.resolveTemplateForCreate(templateId);
 	}
