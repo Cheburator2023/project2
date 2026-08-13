@@ -39,7 +39,7 @@ export function AnketaEditSessionTimeoutScreen({
 						Сессия редактирования завершена
 					</Typography>
 					<Typography variant="body1" color="text.secondary">
-						Вы были неактивны 30 минут
+						Вы были неактивны 3 минуты
 						{title ? (
 							<>
 								{" "}

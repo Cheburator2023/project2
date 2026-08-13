@@ -72,6 +72,30 @@ export class V2RuntimeSettingsEntity {
 	})
 	allowNestedLeadGroups!: boolean | null;
 
+	/**
+	 * Функционал менеджера программ ДАДМ (утверждение, режимы реестра, срезы версий).
+	 * null = env `DADM_PROGRAM_MANAGER_ENABLED` (default OFF).
+	 */
+	@Column({
+		name: "dadm_program_manager_enabled",
+		type: "boolean",
+		nullable: true,
+		default: null,
+	})
+	dadmProgramManagerEnabled!: boolean | null;
+
+	/**
+	 * Жёсткий disable формы анкеты при чужом edit-lock.
+	 * null = env `EDIT_LOCK_HARD_DISABLE_ENABLED` (default OFF — только предупреждение).
+	 */
+	@Column({
+		name: "edit_lock_hard_disable_enabled",
+		type: "boolean",
+		nullable: true,
+		default: null,
+	})
+	editLockHardDisableEnabled!: boolean | null;
+
 	@UpdateDateColumn({ name: "updated_at", type: "timestamptz" })
 	updatedAt!: Date;
 

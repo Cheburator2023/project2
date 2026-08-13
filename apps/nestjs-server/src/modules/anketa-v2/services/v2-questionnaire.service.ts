@@ -32,6 +32,7 @@ import { V2TemplateEntity } from "../entities/v2-template.entity";
 import { V2TemplateVersionEntity } from "../entities/v2-template-version.entity";
 import { V2TemplateService } from "./v2-template.service";
 import { V2CalculationService } from "./v2-calculation.service";
+import { V2RuntimeSettingsService } from "./v2-runtime-settings.service";
 import {
 	buildTestQuestionnaireFormData,
 	V2_TEST_QUESTIONNAIRE_SEED_SPECS,
@@ -75,6 +76,7 @@ export class V2QuestionnaireService {
 		private readonly versionRepository: Repository<V2TemplateVersionEntity>,
 		private readonly templateService: V2TemplateService,
 		private readonly calculationService: V2CalculationService,
+		private readonly runtimeSettingsService: V2RuntimeSettingsService,
 	) {}
 
 	async findAll(): Promise<V2QuestionnaireDto[]> {
@@ -185,8 +187,10 @@ export class V2QuestionnaireService {
 		}
 		const versionDto = mapV2TemplateVersionToDto(bound);
 		const workflow = normalizeV2AnketaWorkflow(dto.formData.workflow);
+		const dadmEnabled =
+			await this.runtimeSettingsService.isDadmProgramManagerEnabled();
 		const readOnly =
-			row.status === "inactive" ||
+			(dadmEnabled && row.status === "inactive") ||
 			row.status === "archived" ||
 			dto.schemaBinding.status === "unavailable" ||
 			isAnketaGloballyLocked(workflow);
@@ -207,6 +211,15 @@ export class V2QuestionnaireService {
 				"Создание анкет доступно только ролям ds_lead, modelops_lead и sacfg",
 			);
 		}
+	}
+
+	private async assertDadmProgramManagerEnabled(): Promise<void> {
+		if (await this.runtimeSettingsService.isDadmProgramManagerEnabled()) {
+			return;
+		}
+		throw new ForbiddenException(
+			"Функционал менеджера программ ДАДМ выключен",
+		);
 	}
 
 	private assertCanCopyQuestionnaire(
@@ -277,7 +290,12 @@ export class V2QuestionnaireService {
 		user?: TUserLike | null,
 	): Promise<V2QuestionnaireDto> {
 		const row = await this.loadWithRelations(id);
-		if (row.status === "inactive" || row.status === "archived") {
+		const dadmEnabled =
+			await this.runtimeSettingsService.isDadmProgramManagerEnabled();
+		if (
+			row.status === "archived" ||
+			(dadmEnabled && row.status === "inactive")
+		) {
 			throw new ConflictException(
 				"Историческая (неактивная) версия анкеты неизменяема. Создайте новую версию.",
 			);
@@ -348,6 +366,7 @@ export class V2QuestionnaireService {
 
 	/** Утверждение оценки: любой статус → Утверждена (независимо от готовности разделов). */
 	async hold(id: string): Promise<V2QuestionnaireDto> {
+		await this.assertDadmProgramManagerEnabled();
 		const row = await this.loadWithRelations(id);
 		if (row.status === "inactive" || row.status === "archived") {
 			throw new ConflictException(
@@ -412,13 +431,18 @@ export class V2QuestionnaireService {
 		const nextVersion = String(maxVersion + 1);
 		const readableId = `V2-${parent.seriesId}-v${nextVersion}`;
 
-		/** В серии активна только одна версия — предыдущие уходят в исторический срез. */
-		const toDeactivate = siblings.filter((s) => s.status === "active");
-		for (const row of toDeactivate) {
-			row.status = "inactive";
-		}
-		if (toDeactivate.length > 0) {
-			await this.questionnaireRepository.save(toDeactivate);
+		/**
+		 * Режим менеджера программ ДАДМ: в серии активна только одна версия —
+		 * предыдущие уходят в исторический срез.
+		 */
+		if (await this.runtimeSettingsService.isDadmProgramManagerEnabled()) {
+			const toDeactivate = siblings.filter((s) => s.status === "active");
+			for (const row of toDeactivate) {
+				row.status = "inactive";
+			}
+			if (toDeactivate.length > 0) {
+				await this.questionnaireRepository.save(toDeactivate);
+			}
 		}
 
 		const { boundVersion, formData, formDataProjection } =
@@ -606,6 +630,8 @@ export class V2QuestionnaireService {
 				const workflow = normalizeV2AnketaWorkflow(
 					migrateV2AnketaFormData(row.formData ?? {}).workflow,
 				);
+				const dadmEnabled =
+					await this.runtimeSettingsService.isDadmProgramManagerEnabled();
 				const resolved = resolveV2QuestionnaireDeleteAction(
 					workflow.globalStatus,
 					row.status,
@@ -622,7 +648,8 @@ export class V2QuestionnaireService {
 					continue;
 				}
 
-				if (resolved.action === "hard_delete") {
+				/** Без фичи ДАДМ — всегда hard-delete (старое поведение). */
+				if (!dadmEnabled || resolved.action === "hard_delete") {
 					await this.questionnaireRepository.remove(row);
 					deletedIds.push(id);
 					continue;

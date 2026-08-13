@@ -1,5 +1,7 @@
+import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import Box from "@mui/material/Box";
 import Divider from "@mui/material/Divider";
+import IconButton from "@mui/material/IconButton";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
@@ -36,19 +38,25 @@ const REMOTE_APP_LINKS: RemoteAppLink[] = [
 	{ id: "sum-rm", label: "СУРМ", href: "/sum-rm" },
 ];
 
-const getAdminNavbarItems = () =>
+const getGroupNavbarItems = (group: "adminV2" | "tracker") =>
 	(Object.values(commonRoutes) as AppRouteConfig[])
 		.filter((r) => r.showInNavbar)
-		.filter((r) => r.navbar?.group === "adminV2")
+		.filter((r) => r.navbar?.group === group)
 		.filter((r) => !r.disabled)
+		.filter((r) => r.navbar?.asSectionIcon !== "settings")
 		.sort((a, b) => (a.navbar?.order ?? 0) - (b.navbar?.order ?? 0));
 
-const getTrackerNavbarItems = () =>
-	(Object.values(commonRoutes) as AppRouteConfig[])
-		.filter((r) => r.showInNavbar)
-		.filter((r) => r.navbar?.group === "tracker")
-		.filter((r) => !r.disabled)
-		.sort((a, b) => (a.navbar?.order ?? 0) - (b.navbar?.order ?? 0));
+const getGroupSettingsRoute = (group: "adminV2" | "tracker") =>
+	(Object.values(commonRoutes) as AppRouteConfig[]).find(
+		(r) =>
+			r.showInNavbar &&
+			!r.disabled &&
+			r.navbar?.group === group &&
+			r.navbar?.asSectionIcon === "settings",
+	);
+
+const getAdminNavbarItems = () => getGroupNavbarItems("adminV2");
+const getTrackerNavbarItems = () => getGroupNavbarItems("tracker");
 
 const getDevNavbarItems = () =>
 	(Object.values(commonRoutes) as AppRouteConfig[])
@@ -142,6 +150,49 @@ function NavLinkItem({
 	);
 }
 
+function NavSectionHeader({
+	title,
+	pl,
+	settingsPath,
+	settingsSelected,
+}: {
+	title: string;
+	pl: number;
+	settingsPath?: string;
+	settingsSelected?: boolean;
+}) {
+	return (
+		<ListItem
+			disablePadding
+			sx={{ display: "block", mb: 0.2 }}
+			secondaryAction={
+				settingsPath ? (
+					<IconButton
+						component={RouterLink}
+						to={settingsPath}
+						size="small"
+						edge="end"
+						title="Настройки"
+						aria-label="Настройки"
+						color={settingsSelected ? "primary" : "default"}
+						data-test-id={`nav-section-settings--${settingsPath}`}
+						sx={{ mr: 0.25 }}
+					>
+						<SettingsOutlinedIcon fontSize="small" />
+					</IconButton>
+				) : undefined
+			}
+		>
+			<ListItemButton
+				disabled
+				sx={{ pl, pr: settingsPath ? 6 : undefined }}
+			>
+				<ListItemText secondary={title} />
+			</ListItemButton>
+		</ListItem>
+	);
+}
+
 function NavSection({
 	title,
 	homeLabel,
@@ -162,9 +213,7 @@ function NavSection({
 
 	return (
 		<Box sx={{ display: "block", mb: 0.2 }}>
-			<ListItemButton disabled sx={{ pl }}>
-				<ListItemText secondary={title} />
-			</ListItemButton>
+			<NavSectionHeader title={title} pl={pl} />
 			<List disablePadding sx={{ py: 0 }}>
 				<NavLinkItem
 					to={homePath}
@@ -206,6 +255,8 @@ function SmartAnketaSections({ pathname }: { pathname: string }) {
 		}
 		return true;
 	});
+	const adminSettings = getGroupSettingsRoute("adminV2");
+	const trackerSettings = getGroupSettingsRoute("tracker");
 	const sectionIndent = SHOW_SMART_ANKETA_APP_TITLE ? 1 : 0;
 
 	return (
@@ -249,9 +300,16 @@ function SmartAnketaSections({ pathname }: { pathname: string }) {
 					<Divider sx={{ my: 1 }} />
 					{/* Все пункты трекера равноправны — порядок только из navbar.order */}
 					<Box sx={{ display: "block", mb: 0.2 }}>
-						<ListItemButton disabled sx={{ pl: 1 + sectionIndent }}>
-							<ListItemText secondary={commonNavbarGroups.tracker.title} />
-						</ListItemButton>
+						<NavSectionHeader
+							title={commonNavbarGroups.tracker.title}
+							pl={1 + sectionIndent}
+							settingsPath={trackerSettings?.rootPath}
+							settingsSelected={
+								Boolean(trackerSettings) &&
+								(pathname === trackerSettings.rootPath ||
+									pathname.startsWith(`${trackerSettings.rootPath}/`))
+							}
+						/>
 						<List disablePadding sx={{ py: 0 }}>
 							{getTrackerNavbarItems().map((route) => (
 								<NavLinkItem
@@ -291,12 +349,16 @@ function SmartAnketaSections({ pathname }: { pathname: string }) {
 					<Divider sx={{ my: 1 }} />
 
 					<Box sx={{ display: "block", mb: 0.2 }}>
-						<ListItemButton
-							disabled
-							sx={{ pl: SHOW_SMART_ANKETA_APP_TITLE ? 2 : 1 }}
-						>
-							<ListItemText secondary={commonNavbarGroups.adminV2.title} />
-						</ListItemButton>
+						<NavSectionHeader
+							title={commonNavbarGroups.adminV2.title}
+							pl={SHOW_SMART_ANKETA_APP_TITLE ? 2 : 1}
+							settingsPath={adminSettings?.rootPath}
+							settingsSelected={
+								Boolean(adminSettings) &&
+								(pathname === adminSettings.rootPath ||
+									pathname.startsWith(`${adminSettings.rootPath}/`))
+							}
+						/>
 						<List disablePadding sx={{ py: 0 }}>
 							{adminNavItems.map((route) => (
 								<NavLinkItem

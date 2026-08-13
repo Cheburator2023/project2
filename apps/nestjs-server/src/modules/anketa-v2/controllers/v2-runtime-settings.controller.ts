@@ -5,6 +5,8 @@ import { DomainRoles } from "../../../shared/decorators/domain-roles.decorator";
 import { CurrentUser } from "../../../shared/decorators/user.decorator";
 import {
 	V2RuntimeSettingsService,
+	type V2DadmProgramManagerSettingDto,
+	type V2EditLockHardDisableSettingDto,
 	type V2RoleCompatSettingDto,
 	type V2StreamFilterSettingDto,
 	type V2WorkEstimatesStreamFilterSettingDto,
@@ -28,6 +30,16 @@ class UpdateV2RoleCompatSettingDto {
 	@IsOptional()
 	@IsBoolean()
 	allowNestedLeadGroups?: boolean;
+}
+
+class UpdateV2DadmProgramManagerSettingDto {
+	@IsBoolean()
+	enabled!: boolean;
+}
+
+class UpdateV2EditLockHardDisableSettingDto {
+	@IsBoolean()
+	enabled!: boolean;
 }
 
 @ApiTags("v2-runtime-settings")
@@ -144,5 +156,83 @@ export class V2RuntimeSettingsController {
 		const updatedBy =
 			user?.preferred_username || user?.username || null;
 		return this.settings.clearRoleCompatOverride(updatedBy);
+	}
+
+	@Get("dadm-program-manager")
+	@ApiOperation({
+		summary:
+			"Feature flag: функционал менеджера программ ДАДМ (default OFF)",
+	})
+	async getDadmProgramManager(): Promise<V2DadmProgramManagerSettingDto> {
+		return this.settings.getDadmProgramManagerSetting();
+	}
+
+	@Put("dadm-program-manager")
+	@DomainRoles("appadmin", "sacfg")
+	@ApiOperation({
+		summary: "Включить/выключить функционал менеджера программ ДАДМ",
+	})
+	async putDadmProgramManager(
+		@Body() body: UpdateV2DadmProgramManagerSettingDto,
+		@CurrentUser() user?: { preferred_username?: string; username?: string },
+	): Promise<V2DadmProgramManagerSettingDto> {
+		const updatedBy =
+			user?.preferred_username || user?.username || null;
+		return this.settings.setDadmProgramManagerEnabled(body.enabled, updatedBy);
+	}
+
+	@Delete("dadm-program-manager/override")
+	@DomainRoles("appadmin", "sacfg")
+	@ApiOperation({
+		summary:
+			"Сбросить override — снова брать DADM_PROGRAM_MANAGER_ENABLED / default OFF",
+	})
+	async clearDadmProgramManagerOverride(
+		@CurrentUser() user?: { preferred_username?: string; username?: string },
+	): Promise<V2DadmProgramManagerSettingDto> {
+		const updatedBy =
+			user?.preferred_username || user?.username || null;
+		return this.settings.clearDadmProgramManagerOverride(updatedBy);
+	}
+
+	@Get("edit-lock-hard-disable")
+	@ApiOperation({
+		summary:
+			"Feature flag: жёсткий disable формы при чужом edit-lock (default OFF)",
+	})
+	async getEditLockHardDisable(): Promise<V2EditLockHardDisableSettingDto> {
+		return this.settings.getEditLockHardDisableSetting();
+	}
+
+	@Put("edit-lock-hard-disable")
+	@DomainRoles("appadmin", "sacfg")
+	@ApiOperation({
+		summary:
+			"Включить/выключить жёсткий disable формы при чужом edit-lock",
+	})
+	async putEditLockHardDisable(
+		@Body() body: UpdateV2EditLockHardDisableSettingDto,
+		@CurrentUser() user?: { preferred_username?: string; username?: string },
+	): Promise<V2EditLockHardDisableSettingDto> {
+		const updatedBy =
+			user?.preferred_username || user?.username || null;
+		return this.settings.setEditLockHardDisableEnabled(
+			body.enabled,
+			updatedBy,
+		);
+	}
+
+	@Delete("edit-lock-hard-disable/override")
+	@DomainRoles("appadmin", "sacfg")
+	@ApiOperation({
+		summary:
+			"Сбросить override — снова брать EDIT_LOCK_HARD_DISABLE_ENABLED / default OFF",
+	})
+	async clearEditLockHardDisableOverride(
+		@CurrentUser() user?: { preferred_username?: string; username?: string },
+	): Promise<V2EditLockHardDisableSettingDto> {
+		const updatedBy =
+			user?.preferred_username || user?.username || null;
+		return this.settings.clearEditLockHardDisableOverride(updatedBy);
 	}
 }

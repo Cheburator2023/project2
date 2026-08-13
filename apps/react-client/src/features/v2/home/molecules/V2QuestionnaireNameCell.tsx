@@ -1,4 +1,5 @@
 import type { ICellRendererParams } from "ag-grid-community";
+import { useEditLockHardDisableFeature } from "@react-client/common/api/queries/v2-runtime-settings";
 import { AgGridRouterLink } from "@react-client/common/tableStuff/AgGridRouterLink";
 import { pathForV2QuestionnairePreview } from "@react-client/routing/common/pathHelpers";
 import type { V2QuestionnaireGridRow } from "../types/v2QuestionnaireGrid.types";
@@ -9,6 +10,7 @@ export function V2QuestionnaireNameCell(
 	params: ICellRendererParams<V2QuestionnaireGridRow>,
 ) {
 	const row = resolveVersionRow(params.data);
+	const editLockHardDisable = useEditLockHardDisableFeature();
 	if (!row) return null;
 
 	const label =
@@ -18,7 +20,8 @@ export function V2QuestionnaireNameCell(
 		row.readableId ||
 		row.id;
 
-	if (row.isEditLocked) {
+	const hardLocked = editLockHardDisable && row.isEditLocked;
+	if (hardLocked) {
 		return (
 			<span title="Анкета сейчас редактируется">{label}</span>
 		);
@@ -27,7 +30,11 @@ export function V2QuestionnaireNameCell(
 	return (
 		<AgGridRouterLink
 			to={pathForV2QuestionnairePreview(row.id)}
-			title="Открыть анкету"
+			title={
+				row.isEditLocked
+					? "Анкета уже редактируется — можно открыть"
+					: "Открыть анкету"
+			}
 		>
 			{label}
 		</AgGridRouterLink>

@@ -1,4 +1,7 @@
 import {
+	allRequiredSectionsCompleted,
+	collectRequiredWorkflowTargetsForViewer,
+	completeGlobalQuestionnaire,
 	completePanelSection,
 	completeSection,
 	createDefaultV2AnketaWorkflow,
@@ -60,13 +63,26 @@ export function resetSectionOnWorksCompositionChange(
 export function useAnketaWorkflow(
 	formData: Record<string, unknown>,
 	setFormData: (next: Record<string, unknown>) => void,
-	_uiSchema?: unknown,
-	_viewerAccess?: V2AnketaViewerAccessContext & {
+	uiSchema?: unknown,
+	viewerAccess?: V2AnketaViewerAccessContext & {
 		applyAccessRules?: boolean;
 	},
 ) {
 	const workflow = useMemo(() => readWorkflowFromFormData(formData), [formData]);
 	const globallyLocked = isAnketaGloballyLocked(workflow);
+	const requiredTargets = useMemo(() => {
+		if (!uiSchema) return undefined;
+		return collectRequiredWorkflowTargetsForViewer(
+			uiSchema,
+			formData,
+			viewerAccess,
+			{ applyAccessRules: viewerAccess?.applyAccessRules !== false },
+		);
+	}, [uiSchema, formData, viewerAccess]);
+	const allSectionsCompleted = useMemo(
+		() => allRequiredSectionsCompleted(workflow, requiredTargets),
+		[workflow, requiredTargets],
+	);
 
 	const setWorkflow = useCallback(
 		(next: V2AnketaWorkflowDto, baseFormData?: Record<string, unknown>) => {
@@ -102,6 +118,13 @@ export function useAnketaWorkflow(
 		[formData, setFormData],
 	);
 
+	const completeGlobalFill = useCallback(() => {
+		const current = readWorkflowFromFormData(formData);
+		const next = completeGlobalQuestionnaire(current, requiredTargets);
+		if (next === current) return;
+		setFormData(withWorkflow(formData, next));
+	}, [formData, requiredTargets, setFormData]);
+
 	const isSectionLocked = useCallback(
 		(sectionId: V2AnketaMainSectionId) =>
 			globallyLocked || workflow.sections[sectionId] === "Заполнено",
@@ -111,9 +134,11 @@ export function useAnketaWorkflow(
 	return {
 		workflow,
 		globallyLocked,
+		allSectionsCompleted,
 		completeMainSection,
 		completePanelSectionByPath,
 		touchMainSection,
+		completeGlobalFill,
 		isSectionLocked,
 	};
 }

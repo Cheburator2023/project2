@@ -11,6 +11,11 @@ export type AppRouteConfig = {
 	navbar?: {
 		group?: "main" | "adminV2" | "dev" | "tracker";
 		order?: number;
+		/**
+		 * Не пункт списка, а иконка справа от заголовка секции группы.
+		 * Сейчас: шестерёнка «Настройки».
+		 */
+		asSectionIcon?: "settings";
 	};
 	/** Короткий заголовок для крошек на вложенных экранах */
 	shortName?: string;

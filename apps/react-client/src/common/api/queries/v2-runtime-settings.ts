@@ -23,12 +23,32 @@ export type V2RoleCompatSetting = {
 	allowNestedLeadGroupsOverride: boolean | null;
 };
 
+export type V2DadmProgramManagerSetting = {
+	enabled: boolean;
+	envDefaultEnabled: boolean;
+	override: boolean | null;
+};
+
+export type V2EditLockHardDisableSetting = {
+	enabled: boolean;
+	envDefaultEnabled: boolean;
+	override: boolean | null;
+};
+
 const STREAM_FILTER_KEY = ["v2-runtime-settings", "stream-filter"] as const;
 const WORK_ESTIMATES_STREAM_FILTER_KEY = [
 	"v2-runtime-settings",
 	"work-estimates-stream-filter",
 ] as const;
 const ROLE_COMPAT_KEY = ["v2-runtime-settings", "role-compat"] as const;
+const DADM_PROGRAM_MANAGER_KEY = [
+	"v2-runtime-settings",
+	"dadm-program-manager",
+] as const;
+const EDIT_LOCK_HARD_DISABLE_KEY = [
+	"v2-runtime-settings",
+	"edit-lock-hard-disable",
+] as const;
 
 export const useV2StreamFilterSetting = () =>
 	useQuery<V2StreamFilterSetting>({
@@ -152,3 +172,95 @@ export const useResetV2RoleCompatSetting = () => {
 		},
 	});
 };
+
+export const useV2DadmProgramManagerSetting = () =>
+	useQuery<V2DadmProgramManagerSetting>({
+		queryKey: DADM_PROGRAM_MANAGER_KEY,
+		queryFn: () =>
+			apiClient<V2DadmProgramManagerSetting>({
+				url: "/v2/runtime-settings/dadm-program-manager",
+				method: "GET",
+			}),
+		staleTime: 30_000,
+	});
+
+export const useUpdateV2DadmProgramManagerSetting = () => {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: (enabled: boolean) =>
+			apiClient<V2DadmProgramManagerSetting>({
+				url: "/v2/runtime-settings/dadm-program-manager",
+				method: "PUT",
+				data: { enabled },
+			}),
+		onSuccess: (data) => {
+			qc.setQueryData(DADM_PROGRAM_MANAGER_KEY, data);
+		},
+	});
+};
+
+export const useResetV2DadmProgramManagerSetting = () => {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: () =>
+			apiClient<V2DadmProgramManagerSetting>({
+				url: "/v2/runtime-settings/dadm-program-manager/override",
+				method: "DELETE",
+			}),
+		onSuccess: (data) => {
+			qc.setQueryData(DADM_PROGRAM_MANAGER_KEY, data);
+		},
+	});
+};
+
+/** Convenience: default OFF until settings loaded. */
+export function useDadmProgramManagerFeature(): boolean {
+	const { data } = useV2DadmProgramManagerSetting();
+	return data?.enabled === true;
+}
+
+export const useV2EditLockHardDisableSetting = () =>
+	useQuery<V2EditLockHardDisableSetting>({
+		queryKey: EDIT_LOCK_HARD_DISABLE_KEY,
+		queryFn: () =>
+			apiClient<V2EditLockHardDisableSetting>({
+				url: "/v2/runtime-settings/edit-lock-hard-disable",
+				method: "GET",
+			}),
+		staleTime: 30_000,
+	});
+
+export const useUpdateV2EditLockHardDisableSetting = () => {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: (enabled: boolean) =>
+			apiClient<V2EditLockHardDisableSetting>({
+				url: "/v2/runtime-settings/edit-lock-hard-disable",
+				method: "PUT",
+				data: { enabled },
+			}),
+		onSuccess: (data) => {
+			qc.setQueryData(EDIT_LOCK_HARD_DISABLE_KEY, data);
+		},
+	});
+};
+
+export const useResetV2EditLockHardDisableSetting = () => {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: () =>
+			apiClient<V2EditLockHardDisableSetting>({
+				url: "/v2/runtime-settings/edit-lock-hard-disable/override",
+				method: "DELETE",
+			}),
+		onSuccess: (data) => {
+			qc.setQueryData(EDIT_LOCK_HARD_DISABLE_KEY, data);
+		},
+	});
+};
+
+/** Convenience: default OFF until settings loaded. */
+export function useEditLockHardDisableFeature(): boolean {
+	const { data } = useV2EditLockHardDisableSetting();
+	return data?.enabled === true;
+}

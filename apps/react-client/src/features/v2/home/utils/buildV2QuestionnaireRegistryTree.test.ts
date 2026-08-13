@@ -92,4 +92,31 @@ describe("buildV2QuestionnaireRegistryTree", () => {
 		expect(tree.map((g) => g.seriesId)).toEqual(["s1"]);
 		expect(tree[0]?.children.map((c) => c.id)).toEqual(["a1"]);
 	});
+
+	it("includeAllVersions: все версии серии без фильтра режимов", () => {
+		const rows = [
+			version({
+				id: "a1",
+				seriesId: "s1",
+				version: "1",
+				calcName: "A",
+				status: "inactive",
+				workflowGlobalStatus: "Утверждена",
+				createdAt: "2026-01-01T00:00:00.000Z",
+			}),
+			version({
+				id: "a2",
+				seriesId: "s1",
+				version: "2",
+				calcName: "A v2",
+				status: "active",
+				createdAt: "2026-01-02T00:00:00.000Z",
+			}),
+		];
+		const tree = buildV2QuestionnaireRegistryTree(rows, "actual", {
+			includeAllVersions: true,
+		});
+		expect(tree).toHaveLength(1);
+		expect(tree[0]?.children.map((c) => c.id)).toEqual(["a1", "a2"]);
+	});
 });

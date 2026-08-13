@@ -27,6 +27,23 @@ export type V2RoleCompatSettingDto = {
 	allowNestedLeadGroupsOverride: boolean | null;
 };
 
+/** Feature flag ДАДМ: default OFF (старое поведение без утверждения/срезов). */
+export type V2DadmProgramManagerSettingDto = {
+	enabled: boolean;
+	envDefaultEnabled: boolean;
+	override: boolean | null;
+};
+
+/**
+ * Жёсткий disable формы при чужом edit-lock.
+ * Default OFF — только предупреждение, форма остаётся редактируемой.
+ */
+export type V2EditLockHardDisableSettingDto = {
+	enabled: boolean;
+	envDefaultEnabled: boolean;
+	override: boolean | null;
+};
+
 @Injectable()
 export class V2RuntimeSettingsService implements OnModuleInit {
 	constructor(
@@ -65,6 +82,16 @@ export class V2RuntimeSettingsService implements OnModuleInit {
 
 	getEnvAllowNestedLeadGroups(): boolean {
 		return process.env.ALLOW_NESTED_LEAD_GROUPS !== "false";
+	}
+
+	/** Default OFF — включается явно через админку или `DADM_PROGRAM_MANAGER_ENABLED=true`. */
+	getEnvDadmProgramManagerEnabled(): boolean {
+		return process.env.DADM_PROGRAM_MANAGER_ENABLED === "true";
+	}
+
+	/** Default OFF — `EDIT_LOCK_HARD_DISABLE_ENABLED=true` или override в админке. */
+	getEnvEditLockHardDisableEnabled(): boolean {
+		return process.env.EDIT_LOCK_HARD_DISABLE_ENABLED === "true";
 	}
 
 	async getStreamFilterSetting(): Promise<V2StreamFilterSettingDto> {
@@ -192,6 +219,80 @@ export class V2RuntimeSettingsService implements OnModuleInit {
 		};
 	}
 
+	async getDadmProgramManagerSetting(): Promise<V2DadmProgramManagerSettingDto> {
+		const row = await this.getOrCreate();
+		const envDefaultEnabled = this.getEnvDadmProgramManagerEnabled();
+		const override = row.dadmProgramManagerEnabled;
+		return {
+			enabled: override == null ? envDefaultEnabled : override,
+			envDefaultEnabled,
+			override,
+		};
+	}
+
+	async setDadmProgramManagerEnabled(
+		enabled: boolean,
+		updatedBy?: string | null,
+	): Promise<V2DadmProgramManagerSettingDto> {
+		const row = await this.getOrCreate();
+		row.dadmProgramManagerEnabled = enabled;
+		row.updatedBy = updatedBy ?? null;
+		await this.repo.save(row);
+		return this.getDadmProgramManagerSetting();
+	}
+
+	async clearDadmProgramManagerOverride(
+		updatedBy?: string | null,
+	): Promise<V2DadmProgramManagerSettingDto> {
+		const row = await this.getOrCreate();
+		row.dadmProgramManagerEnabled = null;
+		row.updatedBy = updatedBy ?? null;
+		await this.repo.save(row);
+		return this.getDadmProgramManagerSetting();
+	}
+
+	async isDadmProgramManagerEnabled(): Promise<boolean> {
+		const dto = await this.getDadmProgramManagerSetting();
+		return dto.enabled;
+	}
+
+	async getEditLockHardDisableSetting(): Promise<V2EditLockHardDisableSettingDto> {
+		const row = await this.getOrCreate();
+		const envDefaultEnabled = this.getEnvEditLockHardDisableEnabled();
+		const override = row.editLockHardDisableEnabled;
+		return {
+			enabled: override == null ? envDefaultEnabled : override,
+			envDefaultEnabled,
+			override,
+		};
+	}
+
+	async setEditLockHardDisableEnabled(
+		enabled: boolean,
+		updatedBy?: string | null,
+	): Promise<V2EditLockHardDisableSettingDto> {
+		const row = await this.getOrCreate();
+		row.editLockHardDisableEnabled = enabled;
+		row.updatedBy = updatedBy ?? null;
+		await this.repo.save(row);
+		return this.getEditLockHardDisableSetting();
+	}
+
+	async clearEditLockHardDisableOverride(
+		updatedBy?: string | null,
+	): Promise<V2EditLockHardDisableSettingDto> {
+		const row = await this.getOrCreate();
+		row.editLockHardDisableEnabled = null;
+		row.updatedBy = updatedBy ?? null;
+		await this.repo.save(row);
+		return this.getEditLockHardDisableSetting();
+	}
+
+	async isEditLockHardDisableEnabled(): Promise<boolean> {
+		const dto = await this.getEditLockHardDisableSetting();
+		return dto.enabled;
+	}
+
 	async getKeycloakEtalonOverlay(): Promise<Record<string, unknown> | null> {
 		const row = await this.getOrCreate();
 		return row.keycloakEtalonOverlay ?? null;
@@ -217,6 +318,8 @@ export class V2RuntimeSettingsService implements OnModuleInit {
 			workEstimatesStreamFilterEnabled: null,
 			adminItAsAppadmin: null,
 			allowNestedLeadGroups: null,
+			dadmProgramManagerEnabled: null,
+			editLockHardDisableEnabled: null,
 			updatedBy: null,
 		});
 		return this.repo.save(row);

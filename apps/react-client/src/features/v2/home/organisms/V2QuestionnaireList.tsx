@@ -89,7 +89,11 @@ import {
 } from "@react-client/theme/ag-grid/agGridCustomTheme";
 import { agGridIconSet } from "@react-client/theme/ag-grid/agGridIconSet";
 import { useUserStore } from "@react-client/common/store/userStore";
-import { useV2StreamFilterSetting } from "@react-client/common/api/queries/v2-runtime-settings";
+import {
+	useDadmProgramManagerFeature,
+	useEditLockHardDisableFeature,
+	useV2StreamFilterSetting,
+} from "@react-client/common/api/queries/v2-runtime-settings";
 import {
 	canHoldQuestionnaire,
 	canUserDeleteV2Questionnaire,
@@ -397,8 +401,12 @@ export function V2QuestionnaireList() {
 		canExportReports,
 		canHoldCalculation,
 	} = usePermissions();
+	const dadmProgramManagerEnabled = useDadmProgramManagerFeature();
+	const editLockHardDisable = useEditLockHardDisableFeature();
 	const bulkDelete = useBulkDeleteV2Questionnaires();
 	const bulkHold = useBulkHoldV2Questionnaires();
+	const canShowHoldActions =
+		dadmProgramManagerEnabled && canHoldCalculation;
 	const { data: registryConfig, isLoading: isRegistryConfigLoading } =
 		useV2QuestionnaireRegistryConfig();
 	const [selectedVersions, setSelectedVersions] = useState<
@@ -522,19 +530,26 @@ export function V2QuestionnaireList() {
 		});
 	}, [streamFilteredQuestionnaires, locksById, username]);
 
-	const rowData = useMemo<V2QuestionnaireSeriesRow[]>(
-		() => buildV2QuestionnaireRegistryTree(versionRows, registryVersionMode),
-		[versionRows, registryVersionMode],
-	);
+	/** Дерево версий — только при фиче ДАДМ; иначе плоский реестр. */
+	const rowData = useMemo<V2QuestionnaireGridRow[]>(() => {
+		if (!dadmProgramManagerEnabled) return versionRows;
+		return buildV2QuestionnaireRegistryTree(
+			versionRows,
+			registryVersionMode,
+		);
+	}, [versionRows, registryVersionMode, dadmProgramManagerEnabled]);
 
-	const visibleVersionRows = useMemo(
-		() => flattenV2QuestionnaireRegistryTree(rowData),
-		[rowData],
-	);
+	const visibleVersionRows = useMemo(() => {
+		if (!dadmProgramManagerEnabled) return versionRows;
+		return flattenV2QuestionnaireRegistryTree(
+			rowData as V2QuestionnaireSeriesRow[],
+		);
+	}, [dadmProgramManagerEnabled, rowData, versionRows]);
 
 	useEffect(() => {
+		if (!dadmProgramManagerEnabled) return;
 		gridRef.current?.api?.expandAll();
-	}, [rowData]);
+	}, [rowData, dadmProgramManagerEnabled]);
 
 	const rowClassRules = useMemo(
 		() => ({
@@ -612,7 +627,7 @@ export function V2QuestionnaireList() {
 		(e: RowDoubleClickedEvent<V2QuestionnaireGridRow>) => {
 			const row = resolveVersionRow(e.data);
 			if (!row) return;
-			if (row.isEditLocked) {
+			if (editLockHardDisable && row.isEditLocked) {
 				toast.error("Анкета сейчас редактируется", {
 					description: "Откройте позже, когда блокировка снимется",
 				});
@@ -620,7 +635,7 @@ export function V2QuestionnaireList() {
 			}
 			navigate(pathForV2QuestionnairePreview(row.id));
 		},
-		[navigate],
+		[editLockHardDisable, navigate],
 	);
 
 	const getRowId = useCallback(
@@ -644,9 +659,11 @@ export function V2QuestionnaireList() {
 			applyAgGridColumnState(GRID_COLUMN_STATE_KEY, (state) => {
 				e.api.applyColumnState({ state, applyOrder: true });
 			});
-			e.api.expandAll();
+			if (dadmProgramManagerEnabled) {
+				e.api.expandAll();
+			}
 		},
-		[columnTree],
+		[columnTree, dadmProgramManagerEnabled],
 	);
 
 	const persistColumnState = useCallback((api: GridApi) => {
@@ -725,16 +742,19 @@ export function V2QuestionnaireList() {
 				exportIds.length > 1
 					? `Экспорт в XLSX (${exportIds.length})`
 					: "Экспорт в XLSX";
-			const lockedHint = row.isEditLocked
+			const hardLocked = editLockHardDisable && row.isEditLocked;
+			const lockedHint = hardLocked
 				? "Анкета сейчас редактируется"
-				: undefined;
+				: row.isEditLocked
+					? "уже редактируется — можно открыть"
+					: undefined;
 
 			return [
 				{
 					name: lockedHint ? `Открыть (${lockedHint})` : "Открыть",
-					disabled: Boolean(row.isEditLocked),
+					disabled: Boolean(hardLocked),
 					action: () => {
-						if (row.isEditLocked) return;
+						if (hardLocked) return;
 						navigate(pathForV2QuestionnairePreview(row.id));
 					},
 				},
@@ -742,9 +762,9 @@ export function V2QuestionnaireList() {
 					name: lockedHint
 						? `Новая версия анкеты (${lockedHint})`
 						: "Новая версия анкеты",
-					disabled: Boolean(row.isEditLocked),
+					disabled: Boolean(hardLocked),
 					action: () => {
-						if (row.isEditLocked) return;
+						if (hardLocked) return;
 						navigate(pathForV2QuestionnaireNewVersion(row.id));
 					},
 				},
@@ -755,7 +775,7 @@ export function V2QuestionnaireList() {
 				},
 			];
 		},
-		[navigate, isExporting, handleExportXlsx],
+		[editLockHardDisable, navigate, isExporting, handleExportXlsx],
 	);
 
 	const holdableSelectedIds = useMemo(
@@ -849,7 +869,7 @@ export function V2QuestionnaireList() {
 		);
 	}, [bulkDelete, groups, selectedVersions]);
 
-	const versionModeToggle = (
+	const versionModeToggle = dadmProgramManagerEnabled ? (
 		<SegmentBar<V2QuestionnaireRegistryVersionMode>
 			value={registryVersionMode}
 			onChange={setRegistryVersionMode}
@@ -869,7 +889,7 @@ export function V2QuestionnaireList() {
 				},
 			]}
 		/>
-	);
+	) : null;
 
 	return (
 		<Flex
@@ -952,7 +972,7 @@ export function V2QuestionnaireList() {
 										</Button>
 									</>
 								) : null}
-								{canHoldCalculation ? (
+								{canShowHoldActions ? (
 									<Button
 										variant="contained"
 										size="small"
@@ -981,7 +1001,11 @@ export function V2QuestionnaireList() {
 										disabled={
 											!selectedVersions.length || bulkDelete.isPending
 										}
-										title="Неутверждённые — полное удаление; утверждённые — статус «Неактивная»."
+										title={
+											dadmProgramManagerEnabled
+												? "Неутверждённые — полное удаление; утверждённые — статус «Неактивная»."
+												: "Удалить выбранные анкеты безвозвратно"
+										}
 										onClick={() => {
 											setHeaderMenuAnchor(null);
 											setDeleteDialogOpen(true);
@@ -1056,7 +1080,7 @@ export function V2QuestionnaireList() {
 									</Button>
 								</>
 							) : null}
-							{canHoldCalculation ? (
+							{canShowHoldActions ? (
 								<Button
 									variant="contained"
 									size="small"
@@ -1081,7 +1105,11 @@ export function V2QuestionnaireList() {
 									disabled={
 										!selectedVersions.length || bulkDelete.isPending
 									}
-									title="Неутверждённые — полное удаление; утверждённые — статус «Неактивная»."
+									title={
+										dadmProgramManagerEnabled
+											? "Неутверждённые — полное удаление; утверждённые — статус «Неактивная»."
+											: "Удалить выбранные анкеты безвозвратно"
+									}
 									onClick={() => setDeleteDialogOpen(true)}
 								>
 									Удалить выбранные ({selectedVersions.length})
@@ -1140,10 +1168,9 @@ export function V2QuestionnaireList() {
 				<DialogTitle>Удалить выбранные анкеты?</DialogTitle>
 				<DialogContent>
 					<DialogContentText>
-						Будет обработано записей: {selectedVersions.length}. Неутверждённые
-						анкеты удаляются из реестра безвозвратно; утверждённые переводятся в
-						статус записи «Неактивная» (срез сохраняется). Действие применяется
-						только к анкетам, доступным вашей роли и стриму.
+						{dadmProgramManagerEnabled
+							? `Будет обработано записей: ${selectedVersions.length}. Неутверждённые анкеты удаляются из реестра безвозвратно; утверждённые переводятся в статус записи «Неактивная» (срез сохраняется). Действие применяется только к анкетам, доступным вашей роли и стриму.`
+							: `Будет удалено записей: ${selectedVersions.length}. Удаление безвозвратное. Действие применяется только к анкетам, доступным вашей роли и стриму.`}
 					</DialogContentText>
 				</DialogContent>
 				<DialogActions>
@@ -1164,11 +1191,15 @@ export function V2QuestionnaireList() {
 					theme={gridTheme}
 					icons={gridIcons}
 					localeText={AG_GRID_LOCALE_RU}
-					treeData
-					treeDataChildrenField="children"
+					treeData={dadmProgramManagerEnabled}
+					treeDataChildrenField={
+						dadmProgramManagerEnabled ? "children" : undefined
+					}
 					rowData={rowData}
 					columnDefs={columnDefs}
-					autoGroupColumnDef={autoGroupColumnDef}
+					autoGroupColumnDef={
+						dadmProgramManagerEnabled ? autoGroupColumnDef : undefined
+					}
 					getRowId={getRowId}
 					rowClassRules={rowClassRules}
 					defaultColDef={defaultColDef}

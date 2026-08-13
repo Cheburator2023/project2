@@ -21,11 +21,13 @@ function formatAnketaVersionLabel(version: string): string {
  * Дерево реестра: группа (серия) → версии, отобранные режимом.
  * Актуальные / Утверждённые — по одной версии на серию
  * (`filterV2QuestionnairesByRegistryVersionMode`).
+ * `includeAllVersions` — без фильтра режимов (фича ДАДМ выкл.).
  * Имя группы — calcName первой версии серии (мин. номер среди всех).
  */
 export function buildV2QuestionnaireRegistryTree(
 	versions: readonly V2QuestionnaireVersionRow[],
 	mode: V2QuestionnaireRegistryVersionMode,
+	options?: { includeAllVersions?: boolean },
 ): V2QuestionnaireSeriesRow[] {
 	const bySeries = new Map<string, V2QuestionnaireVersionRow[]>();
 	for (const row of versions) {
@@ -36,9 +38,11 @@ export function buildV2QuestionnaireRegistryTree(
 	}
 
 	const pickedIds = new Set(
-		filterV2QuestionnairesByRegistryVersionMode(versions, mode).map(
-			(row) => row.id,
-		),
+		options?.includeAllVersions
+			? versions.map((row) => row.id)
+			: filterV2QuestionnairesByRegistryVersionMode(versions, mode).map(
+					(row) => row.id,
+				),
 	);
 
 	const groups: V2QuestionnaireSeriesRow[] = [];

@@ -2,6 +2,7 @@ import {
 	useUpdateV2Questionnaire,
 	useV2QuestionnaireFormPackage,
 } from "@react-client/common/api/queries/v2-questionnaires";
+import { useEditLockHardDisableFeature } from "@react-client/common/api/queries/v2-runtime-settings";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { toast } from "@react-client/common/toasts";
 import { AnketaFormShell } from "@react-client/features/v2/anketaCRUD/templates/AnketaFormShell";
@@ -20,11 +21,18 @@ export const AnketaPreviewPageV2 = () => {
 		id ?? "",
 	);
 	const updateMutation = useUpdateV2Questionnaire();
+	const editLockHardDisable = useEditLockHardDisableFeature();
 	const editLock = useQuestionnaireEditLock({
 		questionnaireId: id,
 		enabled: Boolean(formPackage && !formPackage.readOnly),
 	});
-	const { readOnlyByLock, sessionTimedOut, resumeAfterTimeout } = editLock;
+	const {
+		readOnlyByLock,
+		foreignLock,
+		lockedByLabel,
+		sessionTimedOut,
+		resumeAfterTimeout,
+	} = editLock;
 	const [resumingSession, setResumingSession] = useState(false);
 
 	const source = useMemo(
@@ -49,8 +57,10 @@ export const AnketaPreviewPageV2 = () => {
 		[engine.displayFormData],
 	);
 
+	/** Жёсткий disable — только по фиче-тогглу; иначе форма остаётся editable. */
+	const lockForcesReadOnly = editLockHardDisable && readOnlyByLock;
 	const effectiveReadOnly =
-		Boolean(formPackage?.readOnly) || readOnlyByLock;
+		Boolean(formPackage?.readOnly) || lockForcesReadOnly;
 
 	const autosave = useDebouncedQuestionnaireSave({
 		questionnaireId: id,
@@ -102,6 +112,15 @@ export const AnketaPreviewPageV2 = () => {
 				: "Анкета не найдена"
 			: null;
 
+	const foreignEditorLabel =
+		lockedByLabel?.trim() ||
+		foreignLock?.lockedByLabel?.trim() ||
+		"другой пользователь";
+	const lockMessage =
+		Boolean(foreignLock) && !sessionTimedOut
+			? `Анкета сейчас редактируется пользователем «${foreignEditorLabel}»`
+			: null;
+
 	if (sessionTimedOut && !errorMessage) {
 		return (
 			<AnketaEditSessionTimeoutScreen
@@ -134,11 +153,7 @@ export const AnketaPreviewPageV2 = () => {
 			renamePending={updateMutation.isPending}
 			schemaBinding={formPackage?.questionnaire.schemaBinding}
 			readOnly={effectiveReadOnly}
-			lockMessage={
-				readOnlyByLock && !sessionTimedOut
-					? "Анкета сейчас редактируется другим пользователем"
-					: null
-			}
+			lockMessage={lockMessage}
 			onSave={formPackage && !errorMessage && !effectiveReadOnly ? onSave : undefined}
 			savePending={autosave.isSaving}
 			saveStatus={autosave.status}

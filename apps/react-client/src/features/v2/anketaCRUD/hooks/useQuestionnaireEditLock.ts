@@ -33,7 +33,7 @@ const ACTIVITY_EVENTS = [
 type Options = {
 	questionnaireId: string | null | undefined;
 	enabled?: boolean;
-	/** Бездействие до принудительного выхода (по умолчанию 30 мин). */
+	/** Бездействие до принудительного выхода (по умолчанию 3 мин). */
 	idleTimeoutMs?: number;
 };
 

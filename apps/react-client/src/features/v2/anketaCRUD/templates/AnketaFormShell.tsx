@@ -4,6 +4,7 @@ import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import ContentCopyOutlinedIcon from "@mui/icons-material/ContentCopyOutlined";
 import LibraryAddOutlinedIcon from "@mui/icons-material/LibraryAddOutlined";
 import SaveIcon from "@mui/icons-material/Save";
+import TaskAltIcon from "@mui/icons-material/TaskAlt";
 import Alert from "@mui/material/Alert";
 import {
 	Box,
@@ -23,15 +24,29 @@ import {
 	canHoldQuestionnaire,
 	canUserCopyV2Questionnaire,
 	canUserDeleteV2Questionnaire,
+	canViewerCompleteWholeAnketa,
 	holdQuestionnaire,
 	resolveV2QuestionnaireDeleteAction,
 	schemaHasUncertaintyModalWidget,
 	userMasksAllWorkEstimates,
+	V2_ANKETA_GLOBAL_COMPLETE_LABEL,
 	V2_ANKETA_HOLD_LABEL,
 } from "@smart-anketa/api-contract";
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { useDadmProgramManagerFeature } from "@react-client/common/api/queries/v2-runtime-settings";
+import {
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+	type ReactNode,
+} from "react";
 import type { QuestionnaireSaveStatus } from "../hooks/useDebouncedQuestionnaireSave";
 import { AnketaCalcNameDialog } from "../organisms/AnketaCalcNameDialog";
+import {
+	AnketaGlobalCompleteDialog,
+	type AnketaGlobalCompleteDialogPhase,
+} from "../organisms/AnketaGlobalCompleteDialog";
 import { AnketaSchemaCurrencyDialog } from "../organisms/AnketaSchemaCurrencyDialog";
 import { AnketaSchemaInfoDialog } from "../organisms/AnketaSchemaInfoDialog";
 import { FinalScoreCard } from "../organisms/FinalScoreCard";
@@ -178,9 +193,11 @@ export function AnketaFormShell({
 		canEditCalculation,
 		canExportReports,
 		canWorkflowApprove,
+		canCompleteAnketa,
 		canHoldCalculation,
 		hasPermission,
 	} = usePermissions();
+	const dadmProgramManagerEnabled = useDadmProgramManagerFeature();
 
 	const createCopy = useCreateV2QuestionnaireCopy();
 	const holdMutation = useHoldV2Questionnaire();
@@ -195,8 +212,10 @@ export function AnketaFormShell({
 	const {
 		workflow,
 		globallyLocked,
+		allSectionsCompleted,
 		completeMainSection,
 		touchMainSection,
+		completeGlobalFill,
 		isSectionLocked,
 	} = useAnketaWorkflow(
 		engine.formData,
@@ -208,13 +227,30 @@ export function AnketaFormShell({
 	const permissionReadOnly = questionnaireId
 		? !canEditCalculation
 		: !canCreateCalculation;
-	const effectiveReadOnly = readOnly || globallyLocked || permissionReadOnly;
+	/** Legacy без ДАДМ: глобальное «Заполнено» блокирует форму целиком. */
+	const legacyFilledLocked =
+		!dadmProgramManagerEnabled && workflow.globalStatus === "Заполнено";
+	const effectiveReadOnly =
+		readOnly || globallyLocked || legacyFilledLocked || permissionReadOnly;
+	const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
+	const [completeDialogPhase, setCompleteDialogPhase] =
+		useState<AnketaGlobalCompleteDialogPhase>("confirm");
 	const [calculationDebugOpen, setCalculationDebugOpen] = useState(false);
 	const [copyNameDialogOpen, setCopyNameDialogOpen] = useState(false);
 	const [copySchemaDialogOpen, setCopySchemaDialogOpen] = useState(false);
 	const [copyUseCurrentSchema, setCopyUseCurrentSchema] = useState(false);
 	const [renameDialogOpen, setRenameDialogOpen] = useState(false);
 	const [schemaInfoOpen, setSchemaInfoOpen] = useState(false);
+	const saveAfterCompleteRef = useRef(false);
+	const openCompleteDialog = useCallback(() => {
+		setCompleteDialogPhase("confirm");
+		setCompleteDialogOpen(true);
+	}, []);
+	const closeCompleteDialog = useCallback(() => {
+		setCompleteDialogOpen(false);
+		setCompleteDialogPhase("confirm");
+		saveAfterCompleteRef.current = false;
+	}, []);
 	const canShowSchemaInfo = Boolean(
 		templateName?.trim() ||
 			schemaBinding?.boundTemplateVersionId ||
@@ -238,7 +274,8 @@ export function AnketaFormShell({
 		canDeleteCalculation &&
 		deleteAccess.ok &&
 		deleteResolved.action !== "deny";
-	const deleteIsHard = deleteResolved.action === "hard_delete";
+	const deleteIsHard =
+		!dadmProgramManagerEnabled || deleteResolved.action === "hard_delete";
 
 	const confirmDelete = useCallback(() => {
 		if (!questionnaireId) return;
@@ -287,6 +324,7 @@ export function AnketaFormShell({
 						toastFormDataProjectionReport(created.formDataProjection);
 						setCopyNameDialogOpen(false);
 						setCopyUseCurrentSchema(false);
+						closeCompleteDialog();
 						navigate(
 							`/v2/${v2Routes.calculationPreview.rootPath.replace(":id", created.id)}`,
 						);
@@ -299,6 +337,7 @@ export function AnketaFormShell({
 			);
 		},
 		[
+			closeCompleteDialog,
 			copyUseCurrentSchema,
 			createCopy,
 			engine.displayFormData,
@@ -325,6 +364,37 @@ export function AnketaFormShell({
 	const canRenameQuestionnaire = Boolean(onRenameQuestionnaire);
 
 	const hideWorkEstimates = userMasksAllWorkEstimates(viewerAccess.roles);
+
+	const finalizeComplete = useCallback(
+		(withSave: boolean) => {
+			saveAfterCompleteRef.current = withSave;
+			completeGlobalFill();
+		},
+		[completeGlobalFill],
+	);
+
+	useEffect(() => {
+		if (!completeDialogOpen || completeDialogPhase !== "confirm") return;
+		if (workflow.globalStatus !== "Заполнено") return;
+
+		setCompleteDialogPhase("next");
+		if (saveAfterCompleteRef.current) {
+			saveAfterCompleteRef.current = false;
+			onSave?.();
+		}
+	}, [completeDialogOpen, completeDialogPhase, onSave, workflow.globalStatus]);
+
+	/**
+	 * Legacy (фича ДАДМ выкл.): глобальное «Завершить заполнение анкеты».
+	 * §4: у представителя стрима кнопка недоступна всегда.
+	 */
+	const mayCompleteWholeAnketa =
+		!dadmProgramManagerEnabled &&
+		workflow.globalStatus !== "Заполнено" &&
+		workflow.globalStatus !== "Утверждена" &&
+		canCompleteAnketa &&
+		(!viewerAccess.applyAccessRules ||
+			canViewerCompleteWholeAnketa(viewerAccess.roles));
 
 	const confirmHold = useCallback(() => {
 		if (!questionnaireId) return;
@@ -356,6 +426,7 @@ export function AnketaFormShell({
 	}, [engine.formData, holdMutation, questionnaireId, setFormData]);
 
 	const canShowHold =
+		dadmProgramManagerEnabled &&
 		Boolean(questionnaireId) &&
 		canHoldCalculation &&
 		canHoldQuestionnaire(workflow);
@@ -504,6 +575,22 @@ export function AnketaFormShell({
 	const headerActions = useMemo(
 		() => (
 			<>
+				{!globallyLocked && mayCompleteWholeAnketa ? (
+					<IconButton
+						color="primary"
+						disabled={!allSectionsCompleted || effectiveReadOnly}
+						title={
+							allSectionsCompleted
+								? V2_ANKETA_GLOBAL_COMPLETE_LABEL
+								: "Сначала завершите заполнение всех основных разделов"
+						}
+						aria-label={V2_ANKETA_GLOBAL_COMPLETE_LABEL}
+						onClick={openCompleteDialog}
+						data-test-id={`${dataTestId}--complete`}
+					>
+						<TaskAltIcon />
+					</IconButton>
+				) : null}
 				{headerExtra}
 				{canShowHold ? (
 					<Button
@@ -586,25 +673,30 @@ export function AnketaFormShell({
 			</>
 		),
 		[
+			allSectionsCompleted,
+			bulkDelete.isPending,
 			canSaveQuestionnaire,
-			canWorkflowApprove,
-			canShowHold,
-			canShowNewVersion,
 			canShowCopy,
 			canShowDelete,
+			canShowHold,
+			canShowNewVersion,
+			canWorkflowApprove,
+			createCopy.isPending,
+			dataTestId,
 			deleteIsHard,
+			effectiveReadOnly,
+			globallyLocked,
 			headerExtra,
+			holdMutation.isPending,
 			isEditingQuestionnaire,
+			mayCompleteWholeAnketa,
+			navigate,
 			onSave,
+			openCompleteDialog,
+			openCopyNameDialog,
+			questionnaireId,
 			saveDisabled,
 			savePending,
-			dataTestId,
-			openCopyNameDialog,
-			navigate,
-			questionnaireId,
-			createCopy.isPending,
-			holdMutation.isPending,
-			bulkDelete.isPending,
 		],
 	);
 
@@ -686,6 +778,30 @@ export function AnketaFormShell({
 						/>
 					)
 				}
+			/>
+			<AnketaGlobalCompleteDialog
+				open={completeDialogOpen}
+				phase={completeDialogPhase}
+				onClose={closeCompleteDialog}
+				canSave={Boolean(onSave) && canSaveQuestionnaire && !saveDisabled}
+				savePending={savePending}
+				hasQuestionnaireId={Boolean(questionnaireId)}
+				createCopyPending={createCopy.isPending}
+				onConfirmComplete={() => finalizeComplete(false)}
+				onConfirmCompleteAndSave={() => finalizeComplete(true)}
+				onSave={() => onSave?.()}
+				onCreateCopy={openCopyNameDialog}
+				onNewVersion={() => {
+					if (!questionnaireId) return;
+					closeCompleteDialog();
+					navigate(
+						`/v2/${v2Routes.calculationNewVersion.rootPath.replace(":id", questionnaireId)}`,
+					);
+				}}
+				onGoToRegistry={() => {
+					closeCompleteDialog();
+					navigate("/v2");
+				}}
 			/>
 			<V2CalculationDebugDialog
 				open={calculationDebugOpen}

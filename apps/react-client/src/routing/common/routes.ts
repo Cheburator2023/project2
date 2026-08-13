@@ -65,7 +65,7 @@ export const commonRoutes = {
 		name: "Настройки",
 		disabled: false,
 		showInNavbar: true,
-		navbar: { group: "adminV2", order: 8 },
+		navbar: { group: "adminV2", order: 8, asSectionIcon: "settings" },
 	},
 	adminV2KeycloakMatrix: {
 		rootPath: "/admin/keycloak-matrix",
@@ -203,7 +203,7 @@ export const commonRoutes = {
 		name: "Настройки",
 		disabled: false,
 		showInNavbar: true,
-		navbar: { group: "tracker", order: 10 },
+		navbar: { group: "tracker", order: 10, asSectionIcon: "settings" },
 	},
 	trackerHistory: {
 		rootPath: "/tracker/history",
