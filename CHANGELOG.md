@@ -1,5 +1,32 @@
 # Semantic Versioning Changelog
 
+# [1.60.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.59.0...v1.60.0) (2026-08-13)
+
+
+### Bug Fixes
+
+* update labor coefficient calculations and related tests ([ab21648](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/ab21648cef21f7a297278bdf4d40a4bed2f201cc))
+
+
+### Features
+
+* add bulk hold and copy functionality for questionnaires ([2d65db4](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/2d65db48a938c86f24af82e5f6d5a800676234c0))
+* add health check module for application monitoring ([83a9321](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/83a932190240d40c516b951e5b2d692bdec2a5bf))
+* add Kanban board task file management functionality ([3bddefa](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/3bddefa407a68c46585d5db70b9c2b13ded8348b))
+* add new scripts for handling general info fields and importing initiative data ([517405c](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/517405cdf8dc48ca7ab6255f657e57aef449d386))
+* enhance master registry import service and questionnaire handling ([4529729](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/4529729607b53903f7086b9f4d4b6af855830466))
+* enhance questionnaire workflow and management features ([e5b0595](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/e5b0595d9369847978b2268db4c2408b9bc82ad8))
+* implement DADM program manager feature flag and related settings ([4ff3cb9](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/4ff3cb998a5fd6484b0d57d0fbb5c07f578f92ab))
+* implement half-up rounding for deviation calculations and enhance atypical work handling ([fc0b54c](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/fc0b54cf012f896f37abbb1d43a768566f75283a))
+* implement master registry import functionality ([d90b55d](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/d90b55d4f2562e5e584ae16da531c7a5e8d52f3b))
+* implement pagination and search for v2 questionnaires ([f10ca03](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/f10ca03c7ee5596f708087439fd21b2774adb4e6))
+* implement pagination and search for v2 questionnaires ([16f730e](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/16f730ed823f35f53c309ba21d7d372b1ab3bc02))
+* Актуализировал package-lock.json ([f77a327](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/f77a3279354d5c19f17395c358983166fdeb9369))
+* Добавил необходимые зависимости ([3dd5e9d](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/3dd5e9dc2cf70fcf54ee14ae890226ea1bf89ad9))
+* Добавил сервис отправки логов и события ([f9c81c5](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/f9c81c5c30052f0ed972d8d7968ab6af631c133f))
+* Добавил события ([7d0efad](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/7d0efadf52970692f0c999061c5064672840a0b6))
+* Исправил название события согласно аналитике ([418fdc0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/418fdc08ef0c8c4daf5ceb0c816c9e3771eec05c))
+
 ## [Unreleased]
 
 ### Features
