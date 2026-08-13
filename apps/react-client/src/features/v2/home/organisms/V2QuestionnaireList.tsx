@@ -1,7 +1,5 @@
 import DownloadIcon from "@mui/icons-material/Download";
 import AddIcon from "@mui/icons-material/Add";
-import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import TaskAltIcon from "@mui/icons-material/TaskAlt";
@@ -121,6 +119,7 @@ import {
 	flattenV2QuestionnaireRegistryTree,
 } from "../utils/buildV2QuestionnaireRegistryTree";
 import { resolveVersionRow } from "../utils/v2QuestionnaireGridValue";
+import { V2RegistryPagingPanel } from "./V2RegistryPagingPanel";
 
 export type {
 	V2QuestionnaireGridRow,
@@ -149,6 +148,17 @@ const GridWrapper = styled(Flex)`
 	& > div {
 		width: 100%;
 		height: 100%;
+	}
+
+	/* Панель серверной пагинации внизу root (как native ag-paging-panel). */
+	.ag-root-wrapper {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.ag-root-wrapper > .ag-root {
+		flex: 1 1 auto;
+		min-height: 0;
 	}
 
 	.ag-row.v2-questionnaire-row--edit-locked {
@@ -391,6 +401,7 @@ export function V2QuestionnaireList() {
 	const { mode } = useColorScheme();
 	const navigate = useNavigate();
 	const gridRef = useRef<AgGridReact<V2QuestionnaireGridRow>>(null);
+	const gridHostRef = useRef<HTMLDivElement | null>(null);
 	const {
 		canCreateCalculation,
 		canDeleteCalculation,
@@ -415,6 +426,7 @@ export function V2QuestionnaireList() {
 	const [page, setPage] = useState(1);
 	const [searchInput, setSearchInput] = useState("");
 	const debouncedSearch = useDebouncedValue(searchInput, 300);
+	const [pagingHostEl, setPagingHostEl] = useState<HTMLElement | null>(null);
 	const [isExporting, setIsExporting] = useState(false);
 	const [headerMenuAnchor, setHeaderMenuAnchor] =
 		useState<HTMLElement | null>(null);
@@ -636,6 +648,10 @@ export function V2QuestionnaireList() {
 			if (dadmProgramManagerEnabled) {
 				e.api.expandAll();
 			}
+			const root = gridHostRef.current?.querySelector(
+				".ag-root-wrapper",
+			) as HTMLElement | null;
+			setPagingHostEl(root);
 		},
 		[columnTree, dadmProgramManagerEnabled],
 	);
@@ -1163,46 +1179,7 @@ export function V2QuestionnaireList() {
 					</Button>
 				</DialogActions>
 			</Dialog>
-			<Flex
-				alignItems="center"
-				justifyContent="space-between"
-				gap={8}
-				flexShrink={0}
-				padding="4px 8px"
-			>
-				<Typography variant="body2" color="text.secondary">
-					{listMeta
-						? `Всего: ${listMeta.total} · страница ${listMeta.page} из ${Math.max(listMeta.lastPage, 1)} · по ${listMeta.limit}`
-						: "Загрузка…"}
-					{isFetching && !isLoading ? " · обновление…" : ""}
-				</Typography>
-				<Flex alignItems="center" gap={4}>
-					<IconButton
-						size="small"
-						disabled={!listMeta || page <= 1 || isFetching}
-						onClick={() => setPage((p) => Math.max(1, p - 1))}
-						title="Предыдущая страница"
-						aria-label="Предыдущая страница"
-					>
-						<ChevronLeftIcon fontSize="small" />
-					</IconButton>
-					<IconButton
-						size="small"
-						disabled={
-							!listMeta ||
-							listMeta.lastPage === 0 ||
-							page >= listMeta.lastPage ||
-							isFetching
-						}
-						onClick={() => setPage((p) => p + 1)}
-						title="Следующая страница"
-						aria-label="Следующая страница"
-					>
-						<ChevronRightIcon fontSize="small" />
-					</IconButton>
-				</Flex>
-			</Flex>
-			<GridWrapper flexGrow={1} sx={{ p: 0 }}>
+			<GridWrapper ref={gridHostRef} flexGrow={1} sx={{ p: 0 }}>
 				<AgGridReact<V2QuestionnaireGridRow>
 					ref={gridRef}
 					theme={gridTheme}
@@ -1250,6 +1227,15 @@ export function V2QuestionnaireList() {
 					}}
 					domLayout="normal"
 					suppressAggFuncInHeader
+				/>
+				<V2RegistryPagingPanel
+					page={listMeta?.page ?? page}
+					limit={listMeta?.limit ?? V2_QUESTIONNAIRE_REGISTRY_PAGE_SIZE}
+					total={listMeta?.total ?? 0}
+					lastPage={listMeta?.lastPage ?? 0}
+					disabled={isFetching}
+					onPageChange={setPage}
+					hostEl={pagingHostEl}
 				/>
 			</GridWrapper>
 		</Flex>
