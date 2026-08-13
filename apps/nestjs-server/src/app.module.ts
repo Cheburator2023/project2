@@ -5,6 +5,7 @@ import { AuthGuard, ResourceGuard, RoleGuard } from "nest-keycloak-connect";
 import { AppInfoModule } from "./modules/app-info/app-info.module";
 import { CalculationModule } from "./modules/calculation/calculation.module";
 import { DocsModule } from "./modules/docs/docs.module";
+import { HealthModule } from "./modules/health/health.module";
 import { QuestionnaireModule } from "./modules/questionnaire/questionnaire.module";
 import { AnketaV2Module } from "./modules/anketa-v2/anketa-v2.module";
 import { KanbanBoardModule } from "./modules/kanban-board/kanban-board.module";
@@ -29,6 +30,7 @@ import {SharedModule} from "./shared/shared.module";
 		DatabaseModule,
 		KeycloakModule,
 		AppInfoModule,
+		HealthModule,
 		CalculationModule,
 		DocsModule,
 		QuestionnaireModule,
