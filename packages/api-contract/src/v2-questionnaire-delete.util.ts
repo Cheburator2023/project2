@@ -100,12 +100,16 @@ export function userCanCreateV2Questionnaire(
  * Можно ли пользователю удалить/деактивировать анкету (роль + стрим).
  * sacfg — все стримы; ds_lead / modelops_lead — свой стрим
  * (если стримы из groups не извлечены — разрешаем, как у lead без AD-суффикса).
+ * Пустые groups (god / NO_ROLES без AD) — как у create: не блокируем по роли.
  */
 export function canUserDeleteV2Questionnaire(
 	userGroups: readonly string[],
 	formData: unknown,
 ): { ok: true } | { ok: false; reason: V2QuestionnaireDeleteDenyReason } {
 	const normalized = normalizeV2UserGroups(userGroups);
+	if (normalized.length === 0) {
+		return { ok: true };
+	}
 	if (!userHasV2QuestionnaireDeleteRole(userGroups)) {
 		return { ok: false, reason: "forbidden" };
 	}

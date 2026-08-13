@@ -98,7 +98,6 @@ import {
 	canHoldQuestionnaire,
 	canUserDeleteV2Questionnaire,
 	filterV2QuestionnairesByUserStreamGroups,
-	userHasV2QuestionnaireDeleteRole,
 	V2_ANKETA_HOLD_LABEL,
 	V2_QUESTIONNAIRE_REGISTRY_VERSION_MODE_LABELS,
 	type V2QuestionnaireRegistryVersionMode,
@@ -469,9 +468,11 @@ export function V2QuestionnaireList() {
 
 	const username = useUserStore((s) => s.username);
 	const groups = useUserStore((s) => s.groups);
-	/** Delete: KK + доменная роль (дубль `usePermissions` + стрим-проверка в grid). */
-	const canDeleteInRegistry =
-		canDeleteCalculation && userHasV2QuestionnaireDeleteRole(groups);
+	/**
+	 * Кнопка удаления: уже KK + allow-list (+ god) из `usePermissions`.
+	 * Не дублируем `userHasV2QuestionnaireDeleteRole` — в god mode groups=[] и кнопка пропадала.
+	 */
+	const canDeleteInRegistry = canDeleteCalculation;
 	const streamFilterSetting = useV2StreamFilterSetting();
 	const streamFilterEnabled = streamFilterSetting.data?.enabled ?? true;
 	const deModelopsViewAllStreams =

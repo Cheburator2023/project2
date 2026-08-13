@@ -550,7 +550,9 @@ export function mapMasterRegistryRow(
 		overrides?: V2MasterRegistryImportOverrides;
 		/**
 		 * true — загрузка в БД: только точные имена + явные overrides.
-		 * Аббревиатуры / soft-match / regex-стримы не подставляются сами.
+		 * Несовпавшие справочные поля остаются пустыми (анкета всё равно создаётся).
+		 * Аббревиатуры / soft-match / regex-стримы не подставляются сами;
+		 * suggestions для UI не считаются.
 		 */
 		strictMatching?: boolean;
 	},
@@ -618,11 +620,10 @@ export function mapMasterRegistryRow(
 			formData.generalInfo.businessCustomer = [resolved];
 			mappedFlags.businessCustomer = true;
 		} else {
-			const suggestions = suggestSimilarLabels(
-				deptRaw,
-				options.schemaDeptLabels,
-				3,
-			);
+			/** Строгий режим: поле пустое; suggestions только для dry-run UI. */
+			const suggestions = strict
+				? []
+				: suggestSimilarLabels(deptRaw, options.schemaDeptLabels, 3);
 			issues.push({
 				code: "dept_unmatched",
 				value: deptRaw,
@@ -645,7 +646,7 @@ export function mapMasterRegistryRow(
 			formData.generalInfo.implementationStream = code;
 			mappedFlags.implementationStream = true;
 		} else {
-			const suggestions = suggestStreamLabels(streamRaw, 3);
+			const suggestions = strict ? [] : suggestStreamLabels(streamRaw, 3);
 			issues.push({
 				code: "stream_unmatched",
 				value: streamRaw,
@@ -704,7 +705,7 @@ export function mapMasterRegistryRow(
 			formData.generalInfo.productionAdditionalReports = prodValue;
 			mappedFlags.productionAdditionalReports = true;
 		} else {
-			const suggestions = suggestProductionValues(prodRaw);
+			const suggestions = strict ? [] : suggestProductionValues(prodRaw);
 			issues.push({
 				code: "prod_invalid",
 				value: prodRaw,

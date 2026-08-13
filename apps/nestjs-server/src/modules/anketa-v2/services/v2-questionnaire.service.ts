@@ -246,10 +246,46 @@ export class V2QuestionnaireService {
 		dto: CreateV2QuestionnaireRequestDto,
 		user?: TUserLike | null,
 	): Promise<V2QuestionnaireDto> {
+		const saved = await this.createEntity(dto, user);
+		return this.findOne(saved.id);
+	}
+
+	/**
+	 * Создание без повторной загрузки DTO/схемы — для массового импорта.
+	 * Не вызывает findOne (иначе OOM на больших файлах: schema × N строк).
+	 */
+	async createWithoutHydration(
+		dto: CreateV2QuestionnaireRequestDto,
+		user?: TUserLike | null,
+		resolved?: {
+			template: V2TemplateEntity;
+			version: V2TemplateVersionEntity;
+		},
+	): Promise<{ id: string; calcName: string }> {
+		const saved = await this.createEntity(dto, user, resolved);
+		return { id: saved.id, calcName: saved.calcName };
+	}
+
+	/** Сброс identity map TypeORM после пачки insert'ов. */
+	clearPersistenceCache(): void {
+		this.questionnaireRepository.manager.clear(V2QuestionnaireEntity);
+	}
+
+	resolveTemplateForCreatePublic(templateId?: string) {
+		return this.resolveTemplateForCreate(templateId);
+	}
+
+	private async createEntity(
+		dto: CreateV2QuestionnaireRequestDto,
+		user?: TUserLike | null,
+		resolved?: {
+			template: V2TemplateEntity;
+			version: V2TemplateVersionEntity;
+		},
+	): Promise<V2QuestionnaireEntity> {
 		this.assertCanCreateQuestionnaire(user);
-		const { template, version } = await this.resolveTemplateForCreate(
-			dto.templateId,
-		);
+		const { template, version } =
+			resolved ?? (await this.resolveTemplateForCreate(dto.templateId));
 		const seriesId = this.generateSeriesId();
 		const versionLabel = "1";
 		const readableId = `V2-${seriesId}-v${versionLabel}`;
@@ -280,8 +316,7 @@ export class V2QuestionnaireService {
 			author: this.authorName(user),
 		});
 
-		const saved = await this.questionnaireRepository.save(entity);
-		return this.findOne(saved.id);
+		return this.questionnaireRepository.save(entity);
 	}
 
 	async update(

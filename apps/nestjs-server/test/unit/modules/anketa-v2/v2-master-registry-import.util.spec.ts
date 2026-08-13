@@ -217,6 +217,10 @@ describe("v2-master-registry-import.util", () => {
 		expect(strict!.row.issues.some((i) => i.code === "stream_unmatched")).toBe(
 			true,
 		);
+		/** В strict suggestions не считаем — анкета всё равно создаётся с пустыми полями. */
+		expect(
+			strict!.row.issues.find((i) => i.code === "dept_unmatched")?.suggestions,
+		).toBeUndefined();
 	});
 
 	it("applies department override from dry-run mapping", () => {

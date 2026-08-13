@@ -115,6 +115,12 @@ describe("canUserDeleteV2Questionnaire", () => {
 			canUserDeleteV2Questionnaire(["/saprg"], formWithStream("RB")),
 		).toEqual({ ok: false, reason: "forbidden" });
 	});
+
+	it("allows empty groups (god / NO_ROLES)", () => {
+		expect(canUserDeleteV2Questionnaire([], formWithStream("RB"))).toEqual({
+			ok: true,
+		});
+	});
 });
 
 describe("resolveV2QuestionnaireDeleteAction", () => {

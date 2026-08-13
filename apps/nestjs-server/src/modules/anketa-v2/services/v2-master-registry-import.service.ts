@@ -15,6 +15,12 @@ import { V2QuestionnaireService } from "./v2-questionnaire.service";
 import { V2TemplateService } from "./v2-template.service";
 import { V2TemplateVersionService } from "./v2-template-version.service";
 
+/** Защита от раздутого Excel dimension (часто 1M+ пустых строк). */
+const MAX_SHEET_ROWS = 20_000;
+const MAX_SHEET_COLS = 64;
+/** Сброс TypeORM identity map каждые N insert'ов. */
+const CREATE_FLUSH_EVERY = 25;
+
 export type V2MasterRegistryIssueRowDto = {
 	masterRow: number;
 	masterNo: string;
@@ -84,22 +90,10 @@ export class V2MasterRegistryImportService {
 		},
 		user?: TUserLike | null,
 	): Promise<V2MasterRegistryImportResultDto> {
-		const workbook = new ExcelJS.Workbook();
-		try {
-			await workbook.xlsx.load(buffer as never);
-		} catch {
-			throw new BadRequestException("Не удалось прочитать XLSX-файл");
-		}
+		/** Отдельный scope — workbook/ExcelJS отпускаются до create-цикла. */
+		const { sheetName, matrix, extraDeptLabels } =
+			await this.loadInitiativeMatrix(buffer);
 
-		const sheet = this.findInitiativeSheet(workbook);
-		if (!sheet) {
-			throw new BadRequestException(
-				`Лист «${V2_MASTER_REGISTRY_SHEET_NAME}» не найден (скрытые листы пропускаются)`,
-			);
-		}
-
-		const matrix = this.sheetToMatrix(sheet);
-		const extraDeptLabels = this.readDeptLabelsFromWorkbook(workbook);
 		const schemaDeptLabels = await this.loadBusinessCustomerEnums(
 			options.templateId,
 		);
@@ -109,7 +103,10 @@ export class V2MasterRegistryImportService {
 			schemaDeptLabels,
 			extraDeptLabels,
 			overrides: appliedOverrides,
-			/** В БД — только точные имена/маппинг + явные overrides; dry-run мягче. */
+			/**
+			 * В БД — только точные имена/маппинг + явные overrides;
+			 * несовпавшие справочные поля остаются пустыми.
+			 */
 			strictMatching: !options.dryRun,
 		});
 
@@ -168,6 +165,13 @@ export class V2MasterRegistryImportService {
 					user?.preferred_username || user?.username || "import",
 				groups: [] as string[],
 			};
+			/** Один раз на весь импорт — не грузим схему на каждую строку. */
+			const resolved =
+				await this.questionnaireService.resolveTemplateForCreatePublic(
+					options.templateId,
+				);
+
+			let createdSinceFlush = 0;
 			for (const row of parsed.rows) {
 				if (masterRowFilter && !masterRowFilter.has(row.masterRow)) {
 					continue;
@@ -179,10 +183,10 @@ export class V2MasterRegistryImportService {
 						masterNo: row.masterNo,
 					});
 				try {
-					const dto = await this.questionnaireService.create(
+					const dto = await this.questionnaireService.createWithoutHydration(
 						{
 							calcName,
-							templateId: options.templateId,
+							templateId: options.templateId ?? resolved.template.id,
 							formData: {
 								...row.formData,
 								meta: {
@@ -194,6 +198,7 @@ export class V2MasterRegistryImportService {
 							},
 						},
 						createUser,
+						resolved,
 					);
 					created.push({
 						masterRow: row.masterRow,
@@ -201,6 +206,11 @@ export class V2MasterRegistryImportService {
 						id: dto.id,
 						calcName: dto.calcName,
 					});
+					createdSinceFlush += 1;
+					if (createdSinceFlush >= CREATE_FLUSH_EVERY) {
+						this.questionnaireService.clearPersistenceCache();
+						createdSinceFlush = 0;
+					}
 				} catch (error) {
 					const message =
 						error instanceof Error
@@ -217,11 +227,12 @@ export class V2MasterRegistryImportService {
 					});
 				}
 			}
+			this.questionnaireService.clearPersistenceCache();
 		}
 
 		return {
 			dryRun: options.dryRun,
-			sheetName: sheet.name,
+			sheetName,
 			budgetCampaignColumn: parsed.budgetCampaignColumn,
 			stats: parsed.stats,
 			appliedOverrides,
@@ -234,6 +245,31 @@ export class V2MasterRegistryImportService {
 			issues,
 			preview,
 		};
+	}
+
+	private async loadInitiativeMatrix(buffer: Buffer): Promise<{
+		sheetName: string;
+		matrix: unknown[][];
+		extraDeptLabels: string[];
+	}> {
+		const workbook = new ExcelJS.Workbook();
+		try {
+			await workbook.xlsx.load(buffer as never);
+		} catch {
+			throw new BadRequestException("Не удалось прочитать XLSX-файл");
+		}
+
+		const sheet = this.findInitiativeSheet(workbook);
+		if (!sheet) {
+			throw new BadRequestException(
+				`Лист «${V2_MASTER_REGISTRY_SHEET_NAME}» не найден (скрытые листы пропускаются)`,
+			);
+		}
+
+		const sheetName = sheet.name;
+		const extraDeptLabels = this.readDeptLabelsFromWorkbook(workbook);
+		const matrix = this.sheetToMatrix(sheet);
+		return { sheetName, matrix, extraDeptLabels };
 	}
 
 	private findInitiativeSheet(
@@ -259,9 +295,33 @@ export class V2MasterRegistryImportService {
 		return state === "hidden" || state === "veryhidden";
 	}
 
+	/**
+	 * Читает только реально заполненные ячейки (не ws.rowCount из dimension,
+	 * который у больших xlsx часто = 1 048 576 → OOM).
+	 */
 	private sheetToMatrix(ws: ExcelJS.Worksheet): unknown[][] {
-		const rowCount = ws.rowCount || 0;
-		const colCount = Math.max(ws.columnCount || 0, 20);
+		let maxRow = 0;
+		let maxCol = 0;
+		ws.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+			if (rowNumber > MAX_SHEET_ROWS) return;
+			maxRow = Math.max(maxRow, rowNumber);
+			row.eachCell({ includeEmpty: false }, (_cell, colNumber) => {
+				if (colNumber <= MAX_SHEET_COLS) {
+					maxCol = Math.max(maxCol, colNumber);
+				}
+			});
+		});
+
+		if (maxRow === 0) return [];
+
+		const colCount = Math.min(Math.max(maxCol, 20), MAX_SHEET_COLS);
+		const rowCount = Math.min(maxRow, MAX_SHEET_ROWS);
+		if ((ws.rowCount || 0) > MAX_SHEET_ROWS) {
+			this.logger.warn(
+				`Sheet «${ws.name}»: dimension rowCount=${ws.rowCount}, читаем только ${rowCount} строк`,
+			);
+		}
+
 		const matrix: unknown[][] = [];
 		for (let r = 1; r <= rowCount; r += 1) {
 			const row = ws.getRow(r);
@@ -301,6 +361,7 @@ export class V2MasterRegistryImportService {
 		const labels: string[] = [];
 		sheet.eachRow((row, rowNumber) => {
 			if (rowNumber === 1) return;
+			if (rowNumber > MAX_SHEET_ROWS) return;
 			const a = normMasterText(this.cellToPlain(row.getCell(1).value));
 			const b = normMasterText(this.cellToPlain(row.getCell(2).value));
 			const label = b || a;
