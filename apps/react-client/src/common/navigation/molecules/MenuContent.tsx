@@ -306,8 +306,8 @@ function SmartAnketaSections({ pathname }: { pathname: string }) {
 							settingsPath={trackerSettings?.rootPath}
 							settingsSelected={
 								Boolean(trackerSettings) &&
-								(pathname === trackerSettings.rootPath ||
-									pathname.startsWith(`${trackerSettings.rootPath}/`))
+								(pathname === trackerSettings?.rootPath ||
+									pathname.startsWith(`${trackerSettings?.rootPath}/`))
 							}
 						/>
 						<List disablePadding sx={{ py: 0 }}>
@@ -355,8 +355,8 @@ function SmartAnketaSections({ pathname }: { pathname: string }) {
 							settingsPath={adminSettings?.rootPath}
 							settingsSelected={
 								Boolean(adminSettings) &&
-								(pathname === adminSettings.rootPath ||
-									pathname.startsWith(`${adminSettings.rootPath}/`))
+								(pathname === adminSettings?.rootPath ||
+									pathname.startsWith(`${adminSettings?.rootPath}/`))
 							}
 						/>
 						<List disablePadding sx={{ py: 0 }}>

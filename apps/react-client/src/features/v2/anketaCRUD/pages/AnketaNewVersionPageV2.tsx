@@ -167,7 +167,7 @@ export const AnketaNewVersionPageV2 = () => {
 					justifyContent="center"
 					height="100%"
 					minHeight="240px"
-					px={24}
+					padding="0 24px"
 				>
 					<Typography color="error.main" variant="body1">
 						{errorMessage}

@@ -67,6 +67,7 @@ import {
 	type SelectionChangedEvent,
 	ModuleRegistry,
 	type ColumnState,
+	type GridApi,
 	type SideBarDef,
 	ValidationModule,
 } from "ag-grid-community";
@@ -101,9 +102,7 @@ import {
 	V2_QUESTIONNAIRE_REGISTRY_VERSION_MODE_LABELS,
 	type V2QuestionnaireRegistryVersionMode,
 } from "@smart-anketa/api-contract";
-import {
-	buildV2QuestionnaireColumnDefsFromTree,
-} from "../utils/v2QuestionnaireGridColumns";
+import { buildV2QuestionnaireColumnDefsFromTree } from "../utils/v2QuestionnaireGridColumns";
 import type { V2RegistryColumnNode } from "@smart-anketa/api-contract";
 import {
 	FACTORY_PRESET_IDS,
@@ -412,8 +411,7 @@ export function V2QuestionnaireList() {
 	const editLockHardDisable = useEditLockHardDisableFeature();
 	const bulkDelete = useBulkDeleteV2Questionnaires();
 	const bulkHold = useBulkHoldV2Questionnaires();
-	const canShowHoldActions =
-		dadmProgramManagerEnabled && canHoldCalculation;
+	const canShowHoldActions = dadmProgramManagerEnabled && canHoldCalculation;
 	const { data: registryConfig, isLoading: isRegistryConfigLoading } =
 		useV2QuestionnaireRegistryConfig();
 	const [selectedVersions, setSelectedVersions] = useState<
@@ -428,8 +426,9 @@ export function V2QuestionnaireList() {
 	const debouncedSearch = useDebouncedValue(searchInput, 300);
 	const [pagingHostEl, setPagingHostEl] = useState<HTMLElement | null>(null);
 	const [isExporting, setIsExporting] = useState(false);
-	const [headerMenuAnchor, setHeaderMenuAnchor] =
-		useState<HTMLElement | null>(null);
+	const [headerMenuAnchor, setHeaderMenuAnchor] = useState<HTMLElement | null>(
+		null,
+	);
 	const compactHeader = useMediaQuery("(max-width:1360px)");
 	const headerMenuOpen = Boolean(headerMenuAnchor);
 
@@ -438,13 +437,15 @@ export function V2QuestionnaireList() {
 			? agGridCustomMUITheme
 			: agGridCustomMUIThemeDark;
 
-	const { data: listResponse, isLoading, isFetching } = useV2Questionnaires({
+	const {
+		data: listResponse,
+		isLoading,
+		isFetching,
+	} = useV2Questionnaires({
 		page,
 		limit: V2_QUESTIONNAIRE_REGISTRY_PAGE_SIZE,
 		search: debouncedSearch,
-		versionMode: dadmProgramManagerEnabled
-			? registryVersionMode
-			: undefined,
+		versionMode: dadmProgramManagerEnabled ? registryVersionMode : undefined,
 	});
 	const questionnaires = listResponse?.data ?? [];
 	const listMeta = listResponse?.meta;
@@ -520,10 +521,7 @@ export function V2QuestionnaireList() {
 	/** Дерево версий — только при фиче ДАДМ; иначе плоский реестр. */
 	const rowData = useMemo<V2QuestionnaireGridRow[]>(() => {
 		if (!dadmProgramManagerEnabled) return versionRows;
-		return buildV2QuestionnaireRegistryTree(
-			versionRows,
-			registryVersionMode,
-		);
+		return buildV2QuestionnaireRegistryTree(versionRows, registryVersionMode);
 	}, [versionRows, registryVersionMode, dadmProgramManagerEnabled]);
 
 	const visibleVersionRows = useMemo(() => {
@@ -540,9 +538,9 @@ export function V2QuestionnaireList() {
 
 	const rowClassRules = useMemo(
 		() => ({
-			"v2-questionnaire-row--edit-locked": (
-				params: { data?: V2QuestionnaireGridRow | undefined },
-			) => Boolean(resolveVersionRow(params.data)?.isEditLocked),
+			"v2-questionnaire-row--edit-locked": (params: {
+				data?: V2QuestionnaireGridRow | undefined;
+			}) => Boolean(resolveVersionRow(params.data)?.isEditLocked),
 		}),
 		[],
 	);
@@ -560,9 +558,7 @@ export function V2QuestionnaireList() {
 	const GridPresetToolPanelBound = useMemo(
 		() =>
 			function GridPresetToolPanelBound(props: { api: PresetGridApi }) {
-				return (
-					<GridPresetToolPanel {...props} columnTree={columnTree} />
-				);
+				return <GridPresetToolPanel {...props} columnTree={columnTree} />;
 			},
 		[columnTree],
 	);
@@ -665,9 +661,7 @@ export function V2QuestionnaireList() {
 			setIsExporting(true);
 			try {
 				const exportIds =
-					ids && ids.length > 0
-						? ids
-						: visibleVersionRows.map((q) => q.id);
+					ids && ids.length > 0 ? ids : visibleVersionRows.map((q) => q.id);
 				const blob = await v2QuestionnairesExportXlsx({
 					ids: exportIds.length > 0 ? exportIds : undefined,
 				});
@@ -705,9 +699,7 @@ export function V2QuestionnaireList() {
 			filter: "agTextColumnFilter",
 			/** Группа и метка версии — текст; ссылка только в колонке «Анкета» (calcName). */
 			valueFormatter: (p) =>
-				(typeof p.value === "string" && p.value) ||
-				p.data?.displayLabel ||
-				"",
+				(typeof p.value === "string" && p.value) || p.data?.displayLabel || "",
 		}),
 		[],
 	);
@@ -897,7 +889,9 @@ export function V2QuestionnaireList() {
 							onClick={(e) => setHeaderMenuAnchor(e.currentTarget)}
 							title="Действия реестра"
 							aria-label="Действия реестра"
-							aria-controls={headerMenuOpen ? "v2-registry-header-menu" : undefined}
+							aria-controls={
+								headerMenuOpen ? "v2-registry-header-menu" : undefined
+							}
 							aria-haspopup="true"
 							aria-expanded={headerMenuOpen ? "true" : undefined}
 							data-test-id="anketa-registry-header-menu"
@@ -970,9 +964,7 @@ export function V2QuestionnaireList() {
 										size="small"
 										fullWidth
 										startIcon={<TaskAltIcon />}
-										disabled={
-											!holdableSelectedIds.length || bulkHold.isPending
-										}
+										disabled={!holdableSelectedIds.length || bulkHold.isPending}
 										title={V2_ANKETA_HOLD_LABEL}
 										onClick={() => {
 											setHeaderMenuAnchor(null);
@@ -990,9 +982,7 @@ export function V2QuestionnaireList() {
 										fullWidth
 										color="error"
 										startIcon={<DeleteOutlineIcon />}
-										disabled={
-											!selectedVersions.length || bulkDelete.isPending
-										}
+										disabled={!selectedVersions.length || bulkDelete.isPending}
 										title={
 											dadmProgramManagerEnabled
 												? "Неутверждённые — полное удаление; утверждённые — статус «Неактивная»."
@@ -1041,7 +1031,12 @@ export function V2QuestionnaireList() {
 								applyQuickFilter={false}
 							/>
 						</Flex>
-						<Stack direction="row" spacing={1} alignItems="center" flexShrink={0}>
+						<Stack
+							direction="row"
+							spacing={1}
+							alignItems="center"
+							flexShrink={0}
+						>
 							{canExportReports ? (
 								<>
 									<Button
@@ -1058,9 +1053,7 @@ export function V2QuestionnaireList() {
 										size="small"
 										startIcon={<DownloadIcon />}
 										disabled={
-											isExporting ||
-											isLoading ||
-											selectedVersions.length === 0
+											isExporting || isLoading || selectedVersions.length === 0
 										}
 										onClick={() =>
 											void handleExportXlsx(
@@ -1079,9 +1072,7 @@ export function V2QuestionnaireList() {
 									variant="contained"
 									size="small"
 									startIcon={<TaskAltIcon />}
-									disabled={
-										!holdableSelectedIds.length || bulkHold.isPending
-									}
+									disabled={!holdableSelectedIds.length || bulkHold.isPending}
 									title={V2_ANKETA_HOLD_LABEL}
 									onClick={() => setHoldDialogOpen(true)}
 									data-test-id="anketa-registry-bulk-hold"
@@ -1096,9 +1087,7 @@ export function V2QuestionnaireList() {
 									size="small"
 									color="error"
 									startIcon={<DeleteOutlineIcon />}
-									disabled={
-										!selectedVersions.length || bulkDelete.isPending
-									}
+									disabled={!selectedVersions.length || bulkDelete.isPending}
 									title={
 										dadmProgramManagerEnabled
 											? "Неутверждённые — полное удаление; утверждённые — статус «Неактивная»."
@@ -1135,8 +1124,8 @@ export function V2QuestionnaireList() {
 				<DialogContent>
 					<DialogContentText>
 						Будет утверждено версий: {holdableSelectedIds.length}. Каждая
-						перейдёт в статус «Утверждена» и будет заблокирована для
-						заполнения. Чтобы внести изменения позже, создайте новую версию.
+						перейдёт в статус «Утверждена» и будет заблокирована для заполнения.
+						Чтобы внести изменения позже, создайте новую версию.
 					</DialogContentText>
 				</DialogContent>
 				<DialogActions>
@@ -1220,9 +1209,7 @@ export function V2QuestionnaireList() {
 							e.api
 								.getSelectedRows()
 								.map((row) => resolveVersionRow(row))
-								.filter(
-									(row): row is V2QuestionnaireVersionRow => row != null,
-								),
+								.filter((row): row is V2QuestionnaireVersionRow => row != null),
 						);
 					}}
 					domLayout="normal"
