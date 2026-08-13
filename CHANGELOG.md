@@ -1,5 +1,17 @@
 # Semantic Versioning Changelog
 
+# [1.62.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.61.0...v1.62.0) (2026-08-13)
+
+
+### Bug Fixes
+
+* add optional chaining for tracker and admin settings paths ([add9962](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/add9962a860c84c8d01b6fa9ed5a9f977d1663e6))
+
+
+### Features
+
+* add V2RegistryPagingPanel for improved pagination in questionnaire list ([03bb6a8](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/03bb6a8955484f03e5f736db5c3846ed219ab004))
+
 # [1.61.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.60.0...v1.61.0) (2026-08-13)
 
 
