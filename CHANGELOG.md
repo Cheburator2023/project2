@@ -1,5 +1,12 @@
 # Semantic Versioning Changelog
 
+# [1.61.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.60.0...v1.61.0) (2026-08-13)
+
+
+### Features
+
+* implement pagination and search for v2 questionnaires ([c8d6516](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/c8d6516409c52e5d7e3e5cc032b1105138962959))
+
 # [1.60.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.59.0...v1.60.0) (2026-08-13)
 
 
