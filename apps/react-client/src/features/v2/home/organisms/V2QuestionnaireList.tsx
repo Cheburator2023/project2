@@ -15,8 +15,6 @@ import {
 	Popover,
 	Stack,
 	TextField,
-	ToggleButton,
-	ToggleButtonGroup,
 	Typography,
 	styled,
 	useColorScheme,
@@ -36,6 +34,7 @@ import { downloadBlob } from "@react-client/common/api/queries/kanban-board";
 import { usePermissions } from "@react-client/hooks/usePermissions";
 import { toast } from "@react-client/common/toasts";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
+import { SegmentBar } from "@react-client/common/muiCustom/SegmentBar";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Header } from "@react-client/common/navigation/organisms/Header";
 import { SearchInput } from "@react-client/common/navigation/organisms/SearchInput";
@@ -52,10 +51,15 @@ import {
 	pathForV2QuestionnaireNewVersion,
 	pathForV2QuestionnairePreview,
 } from "@react-client/routing/common/pathHelpers";
-import type { V2QuestionnaireGridRow, V2QuestionnaireVersionRow } from "../types/v2QuestionnaireGrid.types";
+import type {
+	V2QuestionnaireGridRow,
+	V2QuestionnaireSeriesRow,
+	V2QuestionnaireVersionRow,
+} from "../types/v2QuestionnaireGrid.types";
 import {
 	AllCommunityModule,
 	ClientSideRowModelModule,
+	type ColDef,
 	type GetContextMenuItemsParams,
 	type GridApi,
 	type GridReadyEvent,
@@ -74,6 +78,7 @@ import {
 	FiltersToolPanelModule,
 	SetFilterModule,
 	SideBarModule,
+	TreeDataModule,
 } from "ag-grid-enterprise";
 import { AgGridReact } from "ag-grid-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -88,7 +93,6 @@ import { useV2StreamFilterSetting } from "@react-client/common/api/queries/v2-ru
 import {
 	canHoldQuestionnaire,
 	canUserDeleteV2Questionnaire,
-	filterV2QuestionnairesByRegistryVersionMode,
 	filterV2QuestionnairesByUserStreamGroups,
 	userHasV2QuestionnaireDeleteRole,
 	V2_ANKETA_HOLD_LABEL,
@@ -109,6 +113,10 @@ import {
 	isFactoryPresetId,
 	type QuestionnaireGridPresetApi,
 } from "../utils/v2QuestionnaireGridFactoryPresets";
+import {
+	buildV2QuestionnaireRegistryTree,
+	flattenV2QuestionnaireRegistryTree,
+} from "../utils/buildV2QuestionnaireRegistryTree";
 import { resolveVersionRow } from "../utils/v2QuestionnaireGridValue";
 
 export type {
@@ -125,6 +133,7 @@ ModuleRegistry.registerModules([
 	FiltersToolPanelModule,
 	SetFilterModule,
 	SideBarModule,
+	TreeDataModule,
 	...(process.env.NODE_ENV !== "production" ? [ValidationModule] : []),
 ]);
 
@@ -444,6 +453,8 @@ export function V2QuestionnaireList() {
 			checkboxes: true,
 			headerCheckbox: true,
 			enableClickSelection: false,
+			isRowSelectable: (node: { data?: V2QuestionnaireGridRow }) =>
+				node.data?.rowKind === "version",
 		}),
 		[],
 	);
@@ -469,20 +480,11 @@ export function V2QuestionnaireList() {
 		[questionnaires, groups, streamFilterEnabled, deModelopsViewAllStreams],
 	);
 
-	const filteredQuestionnaires = useMemo(
-		() =>
-			filterV2QuestionnairesByRegistryVersionMode(
-				streamFilteredQuestionnaires,
-				registryVersionMode,
-			),
-		[streamFilteredQuestionnaires, registryVersionMode],
-	);
-
 	useEffect(() => {
 		logV2RegistryStreamDebug({
 			username,
 			groups,
-			questionnaires: filteredQuestionnaires,
+			questionnaires: streamFilteredQuestionnaires,
 			allQuestionnaires: questionnaires,
 			streamFilterEnabled,
 			deModelopsViewAllStreams,
@@ -491,7 +493,7 @@ export function V2QuestionnaireList() {
 	}, [
 		username,
 		groups,
-		filteredQuestionnaires,
+		streamFilteredQuestionnaires,
 		questionnaires,
 		streamFilterEnabled,
 		deModelopsViewAllStreams,
@@ -504,9 +506,9 @@ export function V2QuestionnaireList() {
 		gridRef.current?.api?.deselectAll();
 	}, [registryVersionMode]);
 
-	const rowData = useMemo<V2QuestionnaireVersionRow[]>(() => {
-		if (!filteredQuestionnaires.length) return [];
-		return filteredQuestionnaires.map((q) => {
+	const versionRows = useMemo<V2QuestionnaireVersionRow[]>(() => {
+		if (!streamFilteredQuestionnaires.length) return [];
+		return streamFilteredQuestionnaires.map((q) => {
 			const lock = locksById[q.id];
 			const lockedByOther =
 				Boolean(lock) && !isOwnV2QuestionnaireEditLock(lock, username);
@@ -518,7 +520,21 @@ export function V2QuestionnaireList() {
 				isEditLocked: lockedByOther,
 			};
 		});
-	}, [filteredQuestionnaires, locksById, username]);
+	}, [streamFilteredQuestionnaires, locksById, username]);
+
+	const rowData = useMemo<V2QuestionnaireSeriesRow[]>(
+		() => buildV2QuestionnaireRegistryTree(versionRows, registryVersionMode),
+		[versionRows, registryVersionMode],
+	);
+
+	const visibleVersionRows = useMemo(
+		() => flattenV2QuestionnaireRegistryTree(rowData),
+		[rowData],
+	);
+
+	useEffect(() => {
+		gridRef.current?.api?.expandAll();
+	}, [rowData]);
 
 	const rowClassRules = useMemo(
 		() => ({
@@ -628,6 +644,7 @@ export function V2QuestionnaireList() {
 			applyAgGridColumnState(GRID_COLUMN_STATE_KEY, (state) => {
 				e.api.applyColumnState({ state, applyOrder: true });
 			});
+			e.api.expandAll();
 		},
 		[columnTree],
 	);
@@ -643,7 +660,7 @@ export function V2QuestionnaireList() {
 				const exportIds =
 					ids && ids.length > 0
 						? ids
-						: filteredQuestionnaires.map((q) => q.id);
+						: visibleVersionRows.map((q) => q.id);
 				const blob = await v2QuestionnairesExportXlsx({
 					ids: exportIds.length > 0 ? exportIds : undefined,
 				});
@@ -668,7 +685,24 @@ export function V2QuestionnaireList() {
 				setIsExporting(false);
 			}
 		},
-		[filteredQuestionnaires],
+		[visibleVersionRows],
+	);
+
+	const autoGroupColumnDef = useMemo<ColDef<V2QuestionnaireGridRow>>(
+		() => ({
+			field: "displayLabel",
+			headerName: "Анкета / версия",
+			flex: 1,
+			minWidth: 220,
+			sortable: false,
+			filter: "agTextColumnFilter",
+			/** Группа и метка версии — текст; ссылка только в колонке «Анкета» (calcName). */
+			valueFormatter: (p) =>
+				(typeof p.value === "string" && p.value) ||
+				p.data?.displayLabel ||
+				"",
+		}),
+		[],
 	);
 
 	const getContextMenuItems = useCallback(
@@ -816,29 +850,25 @@ export function V2QuestionnaireList() {
 	}, [bulkDelete, groups, selectedVersions]);
 
 	const versionModeToggle = (
-		<ToggleButtonGroup
-			exclusive
-			size="small"
+		<SegmentBar<V2QuestionnaireRegistryVersionMode>
 			value={registryVersionMode}
-			onChange={(_e, next: V2QuestionnaireRegistryVersionMode | null) => {
-				if (next) setRegistryVersionMode(next);
-			}}
-			aria-label="Режим версий в реестре"
+			onChange={setRegistryVersionMode}
 			data-test-id="anketa-registry-version-mode"
-		>
-			<ToggleButton
-				value="actual"
-				title="Последняя актуальная версия каждой анкеты"
-			>
-				{V2_QUESTIONNAIRE_REGISTRY_VERSION_MODE_LABELS.actual}
-			</ToggleButton>
-			<ToggleButton
-				value="approved"
-				title="Последняя утверждённая версия каждой анкеты"
-			>
-				{V2_QUESTIONNAIRE_REGISTRY_VERSION_MODE_LABELS.approved}
-			</ToggleButton>
-		</ToggleButtonGroup>
+			segments={[
+				{
+					id: "actual",
+					label: V2_QUESTIONNAIRE_REGISTRY_VERSION_MODE_LABELS.actual,
+					title: "Последняя актуальная версия каждой анкеты",
+					"data-test-id": "anketa-registry-version-mode-actual",
+				},
+				{
+					id: "approved",
+					label: V2_QUESTIONNAIRE_REGISTRY_VERSION_MODE_LABELS.approved,
+					title: "Последняя утверждённая версия каждой анкеты",
+					"data-test-id": "anketa-registry-version-mode-approved",
+				},
+			]}
+		/>
 	);
 
 	return (
@@ -1134,8 +1164,11 @@ export function V2QuestionnaireList() {
 					theme={gridTheme}
 					icons={gridIcons}
 					localeText={AG_GRID_LOCALE_RU}
+					treeData
+					treeDataChildrenField="children"
 					rowData={rowData}
 					columnDefs={columnDefs}
+					autoGroupColumnDef={autoGroupColumnDef}
 					getRowId={getRowId}
 					rowClassRules={rowClassRules}
 					defaultColDef={defaultColDef}
@@ -1159,7 +1192,12 @@ export function V2QuestionnaireList() {
 						e: SelectionChangedEvent<V2QuestionnaireGridRow>,
 					) => {
 						setSelectedVersions(
-							e.api.getSelectedRows() as V2QuestionnaireVersionRow[],
+							e.api
+								.getSelectedRows()
+								.map((row) => resolveVersionRow(row))
+								.filter(
+									(row): row is V2QuestionnaireVersionRow => row != null,
+								),
 						);
 					}}
 					domLayout="normal"

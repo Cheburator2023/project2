@@ -1,5 +1,11 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
-import { IsNumber, IsObject, IsOptional, IsString } from "class-validator";
+import {
+	IsBoolean,
+	IsNumber,
+	IsObject,
+	IsOptional,
+	IsString,
+} from "class-validator";
 
 export class CreateV2QuestionnaireVersionDto {
 	@ApiPropertyOptional()
@@ -16,4 +22,12 @@ export class CreateV2QuestionnaireVersionDto {
 	@IsOptional()
 	@IsNumber()
 	finalCoefficient?: number | null;
+
+	@ApiPropertyOptional({
+		description:
+			"true — привязать к актуальной версии схемы; иначе сохранить схему исходной версии",
+	})
+	@IsOptional()
+	@IsBoolean()
+	useCurrentSchema?: boolean;
 }

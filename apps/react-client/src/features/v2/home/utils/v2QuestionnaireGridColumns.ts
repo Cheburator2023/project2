@@ -2,7 +2,7 @@ import type { ColDef, ColGroupDef } from "ag-grid-community";
 import {
 	buildV2QuestionnaireRegistryColumnTree,
 	estimateRegistryColumnWidth,
-	formatV2SchemaBindingStatus,
+	formatV2TemplateVersionDisplayName,
 	resolveImplementationStreamLabel,
 	type V2RegistryColumnNode,
 	type V2RegistryLeafColumn,
@@ -187,10 +187,14 @@ function leafToColDef(leaf: V2RegistryLeafColumn): ColDef<V2QuestionnaireGridRow
 				resizable: true,
 				...baseFilter,
 				cellRenderer: V2SchemaBindingStatusCell,
-				valueGetter: (p) =>
-					formatV2SchemaBindingStatus(
-						resolveVersionRow(p.data)?.schemaBinding.status,
-					),
+				valueGetter: (p) => {
+					const row = resolveVersionRow(p.data);
+					if (!row) return "";
+					return formatV2TemplateVersionDisplayName(
+						row.templateName,
+						row.schemaBinding.boundTemplateVersionNumber,
+					);
+				},
 			};
 		}
 		return {

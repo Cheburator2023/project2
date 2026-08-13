@@ -22,11 +22,12 @@ import {
 	pathForAdminV2Template,
 	pathForAdminV2TemplateHistory,
 } from "@react-client/routing/common/pathHelpers";
-import type {
-	V2FactorySnapshotSettingDto,
-	V2TemplateDto,
-	V2TemplateStatus,
-	V2TemplateVersionSummaryDto,
+import {
+	formatV2TemplateVersionDisplayName,
+	type V2FactorySnapshotSettingDto,
+	type V2TemplateDto,
+	type V2TemplateStatus,
+	type V2TemplateVersionSummaryDto,
 } from "@smart-anketa/api-contract";
 import {
 	type ColDef,
@@ -190,7 +191,10 @@ export const V2TemplateList = forwardRef<
 					...v,
 					rowKind: "version",
 					templateCurrentVersionId: t.currentVersionId,
-					displayLabel: `Версия ${v.versionNumber} (${VERSION_STATUS_RU[v.status]})`,
+					displayLabel: formatV2TemplateVersionDisplayName(
+						template.name,
+						v.versionNumber,
+					),
 				})),
 			};
 		});

@@ -8,9 +8,9 @@ import {
 } from "./v2-anketa-section-ui.util";
 import {
 	formatV2QuestionnaireStatus,
-	formatV2SchemaBindingStatus,
 	type V2QuestionnaireDto,
 } from "./v2-questionnaire.types";
+import { formatV2TemplateVersionDisplayName } from "./v2-template-version-label.util";
 import {
 	isV2AnketaBlockVisibleForViewer,
 	isV2AnketaFormPathVisibleForViewer,
@@ -726,7 +726,6 @@ function buildMetaRegistryGroup(): V2RegistryGroupColumn {
 			metaLeaf("calcName", "Анкета", "calcName"),
 			metaLeaf("readableId", "ID анкеты", "readableId"),
 			metaLeaf("version", "Версия", "version"),
-			metaLeaf("status", "Статус записи", "status"),
 			metaLeaf("workflowGlobalStatus", "Статус анкеты", "workflowGlobalStatus"),
 			metaLeaf("editLock", "Редактирование", "editLock"),
 			metaLeaf("author", "Автор", "author"),
@@ -1131,7 +1130,10 @@ export function getByFormPath(obj: unknown, path: string): unknown {
 function metaValue(row: V2QuestionnaireDto, metaKey: string): unknown {
 	if (metaKey === "readableId") return row.readableId ?? row.id;
 	if (metaKey === "schemaBinding.status") {
-		return formatV2SchemaBindingStatus(row.schemaBinding.status);
+		return formatV2TemplateVersionDisplayName(
+			row.templateName,
+			row.schemaBinding.boundTemplateVersionNumber,
+		);
 	}
 	if (metaKey === "schemaBinding.boundTemplateVersionCreatedAt") {
 		return row.schemaBinding.boundTemplateVersionCreatedAt ?? "";

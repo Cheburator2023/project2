@@ -83,6 +83,9 @@ function buildColumnState(
 	return uniqueOrdered.map((colId) => ({
 		colId,
 		hide: colId !== PRIMARY_NAME_COL_ID && !visibleSet.has(colId),
+		...(colId === "createdAt"
+			? { sort: "desc" as const, sortIndex: 0 }
+			: {}),
 	}));
 }
 

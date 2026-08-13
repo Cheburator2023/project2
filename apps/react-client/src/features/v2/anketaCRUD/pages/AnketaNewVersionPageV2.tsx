@@ -4,17 +4,26 @@ import {
 } from "@react-client/common/api/queries/v2-questionnaires";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { toast } from "@react-client/common/toasts";
-import { AnketaFormShell } from "@react-client/features/v2/anketaCRUD/templates/AnketaFormShell";
-import { useV2AnketaSchemaEngine } from "@react-client/features/v2/anketaCRUD/hooks/useV2AnketaSchemaEngine";
 import { AnketaCalcNameDialog } from "@react-client/features/v2/anketaCRUD/organisms/AnketaCalcNameDialog";
+import { AnketaSchemaCurrencyDialog } from "@react-client/features/v2/anketaCRUD/organisms/AnketaSchemaCurrencyDialog";
+import {
+	needsSchemaCurrencyChoice,
+	toastFormDataProjectionReport,
+} from "@react-client/features/v2/anketaCRUD/utils/anketaFormDataProjectionToast.util";
 import {
 	buildQuestionnaireVersionCalcName,
 	stripQuestionnaireCalcNameFromFormData,
 } from "@react-client/features/v2/anketaCRUD/utils/anketaQuestionnaireMeta.util";
+import { Flex } from "@react-client/common/primitives/Flex";
 import { v2Routes } from "@react-client/routing/version/v2/routes";
+import CircularProgress from "@mui/material/CircularProgress";
+import Typography from "@mui/material/Typography";
 import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 
+/**
+ * Новая версия анкеты: (схема?) → имя → сразу POST → переход в редактирование.
+ */
 export const AnketaNewVersionPageV2 = () => {
 	const { id } = useParams<{ id: string }>();
 	const navigate = useNavigate();
@@ -22,60 +31,36 @@ export const AnketaNewVersionPageV2 = () => {
 		id ?? "",
 	);
 	const createVersion = useCreateV2QuestionnaireVersion();
-	const [calcName, setCalcName] = useState<string | null>(null);
+	const [useCurrentSchema, setUseCurrentSchema] = useState<boolean | null>(
+		null,
+	);
+	const [nameDialogOpen, setNameDialogOpen] = useState(false);
+
+	const needsSchemaChoice = Boolean(
+		formPackage &&
+			needsSchemaCurrencyChoice(formPackage.questionnaire.schemaBinding),
+	);
+
+	const schemaDialogOpen =
+		Boolean(formPackage) &&
+		needsSchemaChoice &&
+		useCurrentSchema === null &&
+		!createVersion.isPending;
 
 	const suggestedVersionCalcName = useMemo(() => {
 		if (!formPackage) return "Анкета";
-		const currentVersion = Number.parseInt(formPackage.questionnaire.version, 10);
-		const nextVersion = Number.isFinite(currentVersion) ? currentVersion + 1 : 1;
+		const currentVersion = Number.parseInt(
+			formPackage.questionnaire.version,
+			10,
+		);
+		const nextVersion = Number.isFinite(currentVersion)
+			? currentVersion + 1
+			: 1;
 		return buildQuestionnaireVersionCalcName(
 			formPackage.questionnaire.calcName,
 			nextVersion,
 		);
 	}, [formPackage]);
-
-	const source = useMemo(
-		() =>
-			formPackage && calcName
-				? {
-						templateId: formPackage.questionnaire.templateId,
-						versionId: formPackage.questionnaire.boundTemplateVersionId,
-						instanceId: formPackage.questionnaire.id,
-						initialFormData: formPackage.questionnaire.formData,
-						initialJsonSchema: formPackage.jsonSchema,
-						initialUiSchema: formPackage.uiSchema,
-						initialLogic: formPackage.logic,
-					}
-				: null,
-		[calcName, formPackage],
-	);
-
-	const engine = useV2AnketaSchemaEngine(source);
-
-	const onSave = () => {
-		if (!id || !formPackage || !calcName?.trim()) return;
-		createVersion.mutate(
-			{
-				id,
-				body: {
-					calcName: calcName.trim(),
-					formData: stripQuestionnaireCalcNameFromFormData(engine.formData),
-				},
-			},
-			{
-				onSuccess: (created) => {
-					toast.success("Создана новая версия анкеты");
-					navigate(
-						`/v2/${v2Routes.calculationPreview.rootPath.replace(":id", created.id)}`,
-					);
-				},
-				onError: (err) =>
-					toast.error("Не удалось создать версию", {
-						description: apiErrorMessage(err),
-					}),
-			},
-		);
-	};
 
 	const errorMessage =
 		!isLoading && (error || !formPackage)
@@ -84,35 +69,110 @@ export const AnketaNewVersionPageV2 = () => {
 				: "Анкета не найдена"
 			: null;
 
-	const showNameDialog =
-		Boolean(formPackage) && !errorMessage && calcName == null;
+	const resolveSchemaChoice = (useCurrent: boolean) => {
+		setUseCurrentSchema(useCurrent);
+		setNameDialogOpen(true);
+	};
+
+	/** Если схема актуальна — сразу имя. */
+	const effectiveNameDialogOpen =
+		nameDialogOpen ||
+		(Boolean(formPackage) &&
+			!needsSchemaChoice &&
+			useCurrentSchema === null &&
+			!createVersion.isPending &&
+			!errorMessage);
+
+	const createAndOpen = (calcName: string) => {
+		const name = calcName.trim();
+		if (!id || !formPackage || !name) return;
+		setNameDialogOpen(false);
+		createVersion.mutate(
+			{
+				id,
+				body: {
+					calcName: name,
+					formData: stripQuestionnaireCalcNameFromFormData(
+						formPackage.questionnaire.formData,
+					),
+					useCurrentSchema: useCurrentSchema === true,
+				},
+			},
+			{
+				onSuccess: (created) => {
+					toast.success("Создана новая версия анкеты");
+					toastFormDataProjectionReport(created.formDataProjection);
+					navigate(
+						`/v2/${v2Routes.calculationPreview.rootPath.replace(":id", created.id)}`,
+						{ replace: true },
+					);
+				},
+				onError: (err) => {
+					setNameDialogOpen(true);
+					toast.error("Не удалось создать версию", {
+						description: apiErrorMessage(err),
+					});
+				},
+			},
+		);
+	};
+
+	const creating = createVersion.isPending;
 
 	return (
 		<>
-			<AnketaCalcNameDialog
-				open={showNameDialog}
-				title="Новая версия анкеты"
-				confirmLabel="Продолжить"
-				initialCalcName={suggestedVersionCalcName}
-				helperText="Название отображается в реестре. Версия в серии будет присвоена автоматически."
+			<AnketaSchemaCurrencyDialog
+				open={schemaDialogOpen}
+				pending={creating}
 				onCancel={() => navigate(-1)}
-				onConfirm={setCalcName}
+				onUseCurrent={() => resolveSchemaChoice(true)}
+				onKeepSource={() => resolveSchemaChoice(false)}
+				data-test-id="anketa-new-version-schema-dialog"
+			/>
+			<AnketaCalcNameDialog
+				open={
+					effectiveNameDialogOpen &&
+					!creating &&
+					!errorMessage &&
+					Boolean(formPackage)
+				}
+				title="Новая версия анкеты"
+				confirmLabel="Создать"
+				initialCalcName={suggestedVersionCalcName}
+				helperText="Название отображается в реестре. Версия сохранится сразу после подтверждения."
+				pending={creating}
+				onCancel={() => navigate(-1)}
+				onConfirm={createAndOpen}
 				data-test-id="anketa-new-version-name-dialog"
 			/>
-			{calcName ? (
-				<AnketaFormShell
-					data-test-id="anketa-new-version-page"
-					source={source}
-					engine={engine}
-					loading={isLoading}
-					errorMessage={errorMessage}
-					questionnaireCalcName={calcName}
-					templateName={formPackage?.questionnaire.templateName}
-					onRenameQuestionnaire={setCalcName}
-					schemaBinding={formPackage?.questionnaire.schemaBinding}
-					onSave={formPackage && !errorMessage ? onSave : undefined}
-					savePending={createVersion.isPending}
-				/>
+			{(creating || isLoading) && !errorMessage ? (
+				<Flex
+					flexDirection="column"
+					alignItems="center"
+					justifyContent="center"
+					gap={12}
+					height="100%"
+					minHeight="240px"
+					data-test-id="anketa-new-version-page--saving"
+				>
+					<CircularProgress size={28} />
+					<Typography variant="body2" color="text.secondary">
+						{isLoading ? "Загрузка анкеты…" : "Создание версии…"}
+					</Typography>
+				</Flex>
+			) : null}
+			{errorMessage ? (
+				<Flex
+					alignItems="center"
+					justifyContent="center"
+					height="100%"
+					minHeight="240px"
+					px={24}
+				>
+					<Typography color="error.main" variant="body1">
+						{errorMessage}
+					</Typography>
+				</Flex>
 			) : null}
 		</>
 	);

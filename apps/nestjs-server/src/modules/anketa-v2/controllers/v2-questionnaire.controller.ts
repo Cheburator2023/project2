@@ -710,7 +710,7 @@ export class V2QuestionnaireController {
 	@RealmRole(Permission.ANKETA_CREATE_CALCULATION)
 	@ApiOperation({
 		summary:
-			"Новая версия анкеты в серии (наследует привязку к схеме, как v1)",
+			"Новая версия анкеты в серии (useCurrentSchema — актуальная или исходная схема)",
 	})
     async createNewVersion(
         @Param("id", ParseUUIDPipe) id: string,

@@ -8,6 +8,7 @@ import type {
 	V2AnketaMainSectionId,
 	V2AnketaSectionStatus,
 } from "./v2-anketa-workflow.types";
+import type { V2FormDataProjectionReportDto } from "./v2-form-data-schema-projection.util";
 
 export const V2_QUESTIONNAIRE_STATUS_VALUES = [
 	"active",
@@ -100,6 +101,11 @@ export type V2QuestionnaireDto = {
 		V2AnketaMainSectionId,
 		V2AnketaSectionStatus
 	>;
+	/**
+	 * Только в ответах create version / copy: расхождения параметров
+	 * при проекции formData на целевую схему.
+	 */
+	formDataProjection?: V2FormDataProjectionReportDto;
 };
 
 export type V2QuestionnaireFormPackageDto = {
@@ -129,6 +135,11 @@ export type CreateV2QuestionnaireVersionRequestDto = {
 	calcName?: string;
 	formData?: Record<string, unknown>;
 	finalCoefficient?: number | null;
+	/**
+	 * true — привязать к актуальной версии схемы шаблона;
+	 * false/omit — сохранить boundTemplateVersionId исходной версии.
+	 */
+	useCurrentSchema?: boolean;
 };
 
 export type BulkDeleteV2QuestionnairesRequestDto = {

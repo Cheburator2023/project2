@@ -1,6 +1,9 @@
 import type { ICellRendererParams } from "ag-grid-community";
 import Link from "@mui/material/Link";
-import { formatV2SchemaBindingStatus } from "@smart-anketa/api-contract";
+import {
+	formatV2SchemaBindingStatus,
+	formatV2TemplateVersionDisplayName,
+} from "@smart-anketa/api-contract";
 import { pathForAdminV2Template } from "@react-client/routing/common/pathHelpers";
 import { Link as RouterLink } from "react-router";
 import type { V2QuestionnaireGridRow } from "../types/v2QuestionnaireGrid.types";
@@ -12,18 +15,22 @@ export function V2SchemaBindingStatusCell(
 	const row = resolveVersionRow(params.data);
 	if (!row) return null;
 
-	const { schemaBinding, templateId } = row;
-	const label = formatV2SchemaBindingStatus(schemaBinding.status);
-	if (!label) return null;
+	const { schemaBinding, templateId, templateName } = row;
+	const text = formatV2TemplateVersionDisplayName(
+		templateName,
+		schemaBinding.boundTemplateVersionNumber,
+	);
+	if (!text) return null;
 
-	const versionNumber = schemaBinding.boundTemplateVersionNumber;
-	const text =
-		versionNumber != null ? `${label} (v${versionNumber})` : label;
+	const statusLabel = formatV2SchemaBindingStatus(schemaBinding.status);
+	const titleParts = [
+		schemaBinding.message?.trim() || null,
+		statusLabel || null,
+		"Открыть привязанную схему",
+	].filter(Boolean);
 
 	if (!templateId) {
-		return (
-			<span title={schemaBinding.message || undefined}>{text}</span>
-		);
+		return <span title={titleParts.join(" · ") || undefined}>{text}</span>;
 	}
 
 	const to = pathForAdminV2Template(
@@ -36,7 +43,7 @@ export function V2SchemaBindingStatusCell(
 			component={RouterLink}
 			to={to}
 			underline="hover"
-			title={schemaBinding.message || "Открыть привязанную схему"}
+			title={titleParts.join(" · ")}
 			onClick={(e) => e.stopPropagation()}
 			onContextMenu={(e) => e.stopPropagation()}
 			sx={{ fontSize: "inherit", lineHeight: "inherit" }}

@@ -2,6 +2,7 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import ContentCopyOutlinedIcon from "@mui/icons-material/ContentCopyOutlined";
+import LibraryAddOutlinedIcon from "@mui/icons-material/LibraryAddOutlined";
 import SaveIcon from "@mui/icons-material/Save";
 import Alert from "@mui/material/Alert";
 import {
@@ -22,19 +23,16 @@ import {
 	canHoldQuestionnaire,
 	canUserCopyV2Questionnaire,
 	canUserDeleteV2Questionnaire,
+	holdQuestionnaire,
 	resolveV2QuestionnaireDeleteAction,
 	schemaHasUncertaintyModalWidget,
 	userMasksAllWorkEstimates,
 	V2_ANKETA_HOLD_LABEL,
 } from "@smart-anketa/api-contract";
-import {
-	useCallback,
-	useMemo,
-	useState,
-	type ReactNode,
-} from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import type { QuestionnaireSaveStatus } from "../hooks/useDebouncedQuestionnaireSave";
 import { AnketaCalcNameDialog } from "../organisms/AnketaCalcNameDialog";
+import { AnketaSchemaCurrencyDialog } from "../organisms/AnketaSchemaCurrencyDialog";
 import { AnketaSchemaInfoDialog } from "../organisms/AnketaSchemaInfoDialog";
 import { FinalScoreCard } from "../organisms/FinalScoreCard";
 import { V2AnketaFormWithModals } from "../organisms/V2AnketaFormWithModals";
@@ -46,7 +44,11 @@ import {
 	type V2AnketaSchemaEngineSource,
 } from "../hooks/useV2AnketaSchemaEngine";
 import { AnketaSectionStatusChip } from "../molecules/AnketaSectionStatusChip";
-import { useAnketaWorkflow } from "../hooks/useAnketaWorkflow";
+import {
+	readWorkflowFromFormData,
+	useAnketaWorkflow,
+	withWorkflow,
+} from "../hooks/useAnketaWorkflow";
 import { useSchemaBindingToast } from "../hooks/useSchemaBindingToast";
 import type { AnketaFormContextValue } from "../utils/anketaFormContext";
 import { useAnketaViewerAccess } from "../utils/anketaViewerAccess";
@@ -66,6 +68,10 @@ import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessag
 import { usePermissions } from "@react-client/hooks/usePermissions";
 import { useUserStore } from "@react-client/common/store/userStore";
 import { Permission } from "@react-client/types/roles";
+import {
+	needsSchemaCurrencyChoice,
+	toastFormDataProjectionReport,
+} from "../utils/anketaFormDataProjectionToast.util";
 import {
 	buildQuestionnaireCopyCalcName,
 	stripQuestionnaireCalcNameFromFormData,
@@ -205,6 +211,8 @@ export function AnketaFormShell({
 	const effectiveReadOnly = readOnly || globallyLocked || permissionReadOnly;
 	const [calculationDebugOpen, setCalculationDebugOpen] = useState(false);
 	const [copyNameDialogOpen, setCopyNameDialogOpen] = useState(false);
+	const [copySchemaDialogOpen, setCopySchemaDialogOpen] = useState(false);
+	const [copyUseCurrentSchema, setCopyUseCurrentSchema] = useState(false);
 	const [renameDialogOpen, setRenameDialogOpen] = useState(false);
 	const [schemaInfoOpen, setSchemaInfoOpen] = useState(false);
 	const canShowSchemaInfo = Boolean(
@@ -270,12 +278,15 @@ export function AnketaFormShell({
 						formData: stripQuestionnaireCalcNameFromFormData(
 							engine.displayFormData,
 						),
+						useCurrentSchema: copyUseCurrentSchema,
 					},
 				},
 				{
 					onSuccess: (created) => {
 						toast.success("Создана копия анкеты");
+						toastFormDataProjectionReport(created.formDataProjection);
 						setCopyNameDialogOpen(false);
+						setCopyUseCurrentSchema(false);
 						navigate(
 							`/v2/${v2Routes.calculationPreview.rootPath.replace(":id", created.id)}`,
 						);
@@ -287,12 +298,23 @@ export function AnketaFormShell({
 				},
 			);
 		},
-		[createCopy, engine.displayFormData, navigate, questionnaireId],
+		[
+			copyUseCurrentSchema,
+			createCopy,
+			engine.displayFormData,
+			navigate,
+			questionnaireId,
+		],
 	);
 
 	const openCopyNameDialog = useCallback(() => {
+		if (schemaBinding && needsSchemaCurrencyChoice(schemaBinding)) {
+			setCopySchemaDialogOpen(true);
+			return;
+		}
+		setCopyUseCurrentSchema(false);
 		setCopyNameDialogOpen(true);
-	}, []);
+	}, [schemaBinding]);
 
 	const suggestedCopyName = useMemo(
 		() => buildQuestionnaireCopyCalcName(questionnaireCalcName ?? "Анкета"),
@@ -307,7 +329,22 @@ export function AnketaFormShell({
 	const confirmHold = useCallback(() => {
 		if (!questionnaireId) return;
 		holdMutation.mutate(questionnaireId, {
-			onSuccess: () => {
+			onSuccess: (held) => {
+				// Engine гидрирует formData один раз на instanceId — рефетч
+				// form-package после hold сам UI не обновит. Синхронизируем workflow.
+				const nextFormData =
+					held.formData && typeof held.formData === "object"
+						? withWorkflow(
+								engine.formData,
+								readWorkflowFromFormData(held.formData),
+							)
+						: withWorkflow(
+								engine.formData,
+								holdQuestionnaire(
+									readWorkflowFromFormData(engine.formData),
+								),
+							);
+				setFormData(nextFormData);
 				toast.success("Оценка по анкете утверждена");
 				setHoldDialogOpen(false);
 			},
@@ -316,7 +353,7 @@ export function AnketaFormShell({
 					description: apiErrorMessage(err),
 				}),
 		});
-	}, [holdMutation, questionnaireId]);
+	}, [engine.formData, holdMutation, questionnaireId, setFormData]);
 
 	const canShowHold =
 		Boolean(questionnaireId) &&
@@ -483,35 +520,36 @@ export function AnketaFormShell({
 					</Button>
 				) : null}
 				{canShowNewVersion ? (
-					<Button
-						variant="outlined"
+					<IconButton
 						size="small"
 						title="Создать новую версию для корректировки (тот же ID, версия +1)"
+						aria-label="Создать новую версию"
 						onClick={() => {
 							if (!questionnaireId) return;
 							navigate(
 								`/v2/${v2Routes.calculationNewVersion.rootPath.replace(":id", questionnaireId)}`,
 							);
 						}}
-						sx={{ textTransform: "none", whiteSpace: "nowrap" }}
 						data-test-id={`${dataTestId}--new-version`}
 					>
-						Создать новую версию
-					</Button>
+						<LibraryAddOutlinedIcon fontSize="small" />
+					</IconButton>
 				) : null}
 				{canShowCopy ? (
-					<Button
-						variant="outlined"
+					<IconButton
 						size="small"
 						disabled={createCopy.isPending}
-						startIcon={<ContentCopyOutlinedIcon />}
 						title="Создать копию как новую анкету (новый ID, версия 1). Представитель стрима — только немодельные анкеты."
+						aria-label="Создать копию"
 						onClick={openCopyNameDialog}
-						sx={{ textTransform: "none", whiteSpace: "nowrap" }}
 						data-test-id={`${dataTestId}--copy`}
 					>
-						Создать копию
-					</Button>
+						{createCopy.isPending ? (
+							<CircularProgress size={18} color="inherit" />
+						) : (
+							<ContentCopyOutlinedIcon fontSize="small" />
+						)}
+					</IconButton>
 				) : null}
 				{canShowDelete ? (
 					<IconButton
@@ -654,13 +692,32 @@ export function AnketaFormShell({
 				onClose={() => setCalculationDebugOpen(false)}
 				engine={engine}
 			/>
+			<AnketaSchemaCurrencyDialog
+				open={copySchemaDialogOpen}
+				pending={createCopy.isPending}
+				onCancel={() => setCopySchemaDialogOpen(false)}
+				onUseCurrent={() => {
+					setCopyUseCurrentSchema(true);
+					setCopySchemaDialogOpen(false);
+					setCopyNameDialogOpen(true);
+				}}
+				onKeepSource={() => {
+					setCopyUseCurrentSchema(false);
+					setCopySchemaDialogOpen(false);
+					setCopyNameDialogOpen(true);
+				}}
+				data-test-id={`${dataTestId}--copy-schema-dialog`}
+			/>
 			<AnketaCalcNameDialog
 				open={copyNameDialogOpen}
 				title="Создать копию анкеты"
 				confirmLabel="Создать копию"
 				initialCalcName={suggestedCopyName}
 				pending={createCopy.isPending}
-				onCancel={() => setCopyNameDialogOpen(false)}
+				onCancel={() => {
+					setCopyNameDialogOpen(false);
+					setCopyUseCurrentSchema(false);
+				}}
 				onConfirm={handleCreateCopy}
 				data-test-id={`${dataTestId}--copy-name-dialog`}
 			/>

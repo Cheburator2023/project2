@@ -13,6 +13,7 @@ import {
 	canUserCopyV2Questionnaire,
 	canUserDeleteV2Questionnaire,
 	collectForbiddenV2AnketaWorkflowChanges,
+	projectAndDefaultFormDataOntoJsonSchema,
 	resolveV2QuestionnaireDeleteAction,
 	userCanCreateV2Questionnaire,
 	type BulkDeleteV2QuestionnairesResultDto,
@@ -20,6 +21,7 @@ import {
 	type CreateV2QuestionnaireVersionRequestDto,
 	type SeedV2TestQuestionnairesResultDto,
 	type UpdateV2QuestionnaireRequestDto,
+	type V2FormDataProjectionReportDto,
 	type V2QuestionnaireFormPackageDto,
 	type V2QuestionnaireDto,
 	type V2QuestionnaireRegistryConfigDto,
@@ -184,6 +186,8 @@ export class V2QuestionnaireService {
 		const versionDto = mapV2TemplateVersionToDto(bound);
 		const workflow = normalizeV2AnketaWorkflow(dto.formData.workflow);
 		const readOnly =
+			row.status === "inactive" ||
+			row.status === "archived" ||
 			dto.schemaBinding.status === "unavailable" ||
 			isAnketaGloballyLocked(workflow);
 
@@ -273,6 +277,11 @@ export class V2QuestionnaireService {
 		user?: TUserLike | null,
 	): Promise<V2QuestionnaireDto> {
 		const row = await this.loadWithRelations(id);
+		if (row.status === "inactive" || row.status === "archived") {
+			throw new ConflictException(
+				"Историческая (неактивная) версия анкеты неизменяема. Создайте новую версию.",
+			);
+		}
 		const currentFormData = migrateV2AnketaFormData(row.formData ?? {});
 		const currentWorkflow = normalizeV2AnketaWorkflow(currentFormData.workflow);
 		if (
@@ -412,6 +421,9 @@ export class V2QuestionnaireService {
 			await this.questionnaireRepository.save(toDeactivate);
 		}
 
+		const { boundVersion, formData, formDataProjection } =
+			await this.prepareVersionFormDataFromParent(parent, dto);
+
 		const entity = this.questionnaireRepository.create({
 			calcName: dto.calcName?.trim() || parent.calcName,
 			status: "active",
@@ -420,10 +432,8 @@ export class V2QuestionnaireService {
 			parentQuestionnaireId: parent.id,
 			readableId,
 			templateId: parent.templateId,
-			boundTemplateVersionId: parent.boundTemplateVersionId,
-			formData: migrateV2AnketaFormData(
-				resetWorkflowForCopy(dto.formData ?? { ...parent.formData }),
-			),
+			boundTemplateVersionId: boundVersion.id,
+			formData,
 			finalCoefficient:
 				dto.finalCoefficient !== undefined
 					? dto.finalCoefficient
@@ -432,7 +442,8 @@ export class V2QuestionnaireService {
 		});
 
 		const saved = await this.questionnaireRepository.save(entity);
-		return this.findOne(saved.id);
+		const result = await this.findOne(saved.id);
+		return { ...result, formDataProjection };
 	}
 
 	/**
@@ -464,6 +475,12 @@ export class V2QuestionnaireService {
 			});
 		}
 
+		const { boundVersion, formData, formDataProjection } =
+			await this.prepareVersionFormDataFromParent(parent, {
+				...dto,
+				formData: sourceFormData,
+			});
+
 		const entity = this.questionnaireRepository.create({
 			calcName,
 			status: "active",
@@ -472,8 +489,8 @@ export class V2QuestionnaireService {
 			parentQuestionnaireId: parent.id,
 			readableId,
 			templateId: parent.templateId,
-			boundTemplateVersionId: parent.boundTemplateVersionId,
-			formData: migrateV2AnketaFormData(resetWorkflowForCopy(sourceFormData)),
+			boundTemplateVersionId: boundVersion.id,
+			formData,
 			finalCoefficient:
 				dto.finalCoefficient !== undefined
 					? dto.finalCoefficient
@@ -482,7 +499,71 @@ export class V2QuestionnaireService {
 		});
 
 		const saved = await this.questionnaireRepository.save(entity);
-		return this.findOne(saved.id);
+		const result = await this.findOne(saved.id);
+		return { ...result, formDataProjection };
+	}
+
+	/**
+	 * Выбор целевой схемы + проекция formData (prune/defaults) + сброс workflow.
+	 */
+	private async prepareVersionFormDataFromParent(
+		parent: V2QuestionnaireEntity,
+		dto: CreateV2QuestionnaireVersionRequestDto,
+	): Promise<{
+		boundVersion: V2TemplateVersionEntity;
+		formData: Record<string, unknown>;
+		formDataProjection: V2FormDataProjectionReportDto;
+	}> {
+		const boundVersion = await this.resolveBoundVersionForVersionCreate(
+			parent,
+			dto.useCurrentSchema === true,
+		);
+		const sourceFormData = migrateV2AnketaFormData(
+			dto.formData ?? { ...(parent.formData as Record<string, unknown>) },
+		);
+		const projected = projectAndDefaultFormDataOntoJsonSchema(
+			sourceFormData,
+			boundVersion.jsonSchema,
+		);
+		const formData = migrateV2AnketaFormData(
+			resetWorkflowForCopy(projected.formData),
+		);
+		return {
+			boundVersion,
+			formData,
+			formDataProjection: projected.report,
+		};
+	}
+
+	private async resolveBoundVersionForVersionCreate(
+		parent: V2QuestionnaireEntity,
+		useCurrentSchema: boolean,
+	): Promise<V2TemplateVersionEntity> {
+		if (useCurrentSchema) {
+			const template =
+				parent.template ??
+				(await this.templateRepository.findOne({
+					where: { id: parent.templateId },
+				}));
+			if (!template) {
+				throw new NotFoundException(
+					`Шаблон ${parent.templateId} не найден`,
+				);
+			}
+			return this.resolvePublishedVersionForTemplate(template);
+		}
+
+		const bound =
+			parent.boundTemplateVersion ??
+			(await this.versionRepository.findOne({
+				where: { id: parent.boundTemplateVersionId },
+			}));
+		if (!bound) {
+			throw new NotFoundException(
+				"Привязанная версия схемы исходной анкеты не найдена",
+			);
+		}
+		return bound;
 	}
 
 	async bulkDelete(
