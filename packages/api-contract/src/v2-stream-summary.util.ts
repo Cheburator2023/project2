@@ -242,3 +242,71 @@ export function buildAtypicalTotalsByStreamLabel(
 		atypicalTotal: roundUp2(entry.atypicalTotal),
 	}));
 }
+
+export type V2StreamAtypicalWorkGroup = {
+	streamLabel: string;
+	streamExecutors: V2StreamBlockExecutor[];
+	/** Строки с названием, включённые в расчёт (или без явного exclude). */
+	rows: Record<string, unknown>[];
+};
+
+function isAtypicalRowVisible(item: Record<string, unknown>): boolean {
+	if (item.includeInCalculation === false) return false;
+	const name = typeof item.name === "string" ? item.name.trim() : "";
+	return name.length > 0;
+}
+
+/**
+ * Нетиповые работы по стримам — для таблицы в панели «Итоговая оценка»
+ * (как типовые в collectAppearedTypicalWorkGroups).
+ */
+export function collectAtypicalWorkGroupsByStream(
+	formData: Record<string, unknown> | null | undefined,
+	uiSchema: unknown,
+	liveFormData?: Record<string, unknown> | null,
+): V2StreamAtypicalWorkGroup[] {
+	const blocks = collectExecutorStreamBlocks(uiSchema);
+	if (blocks.length === 0) return [];
+
+	const atypicalPaths = collectAtypicalWorkArrayPaths(uiSchema);
+	const readRows = (path: string): unknown[] => {
+		const live = liveFormData ? readByDotPath(liveFormData, path) : undefined;
+		if (Array.isArray(live) && live.length > 0) return live;
+		const stored = formData ? readByDotPath(formData, path) : undefined;
+		return Array.isArray(stored) ? stored : [];
+	};
+
+	const byLabel = new Map<
+		string,
+		{ streamExecutors: V2StreamBlockExecutor[]; rows: Record<string, unknown>[] }
+	>();
+	for (const block of blocks) {
+		const label = resolveStreamBlockSubtotalLabel(uiSchema, block);
+		if (!label) continue;
+		const entry = byLabel.get(label) ?? {
+			streamExecutors: [],
+			rows: [],
+		};
+		for (const code of block.streamExecutors) {
+			if (!entry.streamExecutors.includes(code)) {
+				entry.streamExecutors.push(code);
+			}
+		}
+		for (const path of pathsUnderBlock(atypicalPaths, block.blockKey)) {
+			for (const raw of readRows(path)) {
+				const item = readRecord(raw);
+				if (!item || !isAtypicalRowVisible(item)) continue;
+				entry.rows.push(item);
+			}
+		}
+		byLabel.set(label, entry);
+	}
+
+	return [...byLabel]
+		.map(([streamLabel, entry]) => ({
+			streamLabel,
+			streamExecutors: entry.streamExecutors,
+			rows: entry.rows,
+		}))
+		.filter((group) => group.rows.length > 0);
+}

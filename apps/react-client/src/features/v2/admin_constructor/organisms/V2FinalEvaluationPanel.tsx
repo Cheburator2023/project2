@@ -31,6 +31,7 @@ import { Flex } from "@react-client/common/primitives/Flex";
 import type { AnketaViewerAccess } from "@react-client/features/v2/anketaCRUD/utils/anketaViewerAccess";
 import {
 	buildAtypicalTotalsByStreamLabel,
+	collectAtypicalWorkGroupsByStream,
 	collectTypicalWorkBlockBindings,
 	dedupeTypicalWorkRowsByWorkId,
 	isModelStreamTypicalWorkVisibleInSummary,
@@ -51,6 +52,7 @@ import {
 	type KeyboardEvent,
 	type MouseEvent,
 } from "react";
+import { Spacer } from "@react-client/common/primitives/Spacer";
 
 const MODEL_STREAM_LABEL = "Модельный стрим";
 
@@ -72,6 +74,14 @@ const MODEL_STREAM_TYPICAL_WORK_TABLE_COLUMNS = [
 
 /** Чужой стрим: состав работ виден, оценки — нет. */
 const MASKED_TYPICAL_WORK_TABLE_COLUMNS = ["Название"] as const;
+
+/** Нетиповые: как типовые без колонки отклонения (база × коэфф → итог). */
+const ATYPICAL_WORK_TABLE_COLUMNS = [
+	"Название",
+	"База",
+	"Коэфф",
+	"С поправкой",
+] as const;
 
 export type V2SummaryFormSlice = {
 	total?: number;
@@ -324,6 +334,24 @@ export function V2FinalEvaluationPanel({
 		}
 		return byLabel;
 	}, [displayFormData, uiSchema, displayLiveFormData]);
+	const atypicalWorkGroups = useMemo(
+		() =>
+			uiSchema
+				? collectAtypicalWorkGroupsByStream(
+						displayFormData,
+						uiSchema,
+						displayLiveFormData,
+					)
+				: [],
+		[displayFormData, uiSchema, displayLiveFormData],
+	);
+	const atypicalRowsByStream = useMemo(() => {
+		const map = new Map<string, Record<string, unknown>[]>();
+		for (const group of atypicalWorkGroups) {
+			map.set(group.streamLabel, group.rows);
+		}
+		return map;
+	}, [atypicalWorkGroups]);
 	/**
 	 * §2/§4: представитель стрима видит цифры только по своему стриму —
 	 * ни чужих подытогов, ни сквозного итога по анкете.
@@ -396,6 +424,80 @@ export function V2FinalEvaluationPanel({
 	const typicalWorkRowCount =
 		modelStreamTypicalRows.length +
 		otherTypicalWorkGroups.reduce((sum, group) => sum + group.rows.length, 0);
+	const localAtypicalTotal = useMemo(() => {
+		let sum = 0;
+		for (const row of streamSubtotals.values()) {
+			sum += row.atypicalTotal;
+		}
+		return sum;
+	}, [streamSubtotals]);
+	const localTypicalWithCoeffs = useMemo(
+		() =>
+			sumTypicalRowTotals([
+				...modelStreamTypicalRows,
+				...otherTypicalWorkGroups.flatMap((group) => group.rows),
+			]),
+		[modelStreamTypicalRows, otherTypicalWorkGroups],
+	);
+	/**
+	 * Headline: summary с сервера часто пустой, если сработали только нетиповые
+	 * (JsonLogic /summary/* не заполнился). Добираем суммы из formData/стримов.
+	 */
+	const headlineSummary = useMemo((): V2SummaryFormSlice | null => {
+		const atypicalTotal = Math.max(
+			typeof effectiveSummary?.atypicalTotal === "number"
+				? effectiveSummary.atypicalTotal
+				: 0,
+			localAtypicalTotal,
+		);
+		const typicalTotal = Math.max(
+			typeof effectiveSummary?.typicalTotal === "number"
+				? effectiveSummary.typicalTotal
+				: 0,
+			localTypicalWithCoeffs,
+		);
+		const totalFromParts = typicalTotal + atypicalTotal;
+		const total = Math.max(
+			typeof effectiveSummary?.total === "number" ? effectiveSummary.total : 0,
+			totalFromParts,
+		);
+		if (total <= 0 && atypicalTotal <= 0 && typicalTotal <= 0) {
+			return effectiveSummary;
+		}
+		const baseScoreStream =
+			effectiveSummary?.baseScoreStream != null &&
+			Number.isFinite(effectiveSummary.baseScoreStream)
+				? effectiveSummary.baseScoreStream
+				: undefined;
+		const scoreWithComplexityCoeff =
+			effectiveSummary?.scoreWithComplexityCoeff != null &&
+			Number.isFinite(effectiveSummary.scoreWithComplexityCoeff)
+				? effectiveSummary.scoreWithComplexityCoeff
+				: total;
+		let deviationFromBaseline = effectiveSummary?.deviationFromBaseline;
+		if (
+			(deviationFromBaseline === undefined || deviationFromBaseline === null) &&
+			typeof baseScoreStream === "number" &&
+			baseScoreStream > 0 &&
+			total > 0
+		) {
+			deviationFromBaseline =
+				Math.round((total / baseScoreStream) * 10000) / 100;
+		}
+		return {
+			...(effectiveSummary ?? {}),
+			atypicalTotal,
+			typicalTotal,
+			total,
+			scoreWithComplexityCoeff,
+			...(baseScoreStream !== undefined ? { baseScoreStream } : {}),
+			...(deviationFromBaseline !== undefined ? { deviationFromBaseline } : {}),
+		};
+	}, [effectiveSummary, localAtypicalTotal, localTypicalWithCoeffs]);
+	const hasAtypicalWorks =
+		localAtypicalTotal > 0 || (headlineSummary?.atypicalTotal ?? 0) > 0;
+	/** Типовые и/или нетиповые — блок итогов показываем при любом из них. */
+	const hasAnyWorks = typicalWorkRowCount > 0 || hasAtypicalWorks;
 	/** Сумма нормативов типовых работ (без коэффициентов трудоёмкости). */
 	const typicalBaseSum = useMemo(() => {
 		const rows = [
@@ -410,28 +512,32 @@ export function V2FinalEvaluationPanel({
 		return sum;
 	}, [modelStreamTypicalRows, otherTypicalWorkGroups]);
 	const typicalBaseDisplay =
-		effectiveSummary?.baseScoreStream != null &&
-		Number.isFinite(effectiveSummary.baseScoreStream)
-			? effectiveSummary.baseScoreStream
+		headlineSummary?.baseScoreStream != null &&
+		Number.isFinite(headlineSummary.baseScoreStream)
+			? headlineSummary.baseScoreStream
 			: typicalBaseSum;
+	const modelStreamAtypicalTotal =
+		streamSubtotals.get(MODEL_STREAM_LABEL)?.atypicalTotal ?? 0;
 	const showModelStreamSection =
-		hasModelStreamCatalogInSchema || modelStreamTypicalRows.length > 0;
+		hasModelStreamCatalogInSchema ||
+		modelStreamTypicalRows.length > 0 ||
+		modelStreamAtypicalTotal > 0;
 	const showOtherStreamsSection = otherTypicalWorkGroups.length > 0;
 	const showUnifiedHeadline = Boolean(
 		!hideCrossStreamTotals &&
-			typicalWorkRowCount > 0 &&
-			effectiveSummary &&
-			hasNonZeroUnifiedTotals(effectiveSummary),
+			hasAnyWorks &&
+			headlineSummary &&
+			hasNonZeroUnifiedTotals(headlineSummary),
 	);
 	const showLegacyHeadline = Boolean(
 		!hideCrossStreamTotals &&
-			typicalWorkRowCount > 0 &&
-			effectiveSummary &&
-			hasLegacyHeadline(effectiveSummary),
+			hasAnyWorks &&
+			typicalBaseDisplay > 0 &&
+			headlineSummary &&
+			(hasLegacyHeadline(headlineSummary) ||
+				headlineSummary.deviationFromBaseline !== undefined),
 	);
-	const hasData =
-		(effectiveSummary && (showUnifiedHeadline || showLegacyHeadline)) ||
-		typicalWorkRowCount > 0;
+	const hasData = showUnifiedHeadline || showLegacyHeadline || hasAnyWorks;
 	const showDetailedSection =
 		!hideDetailedEstimates &&
 		(showModelStreamSection || showOtherStreamsSection);
@@ -506,12 +612,12 @@ export function V2FinalEvaluationPanel({
 						<>
 							<Metric
 								label="Итоговая трудоёмкость (ч/д):"
-								value={formatNum(effectiveSummary?.total)}
+								value={formatNum(headlineSummary?.total)}
 								infoTitle={[
 									"Сумма типовых (с коэффициентами) и нетиповых работ (ч/д).",
-									`Типовые с коэфф. = ${formatNum(effectiveSummary?.typicalTotal)}`,
-									`Нетиповые = ${formatNum(effectiveSummary?.atypicalTotal)}`,
-									`Итого = ${formatNum(effectiveSummary?.typicalTotal)} + ${formatNum(effectiveSummary?.atypicalTotal)} = ${formatNum(effectiveSummary?.total)}`,
+									`Типовые с коэфф. = ${formatNum(headlineSummary?.typicalTotal)}`,
+									`Нетиповые = ${formatNum(headlineSummary?.atypicalTotal)}`,
+									`Итого = ${formatNum(headlineSummary?.typicalTotal)} + ${formatNum(headlineSummary?.atypicalTotal)} = ${formatNum(headlineSummary?.total)}`,
 								].join("\n")}
 							/>
 							<Metric
@@ -520,11 +626,16 @@ export function V2FinalEvaluationPanel({
 								infoTitle={[
 									"Сумма всех нормативов типовых работ",
 									"(без коэффициентов, которые формируются параметрами трудоёмкости).",
-								].join("\n")}
+									typicalBaseDisplay <= 0
+										? "При отсутствии типовых работ база равна 0."
+										: "",
+								]
+									.filter(Boolean)
+									.join("\n")}
 							/>
 							<Metric
 								label="Типовые работы:"
-								value={formatNum(effectiveSummary?.typicalTotal)}
+								value={formatNum(headlineSummary?.typicalTotal)}
 								infoTitle={[
 									"Сумма типовых работ с учётом коэффициентов трудоёмкости.",
 									`Базовая оценка (нормативы без коэффициентов) = ${formatNum(typicalBaseDisplay)}`,
@@ -532,7 +643,7 @@ export function V2FinalEvaluationPanel({
 							/>
 							<Metric
 								label="Нетиповые работы:"
-								value={formatNum(effectiveSummary?.atypicalTotal)}
+								value={formatNum(headlineSummary?.atypicalTotal)}
 								infoTitle={[
 									"Сумма нетиповых работ стримов, включённых в расчёт",
 									"(учитываются строки с «Включить в расчёт»).",
@@ -544,12 +655,12 @@ export function V2FinalEvaluationPanel({
 					{showLegacyHeadline ? (
 						<Metric
 							label="Отклонение:"
-							value={formatPercent(effectiveSummary?.deviationFromBaseline)}
+							value={formatPercent(headlineSummary?.deviationFromBaseline)}
 							valueColor={deviationColor(
-								(effectiveSummary?.deviationFromBaseline ?? 0) - 100,
+								(headlineSummary?.deviationFromBaseline ?? 0) - 100,
 							)}
 							infoTitle={buildDeviationFormulaTitle(
-								effectiveSummary,
+								headlineSummary,
 								typicalBaseDisplay,
 							)}
 						/>
@@ -581,13 +692,15 @@ export function V2FinalEvaluationPanel({
 							</Typography>
 						</Stack>
 					) : null}
-					{!hasData && !isLoading && typicalWorkRowCount === 0 ? (
+					{!hasData && !isLoading && !hasAnyWorks ? (
 						<Typography variant="body2" color="text.secondary">
 							{hideDetailedEstimates
 								? "Оценки работ недоступны для вашей роли."
-								: "Заполните анкету — здесь появится расчёт по типовым работам стримов."}
+								: "Заполните анкету — здесь появится расчёт по типовым и нетиповым работам стримов."}
 						</Typography>
 					) : null}
+
+					<Spacer />
 
 					{showDetailedSection ? (
 						<Box
@@ -633,17 +746,49 @@ export function V2FinalEvaluationPanel({
 										/>
 									</Flex>
 									{modelStreamTypicalRows.length > 0 ? (
-										<TypicalWorksMiniTable
-											rows={modelStreamTypicalRows}
-											showDeviations
-											maskEstimates={isStreamMasked(MODEL_STREAM_LABEL)}
-										/>
-									) : (
+										<>
+											<Typography
+												variant="subtitle2"
+												fontWeight={700}
+												color="text.secondary"
+												mb={1}
+											>
+												Типовые работы
+											</Typography>
+											<TypicalWorksMiniTable
+												rows={modelStreamTypicalRows}
+												showDeviations
+												maskEstimates={isStreamMasked(MODEL_STREAM_LABEL)}
+											/>
+										</>
+									) : null}
+									{(atypicalRowsByStream.get(MODEL_STREAM_LABEL)?.length ?? 0) >
+									0 ? (
+										<Box mt={modelStreamTypicalRows.length > 0 ? 3 : 0}>
+											<Typography
+												variant="subtitle2"
+												fontWeight={700}
+												color="text.secondary"
+												mb={1}
+											>
+												Нетиповые работы
+											</Typography>
+											<AtypicalWorksMiniTable
+												rows={
+													atypicalRowsByStream.get(MODEL_STREAM_LABEL) ?? []
+												}
+												maskEstimates={isStreamMasked(MODEL_STREAM_LABEL)}
+											/>
+										</Box>
+									) : null}
+									{modelStreamTypicalRows.length === 0 &&
+									(atypicalRowsByStream.get(MODEL_STREAM_LABEL)?.length ?? 0) ===
+										0 ? (
 										<Typography variant="body2" color="text.secondary">
 											Работы модельного стрима появятся здесь после выполнения
 											условий появления в анкете.
 										</Typography>
-									)}
+									) : null}
 									{showOtherStreamsSection ? <Divider sx={{ my: 4 }} /> : null}
 								</>
 							) : null}
@@ -682,21 +827,63 @@ export function V2FinalEvaluationPanel({
 													</Flex>
 												) : null}
 												{group.rows.length > 0 ? (
-													<TypicalWorksMiniTable
-														rows={group.rows}
-														showDeviations
-														maskEstimates={
-															group.streamExecutor
-																? isStreamMasked(group.streamExecutor)
-																: false
-														}
-													/>
-												) : (
+													<>
+														<Typography
+															variant="caption"
+															fontWeight={700}
+															color="text.secondary"
+															display="block"
+															mb={0.5}
+														>
+															Типовые работы
+														</Typography>
+														<TypicalWorksMiniTable
+															rows={group.rows}
+															showDeviations
+															maskEstimates={
+																group.streamExecutor
+																	? isStreamMasked(group.streamExecutor)
+																	: false
+															}
+														/>
+													</>
+												) : null}
+												{(group.streamExecutor &&
+													(atypicalRowsByStream.get(group.streamExecutor)
+														?.length ?? 0) > 0) ? (
+													<Box mt={group.rows.length > 0 ? 2 : 0}>
+														<Typography
+															variant="caption"
+															fontWeight={700}
+															color="text.secondary"
+															display="block"
+															mb={0.5}
+														>
+															Нетиповые работы
+														</Typography>
+														<AtypicalWorksMiniTable
+															rows={
+																atypicalRowsByStream.get(
+																	group.streamExecutor,
+																) ?? []
+															}
+															maskEstimates={isStreamMasked(
+																group.streamExecutor,
+															)}
+														/>
+													</Box>
+												) : null}
+												{group.rows.length === 0 &&
+												!(
+													group.streamExecutor &&
+													(atypicalRowsByStream.get(group.streamExecutor)
+														?.length ?? 0) > 0
+												) ? (
 													<Typography variant="body2" color="text.secondary">
 														Работы стрима появятся здесь после выполнения
 														условий появления в анкете.
 													</Typography>
-												)}
+												) : null}
 											</Box>
 										))}
 									</Stack>
@@ -724,7 +911,7 @@ function buildDeviationFormulaTitle(
 		Number.isFinite(withCoeff) &&
 		Number.isFinite(atypical)
 			? withCoeff - atypical
-			: summary?.typicalTotal ?? null;
+			: (summary?.typicalTotal ?? null);
 
 	const laborTotal =
 		summary?.total != null && Number.isFinite(summary.total)
@@ -834,6 +1021,110 @@ function StreamSubtotal({
 				{formatNum(typicalTotal + atypicalTotal)}
 			</Typography>
 		</Typography>
+	);
+}
+
+function atypicalWorkDisplayName(
+	item: Record<string, unknown>,
+	index: number,
+): string {
+	const name = typeof item.name === "string" ? item.name.trim() : "";
+	if (name) return name;
+	const workType = typeof item.workType === "string" ? item.workType.trim() : "";
+	if (workType) return workType;
+	return `Нетиповая работа ${index + 1}`;
+}
+
+function resolveAtypicalRowTotal(item: Record<string, unknown>): number | null {
+	const total = readTypicalWorkFiniteNumber(item.total);
+	if (total !== null) return total;
+	const base = readTypicalWorkFiniteNumber(item.estimateHoursPerDay);
+	const coeff = readTypicalWorkFiniteNumber(item.coefficient);
+	if (base !== null && coeff !== null) return base * coeff;
+	return base;
+}
+
+/** Таблица нетиповых работ в подробном расчёте (как типовые: название / база / коэфф / итог). */
+function AtypicalWorksMiniTable({
+	rows,
+	maskEstimates = false,
+}: {
+	rows: Record<string, unknown>[];
+	maskEstimates?: boolean;
+}) {
+	const columns = maskEstimates
+		? MASKED_TYPICAL_WORK_TABLE_COLUMNS
+		: ATYPICAL_WORK_TABLE_COLUMNS;
+
+	return (
+		<Table
+			size="small"
+			sx={{
+				tableLayout: "fixed",
+				width: "100%",
+				"& td, & th": {
+					px: 0.75,
+					py: 0.5,
+					fontSize: 12,
+					verticalAlign: "top",
+					wordBreak: "break-word",
+				},
+			}}
+		>
+			<TableHead>
+				<TableRow>
+					{columns.map((col, index) => (
+						<TableCell
+							key={col}
+							align={index === 0 ? "left" : "right"}
+							sx={{
+								fontWeight: 700,
+								color: "text.secondary",
+								width: index === 0 ? "42%" : undefined,
+							}}
+						>
+							{col}
+						</TableCell>
+					))}
+				</TableRow>
+			</TableHead>
+			<TableBody>
+				{rows.map((item, index) => {
+					const name = atypicalWorkDisplayName(item, index);
+					const rowKey = `atypical-${name}-${index}`;
+					if (maskEstimates) {
+						return (
+							<TableRow key={rowKey}>
+								<TableCell>
+									<Typography fontWeight={500}>{name}</Typography>
+								</TableCell>
+							</TableRow>
+						);
+					}
+					const base = readTypicalWorkFiniteNumber(item.estimateHoursPerDay);
+					const coeff = readTypicalWorkFiniteNumber(item.coefficient);
+					const total = resolveAtypicalRowTotal(item);
+					return (
+						<TableRow key={rowKey}>
+							<TableCell>
+								<Typography fontWeight={500}>{name}</Typography>
+							</TableCell>
+							<TableCell align="right">
+								{formatTypicalWorkNumberValue(base)}
+							</TableCell>
+							<TableCell align="right">
+								{formatTypicalWorkNumberValue(coeff)}
+							</TableCell>
+							<TableCell align="right">
+								<Typography fontWeight={600} component="span">
+									{formatTypicalWorkNumberValue(total)}
+								</Typography>
+							</TableCell>
+						</TableRow>
+					);
+				})}
+			</TableBody>
+		</Table>
 	);
 }
 

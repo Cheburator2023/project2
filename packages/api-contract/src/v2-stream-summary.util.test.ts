@@ -4,6 +4,7 @@ import { V2_MODEL_STREAM_EXECUTOR } from "./v2-model-stream-typical-works.consta
 import {
 	buildAtypicalTotalsByStreamLabel,
 	buildExecutorStreamWorkSummaryRows,
+	collectAtypicalWorkGroupsByStream,
 } from "./v2-stream-summary.util";
 
 const uiSchema = {
@@ -201,5 +202,31 @@ describe("buildAtypicalTotalsByStreamLabel", () => {
 		expect(
 			totals.find((row) => row.streamLabel === "ПиРМ")?.atypicalTotal,
 		).toBe(9);
+	});
+
+	it("collectAtypicalWorkGroupsByStream отдаёт строки с названиями по стримам", () => {
+		const groups = collectAtypicalWorkGroupsByStream(
+			{
+				detailInfo: {
+					field_atyp: [
+						{ name: "Работа A", total: 12, includeInCalculation: true },
+						{ name: "Skip", total: 99, includeInCalculation: false },
+					],
+				},
+				field_pirm: {
+					field_atyp: [
+						{ name: "ПиРМ работа", total: 4, includeInCalculation: true },
+					],
+				},
+			},
+			subtotalUiSchema,
+		);
+
+		const model = groups.find(
+			(g) => g.streamLabel === V2_MODEL_STREAM_EXECUTOR,
+		);
+		expect(model?.rows.map((r) => r.name)).toEqual(["Работа A"]);
+		const pirm = groups.find((g) => g.streamLabel === "ПиРМ");
+		expect(pirm?.rows.map((r) => r.name)).toEqual(["ПиРМ работа"]);
 	});
 });

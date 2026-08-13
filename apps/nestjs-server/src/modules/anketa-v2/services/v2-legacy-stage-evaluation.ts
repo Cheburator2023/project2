@@ -60,17 +60,23 @@ function roundUp2(value: number): number {
 	return Math.ceil(value * 100 - 1e-9) / 100;
 }
 
+/** Математическое округление до 2 знаков (для % отклонения в итоговой оценке). */
+function roundHalfUp2(value: number): number {
+	if (!Number.isFinite(value)) return 0;
+	return Math.round(value * 100 + Number.EPSILON) / 100;
+}
+
 function percentDeviation(base: number, adjusted: number): number | null {
 	if (!base || !Number.isFinite(base)) return null;
 	if (!adjusted && adjusted !== 0) return null;
-	return roundUp2(((adjusted / base) - 1) * 100);
+	return roundHalfUp2(((adjusted / base) - 1) * 100);
 }
 
 /** (База×Коэффициенты + Нетиповые) / База × 100% */
 function ratioToBasePercent(base: number, adjusted: number): number | null {
 	if (!base || !Number.isFinite(base)) return null;
 	if (!Number.isFinite(adjusted)) return null;
-	return roundUp2((adjusted / base) * 100);
+	return roundHalfUp2((adjusted / base) * 100);
 }
 
 function readRecord(value: unknown): Record<string, unknown> | undefined {
@@ -832,6 +838,36 @@ export function applyLegacySummaryToFormData(
 	}
 
 	const summary = evaluateLegacyV2Summary(data, options);
+	const platformAtypical = summary.platformStreams.reduce(
+		(acc, row) => acc + (Number(row.atypicalScore) || 0),
+		0,
+	);
+	const platformTypical = summary.platformStreams.reduce(
+		(acc, row) => acc + (Number(row.adjustedTypicalScore) || 0),
+		0,
+	);
+	/** Даже если стрим-блок «неактивен» в ui — нетиповые из formData всё равно учитываем. */
+	const rowsAtypical = sumAtypicalIncluded(
+		collectAtypicalWorkRowsFromData(data, options?.uiSchema),
+	);
+	const prevAtypical = Number(prevSummary.atypicalTotal);
+	const prevTypical = Number(prevSummary.typicalTotal);
+	const prevTotal = Number(prevSummary.total);
+	const atypicalTotal =
+		Number.isFinite(prevAtypical) && prevAtypical > 0
+			? prevAtypical
+			: roundUp2(Math.max(platformAtypical, rowsAtypical));
+	const typicalTotal =
+		Number.isFinite(prevTypical) && prevTypical > 0
+			? prevTypical
+			: roundUp2(platformTypical);
+	const total =
+		Number.isFinite(prevTotal) && prevTotal > 0
+			? prevTotal
+			: Math.max(
+					summary.scoreWithComplexityCoeff,
+					roundUp2(typicalTotal + atypicalTotal),
+				);
 	next.summary = {
 		...prevSummary,
 		baseScoreStream: summary.baseScoreStream,
@@ -839,6 +875,10 @@ export function applyLegacySummaryToFormData(
 		deviationFromBaseline: summary.deviationFromBaseline,
 		detailedCalculation: summary.detailedCalculation,
 		platformStreams: summary.platformStreams,
+		/** UI «Итоговая оценка»: заполняем и при одних нетиповых (JsonLogic мог не успеть). */
+		atypicalTotal,
+		typicalTotal,
+		total,
 	};
 	return {
 		formData: next,

@@ -280,4 +280,57 @@ describe("evaluateLegacyV2Summary snapshot sensitivity", () => {
 		expect(summary.scoreWithComplexityCoeff).toBe(100);
 		expect(summary.deviationFromBaseline).toBe(200);
 	});
+
+	it("rounds deviationFromBaseline with half-up, not ceil", () => {
+		const uiSchema = {
+			streamDataSources: {
+				"ui:options": {
+					archComponent: "streamBlock",
+					streamExecutor: "Стрим источников данных",
+				},
+				typicalWorks: {
+					"ui:options": { archComponent: "typicalWork" },
+					items: {},
+				},
+			},
+		};
+
+		// 263 / 102 × 100 = 257.8431… → 257.84 (ceil давал бы 257.85)
+		expect(
+			evaluateLegacyV2Summary(
+				{
+					summary: { total: 263, typicalTotal: 263, atypicalTotal: 0 },
+					streamDataSources: {
+						typicalWorks: [
+							{
+								estimateHoursPerDay: 102,
+								total: 263,
+								formulaBreakdown: { instanceBreakdown: [{}] },
+							},
+						],
+					},
+				},
+				{ uiSchema },
+			).deviationFromBaseline,
+		).toBe(257.84);
+
+		// 474.56 / 243 × 100 = 195.2921… → 195.29 (ceil давал бы 195.30)
+		expect(
+			evaluateLegacyV2Summary(
+				{
+					summary: { total: 474.56, typicalTotal: 474.56, atypicalTotal: 0 },
+					streamDataSources: {
+						typicalWorks: [
+							{
+								estimateHoursPerDay: 243,
+								total: 474.56,
+								formulaBreakdown: { instanceBreakdown: [{}] },
+							},
+						],
+					},
+				},
+				{ uiSchema },
+			).deviationFromBaseline,
+		).toBe(195.29);
+	});
 });
