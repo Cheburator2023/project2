@@ -175,6 +175,13 @@ export const AdminV2SettingsPage = lazyPage(
 		),
 	"AdminV2SettingsPage",
 );
+export const AdminV2RegistryImportPage = lazyPage(
+	() =>
+		import(
+			/* webpackChunkName: "page-admin-registry-import" */ "@react-client/features/v2/admin/pages/AdminV2RegistryImportPage"
+		),
+	"AdminV2RegistryImportPage",
+);
 export const AdminV2KeycloakMatrixPage = lazyPage(
 	() =>
 		import(

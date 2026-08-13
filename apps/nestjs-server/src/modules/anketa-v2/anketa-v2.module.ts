@@ -49,6 +49,8 @@ import { V2TypicalWorkParamCatalogService } from "./services/v2-typical-work-par
 import { V2TypicalWorkController } from "./controllers/v2-typical-work.controller";
 import { V2DataTransferController } from "./controllers/v2-data-transfer.controller";
 import { V2DataTransferService } from "./services/v2-data-transfer.service";
+import { V2MasterRegistryImportController } from "./controllers/v2-master-registry-import.controller";
+import { V2MasterRegistryImportService } from "./services/v2-master-registry-import.service";
 import { V2KeycloakRoleSyncController } from "./controllers/v2-keycloak-role-sync.controller";
 import { V2KeycloakRoleSyncService } from "./services/v2-keycloak-role-sync.service";
 import { V2RuntimeSettingsEntity } from "./entities/v2-runtime-settings.entity";
@@ -94,6 +96,7 @@ import { V2StreamCatalogService } from "./services/v2-stream-catalog.service";
 		V2QuestionnaireController,
 		V2TypicalWorkController,
 		V2DataTransferController,
+		V2MasterRegistryImportController,
 		V2KeycloakRoleSyncController,
 		V2RuntimeSettingsController,
 	],
@@ -119,6 +122,7 @@ import { V2StreamCatalogService } from "./services/v2-stream-catalog.service";
 		V2TypicalWorkRuntimeService,
 		V2TypicalWorkParamCatalogService,
 		V2DataTransferService,
+		V2MasterRegistryImportService,
 		V2KeycloakRoleSyncService,
 		V2RuntimeSettingsService,
 	],

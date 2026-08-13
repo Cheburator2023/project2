@@ -60,6 +60,13 @@ export const commonRoutes = {
 		showInNavbar: true,
 		navbar: { group: "adminV2", order: 7 },
 	},
+	adminV2RegistryImport: {
+		rootPath: "/admin/registry-import",
+		name: "Импорт реестра",
+		disabled: false,
+		showInNavbar: true,
+		navbar: { group: "adminV2", order: 2 },
+	},
 	adminV2Settings: {
 		rootPath: "/admin/settings",
 		name: "Настройки",

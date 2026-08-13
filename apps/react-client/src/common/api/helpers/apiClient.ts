@@ -63,6 +63,13 @@ function shouldPublishMutationSync(url?: string): boolean {
 	if (url.includes("/calculate")) return false;
 	if (url.includes("/dictionaries/json/bulk")) return false;
 	if (url.includes("/lock") || url.includes("/renew")) return false;
+	// dry-run импорта реестра не меняет данные
+	if (
+		url.includes("/import-master-registry") &&
+		!/[?&]dryRun=(false|0)(?:&|$)/.test(url)
+	) {
+		return false;
+	}
 	return mutationScopeForUrl(url) !== null;
 }
 

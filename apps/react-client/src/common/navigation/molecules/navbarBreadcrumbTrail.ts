@@ -51,6 +51,10 @@ function adminTrail(pathname: string): NavbarBreadcrumbItem[] | null {
 		return [adminCrumb(), { label: commonRoutes.adminV2Guide.name }];
 	}
 
+	if (pathname.startsWith(commonRoutes.adminV2RegistryImport.rootPath)) {
+		return [adminCrumb(), { label: commonRoutes.adminV2RegistryImport.name }];
+	}
+
 	const dictionaryDetailMatch = pathname.match(/^\/admin\/dictionaries\/([^/]+)$/);
 	if (dictionaryDetailMatch) {
 		return [

@@ -11,6 +11,7 @@ import {
 	AdminV2HistoryPage,
 	AdminV2SchemasPage,
 	AdminV2KeycloakMatrixPage,
+	AdminV2RegistryImportPage,
 	AdminV2SettingsPage,
 	AdminV2StreamsPage,
 	AdminV2TemplateHistoryPage,
@@ -70,6 +71,10 @@ function adminChildRoutes(): RouteObject[] {
 					element: <AdminV2TypicalWorkDetailPage />,
 				},
 				{ path: "history", element: <AdminV2HistoryPage /> },
+				{
+					path: "registry-import",
+					element: <AdminV2RegistryImportPage />,
+				},
 				{ path: "settings", element: <AdminV2SettingsPage /> },
 				{
 					path: "keycloak-matrix",
