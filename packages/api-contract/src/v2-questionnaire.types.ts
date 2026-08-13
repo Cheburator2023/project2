@@ -9,6 +9,10 @@ import type {
 	V2AnketaSectionStatus,
 } from "./v2-anketa-workflow.types";
 import type { V2FormDataProjectionReportDto } from "./v2-form-data-schema-projection.util";
+import type { V2QuestionnaireRegistryVersionMode } from "./v2-questionnaire-registry-version-filter.util";
+
+/** Размер страницы реестра анкет v2 по умолчанию. */
+export const V2_QUESTIONNAIRE_REGISTRY_PAGE_SIZE = 50;
 
 export const V2_QUESTIONNAIRE_STATUS_VALUES = [
 	"active",
@@ -216,4 +220,29 @@ export type V2QuestionnaireEditLocksListDto = {
 export type CreateV2QuestionnaireCommentRequestDto = {
 	body: string;
 	parentCommentId?: string | null;
+};
+
+/** Query-параметры реестра анкет v2 (серверная пагинация + поиск). */
+export type V2QuestionnaireListQuery = {
+	page?: number;
+	limit?: number;
+	/** Поиск по названию, readableId, автору, id. */
+	search?: string;
+	/**
+	 * Режим версий (ДАДМ): пагинация после выбора одной версии на серию.
+	 * Без параметра — все версии постранично.
+	 */
+	versionMode?: V2QuestionnaireRegistryVersionMode;
+};
+
+export type V2QuestionnaireListMetaDto = {
+	total: number;
+	page: number;
+	limit: number;
+	lastPage: number;
+};
+
+export type PaginatedV2QuestionnaireResponseDto = {
+	data: V2QuestionnaireDto[];
+	meta: V2QuestionnaireListMetaDto;
 };

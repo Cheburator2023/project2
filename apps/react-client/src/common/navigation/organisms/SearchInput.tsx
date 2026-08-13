@@ -11,23 +11,43 @@ type SearchInputProps = {
 	gridApi?: GridApi | null;
 	placeholder?: string;
 	inputId?: string;
+	/** Controlled value (серверный поиск реестра v2). */
+	value?: string;
+	onChange?: (value: string) => void;
+	/**
+	 * Писать в AG Grid quickFilter.
+	 * По умолчанию: true, если нет внешнего onChange (v1-поведение).
+	 */
+	applyQuickFilter?: boolean;
 };
 
 export function SearchInput({
 	gridApi: gridApiProp,
 	placeholder = "Поиск",
 	inputId = filterInputId,
+	value,
+	onChange,
+	applyQuickFilter,
 }: SearchInputProps = {}) {
 	const storeGridApi = useGlobalSettingsStore((s) => s.gridApi);
 	const gridApi = gridApiProp ?? storeGridApi;
+	const shouldApplyQuickFilter =
+		applyQuickFilter ?? onChange == null;
 
 	const onFilterTextBoxChanged = (event: ChangeEvent<HTMLInputElement>) => {
-		gridApi?.setGridOption("quickFilterText", event.target.value);
+		const next = event.target.value;
+		onChange?.(next);
+		if (shouldApplyQuickFilter) {
+			gridApi?.setGridOption("quickFilterText", next);
+		}
 	};
+
+	const controlled = onChange != null;
 
 	return (
 		<TextField
 			id={inputId}
+			{...(controlled ? { value: value ?? "" } : {})}
 			onChange={onFilterTextBoxChanged}
 			placeholder={placeholder}
 			fullWidth

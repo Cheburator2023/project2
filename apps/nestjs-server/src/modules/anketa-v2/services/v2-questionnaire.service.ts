@@ -13,20 +13,26 @@ import {
 	canUserCopyV2Questionnaire,
 	canUserDeleteV2Questionnaire,
 	collectForbiddenV2AnketaWorkflowChanges,
+	filterV2QuestionnairesByRegistryVersionMode,
+	isV2UserStreamFilteredByGroups,
 	projectAndDefaultFormDataOntoJsonSchema,
 	resolveV2QuestionnaireDeleteAction,
+	resolveV2UserAllowedStreamFilterValues,
 	userCanCreateV2Questionnaire,
+	V2_QUESTIONNAIRE_REGISTRY_PAGE_SIZE,
 	type BulkDeleteV2QuestionnairesResultDto,
 	type CreateV2QuestionnaireRequestDto,
 	type CreateV2QuestionnaireVersionRequestDto,
+	type PaginatedV2QuestionnaireResponseDto,
 	type SeedV2TestQuestionnairesResultDto,
 	type UpdateV2QuestionnaireRequestDto,
 	type V2FormDataProjectionReportDto,
 	type V2QuestionnaireFormPackageDto,
 	type V2QuestionnaireDto,
+	type V2QuestionnaireListQuery,
 	type V2QuestionnaireRegistryConfigDto,
 } from "@smart-anketa/api-contract";
-import { Repository, In } from "typeorm";
+import { Repository, In, type SelectQueryBuilder } from "typeorm";
 import { V2QuestionnaireEntity } from "../entities/v2-questionnaire.entity";
 import { V2TemplateEntity } from "../entities/v2-template.entity";
 import { V2TemplateVersionEntity } from "../entities/v2-template-version.entity";
@@ -85,6 +91,134 @@ export class V2QuestionnaireService {
 			order: { createdAt: "DESC" },
 		});
 		return Promise.all(rows.map((row) => this.toDto(row)));
+	}
+
+	/**
+	 * Реестр: серверная пагинация + поиск (+ стрим / versionMode).
+	 * Полный `findAll` оставляем для export / registry-config.
+	 */
+	async findAllPaginated(
+		query: V2QuestionnaireListQuery,
+		user?: TUserLike | null,
+	): Promise<PaginatedV2QuestionnaireResponseDto> {
+		const page = Math.max(1, Number(query.page) || 1);
+		const limit = Math.min(
+			100,
+			Math.max(
+				1,
+				Number(query.limit) || V2_QUESTIONNAIRE_REGISTRY_PAGE_SIZE,
+			),
+		);
+		const search = query.search?.trim() ?? "";
+		const versionMode = query.versionMode;
+		const groups = Array.isArray(user?.groups) ? user.groups : [];
+
+		const streamSetting =
+			await this.runtimeSettingsService.getStreamFilterSetting();
+		const streamFilterEnabled = streamSetting.enabled ?? true;
+		const deModelopsViewAllStreams =
+			streamSetting.deModelopsViewAllStreams ?? true;
+		const streamOpts = { deModelopsViewAllStreams };
+
+		const empty = (): PaginatedV2QuestionnaireResponseDto => ({
+			data: [],
+			meta: { total: 0, page, limit, lastPage: 0 },
+		});
+
+		let allowedStreams: string[] | null = null;
+		if (
+			streamFilterEnabled &&
+			isV2UserStreamFilteredByGroups(groups, streamOpts)
+		) {
+			allowedStreams = resolveV2UserAllowedStreamFilterValues(
+				groups,
+				streamOpts,
+			);
+			if (allowedStreams.length === 0) return empty();
+		}
+
+		if (versionMode) {
+			const leanQb = this.questionnaireRepository
+				.createQueryBuilder("q")
+				.select("q.id", "id")
+				.addSelect("q.series_id", "seriesId")
+				.addSelect("q.version", "version")
+				.addSelect("q.status", "status")
+				.addSelect("q.created_at", "createdAt")
+				.addSelect(
+					"q.form_data->'workflow'->>'globalStatus'",
+					"workflowGlobalStatus",
+				);
+			this.applyRegistryListFilters(leanQb, search, allowedStreams);
+			const leanRows = await leanQb.getRawMany<{
+				id: string;
+				seriesId: string;
+				version: string;
+				status: string | null;
+				createdAt: Date | string;
+				workflowGlobalStatus: string | null;
+			}>();
+			const picked = filterV2QuestionnairesByRegistryVersionMode(
+				leanRows,
+				versionMode,
+			);
+			picked.sort((a, b) => {
+				const ta = new Date(a.createdAt).getTime();
+				const tb = new Date(b.createdAt).getTime();
+				return tb - ta;
+			});
+			const total = picked.length;
+			const lastPage = total === 0 ? 0 : Math.ceil(total / limit);
+			const slice = picked.slice((page - 1) * limit, page * limit);
+			const data = await this.findAllByIds(slice.map((row) => row.id));
+			return {
+				data,
+				meta: { total, page, limit, lastPage },
+			};
+		}
+
+		const qb = this.questionnaireRepository
+			.createQueryBuilder("q")
+			.leftJoinAndSelect("q.template", "template")
+			.leftJoinAndSelect("q.boundTemplateVersion", "boundTemplateVersion");
+		this.applyRegistryListFilters(qb, search, allowedStreams);
+		qb.orderBy("q.createdAt", "DESC");
+
+		const [rows, total] = await qb
+			.skip((page - 1) * limit)
+			.take(limit)
+			.getManyAndCount();
+		const lastPage = total === 0 ? 0 : Math.ceil(total / limit);
+		const data = await Promise.all(rows.map((row) => this.toDto(row)));
+		return {
+			data,
+			meta: { total, page, limit, lastPage },
+		};
+	}
+
+	private applyRegistryListFilters(
+		qb: SelectQueryBuilder<V2QuestionnaireEntity>,
+		search: string,
+		allowedStreams: string[] | null,
+	): void {
+		if (search) {
+			const pattern = `%${escapeIlikePattern(search)}%`;
+			qb.andWhere(
+				`(q.calc_name ILIKE :search ESCAPE '\\'
+					OR COALESCE(q.readable_id, '') ILIKE :search ESCAPE '\\'
+					OR COALESCE(q.author, '') ILIKE :search ESCAPE '\\'
+					OR CAST(q.id AS text) ILIKE :search ESCAPE '\\')`,
+				{ search: pattern },
+			);
+		}
+		if (allowedStreams) {
+			qb.andWhere(
+				`(q.form_data->'generalInfo'->>'implementationStream' IS NULL
+					OR TRIM(q.form_data->'generalInfo'->>'implementationStream') = ''
+					OR q.form_data->'generalInfo'->>'implementationStream' IN (:...allowedStreams))`,
+				{ allowedStreams },
+			);
+		}
 	}
 
 	async getRegistryConfig(): Promise<V2QuestionnaireRegistryConfigDto> {
@@ -854,4 +988,9 @@ export class V2QuestionnaireService {
 			user.email;
 		return name || "Система";
 	}
+}
+
+/** Экранирование `%` `_` `\` для ILIKE … ESCAPE '\\'. */
+function escapeIlikePattern(raw: string): string {
+	return raw.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
 }

@@ -1,9 +1,15 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+	keepPreviousData,
+	useMutation,
+	useQuery,
+	useQueryClient,
+} from "@tanstack/react-query";
 import type {
 	CreateV2QuestionnaireRequestDto,
 	CreateV2QuestionnaireVersionRequestDto,
 	CreateV2QuestionnaireCommentRequestDto,
 	BulkDeleteV2QuestionnairesResultDto,
+	PaginatedV2QuestionnaireResponseDto,
 	SeedV2TestQuestionnairesResultDto,
 	UpdateV2QuestionnaireRequestDto,
 	AcquireV2QuestionnaireEditLockRequestDto,
@@ -12,22 +18,39 @@ import type {
 	V2QuestionnaireEditLockDto,
 	V2QuestionnaireEditLocksListDto,
 	V2QuestionnaireFormPackageDto,
+	V2QuestionnaireListQuery,
 	V2QuestionnaireRegistryConfigDto,
+} from "@smart-anketa/api-contract";
+import {
+	V2_QUESTIONNAIRE_REGISTRY_PAGE_SIZE,
 } from "@smart-anketa/api-contract";
 import { apiClient, API_ENTITY_CREATE_TIMEOUT_MS } from "../helpers/apiClient";
 
 const ROOT_KEY = ["v2-questionnaires"] as const;
 const REGISTRY_CONFIG_KEY = [...ROOT_KEY, "registry-config"] as const;
 
-export const useV2Questionnaires = () =>
-	useQuery<V2QuestionnaireDto[]>({
-		queryKey: ROOT_KEY,
+export const useV2Questionnaires = (query: V2QuestionnaireListQuery = {}) => {
+	const page = query.page ?? 1;
+	const limit = query.limit ?? V2_QUESTIONNAIRE_REGISTRY_PAGE_SIZE;
+	const search = query.search?.trim() || undefined;
+	const versionMode = query.versionMode;
+
+	return useQuery<PaginatedV2QuestionnaireResponseDto>({
+		queryKey: [...ROOT_KEY, "list", { page, limit, search, versionMode }],
 		queryFn: () =>
-			apiClient<V2QuestionnaireDto[]>({
+			apiClient<PaginatedV2QuestionnaireResponseDto>({
 				url: "/v2/questionnaires",
 				method: "GET",
+				params: {
+					page,
+					limit,
+					...(search ? { search } : {}),
+					...(versionMode ? { versionMode } : {}),
+				},
 			}),
+		placeholderData: keepPreviousData,
 	});
+};
 
 export const useV2QuestionnaireRegistryConfig = () =>
 	useQuery<V2QuestionnaireRegistryConfigDto>({
@@ -110,7 +133,7 @@ export const useUpdateV2Questionnaire = () => {
 					};
 				},
 			);
-			void qc.invalidateQueries({ queryKey: ROOT_KEY, exact: true });
+			void qc.invalidateQueries({ queryKey: ROOT_KEY });
 		},
 	});
 };

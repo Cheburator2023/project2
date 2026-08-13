@@ -17,6 +17,7 @@ import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
 import type {
 	BulkDeleteV2QuestionnairesResultDto,
+	PaginatedV2QuestionnaireResponseDto,
 	SeedV2TestQuestionnairesResultDto,
 	V2QuestionnaireCommentDto,
 	V2QuestionnaireDto,
@@ -32,6 +33,7 @@ import {
 	CreateV2QuestionnaireDto,
 	CreateV2QuestionnaireVersionDto,
 	ExportV2QuestionnairesXlsxDto,
+	ListV2QuestionnairesDto,
 	SeedV2TestQuestionnairesDto,
 	UpdateV2QuestionnaireDto,
 } from "../dto";
@@ -94,10 +96,13 @@ export class V2QuestionnaireController {
 	@Get()
 	@ApiOperation({
 		summary:
-			"Реестр анкет v2 (полный список; фильтр по стриму — на UI, см. /v2/runtime-settings/stream-filter)",
+			"Реестр анкет v2 (пагинация, поиск; фильтр по стриму на сервере)",
 	})
-	async findAll(): Promise<V2QuestionnaireDto[]> {
-		return this.questionnaireService.findAll();
+	async findAll(
+		@Query() query: ListV2QuestionnairesDto,
+		@CurrentUser() user: Record<string, unknown> | undefined,
+	): Promise<PaginatedV2QuestionnaireResponseDto> {
+		return this.questionnaireService.findAllPaginated(query, user as never);
 	}
 
 	@Post("bulk-delete")

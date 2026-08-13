@@ -1,5 +1,7 @@
 import DownloadIcon from "@mui/icons-material/Download";
 import AddIcon from "@mui/icons-material/Add";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import TaskAltIcon from "@mui/icons-material/TaskAlt";
@@ -61,7 +63,6 @@ import {
 	ClientSideRowModelModule,
 	type ColDef,
 	type GetContextMenuItemsParams,
-	type GridApi,
 	type GridReadyEvent,
 	type MenuItemDef,
 	type RowDoubleClickedEvent,
@@ -92,17 +93,16 @@ import { useUserStore } from "@react-client/common/store/userStore";
 import {
 	useDadmProgramManagerFeature,
 	useEditLockHardDisableFeature,
-	useV2StreamFilterSetting,
 } from "@react-client/common/api/queries/v2-runtime-settings";
+import { useDebouncedValue } from "@react-client/features/v2/admin_constructor/hooks/useDebouncedValue";
 import {
 	canHoldQuestionnaire,
 	canUserDeleteV2Questionnaire,
-	filterV2QuestionnairesByUserStreamGroups,
 	V2_ANKETA_HOLD_LABEL,
+	V2_QUESTIONNAIRE_REGISTRY_PAGE_SIZE,
 	V2_QUESTIONNAIRE_REGISTRY_VERSION_MODE_LABELS,
 	type V2QuestionnaireRegistryVersionMode,
 } from "@smart-anketa/api-contract";
-import { logV2RegistryStreamDebug } from "../utils/logV2RegistryStreamDebug";
 import {
 	buildV2QuestionnaireColumnDefsFromTree,
 } from "../utils/v2QuestionnaireGridColumns";
@@ -391,9 +391,6 @@ export function V2QuestionnaireList() {
 	const { mode } = useColorScheme();
 	const navigate = useNavigate();
 	const gridRef = useRef<AgGridReact<V2QuestionnaireGridRow>>(null);
-	const [gridApi, setGridApi] = useState<GridApi<V2QuestionnaireGridRow> | null>(
-		null,
-	);
 	const {
 		canCreateCalculation,
 		canDeleteCalculation,
@@ -415,6 +412,9 @@ export function V2QuestionnaireList() {
 	const [holdDialogOpen, setHoldDialogOpen] = useState(false);
 	const [registryVersionMode, setRegistryVersionMode] =
 		useState<V2QuestionnaireRegistryVersionMode>("actual");
+	const [page, setPage] = useState(1);
+	const [searchInput, setSearchInput] = useState("");
+	const debouncedSearch = useDebouncedValue(searchInput, 300);
 	const [isExporting, setIsExporting] = useState(false);
 	const [headerMenuAnchor, setHeaderMenuAnchor] =
 		useState<HTMLElement | null>(null);
@@ -426,7 +426,16 @@ export function V2QuestionnaireList() {
 			? agGridCustomMUITheme
 			: agGridCustomMUIThemeDark;
 
-	const { data: questionnaires, isLoading } = useV2Questionnaires();
+	const { data: listResponse, isLoading, isFetching } = useV2Questionnaires({
+		page,
+		limit: V2_QUESTIONNAIRE_REGISTRY_PAGE_SIZE,
+		search: debouncedSearch,
+		versionMode: dadmProgramManagerEnabled
+			? registryVersionMode
+			: undefined,
+	});
+	const questionnaires = listResponse?.data ?? [];
+	const listMeta = listResponse?.meta;
 	const { data: editLocksPayload } = useV2QuestionnaireEditLocks(true);
 	const setEditLocks = useQuestionnaireEditLocksStore((s) => s.setLocks);
 	const locksById = useQuestionnaireEditLocksStore((s) => s.locksById);
@@ -473,51 +482,16 @@ export function V2QuestionnaireList() {
 	 * Не дублируем `userHasV2QuestionnaireDeleteRole` — в god mode groups=[] и кнопка пропадала.
 	 */
 	const canDeleteInRegistry = canDeleteCalculation;
-	const streamFilterSetting = useV2StreamFilterSetting();
-	const streamFilterEnabled = streamFilterSetting.data?.enabled ?? true;
-	const deModelopsViewAllStreams =
-		streamFilterSetting.data?.deModelopsViewAllStreams ?? true;
-
-	const streamFilteredQuestionnaires = useMemo(
-		() =>
-			filterV2QuestionnairesByUserStreamGroups(
-				questionnaires ?? [],
-				groups,
-				streamFilterEnabled,
-				{ deModelopsViewAllStreams },
-			),
-		[questionnaires, groups, streamFilterEnabled, deModelopsViewAllStreams],
-	);
 
 	useEffect(() => {
-		logV2RegistryStreamDebug({
-			username,
-			groups,
-			questionnaires: streamFilteredQuestionnaires,
-			allQuestionnaires: questionnaires,
-			streamFilterEnabled,
-			deModelopsViewAllStreams,
-			isLoading: isLoading || streamFilterSetting.isLoading,
-		});
-	}, [
-		username,
-		groups,
-		streamFilteredQuestionnaires,
-		questionnaires,
-		streamFilterEnabled,
-		deModelopsViewAllStreams,
-		isLoading,
-		streamFilterSetting.isLoading,
-	]);
-
-	useEffect(() => {
+		setPage(1);
 		setSelectedVersions([]);
 		gridRef.current?.api?.deselectAll();
-	}, [registryVersionMode]);
+	}, [debouncedSearch, registryVersionMode, dadmProgramManagerEnabled]);
 
 	const versionRows = useMemo<V2QuestionnaireVersionRow[]>(() => {
-		if (!streamFilteredQuestionnaires.length) return [];
-		return streamFilteredQuestionnaires.map((q) => {
+		if (!questionnaires.length) return [];
+		return questionnaires.map((q) => {
 			const lock = locksById[q.id];
 			const lockedByOther =
 				Boolean(lock) && !isOwnV2QuestionnaireEditLock(lock, username);
@@ -529,7 +503,7 @@ export function V2QuestionnaireList() {
 				isEditLocked: lockedByOther,
 			};
 		});
-	}, [streamFilteredQuestionnaires, locksById, username]);
+	}, [questionnaires, locksById, username]);
 
 	/** Дерево версий — только при фиче ДАДМ; иначе плоский реестр. */
 	const rowData = useMemo<V2QuestionnaireGridRow[]>(() => {
@@ -649,7 +623,6 @@ export function V2QuestionnaireList() {
 
 	const onGridReady = useCallback(
 		(e: GridReadyEvent) => {
-			setGridApi(e.api);
 			const basicPreset = getFactoryGridPresetFromTree(
 				FACTORY_PRESET_IDS.default,
 				columnTree,
@@ -931,9 +904,11 @@ export function V2QuestionnaireList() {
 							<Flex flexDirection="column" gap={10} width="100%">
 								{versionModeToggle}
 								<SearchInput
-									gridApi={gridApi}
 									placeholder="Поиск по реестру"
 									inputId="v2_registry_quick_filter"
+									value={searchInput}
+									onChange={setSearchInput}
+									applyQuickFilter={false}
 								/>
 								{canExportReports ? (
 									<>
@@ -1043,9 +1018,11 @@ export function V2QuestionnaireList() {
 						{versionModeToggle}
 						<Flex width="280px" minWidth="200px" flexShrink={0}>
 							<SearchInput
-								gridApi={gridApi}
 								placeholder="Поиск по реестру"
 								inputId="v2_registry_quick_filter"
+								value={searchInput}
+								onChange={setSearchInput}
+								applyQuickFilter={false}
 							/>
 						</Flex>
 						<Stack direction="row" spacing={1} alignItems="center" flexShrink={0}>
@@ -1186,6 +1163,45 @@ export function V2QuestionnaireList() {
 					</Button>
 				</DialogActions>
 			</Dialog>
+			<Flex
+				alignItems="center"
+				justifyContent="space-between"
+				gap={8}
+				flexShrink={0}
+				padding="4px 8px"
+			>
+				<Typography variant="body2" color="text.secondary">
+					{listMeta
+						? `Всего: ${listMeta.total} · страница ${listMeta.page} из ${Math.max(listMeta.lastPage, 1)} · по ${listMeta.limit}`
+						: "Загрузка…"}
+					{isFetching && !isLoading ? " · обновление…" : ""}
+				</Typography>
+				<Flex alignItems="center" gap={4}>
+					<IconButton
+						size="small"
+						disabled={!listMeta || page <= 1 || isFetching}
+						onClick={() => setPage((p) => Math.max(1, p - 1))}
+						title="Предыдущая страница"
+						aria-label="Предыдущая страница"
+					>
+						<ChevronLeftIcon fontSize="small" />
+					</IconButton>
+					<IconButton
+						size="small"
+						disabled={
+							!listMeta ||
+							listMeta.lastPage === 0 ||
+							page >= listMeta.lastPage ||
+							isFetching
+						}
+						onClick={() => setPage((p) => p + 1)}
+						title="Следующая страница"
+						aria-label="Следующая страница"
+					>
+						<ChevronRightIcon fontSize="small" />
+					</IconButton>
+				</Flex>
+			</Flex>
 			<GridWrapper flexGrow={1} sx={{ p: 0 }}>
 				<AgGridReact<V2QuestionnaireGridRow>
 					ref={gridRef}
@@ -1218,7 +1234,7 @@ export function V2QuestionnaireList() {
 					onColumnResized={(event) => {
 						if (event.finished) persistColumnState(event.api);
 					}}
-					loading={isLoading || isRegistryConfigLoading}
+					loading={isLoading || isRegistryConfigLoading || isFetching}
 					rowSelection={rowSelection}
 					onSelectionChanged={(
 						e: SelectionChangedEvent<V2QuestionnaireGridRow>,
