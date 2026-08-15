@@ -88,15 +88,11 @@ describe("V2QuestionnaireService.exportRegistryXlsx", () => {
 		const { service, questionnaireRepository } = createService(rows);
 
 		const exported = await service.exportRegistryXlsx();
-		try {
-			expect(exported.rowCount).toBe(3);
-			expect(questionnaireRepository.createQueryBuilder).toHaveBeenCalled();
-			expect(questionnaireRepository.find).toHaveBeenCalled();
-			for (const call of questionnaireRepository.find.mock.calls) {
-				expect(call[0]).toEqual(expect.objectContaining({ where: expect.anything() }));
-			}
-		} finally {
-			await exported.cleanup();
+		expect(exported.rowCount).toBe(3);
+		expect(questionnaireRepository.createQueryBuilder).toHaveBeenCalled();
+		expect(questionnaireRepository.find).toHaveBeenCalled();
+		for (const call of questionnaireRepository.find.mock.calls) {
+			expect(call[0]).toEqual(expect.objectContaining({ where: expect.anything() }));
 		}
 	});
 

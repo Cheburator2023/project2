@@ -33,9 +33,8 @@ import {
 	type V2QuestionnaireListQuery,
 	type V2QuestionnaireRegistryConfigDto,
 } from "@smart-anketa/api-contract";
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { Writable } from "node:stream";
+import { finished } from "node:stream/promises";
 import { Repository, In, type SelectQueryBuilder } from "typeorm";
 import { V2QuestionnaireEntity } from "../entities/v2-questionnaire.entity";
 import { V2TemplateEntity } from "../entities/v2-template.entity";
@@ -65,7 +64,7 @@ import {
 	buildRegistryExportColumnsFromSchemas,
 	deriveRegistryColumnOptionsFromFormDataBatch,
 	mergeDerivedRegistryColumnOptions,
-	writeV2QuestionnaireRegistryXlsxFile,
+	writeV2QuestionnaireRegistryXlsxToStream,
 } from "../utils/v2-questionnaire-registry-export.util";
 import { V2_DEFAULT_TEMPLATE_SNAPSHOT } from "../constants/v2-default-template-snapshot";
 import { buildV2AnketaViewerAccessFromUser } from "../utils/v2-anketa-viewer-access.util";
@@ -78,10 +77,8 @@ type TUserLike = {
 	groups?: string[];
 };
 
-export type V2QuestionnaireRegistryExportFile = {
-	filePath: string;
+export type V2QuestionnaireRegistryExportResult = {
 	rowCount: number;
-	cleanup: () => Promise<void>;
 };
 
 const DEFAULT_EXPORT_BATCH_SIZE = 40;
@@ -316,128 +313,141 @@ export class V2QuestionnaireService {
 	private async exportRegistryXlsxUncapped(
 		ids?: string[],
 		user?: Record<string, unknown>,
-	): Promise<V2QuestionnaireRegistryExportFile> {
+		onProgress?: (done: number, total: number) => void | Promise<void>,
+		dest?: Writable,
+	): Promise<V2QuestionnaireRegistryExportResult> {
+		this.logger.log(
+			`Registry export: resolving questionnaire ids (${ids?.length ?? "all"})`,
+		);
 		const exportIds = await this.resolveExportQuestionnaireIds(
 			ids,
 			user as TUserLike | undefined,
 		);
+		this.logger.log(`Registry export: ${exportIds.length} questionnaires`);
+		if (onProgress) await onProgress(0, exportIds.length);
 		const viewerAccess = buildV2AnketaViewerAccessFromUser(
 			user as { groups?: string[] } | undefined,
 		);
-		const tmpDir = await mkdtemp(join(tmpdir(), "v2-q-export-"));
-		const filePath = join(tmpDir, "questionnaires.xlsx");
-		const cleanup = async () => {
-			await rm(tmpDir, { recursive: true, force: true });
+		const columnOptionsAcc = {
+			arrayIndicesByPath: {} as Record<string, number[]>,
+			arrayGroupLabelsByPath: {} as Record<string, Record<number, string>>,
 		};
+		const versionIds = new Set<string>();
+		const templateIds = new Set<string>();
 
-		try {
-			const columnOptionsAcc = {
-				arrayIndicesByPath: {} as Record<string, number[]>,
-				arrayGroupLabelsByPath: {} as Record<string, Record<number, string>>,
-			};
-			const versionIds = new Set<string>();
-			const templateIds = new Set<string>();
-
-			for (const batchIds of chunkIds(exportIds, this.exportBatchSize)) {
-				this.assertExportHeapHeadroom();
-				const lean = await this.questionnaireRepository.find({
-					where: { id: In(batchIds) },
-					select: ["id", "formData", "boundTemplateVersionId", "templateId"],
-				});
-				for (const row of lean) {
-					if (row.boundTemplateVersionId) {
-						versionIds.add(row.boundTemplateVersionId);
-					}
-					if (row.templateId) templateIds.add(row.templateId);
+		for (const batchIds of chunkIds(exportIds, this.exportBatchSize)) {
+			this.assertExportHeapHeadroom();
+			const lean = await this.questionnaireRepository.find({
+				where: { id: In(batchIds) },
+				select: ["id", "formData", "boundTemplateVersionId", "templateId"],
+			});
+			for (const row of lean) {
+				if (row.boundTemplateVersionId) {
+					versionIds.add(row.boundTemplateVersionId);
 				}
-				Object.assign(
+				if (row.templateId) templateIds.add(row.templateId);
+			}
+			Object.assign(
+				columnOptionsAcc,
+				mergeDerivedRegistryColumnOptions(
 					columnOptionsAcc,
-					mergeDerivedRegistryColumnOptions(
-						columnOptionsAcc,
-						deriveRegistryColumnOptionsFromFormDataBatch(
-							lean.map((row) => row.formData ?? {}),
-						),
+					deriveRegistryColumnOptionsFromFormDataBatch(
+						lean.map((row) => row.formData ?? {}),
 					),
-				);
-			}
-
-			const templates =
-				templateIds.size > 0
-					? await this.templateRepository.find({
-							where: { id: In([...templateIds]) },
-							select: ["id", "code", "name", "currentVersionId"],
-						})
-					: [];
-			for (const template of templates) {
-				if (template.currentVersionId) {
-					versionIds.add(template.currentVersionId);
-				}
-			}
-
-			const versions =
-				versionIds.size > 0
-					? await this.versionRepository.find({
-							where: { id: In([...versionIds]) },
-							select: [
-								"id",
-								"versionNumber",
-								"status",
-								"createdAt",
-								"updatedAt",
-								"jsonSchema",
-								"uiSchema",
-							],
-						})
-					: [];
-			const templateById = new Map(templates.map((row) => [row.id, row]));
-			const versionById = new Map(versions.map((row) => [row.id, row]));
-
-			const columns = buildRegistryExportColumnsFromSchemas(
-				versions.map((version) => ({
-					jsonSchema: version.jsonSchema as Record<string, unknown>,
-					uiSchema: version.uiSchema as Record<string, unknown>,
-				})),
-				{
-					...columnOptionsAcc,
-					viewerAccess,
-					applyAccessRules: Boolean(viewerAccess),
-				},
+				),
 			);
-
-			const self = this;
-			async function* dtoRows(): AsyncGenerator<V2QuestionnaireDto> {
-				for (const batchIds of chunkIds(exportIds, self.exportBatchSize)) {
-					self.assertExportHeapHeadroom();
-					const entities = await self.questionnaireRepository.find({
-						where: { id: In(batchIds) },
-					});
-					const byId = new Map(entities.map((row) => [row.id, row]));
-					for (const id of batchIds) {
-						const entity = byId.get(id);
-						if (!entity) continue;
-						const template = templateById.get(entity.templateId);
-						const bound = versionById.get(entity.boundTemplateVersionId);
-						const current = template?.currentVersionId
-							? versionById.get(template.currentVersionId)
-							: undefined;
-						yield mapV2QuestionnaireToDto(
-							{ ...entity, template: template ?? undefined },
-							buildSchemaBinding(template, bound, current),
-						);
-					}
-				}
-			}
-
-			const rowCount = await writeV2QuestionnaireRegistryXlsxFile(
-				filePath,
-				columns,
-				dtoRows(),
-			);
-			return { filePath, rowCount, cleanup };
-		} catch (error) {
-			await cleanup();
-			throw error;
+			await new Promise<void>((resolve) => setImmediate(resolve));
 		}
+
+		const templates =
+			templateIds.size > 0
+				? await this.templateRepository.find({
+						where: { id: In([...templateIds]) },
+						select: ["id", "code", "name", "currentVersionId"],
+					})
+				: [];
+		for (const template of templates) {
+			if (template.currentVersionId) {
+				versionIds.add(template.currentVersionId);
+			}
+		}
+
+		const versions =
+			versionIds.size > 0
+				? await this.versionRepository.find({
+						where: { id: In([...versionIds]) },
+						select: [
+							"id",
+							"versionNumber",
+							"status",
+							"createdAt",
+							"updatedAt",
+							"jsonSchema",
+							"uiSchema",
+						],
+					})
+				: [];
+		const templateById = new Map(templates.map((row) => [row.id, row]));
+		const versionById = new Map(versions.map((row) => [row.id, row]));
+
+		const columns = buildRegistryExportColumnsFromSchemas(
+			versions.map((version) => ({
+				jsonSchema: version.jsonSchema as Record<string, unknown>,
+				uiSchema: version.uiSchema as Record<string, unknown>,
+			})),
+			{
+				...columnOptionsAcc,
+				viewerAccess,
+				applyAccessRules: Boolean(viewerAccess),
+			},
+		);
+
+		const self = this;
+		async function* dtoRows(): AsyncGenerator<V2QuestionnaireDto> {
+			for (const batchIds of chunkIds(exportIds, self.exportBatchSize)) {
+				self.assertExportHeapHeadroom();
+				const entities = await self.questionnaireRepository.find({
+					where: { id: In(batchIds) },
+				});
+				const byId = new Map(entities.map((row) => [row.id, row]));
+				for (const id of batchIds) {
+					const entity = byId.get(id);
+					if (!entity) continue;
+					const template = templateById.get(entity.templateId);
+					const bound = versionById.get(entity.boundTemplateVersionId);
+					const current = template?.currentVersionId
+						? versionById.get(template.currentVersionId)
+						: undefined;
+					yield mapV2QuestionnaireToDto(
+						{ ...entity, template: template ?? undefined },
+						buildSchemaBinding(template, bound, current),
+					);
+				}
+				await new Promise<void>((resolve) => setImmediate(resolve));
+			}
+		}
+
+		const sink =
+			dest ??
+			new Writable({
+				write(_chunk, _encoding, callback) {
+					callback();
+				},
+			});
+		const sinkFinished = finished(sink);
+		const rowCount = await writeV2QuestionnaireRegistryXlsxToStream(
+			{ stream: sink },
+			columns,
+			dtoRows(),
+			async (done) => {
+				if (onProgress && (done % 100 === 0 || done === exportIds.length)) {
+					await onProgress(done, exportIds.length);
+				}
+			},
+		);
+		if (!sink.writableEnded) sink.end();
+		await sinkFinished;
+		return { rowCount };
 	}
 
 	async getRegistryConfig(): Promise<V2QuestionnaireRegistryConfigDto> {
@@ -477,8 +487,12 @@ export class V2QuestionnaireService {
 	async exportRegistryXlsx(
 		ids?: string[],
 		user?: Record<string, unknown>,
-	): Promise<V2QuestionnaireRegistryExportFile> {
-		return this.withExportSlot(() => this.exportRegistryXlsxUncapped(ids, user));
+		onProgress?: (done: number, total: number) => void | Promise<void>,
+		dest?: Writable,
+	): Promise<V2QuestionnaireRegistryExportResult> {
+		return this.withExportSlot(() =>
+			this.exportRegistryXlsxUncapped(ids, user, onProgress, dest),
+		);
 	}
 
 	async findAllByIds(ids: string[]): Promise<V2QuestionnaireDto[]> {

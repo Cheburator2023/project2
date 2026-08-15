@@ -72,6 +72,7 @@ import {
 	useBulkDeleteV2Questionnaires,
 	useCreateV2QuestionnaireCopy,
 	useHoldV2Questionnaire,
+	useV2QuestionnaireExportLock,
 	v2QuestionnairesExportXlsx,
 } from "@react-client/common/api/queries/v2-questionnaires";
 import { downloadBlob } from "@react-client/common/api/queries/kanban-board";
@@ -481,10 +482,17 @@ export function AnketaFormShell({
 		? canEditCalculation
 		: canCreateCalculation;
 
+	const { data: exportLock } = useV2QuestionnaireExportLock(canExportReports);
+	const exportBusy = Boolean(exportLock?.busy);
+
 	/** Экспорт текущей анкеты в XLSX: только сохранённая анкета + право export. */
 	const onExportExcel = useMemo(() => {
 		if (!questionnaireId || !canExportReports) return undefined;
 		return async () => {
+			if (exportBusy) {
+				toast.error("Выгрузка уже выполняется. Дождитесь окончания и повторите.");
+				return;
+			}
 			try {
 				const blob = await v2QuestionnairesExportXlsx({
 					ids: [questionnaireId],
@@ -498,7 +506,7 @@ export function AnketaFormShell({
 				});
 			}
 		};
-	}, [questionnaireId, canExportReports]);
+	}, [questionnaireId, canExportReports, exportBusy]);
 
 	const headerLeadingAccessory = useMemo(
 		() => (

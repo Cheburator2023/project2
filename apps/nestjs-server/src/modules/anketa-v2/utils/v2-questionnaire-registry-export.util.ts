@@ -12,7 +12,8 @@ import {
 import { V2_DEFAULT_TEMPLATE_SNAPSHOT } from "../constants/v2-default-template-snapshot";
 
 type WorkbookWriterCtor = new (options: {
-	filename: string;
+	filename?: string;
+	stream?: NodeJS.WritableStream;
 	useStyles?: boolean;
 	useSharedStrings?: boolean;
 }) => ExcelJS.Workbook & { commit(): Promise<void> };
@@ -99,13 +100,14 @@ export function buildRegistryExportColumnsFromSchemas(
 	return [...columnsByKey.values()];
 }
 
-export async function writeV2QuestionnaireRegistryXlsxFile(
-	filePath: string,
+export async function writeV2QuestionnaireRegistryXlsxToStream(
+	dest: { filename: string } | { stream: NodeJS.WritableStream },
 	columns: V2RegistryExportColumn[],
 	rows: AsyncIterable<V2QuestionnaireDto> | Iterable<V2QuestionnaireDto>,
+	onRow?: (count: number) => void | Promise<void>,
 ): Promise<number> {
 	const workbook = new ExcelStreamWriter({
-		filename: filePath,
+		...dest,
 		useStyles: true,
 		useSharedStrings: false,
 	});
@@ -127,10 +129,23 @@ export async function writeV2QuestionnaireRegistryXlsxFile(
 		);
 		excelRow.commit();
 		count += 1;
+		if (onRow) await onRow(count);
 	}
 
 	await workbook.commit();
 	return count;
+}
+
+export async function writeV2QuestionnaireRegistryXlsxFile(
+	filePath: string,
+	columns: V2RegistryExportColumn[],
+	rows: AsyncIterable<V2QuestionnaireDto> | Iterable<V2QuestionnaireDto>,
+): Promise<number> {
+	return writeV2QuestionnaireRegistryXlsxToStream(
+		{ filename: filePath },
+		columns,
+		rows,
+	);
 }
 
 export async function buildV2QuestionnaireRegistryXlsx(

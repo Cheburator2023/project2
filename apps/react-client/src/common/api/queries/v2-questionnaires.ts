@@ -20,6 +20,9 @@ import type {
 	V2QuestionnaireFormPackageDto,
 	V2QuestionnaireListQuery,
 	V2QuestionnaireRegistryConfigDto,
+	V2QuestionnaireExportJobCreateDto,
+	V2QuestionnaireExportJobStatusDto,
+	V2QuestionnaireExportLockDto,
 } from "@smart-anketa/api-contract";
 import {
 	V2_QUESTIONNAIRE_REGISTRY_PAGE_SIZE,
@@ -243,27 +246,72 @@ export const useSeedV2TestQuestionnaires = () => {
 	});
 };
 
-export const v2QuestionnairesExportXlsx = (
+export const useV2QuestionnaireExportLock = (enabled = true) =>
+	useQuery<V2QuestionnaireExportLockDto>({
+		queryKey: [...ROOT_KEY, "export-lock"],
+		queryFn: () =>
+			apiClient<V2QuestionnaireExportLockDto>({
+				url: "/v2/questionnaires/export/xlsx/lock",
+				method: "GET",
+			}),
+		enabled,
+		refetchInterval: 3_000,
+	});
+
+export const v2QuestionnairesStartExportJob = (
 	options?: { ids?: string[]; signal?: AbortSignal },
 ) => {
 	const ids = options?.ids?.filter(Boolean);
-	if (ids && ids.length > 0) {
-		return apiClient<Blob>({
-			url: "/v2/questionnaires/export/xlsx",
-			method: "POST",
-			data: { ids },
-			signal: options?.signal,
-			responseType: "blob",
-			timeout: API_REGISTRY_EXPORT_TIMEOUT_MS,
-		});
-	}
-	return apiClient<Blob>({
+	return apiClient<V2QuestionnaireExportJobCreateDto>({
 		url: "/v2/questionnaires/export/xlsx",
-		method: "GET",
+		method: "POST",
+		data: ids && ids.length > 0 ? { ids } : {},
 		signal: options?.signal,
+	});
+};
+
+export const v2QuestionnairesExportJobStatus = (
+	jobId: string,
+	signal?: AbortSignal,
+) =>
+	apiClient<V2QuestionnaireExportJobStatusDto>({
+		url: `/v2/questionnaires/export/${jobId}/status`,
+		method: "GET",
+		signal,
+	});
+
+export const v2QuestionnairesExportJobDownload = (
+	jobId: string,
+	signal?: AbortSignal,
+) =>
+	apiClient<Blob>({
+		url: `/v2/questionnaires/export/${jobId}/download`,
+		method: "GET",
+		signal,
 		responseType: "blob",
 		timeout: API_REGISTRY_EXPORT_TIMEOUT_MS,
 	});
+
+/** @deprecated используйте start + status + download; оставлено для одиночных выгрузок */
+export const v2QuestionnairesExportXlsx = async (
+	options?: { ids?: string[]; signal?: AbortSignal },
+) => {
+	const started = await v2QuestionnairesStartExportJob(options);
+	const deadline = Date.now() + API_REGISTRY_EXPORT_TIMEOUT_MS;
+	while (Date.now() < deadline) {
+		const status = await v2QuestionnairesExportJobStatus(
+			started.jobId,
+			options?.signal,
+		);
+		if (status.status === "done") {
+			return v2QuestionnairesExportJobDownload(started.jobId, options?.signal);
+		}
+		if (status.status === "failed") {
+			throw new Error(status.error || "Экспорт завершился с ошибкой");
+		}
+		await new Promise((resolve) => setTimeout(resolve, 1500));
+	}
+	throw new Error("Экспорт не завершился вовремя");
 };
 
 const commentsKey = (questionnaireId: string) =>

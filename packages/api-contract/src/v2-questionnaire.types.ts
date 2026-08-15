@@ -150,9 +150,32 @@ export type BulkDeleteV2QuestionnairesRequestDto = {
 	ids: string[];
 };
 
-/** Выгрузка выбранных анкет реестра в XLSX (пустой список не допускается). */
+/** Выгрузка реестра в XLSX: без ids — все доступные анкеты, иначе выбранные. */
 export type ExportV2QuestionnairesXlsxRequestDto = {
-	ids: string[];
+	ids?: string[];
+};
+
+export type V2QuestionnaireExportJobStatus =
+	| "pending"
+	| "processing"
+	| "done"
+	| "failed";
+
+export type V2QuestionnaireExportJobCreateDto = {
+	jobId: string;
+};
+
+export type V2QuestionnaireExportLockDto = {
+	busy: boolean;
+};
+
+export type V2QuestionnaireExportJobStatusDto = {
+	jobId: string;
+	status: V2QuestionnaireExportJobStatus;
+	progress: number;
+	total: number | null;
+	error: string | null;
+	filename: string | null;
 };
 
 export type BulkDeleteV2QuestionnairesFailureDto = {

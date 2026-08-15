@@ -24,13 +24,13 @@ import {
 	useBulkDeleteV2Questionnaires,
 	useBulkHoldV2Questionnaires,
 	useV2QuestionnaireEditLocks,
+	useV2QuestionnaireExportLock,
 	useV2QuestionnaireRegistryConfig,
 	useV2Questionnaires,
-	v2QuestionnairesExportXlsx,
 } from "@react-client/common/api/queries/v2-questionnaires";
+import { V2QuestionnaireExportProgressDialog } from "@react-client/features/v2/export/V2QuestionnaireExportProgressDialog";
 import { useQuestionnaireEditLocksStore } from "@react-client/features/v2/anketaCRUD/stores/questionnaireEditLocksStore";
 import { isOwnV2QuestionnaireEditLock } from "@react-client/features/v2/anketaCRUD/utils/isOwnV2QuestionnaireEditLock";
-import { downloadBlob } from "@react-client/common/api/queries/kanban-board";
 import { usePermissions } from "@react-client/hooks/usePermissions";
 import { toast } from "@react-client/common/toasts";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
@@ -421,7 +421,17 @@ export function V2QuestionnaireList() {
 	const [searchInput, setSearchInput] = useState("");
 	const debouncedSearch = useDebouncedValue(searchInput, 300);
 	const [pagingHostEl, setPagingHostEl] = useState<HTMLElement | null>(null);
-	const [isExporting, setIsExporting] = useState(false);
+	const [exportDialog, setExportDialog] = useState<{
+		open: boolean;
+		ids?: string[];
+	}>({ open: false });
+	const isExporting = exportDialog.open;
+	const { data: exportLock } = useV2QuestionnaireExportLock(canExportReports);
+	const exportBusy = Boolean(exportLock?.busy);
+	const exportBlocked = isExporting || exportBusy;
+	const exportBlockedTitle = exportBusy
+		? "Выгрузка уже выполняется. Дождитесь окончания."
+		: undefined;
 	const [headerMenuAnchor, setHeaderMenuAnchor] = useState<HTMLElement | null>(
 		null,
 	);
@@ -645,32 +655,11 @@ export function V2QuestionnaireList() {
 		saveAgGridColumnState(GRID_COLUMN_STATE_KEY, api.getColumnState());
 	}, []);
 
-	const handleExportXlsx = useCallback(async (ids?: string[]) => {
-		setIsExporting(true);
-		try {
-			const selectedIds = ids && ids.length > 0 ? ids : undefined;
-			const blob = await v2QuestionnairesExportXlsx({
-				ids: selectedIds,
-			});
-			const date = new Date().toISOString().slice(0, 10);
-			const suffix = selectedIds
-				? `selected-${selectedIds.length}`
-				: "all";
-			downloadBlob(blob, `v2-questionnaires-${suffix}-${date}.xlsx`);
-			toast.success(
-				selectedIds
-					? selectedIds.length === 1
-						? "Анкета экспортирована"
-						: `Экспортировано анкет: ${selectedIds.length}`
-					: "Экспортированы все анкеты",
-			);
-		} catch (err) {
-			toast.error("Ошибка экспорта", {
-				description: apiErrorMessage(err),
-			});
-		} finally {
-			setIsExporting(false);
-		}
+	const handleExportXlsx = useCallback((ids?: string[]) => {
+		setExportDialog({
+			open: true,
+			ids: ids && ids.length > 0 ? ids : undefined,
+		});
 	}, []);
 
 	const autoGroupColumnDef = useMemo<ColDef<V2QuestionnaireGridRow>>(
@@ -735,13 +724,16 @@ export function V2QuestionnaireList() {
 					},
 				},
 				{
-					name: exportLabel,
-					disabled: isExporting,
-					action: () => void handleExportXlsx(exportIds),
+					name: exportBusy ? `${exportLabel} (уже выполняется)` : exportLabel,
+					disabled: exportBlocked,
+					action: () => {
+						if (exportBlocked) return;
+						void handleExportXlsx(exportIds);
+					},
 				},
 			];
 		},
-		[editLockHardDisable, navigate, isExporting, handleExportXlsx],
+		[editLockHardDisable, navigate, exportBlocked, exportBusy, handleExportXlsx],
 	);
 
 	const holdableSelectedIds = useMemo(
@@ -911,13 +903,14 @@ export function V2QuestionnaireList() {
 											size="small"
 											fullWidth
 											startIcon={<DownloadIcon />}
-											disabled={isExporting || isLoading}
+											disabled={exportBlocked || isLoading}
+											title={exportBlockedTitle}
 											onClick={() => {
 												setHeaderMenuAnchor(null);
 												void handleExportXlsx();
 											}}
 										>
-											{isExporting ? "Экспорт…" : "Экспорт всех"}
+											{exportBlocked ? "Экспорт…" : "Экспорт всех"}
 										</Button>
 										<Button
 											variant="outlined"
@@ -925,10 +918,11 @@ export function V2QuestionnaireList() {
 											fullWidth
 											startIcon={<DownloadIcon />}
 											disabled={
-												isExporting ||
+												exportBlocked ||
 												isLoading ||
 												selectedVersions.length === 0
 											}
+											title={exportBlockedTitle}
 											onClick={() => {
 												setHeaderMenuAnchor(null);
 												void handleExportXlsx(
@@ -936,7 +930,7 @@ export function V2QuestionnaireList() {
 												);
 											}}
 										>
-											{isExporting
+											{exportBlocked
 												? "Экспорт…"
 												: `Экспорт выбранных (${selectedVersions.length})`}
 										</Button>
@@ -1027,25 +1021,27 @@ export function V2QuestionnaireList() {
 										variant="outlined"
 										size="small"
 										startIcon={<DownloadIcon />}
-										disabled={isExporting || isLoading}
+										disabled={exportBlocked || isLoading}
+										title={exportBlockedTitle}
 										onClick={() => void handleExportXlsx()}
 									>
-										{isExporting ? "Экспорт…" : "Экспорт всех"}
+										{exportBlocked ? "Экспорт…" : "Экспорт всех"}
 									</Button>
 									<Button
 										variant="outlined"
 										size="small"
 										startIcon={<DownloadIcon />}
 										disabled={
-											isExporting || isLoading || selectedVersions.length === 0
+											exportBlocked || isLoading || selectedVersions.length === 0
 										}
+										title={exportBlockedTitle}
 										onClick={() =>
 											void handleExportXlsx(
 												selectedVersions.map((row) => row.id),
 											)
 										}
 									>
-										{isExporting
+										{exportBlocked
 											? "Экспорт…"
 											: `Экспорт выбранных (${selectedVersions.length})`}
 									</Button>
@@ -1128,6 +1124,11 @@ export function V2QuestionnaireList() {
 					</Button>
 				</DialogActions>
 			</Dialog>
+			<V2QuestionnaireExportProgressDialog
+				open={exportDialog.open}
+				ids={exportDialog.ids}
+				onClose={() => setExportDialog({ open: false })}
+			/>
 			<Dialog
 				open={deleteDialogOpen}
 				onClose={() => setDeleteDialogOpen(false)}

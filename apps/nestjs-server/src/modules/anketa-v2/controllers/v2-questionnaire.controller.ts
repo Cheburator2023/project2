@@ -11,10 +11,8 @@ import {
 	Post,
 	Put,
 	Query,
-	Res,
 } from "@nestjs/common";
 import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
-import type { Response } from "express";
 import type {
 	BulkDeleteV2QuestionnairesResultDto,
 	PaginatedV2QuestionnaireResponseDto,
@@ -32,7 +30,6 @@ import {
 	CreateV2QuestionnaireCommentDto,
 	CreateV2QuestionnaireDto,
 	CreateV2QuestionnaireVersionDto,
-	ExportV2QuestionnairesXlsxDto,
 	ListV2QuestionnairesDto,
 	SeedV2TestQuestionnairesDto,
 	UpdateV2QuestionnaireDto,
@@ -51,12 +48,8 @@ import {
     AUDIT_EVENT_SUMD_HOLDANKETA,
     AUDIT_EVENT_SUMD_BLOCKAPPROVE,
     AUDIT_EVENT_SUMD_ANKETAAPPROVE,
-    AUDIT_EVENT_SUMD_EXPORTLISTANKET,
-    AUDIT_EVENT_SUMD_EXPORTANKETA,
 } from "../../../shared/audit/audit.constants";
 import { v4 as uuidv4 } from "uuid";
-import { createReadStream } from "node:fs";
-import { pipeline } from "node:stream/promises";
 import { normalizeV2AnketaWorkflow } from "../utils/v2-anketa-workflow.util";
 
 const questionnaireAuditUserId = (
@@ -211,147 +204,6 @@ export class V2QuestionnaireController {
             throw error;
         }
     }
-
-	@Get("export/xlsx")
-	@RealmRole(Permission.ANKETA_EXPORT_REPORTS)
-	@ApiOperation({ summary: "Выгрузка всех анкет v2 реестра в XLSX" })
-	@ApiResponse({
-		status: HttpStatus.OK,
-		content: {
-			"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
-				schema: { type: "string", format: "binary" },
-			},
-		},
-	})
-    async exportRegistryXlsx(
-        @Res() res: Response,
-        @CurrentUser() user: Record<string, unknown> | undefined,
-    ): Promise<void> {
-        const correlationId = uuidv4();
-        const initiator = this.buildInitiator(user);
-
-        this.auditService.sendEvent(
-            AUDIT_EVENT_SUMD_EXPORTLISTANKET,
-            "START",
-            correlationId,
-            initiator,
-            { exportType: "all" },
-        );
-
-        try {
-            const exported = await this.questionnaireService.exportRegistryXlsx(
-                undefined,
-                user,
-            );
-            try {
-                await this.sendRegistryXlsxFile(
-                    res,
-                    exported.filePath,
-                    "v2-questionnaires-all",
-                    exported.rowCount,
-                );
-            } finally {
-                await exported.cleanup();
-            }
-            this.auditService.sendEvent(
-                AUDIT_EVENT_SUMD_EXPORTLISTANKET,
-                "SUCCESS",
-                correlationId,
-                initiator,
-                { exportType: "all", rowCount: exported.rowCount },
-            );
-        } catch (error) {
-            this.auditService.sendEvent(
-                AUDIT_EVENT_SUMD_EXPORTLISTANKET,
-                "FAILURE",
-                correlationId,
-                initiator,
-                { exportType: "all", errorMessage: (error as Error).message },
-            );
-            throw error;
-        }
-    }
-
-	@Post("export/xlsx")
-	@HttpCode(200)
-	@RealmRole(Permission.ANKETA_EXPORT_REPORTS)
-	@ApiOperation({ summary: "Выгрузка выбранных анкет v2 реестра в XLSX" })
-	@ApiResponse({
-		status: HttpStatus.OK,
-		content: {
-			"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
-				schema: { type: "string", format: "binary" },
-			},
-		},
-	})
-    async exportSelectedRegistryXlsx(
-        @Body() body: ExportV2QuestionnairesXlsxDto,
-        @Res() res: Response,
-        @CurrentUser() user: Record<string, unknown> | undefined,
-    ): Promise<void> {
-        const correlationId = uuidv4();
-        const initiator = this.buildInitiator(user);
-
-        this.auditService.sendEvent(
-            AUDIT_EVENT_SUMD_EXPORTANKETA,
-            "START",
-            correlationId,
-            initiator,
-            { exportType: "selected", ids: body.ids },
-        );
-
-        try {
-            const exported = await this.questionnaireService.exportRegistryXlsx(
-                body.ids,
-                user,
-            );
-            try {
-                await this.sendRegistryXlsxFile(
-                    res,
-                    exported.filePath,
-                    `v2-questionnaires-selected-${body.ids.length}`,
-                    exported.rowCount,
-                );
-            } finally {
-                await exported.cleanup();
-            }
-            this.auditService.sendEvent(
-                AUDIT_EVENT_SUMD_EXPORTANKETA,
-                "SUCCESS",
-                correlationId,
-                initiator,
-                { exportType: "selected", ids: body.ids, rowCount: exported.rowCount },
-            );
-        } catch (error) {
-            this.auditService.sendEvent(
-                AUDIT_EVENT_SUMD_EXPORTANKETA,
-                "FAILURE",
-                correlationId,
-                initiator,
-                { exportType: "selected", ids: body.ids, errorMessage: (error as Error).message },
-            );
-            throw error;
-        }
-    }
-
-	private async sendRegistryXlsxFile(
-		res: Response,
-		filePath: string,
-		filenamePrefix: string,
-		rowCount: number,
-	): Promise<void> {
-		const date = new Date().toISOString().slice(0, 10);
-		res.setHeader(
-			"Content-Type",
-			"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-		);
-		res.setHeader(
-			"Content-Disposition",
-			`attachment; filename=${filenamePrefix}-${date}.xlsx`,
-		);
-		res.setHeader("X-Export-Row-Count", String(rowCount));
-		await pipeline(createReadStream(filePath), res);
-	}
 
 	@Get(":id")
 	@ApiOperation({ summary: "Анкета по id" })

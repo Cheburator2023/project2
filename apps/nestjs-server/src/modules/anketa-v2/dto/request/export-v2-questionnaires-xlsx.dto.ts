@@ -1,10 +1,10 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { ArrayNotEmpty, IsArray, IsUUID } from "class-validator";
+import { ApiPropertyOptional } from "@nestjs/swagger";
+import { IsArray, IsOptional, IsUUID } from "class-validator";
 
 export class ExportV2QuestionnairesXlsxDto {
-	@ApiProperty({ type: [String], format: "uuid" })
+	@ApiPropertyOptional({ type: [String], format: "uuid" })
+	@IsOptional()
 	@IsArray()
-	@ArrayNotEmpty()
 	@IsUUID("4", { each: true })
-	ids: string[];
+	ids?: string[];
 }
