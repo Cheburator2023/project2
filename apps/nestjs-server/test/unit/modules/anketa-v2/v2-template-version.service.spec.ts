@@ -173,3 +173,47 @@ describe("V2TemplateVersionService.update", () => {
 		expect(catalogRule?.payload?.sourceArrayPath).toBe("generalInfo.modelService");
 	});
 });
+
+describe("V2TemplateVersionService.findOneForCalculation", () => {
+	it("loads jsonb schemas once and reuses the process cache", async () => {
+		const row = {
+			id: "version-1",
+			templateId: "template-1",
+			jsonSchema: { type: "object" },
+			uiSchema: {},
+			logic: { rules: [] },
+		};
+		const versionRepository = {
+			findOne: jest.fn(async () => row),
+		};
+		const service = new V2TemplateVersionService(
+			versionRepository as never,
+			{} as never,
+			{ assertTemplateExists: jest.fn() } as never,
+			{} as never,
+			{} as never,
+			{} as never,
+		);
+
+		const first = await service.findOneForCalculation("version-1");
+		const second = await service.findOneForCalculation("version-1");
+
+		expect(first).toEqual({
+			id: "version-1",
+			templateId: "template-1",
+			jsonSchema: { type: "object" },
+			uiSchema: {},
+			logic: { rules: [] },
+		});
+		expect(second).toBe(first);
+		expect(versionRepository.findOne).toHaveBeenCalledTimes(1);
+		expect(versionRepository.findOne).toHaveBeenCalledWith({
+			where: { id: "version-1" },
+			select: ["id", "templateId", "jsonSchema", "uiSchema", "logic"],
+		});
+
+		service.invalidateCalculationCache("version-1");
+		await service.findOneForCalculation("version-1");
+		expect(versionRepository.findOne).toHaveBeenCalledTimes(2);
+	});
+});

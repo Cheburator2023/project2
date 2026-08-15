@@ -8,8 +8,14 @@ import { migrateV2AnketaFormData } from "./v2-form-data-migration.util";
 import { V2TemplateEntity } from "../entities/v2-template.entity";
 import { V2TemplateVersionEntity } from "../entities/v2-template-version.entity";
 
+type SchemaBindingVersion = Pick<
+	V2TemplateVersionEntity,
+	"id" | "versionNumber" | "status"
+> &
+	Partial<Pick<V2TemplateVersionEntity, "createdAt" | "updatedAt">>;
+
 function boundVersionDateFields(
-	boundVersion: V2TemplateVersionEntity | null | undefined,
+	boundVersion: SchemaBindingVersion | null | undefined,
 ): Pick<
 	V2SchemaBindingDto,
 	"boundTemplateVersionCreatedAt" | "boundTemplateVersionUpdatedAt"
@@ -24,8 +30,8 @@ function boundVersionDateFields(
 
 export function buildSchemaBinding(
 	template: V2TemplateEntity | null | undefined,
-	boundVersion: V2TemplateVersionEntity | null | undefined,
-	currentVersion: V2TemplateVersionEntity | null | undefined,
+	boundVersion: SchemaBindingVersion | null | undefined,
+	currentVersion: SchemaBindingVersion | null | undefined,
 ): V2SchemaBindingDto {
 	const boundId = boundVersion?.id ?? "";
 	const versionDates = boundVersionDateFields(boundVersion);

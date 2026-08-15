@@ -23,6 +23,8 @@
 		"test:unit": "jest --testPathPattern='unit'",
 		"test:integration": "jest --testPathPattern='integration'",
 		"test:e2e": "jest --testPathPattern='e2e' --config ./test/jest-e2e.json",
+		"test:load:v2-calculate": "cross-env NO_ROLES=true tsx scripts/load-test-v2-calculate.ts",
+		"test:load:v2-calculate:smoke": "cross-env NO_ROLES=true LOAD_USERS=8 LOAD_DURATION_SEC=15 tsx scripts/load-test-v2-calculate.ts",
 		"test:watch": "jest --watch",
 		"test:cov": "jest --coverage",
 		"test:ci": "jest --runInBand --detectOpenHandles --forceExit",

@@ -15,12 +15,12 @@ import {
 	useCreateKanbanBoardTaskComment,
 	useDeleteKanbanBoardTaskComment,
 	useKanbanBoardAssignees,
-	useKanbanBoardSettings,
 	useKanbanBoardTaskComments,
 } from "@react-client/common/api/queries/kanban-board";
 import { FuzzyAutocomplete } from "@react-client/common/muiCustom/FuzzyAutocomplete";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
+import { getTrackerCurrentUserAssigneeName } from "@react-client/features/tracker/utils/trackerCurrentUserAssignee.storage";
 import { useEffect, useMemo, useState } from "react";
 
 async function copyTextToClipboard(text: string): Promise<boolean> {
@@ -84,13 +84,13 @@ const formatCommentTooltip = (iso: string): string => {
 export function KanbanTaskCommentsSection({ taskId, disabled }: Props) {
 	const commentsQuery = useKanbanBoardTaskComments(taskId);
 	const assigneesQuery = useKanbanBoardAssignees();
-	const settingsQuery = useKanbanBoardSettings();
 	const createComment = useCreateKanbanBoardTaskComment();
 	const deleteComment = useDeleteKanbanBoardTaskComment();
 
 	const [authorName, setAuthorName] = useState("");
 	const [draft, setDraft] = useState("");
 	const [error, setError] = useState<string | null>(null);
+	const defaultAuthorName = getTrackerCurrentUserAssigneeName();
 
 	const authorOptions = useMemo<AuthorOption[]>(
 		() =>
@@ -124,16 +124,11 @@ export function KanbanTaskCommentsSection({ taskId, disabled }: Props) {
 		authorColorByName.get(name) ?? "#64748b";
 
 	useEffect(() => {
-		const defaultName = settingsQuery.data?.defaultCurrentUserAssigneeName;
-		if (!defaultName || authorName) return;
-		if (authorOptions.some((option) => option.value === defaultName)) {
-			setAuthorName(defaultName);
+		if (!defaultAuthorName || authorName) return;
+		if (authorOptions.some((option) => option.value === defaultAuthorName)) {
+			setAuthorName(defaultAuthorName);
 		}
-	}, [
-		authorName,
-		authorOptions,
-		settingsQuery.data?.defaultCurrentUserAssigneeName,
-	]);
+	}, [authorName, authorOptions, defaultAuthorName]);
 
 	const handleSubmit = async () => {
 		setError(null);
@@ -251,7 +246,7 @@ export function KanbanTaskCommentsSection({ taskId, disabled }: Props) {
 			<Spacer space={4} />
 
 			<Flex flexDirection="column" gap={10}>
-				{!settingsQuery.data?.defaultCurrentUserAssigneeName ? (
+				{!defaultAuthorName ? (
 					<FuzzyAutocomplete<AuthorOption>
 						label="Кто пишет"
 						options={authorOptions}
@@ -295,7 +290,7 @@ export function KanbanTaskCommentsSection({ taskId, disabled }: Props) {
 					</Button>
 				</Flex>
 				{error ? <Alert severity="error">{error}</Alert> : null}
-				{!settingsQuery.data?.defaultCurrentUserAssigneeName ? (
+				{!defaultAuthorName ? (
 					<Alert severity="info">
 						Укажите себя в настройках трекера — тогда исполнитель будет
 						подставляться автоматически.

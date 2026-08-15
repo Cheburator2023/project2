@@ -24,7 +24,11 @@ import type {
 import {
 	V2_QUESTIONNAIRE_REGISTRY_PAGE_SIZE,
 } from "@smart-anketa/api-contract";
-import { apiClient, API_ENTITY_CREATE_TIMEOUT_MS } from "../helpers/apiClient";
+import {
+	apiClient,
+	API_ENTITY_CREATE_TIMEOUT_MS,
+	API_REGISTRY_EXPORT_TIMEOUT_MS,
+} from "../helpers/apiClient";
 
 const ROOT_KEY = ["v2-questionnaires"] as const;
 const REGISTRY_CONFIG_KEY = [...ROOT_KEY, "registry-config"] as const;
@@ -250,6 +254,7 @@ export const v2QuestionnairesExportXlsx = (
 			data: { ids },
 			signal: options?.signal,
 			responseType: "blob",
+			timeout: API_REGISTRY_EXPORT_TIMEOUT_MS,
 		});
 	}
 	return apiClient<Blob>({
@@ -257,6 +262,7 @@ export const v2QuestionnairesExportXlsx = (
 		method: "GET",
 		signal: options?.signal,
 		responseType: "blob",
+		timeout: API_REGISTRY_EXPORT_TIMEOUT_MS,
 	});
 };
 

@@ -6,12 +6,25 @@ export type HealthLivenessDto = {
 	status: "ok";
 };
 
+export type HealthMemoryDto = {
+	status: "ok";
+	rssMb: number;
+	heapUsedMb: number;
+	heapTotalMb: number;
+	externalMb: number;
+	arrayBuffersMb: number;
+};
+
 export type HealthReadinessDto = {
 	status: "ok";
 	checks: {
 		database: "up";
 	};
 };
+
+function mb(bytes: number): number {
+	return Math.round((bytes / 1024 / 1024) * 10) / 10;
+}
 
 @Injectable()
 export class HealthService {
@@ -22,6 +35,18 @@ export class HealthService {
 
 	getLiveness(): HealthLivenessDto {
 		return { status: "ok" };
+	}
+
+	getMemory(): HealthMemoryDto {
+		const mem = process.memoryUsage();
+		return {
+			status: "ok",
+			rssMb: mb(mem.rss),
+			heapUsedMb: mb(mem.heapUsed),
+			heapTotalMb: mb(mem.heapTotal),
+			externalMb: mb(mem.external),
+			arrayBuffersMb: mb(mem.arrayBuffers ?? 0),
+		};
 	}
 
 	async getReadiness(): Promise<HealthReadinessDto> {

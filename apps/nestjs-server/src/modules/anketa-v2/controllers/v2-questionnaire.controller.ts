@@ -55,6 +55,8 @@ import {
     AUDIT_EVENT_SUMD_EXPORTANKETA,
 } from "../../../shared/audit/audit.constants";
 import { v4 as uuidv4 } from "uuid";
+import { createReadStream } from "node:fs";
+import { pipeline } from "node:stream/promises";
 import { normalizeV2AnketaWorkflow } from "../utils/v2-anketa-workflow.util";
 
 const questionnaireAuditUserId = (
@@ -237,14 +239,26 @@ export class V2QuestionnaireController {
         );
 
         try {
-            const buffer = await this.questionnaireService.exportRegistryXlsx();
-            this.sendRegistryXlsxResponse(res, buffer, "v2-questionnaires");
+            const exported = await this.questionnaireService.exportRegistryXlsx(
+                undefined,
+                user,
+            );
+            try {
+                await this.sendRegistryXlsxFile(
+                    res,
+                    exported.filePath,
+                    "v2-questionnaires-all",
+                    exported.rowCount,
+                );
+            } finally {
+                await exported.cleanup();
+            }
             this.auditService.sendEvent(
                 AUDIT_EVENT_SUMD_EXPORTLISTANKET,
                 "SUCCESS",
                 correlationId,
                 initiator,
-                { exportType: "all" },
+                { exportType: "all", rowCount: exported.rowCount },
             );
         } catch (error) {
             this.auditService.sendEvent(
@@ -287,18 +301,26 @@ export class V2QuestionnaireController {
         );
 
         try {
-            const buffer = await this.questionnaireService.exportRegistryXlsx(body.ids);
-            this.sendRegistryXlsxResponse(
-                res,
-                buffer,
-                `v2-questionnaires-selected-${body.ids.length}`,
+            const exported = await this.questionnaireService.exportRegistryXlsx(
+                body.ids,
+                user,
             );
+            try {
+                await this.sendRegistryXlsxFile(
+                    res,
+                    exported.filePath,
+                    `v2-questionnaires-selected-${body.ids.length}`,
+                    exported.rowCount,
+                );
+            } finally {
+                await exported.cleanup();
+            }
             this.auditService.sendEvent(
                 AUDIT_EVENT_SUMD_EXPORTANKETA,
                 "SUCCESS",
                 correlationId,
                 initiator,
-                { exportType: "selected", ids: body.ids },
+                { exportType: "selected", ids: body.ids, rowCount: exported.rowCount },
             );
         } catch (error) {
             this.auditService.sendEvent(
@@ -312,11 +334,12 @@ export class V2QuestionnaireController {
         }
     }
 
-	private sendRegistryXlsxResponse(
+	private async sendRegistryXlsxFile(
 		res: Response,
-		buffer: Buffer,
+		filePath: string,
 		filenamePrefix: string,
-	): void {
+		rowCount: number,
+	): Promise<void> {
 		const date = new Date().toISOString().slice(0, 10);
 		res.setHeader(
 			"Content-Type",
@@ -326,7 +349,8 @@ export class V2QuestionnaireController {
 			"Content-Disposition",
 			`attachment; filename=${filenamePrefix}-${date}.xlsx`,
 		);
-		res.end(buffer);
+		res.setHeader("X-Export-Row-Count", String(rowCount));
+		await pipeline(createReadStream(filePath), res);
 	}
 
 	@Get(":id")

@@ -45,4 +45,23 @@ describe("useDebouncedV2Calculation", () => {
 		expect(mutateAsync).toHaveBeenCalledTimes(2);
 		expect(mutateAsync.mock.calls[1]?.[0].dto.formData).toBe(formData);
 	});
+
+	it("does not POST schemas unless overrides are provided", async () => {
+		vi.useFakeTimers();
+		renderHook(() =>
+			useDebouncedV2Calculation({
+				templateId: "template-1",
+				versionId: "version-1",
+				formData: { field: "value" },
+				debounceMs: 10,
+			}),
+		);
+
+		await act(async () => {
+			await vi.advanceTimersByTimeAsync(10);
+		});
+		expect(mutateAsync.mock.calls[0]?.[0].dto).toEqual({
+			formData: { field: "value" },
+		});
+	});
 });

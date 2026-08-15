@@ -53,7 +53,6 @@ import {
 } from "@react-client/routing/common/pathHelpers";
 import type {
 	V2QuestionnaireGridRow,
-	V2QuestionnaireSeriesRow,
 	V2QuestionnaireVersionRow,
 } from "../types/v2QuestionnaireGrid.types";
 import {
@@ -113,10 +112,7 @@ import {
 	isFactoryPresetId,
 	type QuestionnaireGridPresetApi,
 } from "../utils/v2QuestionnaireGridFactoryPresets";
-import {
-	buildV2QuestionnaireRegistryTree,
-	flattenV2QuestionnaireRegistryTree,
-} from "../utils/buildV2QuestionnaireRegistryTree";
+import { buildV2QuestionnaireRegistryTree } from "../utils/buildV2QuestionnaireRegistryTree";
 import { resolveVersionRow } from "../utils/v2QuestionnaireGridValue";
 import { V2RegistryPagingPanel } from "./V2RegistryPagingPanel";
 
@@ -524,13 +520,6 @@ export function V2QuestionnaireList() {
 		return buildV2QuestionnaireRegistryTree(versionRows, registryVersionMode);
 	}, [versionRows, registryVersionMode, dadmProgramManagerEnabled]);
 
-	const visibleVersionRows = useMemo(() => {
-		if (!dadmProgramManagerEnabled) return versionRows;
-		return flattenV2QuestionnaireRegistryTree(
-			rowData as V2QuestionnaireSeriesRow[],
-		);
-	}, [dadmProgramManagerEnabled, rowData, versionRows]);
-
 	useEffect(() => {
 		if (!dadmProgramManagerEnabled) return;
 		gridRef.current?.api?.expandAll();
@@ -656,38 +645,33 @@ export function V2QuestionnaireList() {
 		saveAgGridColumnState(GRID_COLUMN_STATE_KEY, api.getColumnState());
 	}, []);
 
-	const handleExportXlsx = useCallback(
-		async (ids?: string[]) => {
-			setIsExporting(true);
-			try {
-				const exportIds =
-					ids && ids.length > 0 ? ids : visibleVersionRows.map((q) => q.id);
-				const blob = await v2QuestionnairesExportXlsx({
-					ids: exportIds.length > 0 ? exportIds : undefined,
-				});
-				const date = new Date().toISOString().slice(0, 10);
-				const suffix =
-					ids && ids.length > 0
-						? `selected-${ids.length}`
-						: `filtered-${exportIds.length}`;
-				downloadBlob(blob, `v2-questionnaires-${suffix}-${date}.xlsx`);
-				if (ids && ids.length > 0) {
-					toast.success(
-						ids.length === 1
-							? "Анкета экспортирована"
-							: `Экспортировано анкет: ${ids.length}`,
-					);
-				}
-			} catch (err) {
-				toast.error("Ошибка экспорта", {
-					description: apiErrorMessage(err),
-				});
-			} finally {
-				setIsExporting(false);
-			}
-		},
-		[visibleVersionRows],
-	);
+	const handleExportXlsx = useCallback(async (ids?: string[]) => {
+		setIsExporting(true);
+		try {
+			const selectedIds = ids && ids.length > 0 ? ids : undefined;
+			const blob = await v2QuestionnairesExportXlsx({
+				ids: selectedIds,
+			});
+			const date = new Date().toISOString().slice(0, 10);
+			const suffix = selectedIds
+				? `selected-${selectedIds.length}`
+				: "all";
+			downloadBlob(blob, `v2-questionnaires-${suffix}-${date}.xlsx`);
+			toast.success(
+				selectedIds
+					? selectedIds.length === 1
+						? "Анкета экспортирована"
+						: `Экспортировано анкет: ${selectedIds.length}`
+					: "Экспортированы все анкеты",
+			);
+		} catch (err) {
+			toast.error("Ошибка экспорта", {
+				description: apiErrorMessage(err),
+			});
+		} finally {
+			setIsExporting(false);
+		}
+	}, []);
 
 	const autoGroupColumnDef = useMemo<ColDef<V2QuestionnaireGridRow>>(
 		() => ({

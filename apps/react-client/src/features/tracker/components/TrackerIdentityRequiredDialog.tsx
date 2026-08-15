@@ -10,10 +10,10 @@ import TextField from "@mui/material/TextField";
 import {
 	useCreateKanbanBoardAssignee,
 	useKanbanBoardAssignees,
-	useUpdateKanbanBoardSettings,
 } from "@react-client/common/api/queries/kanban-board";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { toast } from "@react-client/common/toasts";
+import { saveTrackerEditIdentity } from "@react-client/features/tracker/hooks/useTrackerEditIdentity";
 import { generateTrackerAutoCode } from "@react-client/features/tracker/trackerAutoCode";
 import { useMemo, useState } from "react";
 
@@ -30,7 +30,6 @@ export function TrackerIdentityRequiredDialog({
 }: Props) {
 	const assigneesQuery = useKanbanBoardAssignees();
 	const createAssignee = useCreateKanbanBoardAssignee();
-	const updateSettings = useUpdateKanbanBoardSettings();
 	const [name, setName] = useState("");
 	const [error, setError] = useState<string | null>(null);
 
@@ -54,7 +53,7 @@ export function TrackerIdentityRequiredDialog({
 		);
 	}, [assigneesQuery.data, trimmed]);
 
-	const busy = createAssignee.isPending || updateSettings.isPending;
+	const busy = createAssignee.isPending;
 	const canSubmit = trimmed.length > 0 && !busy;
 
 	const handleSubmit = async () => {
@@ -71,9 +70,7 @@ export function TrackerIdentityRequiredDialog({
 					name: resolvedName,
 				});
 			}
-			await updateSettings.mutateAsync({
-				defaultCurrentUserAssigneeName: resolvedName,
-			});
+			saveTrackerEditIdentity(resolvedName);
 			toast.success(
 				existing
 					? "Профиль в трекере сохранён"
@@ -99,35 +96,28 @@ export function TrackerIdentityRequiredDialog({
 			<DialogTitle>Кто вы в трекере?</DialogTitle>
 			<DialogContent>
 				<DialogContentText sx={{ mb: 2 }}>
-					Перед созданием задачи нужно указать себя. Это используется для
-					комментариев, блокировки редактирования и раздела «Мои задачи». Поле
-					«Назначил» в задаче по умолчанию останется пустым.
+					Укажите себя как исполнителя — имя сохранится в этом браузере и будет
+					использоваться для комментариев, блокировки редактирования и фильтра
+					«Мои задачи».
 				</DialogContentText>
 				<Autocomplete
 					freeSolo
 					options={assigneeNames}
 					inputValue={name}
-					onInputChange={(_, next) => setName(next)}
-					disabled={busy || assigneesQuery.isLoading}
+					onInputChange={(_, value) => setName(value)}
+					disabled={busy}
 					renderInput={(params) => (
 						<TextField
 							{...params}
-							label="Я — исполнитель"
-							placeholder="Выберите или введите ФИО"
 							autoFocus
-							required
-							helperText={
-								trimmed
-									? existing
-										? "Найден в справочнике исполнителей"
-										: "Новый исполнитель будет добавлен в справочник"
-									: "Обязательное поле"
-							}
+							label="ФИО"
+							margin="dense"
+							fullWidth
 						/>
 					)}
 				/>
 				{error ? (
-					<Alert severity="error" sx={{ mt: 2 }}>
+					<Alert severity="error" sx={{ mt: 1 }}>
 						{error}
 					</Alert>
 				) : null}
@@ -141,7 +131,7 @@ export function TrackerIdentityRequiredDialog({
 					disabled={!canSubmit}
 					onClick={() => void handleSubmit()}
 				>
-					{busy ? "Сохранение…" : "Продолжить"}
+					Сохранить
 				</Button>
 			</DialogActions>
 		</Dialog>

@@ -214,6 +214,49 @@ describe("V2TypicalWorkRuntimeService", () => {
 		expect(notMatched).toEqual([]);
 	});
 
+	it("does not reload template version when schemaParams are provided", async () => {
+		const templateVersionRepository = {
+			findOne: jest.fn(async () => ({
+				jsonSchema: { type: "object" },
+				uiSchema: {},
+			})),
+		};
+		const service = new V2TypicalWorkRuntimeService(
+			repo([
+				{
+					id: WORK_WITH_TRIGGER,
+					name: "Работа с триггером",
+					workType: "Типовая",
+					archComponentType: "Система-источник",
+				},
+			]) as never,
+			repo([]) as never,
+			repo([]) as never,
+			repo([]) as never,
+			repo([]) as never,
+			repo(DEFAULT_ASSIGNMENTS) as never,
+			repo([]) as never,
+			templateVersionRepository as never,
+			{ listTriggerStatusCatalog: jest.fn(async () => []) } as never,
+			{
+				getCatalog: jest.fn(async () => []),
+				getCachedCatalog: jest.fn(() => []),
+			} as never,
+		);
+
+		await service.buildCatalogTasks({
+			archComponentType: "Система-источник",
+			streamExecutor: STREAM,
+			source: { type: "Внутренний" },
+			templateVersionId: "version-1",
+			atDate: "2025-06-01",
+			schemaParams: [],
+			schemaFieldIndex: null,
+		});
+
+		expect(templateVersionRepository.findOne).not.toHaveBeenCalled();
+	});
+
 	it("filters catalog tasks by allowedWorkIds when block binding is set", async () => {
 		const service = createService({
 			rules: [

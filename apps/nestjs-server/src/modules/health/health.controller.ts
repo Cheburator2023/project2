@@ -4,6 +4,7 @@ import { Public } from "../../shared/decorators/public.decorator";
 import {
 	HealthService,
 	type HealthLivenessDto,
+	type HealthMemoryDto,
 	type HealthReadinessDto,
 } from "./health.service";
 
@@ -20,6 +21,12 @@ export class HealthController {
 	@ApiOkResponse({ description: "Liveness: процесс жив" })
 	getLiveness(): HealthLivenessDto {
 		return this.healthService.getLiveness();
+	}
+
+	@Get("memory")
+	@ApiOkResponse({ description: "RSS/heap процесса (нагрузка, k8s debug)" })
+	getMemory(): HealthMemoryDto {
+		return this.healthService.getMemory();
 	}
 
 	@Get("ready")

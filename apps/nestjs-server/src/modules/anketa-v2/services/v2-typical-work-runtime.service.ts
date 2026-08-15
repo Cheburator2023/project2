@@ -113,6 +113,11 @@ export type BuildCatalogTasksParams = {
 	worksCatalogAllArchComponents?: boolean;
 	/** Конфиг методики «Общая неопределённость» из logic шаблона. */
 	uncertaintyConfig?: import("@smart-anketa/api-contract").V2OverallUncertaintyConfig;
+	/** Уже загруженные схемы calculate — не ходить в v2_template_version повторно. */
+	jsonSchema?: Record<string, unknown> | null;
+	uiSchema?: Record<string, unknown> | null;
+	schemaParams?: WorkSchemaParamDef[];
+	schemaFieldIndex?: import("@smart-anketa/api-contract").V2SchemaFieldIndex | null;
 };
 
 type RuntimeWorkContext = {
@@ -812,7 +817,7 @@ export class V2TypicalWorkRuntimeService {
 			schemaFieldIndex,
 			jsonSchema,
 			uiSchema,
-		} = await this.loadSchemaParams(params.templateVersionId);
+		} = await this.resolveSchemaParams(params);
 		const coefficientValueCatalog = buildWorkCoefficientCatalog({
 			schemaParams,
 			laborParams: laborParams.map((row) => ({
@@ -1012,6 +1017,37 @@ export class V2TypicalWorkRuntimeService {
 		return tasks;
 	}
 
+	private async resolveSchemaParams(params: BuildCatalogTasksParams): Promise<{
+		schemaParams: WorkSchemaParamDef[];
+		schemaFieldIndex: ReturnType<typeof buildV2SchemaFieldIndex> | null;
+		jsonSchema: Record<string, unknown> | null;
+		uiSchema: Record<string, unknown> | null;
+	}> {
+		if (params.schemaParams !== undefined) {
+			return {
+				schemaParams: params.schemaParams,
+				schemaFieldIndex: params.schemaFieldIndex ?? null,
+				jsonSchema: params.jsonSchema ?? null,
+				uiSchema: params.uiSchema ?? null,
+			};
+		}
+		if (params.jsonSchema && params.uiSchema) {
+			return {
+				schemaParams: buildWorkSchemaParamsFromTemplate({
+					jsonSchema: params.jsonSchema,
+					uiSchema: params.uiSchema,
+				}),
+				schemaFieldIndex: buildV2SchemaFieldIndex(
+					params.jsonSchema,
+					params.uiSchema,
+				),
+				jsonSchema: params.jsonSchema,
+				uiSchema: params.uiSchema,
+			};
+		}
+		return this.loadSchemaParams(params.templateVersionId);
+	}
+
 	private async loadSchemaParams(
 		templateVersionId: string | null,
 	): Promise<{
@@ -1030,6 +1066,7 @@ export class V2TypicalWorkRuntimeService {
 		}
 		const version = await this.templateVersionRepository.findOne({
 			where: { id: templateVersionId },
+			select: ["id", "jsonSchema", "uiSchema"],
 		});
 		if (!version) {
 			return {

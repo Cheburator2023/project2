@@ -116,6 +116,9 @@ function isPostgresUniqueViolation(error: unknown): boolean {
 @Injectable()
 export class V2TypicalWorkParamCatalogService {
 	private readonly logger = new Logger(V2TypicalWorkParamCatalogService.name);
+	private triggerCatalogCache: WorkTriggerStatusCatalogParam[] | null = null;
+	private triggerCatalogLoad: Promise<WorkTriggerStatusCatalogParam[]> | null =
+		null;
 	private seedingPromise: Promise<void> | null = null;
 
 	constructor(
@@ -239,6 +242,9 @@ export class V2TypicalWorkParamCatalogService {
 				`Synchronized ${synchronized} factory typical-work parameter catalogs`,
 			);
 		}
+		if (created > 0 || synchronized > 0) {
+			this.invalidateTriggerCatalogCache();
+		}
 	}
 
 	async listParameters(
@@ -292,6 +298,7 @@ export class V2TypicalWorkParamCatalogService {
 				description: dto.description?.trim() || null,
 			}),
 		);
+		this.invalidateTriggerCatalogCache();
 
 		return toParamDto({ ...param, values: [] });
 	}
@@ -323,6 +330,7 @@ export class V2TypicalWorkParamCatalogService {
 		}
 
 		await this.paramRepository.save(param);
+		this.invalidateTriggerCatalogCache();
 		const saved = await this.findParamByCode(param.code);
 		return toParamDto(saved);
 	}
@@ -330,6 +338,7 @@ export class V2TypicalWorkParamCatalogService {
 	async deleteParameter(code: string): Promise<void> {
 		const param = await this.findParamByCode(code);
 		await this.paramRepository.delete(param.id);
+		this.invalidateTriggerCatalogCache();
 	}
 
 	async createParameterValue(
@@ -364,6 +373,7 @@ export class V2TypicalWorkParamCatalogService {
 				validTo,
 			}),
 		);
+		this.invalidateTriggerCatalogCache();
 		return toValueDto(value);
 	}
 
@@ -409,7 +419,9 @@ export class V2TypicalWorkParamCatalogService {
 			throw new ConflictException("Дата окончания должна быть позже даты начала");
 		}
 
-		return toValueDto(await this.valueRepository.save(value));
+		const saved = await this.valueRepository.save(value);
+		this.invalidateTriggerCatalogCache();
+		return toValueDto(saved);
 	}
 
 	async deleteParameterValue(
@@ -419,6 +431,7 @@ export class V2TypicalWorkParamCatalogService {
 		const param = await this.findParamByCode(paramCode);
 		const value = await this.findValueByCode(param.id, valueCode);
 		await this.valueRepository.delete(value.id);
+		this.invalidateTriggerCatalogCache();
 	}
 
 	async listParameterDependencies(): Promise<V2ParameterDependencyListResponseDto> {
@@ -439,25 +452,47 @@ export class V2TypicalWorkParamCatalogService {
 	async listTriggerStatusCatalog(
 		atDate?: string,
 	): Promise<WorkTriggerStatusCatalogParam[]> {
+		const params = await this.loadTriggerCatalog();
+		if (!atDate) return params;
+		return params.map((param) => ({
+			code: param.code,
+			values: filterTypicalWorkParameterValuesActiveOnDate(
+				param.values ?? [],
+				atDate,
+			),
+		}));
+	}
+
+	private invalidateTriggerCatalogCache(): void {
+		this.triggerCatalogCache = null;
+		this.triggerCatalogLoad = null;
+	}
+
+	private async loadTriggerCatalog(): Promise<WorkTriggerStatusCatalogParam[]> {
+		if (this.triggerCatalogCache) return this.triggerCatalogCache;
+		if (this.triggerCatalogLoad) return this.triggerCatalogLoad;
+		this.triggerCatalogLoad = this.fetchTriggerCatalog().finally(() => {
+			this.triggerCatalogLoad = null;
+		});
+		return this.triggerCatalogLoad;
+	}
+
+	private async fetchTriggerCatalog(): Promise<WorkTriggerStatusCatalogParam[]> {
 		const params = await this.paramRepository.find({
 			relations: { values: true },
 			order: { code: "ASC", values: { sortOrder: "ASC" } },
 		});
-		return params.map((param) => ({
+		const catalog = params.map((param) => ({
 			code: param.code,
-			values: (atDate
-				? filterTypicalWorkParameterValuesActiveOnDate(
-						param.values ?? [],
-						atDate,
-					)
-				: (param.values ?? [])
-			).map((value) => ({
+			values: (param.values ?? []).map((value) => ({
 				code: value.code,
 				label: value.label,
 				validFrom: value.validFrom,
 				validTo: value.validTo,
 			})),
 		}));
+		this.triggerCatalogCache = catalog;
+		return catalog;
 	}
 
 	private async findParamByCode(code: string): Promise<V2TypicalWorkParamEntity> {

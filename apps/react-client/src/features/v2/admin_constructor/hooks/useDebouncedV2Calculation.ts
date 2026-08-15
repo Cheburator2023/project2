@@ -2,6 +2,7 @@ import { useCalculateV2Template } from "@react-client/common/api/queries/v2-temp
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { IS_DEV } from "@react-client/common/constants/dev";
 import type {
+	V2CalculateRequestDto,
 	V2CalculationResultDto,
 	V2LogicGraphDto,
 } from "@smart-anketa/api-contract";
@@ -11,6 +12,7 @@ type Options = {
 	templateId: string;
 	versionId?: string | null;
 	formData: Record<string, unknown>;
+	/** Только конструктор/draft preview — runtime анкеты не шлёт схемы. */
 	rulesOverride?: V2LogicGraphDto;
 	jsonSchema?: Record<string, unknown>;
 	uiSchema?: Record<string, unknown>;
@@ -54,12 +56,17 @@ export function useDebouncedV2Calculation({
 					templateId,
 					versionId,
 					formDataKeys: Object.keys(formData),
+					hasOverrides: Boolean(rulesOverride || jsonSchema || uiSchema),
 				});
 			}
+			const dto: V2CalculateRequestDto = { formData };
+			if (rulesOverride) dto.rulesOverride = rulesOverride;
+			if (jsonSchema) dto.jsonSchema = jsonSchema;
+			if (uiSchema) dto.uiSchema = uiSchema;
 			void mutateAsync({
 				templateId,
 				versionId,
-				dto: { formData, rulesOverride, jsonSchema, uiSchema },
+				dto,
 			})
 				.then((data) => {
 					if (requestId !== requestIdRef.current) return;

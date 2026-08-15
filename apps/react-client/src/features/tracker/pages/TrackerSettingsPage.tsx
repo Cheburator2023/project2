@@ -27,6 +27,10 @@ import {
 	TRACKER_AG_GRID_STATE_KEYS,
 } from "@react-client/common/tableStuff/agGridColumnState";
 import {
+	getTrackerCurrentUserAssigneeName,
+	setTrackerCurrentUserAssigneeName,
+} from "@react-client/features/tracker/utils/trackerCurrentUserAssignee.storage";
+import {
 	KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD,
 	KANBAN_BOARD_STATUSES,
 } from "@smart-anketa/api-contract";
@@ -94,9 +98,12 @@ export function TrackerSettingsPage() {
 	useEffect(() => {
 		if (settings) {
 			setDefaultCapacity(String(settings.defaultSprintCapacityPd));
-			setDefaultCurrentUser(settings.defaultCurrentUserAssigneeName ?? "");
 		}
 	}, [settings]);
+
+	useEffect(() => {
+		setDefaultCurrentUser(getTrackerCurrentUserAssigneeName());
+	}, []);
 
 	const assigneeOptions = useMemo<AssigneeOption[]>(
 		() =>
@@ -133,14 +140,9 @@ export function TrackerSettingsPage() {
 
 	const handleSaveCurrentUser = async () => {
 		setUserSaveError(null);
-		try {
-			await updateSettings.mutateAsync({
-				defaultCurrentUserAssigneeName: defaultCurrentUser.trim() || null,
-			});
-			toast.success("Исполнитель по умолчанию сохранён");
-		} catch {
-			setUserSaveError("Не удалось сохранить исполнителя");
-		}
+		setTrackerCurrentUserAssigneeName(defaultCurrentUser);
+		setUserSaveError(null);
+		toast.success("Исполнитель сохранён в этом браузере");
 	};
 
 	const handleResetGridColumns = () => {
@@ -158,7 +160,7 @@ export function TrackerSettingsPage() {
 				<Flex flexDirection="column" gap={24} maxWidth="720px">
 					<SettingsSection
 						title="Текущий пользователь"
-						description="Кто вы в трекере — для комментариев, блокировки редактирования и «Мои задачи». Если не задано, при создании задачи откроется обязательная форма. Поле «Назначил» в задаче при этом не заполняется автоматически."
+						description="Кто вы в трекере — для комментариев, блокировки редактирования и «Мои задачи». Хранится только в этом браузере (не на сервере). Если не задано, при создании задачи откроется обязательная форма. Поле «Назначил» в задаче при этом не заполняется автоматически."
 					>
 						<FuzzyAutocomplete<AssigneeOption>
 							label="Я — исполнитель"
@@ -175,8 +177,8 @@ export function TrackerSettingsPage() {
 						<Flex gap={12} wrap="wrap" alignItems="center">
 							<Button
 								variant="contained"
-								onClick={() => void handleSaveCurrentUser()}
-								disabled={updateSettings.isPending || settingsLoading}
+								onClick={() => handleSaveCurrentUser()}
+								disabled={assigneesLoading}
 							>
 								Сохранить
 							</Button>

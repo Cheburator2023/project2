@@ -23,9 +23,26 @@ import {
 	syncTypicalWorksCatalogLogicSnapshot,
 } from "@smart-anketa/api-contract";
 
+/** Схемы для calculate — без dictionaries_snapshot и без relation template. */
+export type V2CalculationVersionSnapshot = Pick<
+	V2TemplateVersionEntity,
+	"id" | "templateId" | "jsonSchema" | "uiSchema" | "logic"
+>;
+
+const CALCULATION_SNAPSHOT_LIMIT = 8;
+
 @Injectable()
 export class V2TemplateVersionService {
 	private readonly logger = new Logger(V2TemplateVersionService.name);
+	private readonly calculationSnapshots = new Map<
+		string,
+		V2CalculationVersionSnapshot
+	>();
+	private readonly calculationSnapshotLoads = new Map<
+		string,
+		Promise<V2CalculationVersionSnapshot>
+	>();
+	private readonly calculationSnapshotOrder: string[] = [];
 
 	constructor(
 		@InjectRepository(V2TemplateVersionEntity)
@@ -56,6 +73,70 @@ export class V2TemplateVersionService {
 		}
 
 		return version;
+	}
+
+	invalidateCalculationCache(versionId?: string): void {
+		if (!versionId) {
+			this.calculationSnapshots.clear();
+			this.calculationSnapshotOrder.length = 0;
+			return;
+		}
+		this.calculationSnapshots.delete(versionId);
+		const index = this.calculationSnapshotOrder.indexOf(versionId);
+		if (index >= 0) this.calculationSnapshotOrder.splice(index, 1);
+	}
+
+	/**
+	 * Версия для live calculate: jsonb схем без dictionaries_snapshot,
+	 * process-cache + coalesce параллельных загрузок одного id.
+	 */
+	async findOneForCalculation(id: string): Promise<V2CalculationVersionSnapshot> {
+		const cached = this.calculationSnapshots.get(id);
+		if (cached) return cached;
+		const pending = this.calculationSnapshotLoads.get(id);
+		if (pending) return pending;
+
+		const load = this.loadCalculationSnapshot(id).finally(() => {
+			this.calculationSnapshotLoads.delete(id);
+		});
+		this.calculationSnapshotLoads.set(id, load);
+		return load;
+	}
+
+	private async loadCalculationSnapshot(
+		id: string,
+	): Promise<V2CalculationVersionSnapshot> {
+		const version = await this.versionRepository.findOne({
+			where: { id },
+			select: ["id", "templateId", "jsonSchema", "uiSchema", "logic"],
+		});
+		if (!version) {
+			throw new NotFoundException(`Version with id ${id} not found`);
+		}
+		const snapshot: V2CalculationVersionSnapshot = {
+			id: version.id,
+			templateId: version.templateId,
+			jsonSchema: version.jsonSchema,
+			uiSchema: version.uiSchema,
+			logic: version.logic,
+		};
+		this.rememberCalculationSnapshot(snapshot);
+		return snapshot;
+	}
+
+	private rememberCalculationSnapshot(
+		snapshot: V2CalculationVersionSnapshot,
+	): void {
+		if (this.calculationSnapshots.has(snapshot.id)) {
+			const index = this.calculationSnapshotOrder.indexOf(snapshot.id);
+			if (index >= 0) this.calculationSnapshotOrder.splice(index, 1);
+		}
+		this.calculationSnapshots.set(snapshot.id, snapshot);
+		this.calculationSnapshotOrder.push(snapshot.id);
+		while (this.calculationSnapshotOrder.length > CALCULATION_SNAPSHOT_LIMIT) {
+			const evict = this.calculationSnapshotOrder.shift();
+			if (evict) this.calculationSnapshots.delete(evict);
+		}
 	}
 
 	async findByTemplateAndVersion(
@@ -136,7 +217,9 @@ export class V2TemplateVersionService {
 		Object.assign(version, dto, { updatedBy: userId });
 		this.syncTypicalWorksCatalogLogic(version);
 
-		return this.versionRepository.save(version);
+		const saved = await this.versionRepository.save(version);
+		this.invalidateCalculationCache(id);
+		return saved;
 	}
 
 	private syncTypicalWorksCatalogLogic(version: V2TemplateVersionEntity): void {
@@ -172,6 +255,7 @@ export class V2TemplateVersionService {
 		this.syncTypicalWorksCatalogLogic(version);
 
 		const updatedVersion = await this.versionRepository.save(version);
+		this.invalidateCalculationCache(id);
 
 		await this.templateService.setGlobalCurrentVersion(
 			version.templateId,
@@ -191,7 +275,9 @@ export class V2TemplateVersionService {
 
 		version.status = "archived";
 
-		return this.versionRepository.save(version);
+		const archived = await this.versionRepository.save(version);
+		this.invalidateCalculationCache(id);
+		return archived;
 	}
 
 	/**
@@ -462,6 +548,7 @@ export class V2TemplateVersionService {
 		});
 
 		await this.versionRepository.remove(version);
+		this.invalidateCalculationCache(id);
 	}
 
 	async getPublishedByTemplateCode(

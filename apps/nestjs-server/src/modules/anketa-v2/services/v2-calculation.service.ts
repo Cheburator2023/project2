@@ -7,7 +7,6 @@ import type {
 	V2LogicGraphDto,
 	V2LogicRuleDto,
 	V2TaskTriggerItemDto,
-	V2TemplateVersionDto,
 } from "@smart-anketa/api-contract";
 import {
 	clearStaleGeneratedTypicalWorkPaths,
@@ -38,11 +37,18 @@ import {
 	V2_MODEL_STREAM_SOURCE_ARRAY_PATH,
 	V2_SOURCE_SYSTEMS_ARRAY_PATH,
 	resolveCatalogSourceArrayPath,
+	buildWorkSchemaParamsFromTemplate,
+	buildV2SchemaFieldIndex,
 	type V2ParamDependencyGraph,
 	type V2ParamDefLike,
+	type V2SchemaFieldIndex,
+	type WorkSchemaParamDef,
 } from "@smart-anketa/api-contract";
 import { V2TemplateService } from "./v2-template.service";
-import { V2TemplateVersionService } from "./v2-template-version.service";
+import {
+	V2TemplateVersionService,
+	type V2CalculationVersionSnapshot,
+} from "./v2-template-version.service";
 import { parseFormNumber } from "../utils/v2-form-number.util";
 import {
 	applyJsonLogic,
@@ -54,6 +60,21 @@ import { evaluateLogicValidationRules } from "./v2-logic-validation";
 import { V2TypicalWorkRuntimeService } from "./v2-typical-work-runtime.service";
 import { migrateV2AnketaFormData } from "../utils/v2-form-data-migration.util";
 import { listCatalogParamDefs } from "../utils/v2-catalog-param-defs.util";
+
+type CatalogSchemaPack = {
+	jsonSchema: Record<string, unknown>;
+	uiSchema: Record<string, unknown>;
+	schemaParams: WorkSchemaParamDef[];
+	schemaFieldIndex: V2SchemaFieldIndex | null;
+};
+
+const DEFAULT_CALCULATE_CONCURRENCY = 3;
+
+function resolveCalculateConcurrency(): number {
+	const raw = Number(process.env.V2_CALCULATE_CONCURRENCY);
+	if (Number.isInteger(raw) && raw > 0) return raw;
+	return DEFAULT_CALCULATE_CONCURRENCY;
+}
 
 type ComputedPayload = {
 	role?: V2CalculationRole;
@@ -331,6 +352,10 @@ function topoSortComputed(rules: V2LogicRuleDto[]): {
 
 @Injectable()
 export class V2CalculationService {
+	private calculateInFlight = 0;
+	private readonly calculateWaiters: Array<() => void> = [];
+	private readonly calculateConcurrency = resolveCalculateConcurrency();
+
 	constructor(
 		private readonly versionService: V2TemplateVersionService,
 		private readonly templateService: V2TemplateService,
@@ -341,22 +366,19 @@ export class V2CalculationService {
 	async getEffectiveVersion(
 		templateId: string,
 		versionId?: string,
-	): Promise<V2TemplateVersionDto> {
+	): Promise<V2CalculationVersionSnapshot> {
 		if (versionId) {
-			const v = await this.versionService.findOne(versionId);
+			const v = await this.versionService.findOneForCalculation(versionId);
 			if (!v || v.templateId !== templateId)
 				throw new NotFoundException("V2 template version not found");
-			return v as unknown as V2TemplateVersionDto;
+			return v;
 		}
 		const template = await this.templateService.findOne(templateId);
 		if (!template.currentVersionId)
 			throw new NotFoundException(
 				"V2 template has no current published version",
 			);
-		const current = await this.versionService.findOne(
-			template.currentVersionId,
-		);
-		return current as unknown as V2TemplateVersionDto;
+		return this.versionService.findOneForCalculation(template.currentVersionId);
 	}
 
 	evaluate(
@@ -369,7 +391,22 @@ export class V2CalculationService {
 			uiSchema?: unknown;
 		},
 	): Promise<V2CalculationResultDto> {
-		return this.evaluateAsync(logic, formData, options);
+		return this.withCalculateSlot(() =>
+			this.evaluateAsync(logic, formData, options),
+		);
+	}
+
+	private async withCalculateSlot<T>(fn: () => Promise<T>): Promise<T> {
+		while (this.calculateInFlight >= this.calculateConcurrency) {
+			await new Promise<void>((resolve) => this.calculateWaiters.push(resolve));
+		}
+		this.calculateInFlight += 1;
+		try {
+			return await fn();
+		} finally {
+			this.calculateInFlight -= 1;
+			this.calculateWaiters.shift()?.();
+		}
 	}
 
 	private async evaluateAsync(
@@ -382,6 +419,14 @@ export class V2CalculationService {
 			uiSchema?: unknown;
 		},
 	): Promise<V2CalculationResultDto> {
+		const jsonSchema = (options?.jsonSchema ?? {}) as Record<string, unknown>;
+		const uiSchema = (options?.uiSchema ?? {}) as Record<string, unknown>;
+		const schemaPack: CatalogSchemaPack = {
+			jsonSchema,
+			uiSchema,
+			schemaParams: buildWorkSchemaParamsFromTemplate({ jsonSchema, uiSchema }),
+			schemaFieldIndex: buildV2SchemaFieldIndex(jsonSchema, uiSchema),
+		};
 		const rules =
 			resolveAnketaCalculationLogic(logic, {
 				jsonSchema: options?.jsonSchema,
@@ -437,6 +482,7 @@ export class V2CalculationService {
 				options?.uiSchema as Record<string, unknown> | undefined,
 				uncertaintyConfig,
 				options?.jsonSchema,
+				schemaPack,
 			);
 		}
 
@@ -566,6 +612,7 @@ export class V2CalculationService {
 		uiSchema?: Record<string, unknown>,
 		uncertaintyConfig?: import("@smart-anketa/api-contract").V2OverallUncertaintyConfig,
 		jsonSchema?: unknown,
+		schemaPack?: CatalogSchemaPack,
 	): Promise<Record<string, unknown>> {
 		const payload = (rule.payload ?? {}) as TaskTriggerPayload;
 		if (payload.mode !== "generated_rows") return data;
@@ -737,6 +784,10 @@ export class V2CalculationService {
 											allowedWorkIds: allowedWorkIdsForCatalog,
 											worksCatalogAllArchComponents,
 											uncertaintyConfig,
+											jsonSchema: schemaPack?.jsonSchema,
+											uiSchema: schemaPack?.uiSchema,
+											schemaParams: schemaPack?.schemaParams,
+											schemaFieldIndex: schemaPack?.schemaFieldIndex,
 										}),
 									),
 								)

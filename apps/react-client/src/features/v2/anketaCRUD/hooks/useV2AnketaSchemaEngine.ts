@@ -35,6 +35,7 @@ import {
 	resolveV2QuestionnaireUncertaintyCoefficient,
 	syncAtypicalWorkCoefficientsInFormData,
 	type V2LogicGraphDto,
+	type V2TemplateVersionDto,
 } from "@smart-anketa/api-contract";
 import { IS_DEV } from "@react-client/common/constants/dev";
 
@@ -55,11 +56,22 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 	const templateId = source?.templateId ?? "";
 	const explicitVersionId = source?.versionId ?? null;
 
-	const { data: template } = useV2Template(templateId);
-	const { data: version, isLoading: versionLoading } = useV2TemplateVersion(
-		templateId,
-		explicitVersionId ?? template?.currentVersionId ?? null,
+	const hasInitialSchemas = Boolean(
+		source?.initialJsonSchema && source.initialUiSchema && source.initialLogic,
 	);
+	const { data: template } = useV2Template(templateId);
+	const fetchedVersionId = hasInitialSchemas
+		? null
+		: (explicitVersionId ?? template?.currentVersionId ?? null);
+	const { data: fetchedVersion, isLoading: versionLoading } = useV2TemplateVersion(
+		templateId,
+		fetchedVersionId,
+	);
+	const version = useMemo<V2TemplateVersionDto | undefined>(() => {
+		if (fetchedVersion) return fetchedVersion;
+		if (!hasInitialSchemas || !explicitVersionId) return undefined;
+		return { id: explicitVersionId } as V2TemplateVersionDto;
+	}, [fetchedVersion, hasInitialSchemas, explicitVersionId]);
 
 	const [jsonSchema, setJsonSchema] = useState<RJSFSchema>(EMPTY_JSON_SCHEMA);
 	const [uiSchema, setUiSchema] = useState<UiSchema>({});
@@ -174,10 +186,8 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 		templateId,
 		versionId: version?.id ?? explicitVersionId,
 		formData,
-		rulesOverride: logic,
-		jsonSchema: jsonSchema as Record<string, unknown>,
-		uiSchema: uiSchema as Record<string, unknown>,
 		enabled: Boolean(templateId && (version?.id ?? explicitVersionId)),
+		debounceMs: 600,
 	});
 
 	const mappedCalculation = useMemo(

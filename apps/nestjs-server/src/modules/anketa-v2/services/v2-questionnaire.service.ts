@@ -5,6 +5,7 @@ import {
 	Injectable,
 	Logger,
 	NotFoundException,
+	ServiceUnavailableException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import {
@@ -32,6 +33,9 @@ import {
 	type V2QuestionnaireListQuery,
 	type V2QuestionnaireRegistryConfigDto,
 } from "@smart-anketa/api-contract";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { Repository, In, type SelectQueryBuilder } from "typeorm";
 import { V2QuestionnaireEntity } from "../entities/v2-questionnaire.entity";
 import { V2TemplateEntity } from "../entities/v2-template.entity";
@@ -57,7 +61,12 @@ import {
 	isAnketaGloballyLocked,
 	normalizeV2AnketaWorkflow,
 } from "../utils/v2-anketa-workflow.util";
-import { buildV2QuestionnaireRegistryXlsx } from "../utils/v2-questionnaire-registry-export.util";
+import {
+	buildRegistryExportColumnsFromSchemas,
+	deriveRegistryColumnOptionsFromFormDataBatch,
+	mergeDerivedRegistryColumnOptions,
+	writeV2QuestionnaireRegistryXlsxFile,
+} from "../utils/v2-questionnaire-registry-export.util";
 import { V2_DEFAULT_TEMPLATE_SNAPSHOT } from "../constants/v2-default-template-snapshot";
 import { buildV2AnketaViewerAccessFromUser } from "../utils/v2-anketa-viewer-access.util";
 
@@ -69,9 +78,50 @@ type TUserLike = {
 	groups?: string[];
 };
 
+export type V2QuestionnaireRegistryExportFile = {
+	filePath: string;
+	rowCount: number;
+	cleanup: () => Promise<void>;
+};
+
+const DEFAULT_EXPORT_BATCH_SIZE = 40;
+const DEFAULT_EXPORT_CONCURRENCY = 1;
+const DEFAULT_EXPORT_HEAP_MB_MAX = 1200;
+
+function resolvePositiveInt(envName: string, fallback: number, max: number): number {
+	const raw = Number(process.env[envName]);
+	if (Number.isInteger(raw) && raw > 0) return Math.min(raw, max);
+	return fallback;
+}
+
+function chunkIds(ids: string[], size: number): string[][] {
+	const chunks: string[][] = [];
+	for (let index = 0; index < ids.length; index += size) {
+		chunks.push(ids.slice(index, index + size));
+	}
+	return chunks;
+}
+
 @Injectable()
 export class V2QuestionnaireService {
 	private readonly logger = new Logger(V2QuestionnaireService.name);
+	private exportInFlight = 0;
+	private readonly exportWaiters: Array<() => void> = [];
+	private readonly exportConcurrency = resolvePositiveInt(
+		"V2_EXPORT_CONCURRENCY",
+		DEFAULT_EXPORT_CONCURRENCY,
+		4,
+	);
+	private readonly exportBatchSize = resolvePositiveInt(
+		"V2_EXPORT_BATCH_SIZE",
+		DEFAULT_EXPORT_BATCH_SIZE,
+		200,
+	);
+	private readonly exportHeapMbMax = resolvePositiveInt(
+		"V2_EXPORT_HEAP_MB_MAX",
+		DEFAULT_EXPORT_HEAP_MB_MAX,
+		4000,
+	);
 
 	constructor(
 		@InjectRepository(V2QuestionnaireEntity)
@@ -95,7 +145,7 @@ export class V2QuestionnaireService {
 
 	/**
 	 * Реестр: серверная пагинация + поиск (+ стрим / versionMode).
-	 * Полный `findAll` оставляем для export / registry-config.
+	 * Полный `findAll` — для registry-config; export идёт пачками в файл.
 	 */
 	async findAllPaginated(
 		query: V2QuestionnaireListQuery,
@@ -111,31 +161,14 @@ export class V2QuestionnaireService {
 		);
 		const search = query.search?.trim() ?? "";
 		const versionMode = query.versionMode;
-		const groups = Array.isArray(user?.groups) ? user.groups : [];
-
-		const streamSetting =
-			await this.runtimeSettingsService.getStreamFilterSetting();
-		const streamFilterEnabled = streamSetting.enabled ?? true;
-		const deModelopsViewAllStreams =
-			streamSetting.deModelopsViewAllStreams ?? true;
-		const streamOpts = { deModelopsViewAllStreams };
 
 		const empty = (): PaginatedV2QuestionnaireResponseDto => ({
 			data: [],
 			meta: { total: 0, page, limit, lastPage: 0 },
 		});
 
-		let allowedStreams: string[] | null = null;
-		if (
-			streamFilterEnabled &&
-			isV2UserStreamFilteredByGroups(groups, streamOpts)
-		) {
-			allowedStreams = resolveV2UserAllowedStreamFilterValues(
-				groups,
-				streamOpts,
-			);
-			if (allowedStreams.length === 0) return empty();
-		}
+		const allowedStreams = await this.resolveAllowedStreamsForList(user);
+		if (allowedStreams && allowedStreams.length === 0) return empty();
 
 		if (versionMode) {
 			const leanQb = this.questionnaireRepository
@@ -221,6 +254,192 @@ export class V2QuestionnaireService {
 		}
 	}
 
+	private async resolveAllowedStreamsForList(
+		user?: TUserLike | null,
+	): Promise<string[] | null> {
+		const groups = Array.isArray(user?.groups) ? user.groups : [];
+		const streamSetting =
+			await this.runtimeSettingsService.getStreamFilterSetting();
+		const streamFilterEnabled = streamSetting.enabled ?? true;
+		const deModelopsViewAllStreams =
+			streamSetting.deModelopsViewAllStreams ?? true;
+		const streamOpts = { deModelopsViewAllStreams };
+		if (
+			streamFilterEnabled &&
+			isV2UserStreamFilteredByGroups(groups, streamOpts)
+		) {
+			return resolveV2UserAllowedStreamFilterValues(groups, streamOpts);
+		}
+		return null;
+	}
+
+	private async withExportSlot<T>(fn: () => Promise<T>): Promise<T> {
+		while (this.exportInFlight >= this.exportConcurrency) {
+			await new Promise<void>((resolve) => this.exportWaiters.push(resolve));
+		}
+		this.exportInFlight += 1;
+		try {
+			return await fn();
+		} finally {
+			this.exportInFlight -= 1;
+			this.exportWaiters.shift()?.();
+		}
+	}
+
+	private assertExportHeapHeadroom(): void {
+		const usedMb = process.memoryUsage().heapUsed / (1024 * 1024);
+		if (usedMb > this.exportHeapMbMax) {
+			throw new ServiceUnavailableException(
+				`Экспорт прерван: heap ${Math.round(usedMb)}MB выше лимита ${this.exportHeapMbMax}MB. Выгрузите анкеты частями.`,
+			);
+		}
+	}
+
+	private async resolveExportQuestionnaireIds(
+		ids: string[] | undefined,
+		user?: TUserLike | null,
+	): Promise<string[]> {
+		if (ids && ids.length > 0) {
+			return [...new Set(ids)];
+		}
+		const allowedStreams = await this.resolveAllowedStreamsForList(user);
+		if (allowedStreams && allowedStreams.length === 0) return [];
+		const qb = this.questionnaireRepository
+			.createQueryBuilder("q")
+			.select("q.id", "id")
+			.orderBy("q.createdAt", "DESC");
+		this.applyRegistryListFilters(qb, "", allowedStreams);
+		const rows = await qb.getRawMany<{ id: string }>();
+		return rows.map((row) => row.id);
+	}
+
+	private async exportRegistryXlsxUncapped(
+		ids?: string[],
+		user?: Record<string, unknown>,
+	): Promise<V2QuestionnaireRegistryExportFile> {
+		const exportIds = await this.resolveExportQuestionnaireIds(
+			ids,
+			user as TUserLike | undefined,
+		);
+		const viewerAccess = buildV2AnketaViewerAccessFromUser(
+			user as { groups?: string[] } | undefined,
+		);
+		const tmpDir = await mkdtemp(join(tmpdir(), "v2-q-export-"));
+		const filePath = join(tmpDir, "questionnaires.xlsx");
+		const cleanup = async () => {
+			await rm(tmpDir, { recursive: true, force: true });
+		};
+
+		try {
+			const columnOptionsAcc = {
+				arrayIndicesByPath: {} as Record<string, number[]>,
+				arrayGroupLabelsByPath: {} as Record<string, Record<number, string>>,
+			};
+			const versionIds = new Set<string>();
+			const templateIds = new Set<string>();
+
+			for (const batchIds of chunkIds(exportIds, this.exportBatchSize)) {
+				this.assertExportHeapHeadroom();
+				const lean = await this.questionnaireRepository.find({
+					where: { id: In(batchIds) },
+					select: ["id", "formData", "boundTemplateVersionId", "templateId"],
+				});
+				for (const row of lean) {
+					if (row.boundTemplateVersionId) {
+						versionIds.add(row.boundTemplateVersionId);
+					}
+					if (row.templateId) templateIds.add(row.templateId);
+				}
+				Object.assign(
+					columnOptionsAcc,
+					mergeDerivedRegistryColumnOptions(
+						columnOptionsAcc,
+						deriveRegistryColumnOptionsFromFormDataBatch(
+							lean.map((row) => row.formData ?? {}),
+						),
+					),
+				);
+			}
+
+			const templates =
+				templateIds.size > 0
+					? await this.templateRepository.find({
+							where: { id: In([...templateIds]) },
+							select: ["id", "code", "name", "currentVersionId"],
+						})
+					: [];
+			for (const template of templates) {
+				if (template.currentVersionId) {
+					versionIds.add(template.currentVersionId);
+				}
+			}
+
+			const versions =
+				versionIds.size > 0
+					? await this.versionRepository.find({
+							where: { id: In([...versionIds]) },
+							select: [
+								"id",
+								"versionNumber",
+								"status",
+								"createdAt",
+								"updatedAt",
+								"jsonSchema",
+								"uiSchema",
+							],
+						})
+					: [];
+			const templateById = new Map(templates.map((row) => [row.id, row]));
+			const versionById = new Map(versions.map((row) => [row.id, row]));
+
+			const columns = buildRegistryExportColumnsFromSchemas(
+				versions.map((version) => ({
+					jsonSchema: version.jsonSchema as Record<string, unknown>,
+					uiSchema: version.uiSchema as Record<string, unknown>,
+				})),
+				{
+					...columnOptionsAcc,
+					viewerAccess,
+					applyAccessRules: Boolean(viewerAccess),
+				},
+			);
+
+			const self = this;
+			async function* dtoRows(): AsyncGenerator<V2QuestionnaireDto> {
+				for (const batchIds of chunkIds(exportIds, self.exportBatchSize)) {
+					self.assertExportHeapHeadroom();
+					const entities = await self.questionnaireRepository.find({
+						where: { id: In(batchIds) },
+					});
+					const byId = new Map(entities.map((row) => [row.id, row]));
+					for (const id of batchIds) {
+						const entity = byId.get(id);
+						if (!entity) continue;
+						const template = templateById.get(entity.templateId);
+						const bound = versionById.get(entity.boundTemplateVersionId);
+						const current = template?.currentVersionId
+							? versionById.get(template.currentVersionId)
+							: undefined;
+						yield mapV2QuestionnaireToDto(
+							{ ...entity, template: template ?? undefined },
+							buildSchemaBinding(template, bound, current),
+						);
+					}
+				}
+			}
+
+			const rowCount = await writeV2QuestionnaireRegistryXlsxFile(
+				filePath,
+				columns,
+				dtoRows(),
+			);
+			return { filePath, rowCount, cleanup };
+		} catch (error) {
+			await cleanup();
+			throw error;
+		}
+	}
+
 	async getRegistryConfig(): Promise<V2QuestionnaireRegistryConfigDto> {
 		const rows = await this.findAll();
 		const versionIds = [
@@ -258,36 +477,8 @@ export class V2QuestionnaireService {
 	async exportRegistryXlsx(
 		ids?: string[],
 		user?: Record<string, unknown>,
-	): Promise<Buffer> {
-		const rows =
-			ids && ids.length > 0
-				? await this.findAllByIds(ids)
-				: await this.findAll();
-		const versionIds = [
-			...new Set(
-				rows
-					.map((row) => row.boundTemplateVersionId)
-					.filter((id): id is string => Boolean(id)),
-			),
-		];
-		const versions =
-			versionIds.length > 0
-				? await this.versionRepository.find({ where: { id: In(versionIds) } })
-				: [];
-		const viewerAccess = buildV2AnketaViewerAccessFromUser(
-			user as { groups?: string[] } | undefined,
-		);
-		return buildV2QuestionnaireRegistryXlsx(
-			rows,
-			versions.map((version) => ({
-				jsonSchema: version.jsonSchema as Record<string, unknown>,
-				uiSchema: version.uiSchema as Record<string, unknown>,
-			})),
-			{
-				viewerAccess,
-				applyAccessRules: Boolean(viewerAccess),
-			},
-		);
+	): Promise<V2QuestionnaireRegistryExportFile> {
+		return this.withExportSlot(() => this.exportRegistryXlsxUncapped(ids, user));
 	}
 
 	async findAllByIds(ids: string[]): Promise<V2QuestionnaireDto[]> {
@@ -896,11 +1087,19 @@ export class V2QuestionnaireService {
 			(await this.versionRepository.findOne({
 				where: { id: row.boundTemplateVersionId },
 			}));
-		let currentVersion: V2TemplateVersionEntity | null = null;
+		let currentVersion: Pick<
+			V2TemplateVersionEntity,
+			"id" | "versionNumber" | "status"
+		> | null = null;
 		if (template?.currentVersionId) {
-			currentVersion = await this.versionRepository.findOne({
-				where: { id: template.currentVersionId },
-			});
+			if (boundVersion?.id === template.currentVersionId) {
+				currentVersion = boundVersion;
+			} else {
+				currentVersion = await this.versionRepository.findOne({
+					where: { id: template.currentVersionId },
+					select: ["id", "versionNumber", "status"],
+				});
+			}
 		}
 		const binding = buildSchemaBinding(template, boundVersion, currentVersion);
 		return mapV2QuestionnaireToDto(

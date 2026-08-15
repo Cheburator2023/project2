@@ -30,6 +30,8 @@ export const API_ENTITY_CREATE_TIMEOUT_MS = 120_000;
 export const API_HEAVY_OPERATION_TIMEOUT_MS = 120_000;
 /** Заводская схема: seed 73 работ + reconcile полей (может занимать несколько минут) */
 export const API_FACTORY_SCHEMA_TIMEOUT_MS = 600_000;
+/** Реестр v2: выгрузка всех анкет в XLSX (стриминг на сервере, на клиенте ждём файл) */
+export const API_REGISTRY_EXPORT_TIMEOUT_MS = 600_000;
 
 const axiosInstance = axios.create({
 	timeout: API_DEFAULT_TIMEOUT_MS,
