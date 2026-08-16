@@ -1,5 +1,14 @@
 # Semantic Versioning Changelog
 
+# [1.64.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.63.0...v1.64.0) (2026-08-16)
+
+
+### Features
+
+* add socket.io-client dependency for real-time communication ([59d51a3](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/59d51a37696be44272251f965092b8596e7aa839))
+* enhance NestJS server with new caching and logging features ([48b5d0d](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/48b5d0d5be1496e13b32af82d701c6dec5d12707))
+* synchronize package dependencies across projects ([048cdc8](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/048cdc8489608e4efefca47661111c5831f92a96))
+
 # [1.63.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.62.0...v1.63.0) (2026-08-16)
 
 
