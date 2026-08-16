@@ -35,8 +35,8 @@ type Options = {
 };
 
 /**
- * Автосохранение анкеты с debounce. Не инвалидирует form-package
- * (только soft-update кэша), чтобы не было флешей/ремонта формы.
+ * Автосохранение анкеты с debounce. Не инвалидирует form-package и список
+ * реестра (только soft-update кэша открытой анкеты).
  */
 export function useDebouncedQuestionnaireSave({
 	questionnaireId,
@@ -83,7 +83,6 @@ export function useDebouncedQuestionnaireSave({
 					};
 				},
 			);
-			void qc.invalidateQueries({ queryKey: ROOT_KEY, exact: true });
 		},
 		[qc],
 	);

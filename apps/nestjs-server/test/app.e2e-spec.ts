@@ -2,6 +2,7 @@ import { INestApplication } from "@nestjs/common";
 import { Test, TestingModule } from "@nestjs/testing";
 import * as request from "supertest";
 import { AppModule } from "../src/app.module";
+import { runPostListenSeed } from "../src/shared/bootstrap/run-post-listen-seed";
 
 /**
  * E2e-тест AppModule.
@@ -18,6 +19,7 @@ describe("AppController (e2e)", () => {
 
 		app = moduleFixture.createNestApplication();
 		await app.init();
+		await runPostListenSeed(app);
 	});
 
 	afterEach(async () => {

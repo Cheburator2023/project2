@@ -17,6 +17,11 @@ import axios, {
 	type AxiosRequestConfig,
 	type AxiosResponse,
 } from "axios";
+import { queryClient } from "../queryClient";
+import {
+	invalidateV2QuestionnaireRegistry,
+	shouldInvalidateV2QuestionnaireRegistry,
+} from "../queries/v2-questionnaire-registry-cache";
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
 
@@ -123,6 +128,9 @@ axiosInstance.interceptors.response.use(
 		const method = response.config.method?.toLowerCase();
 		if (method && !["get", "head", "options"].includes(method)) {
 			const url = response.config.url;
+			if (shouldInvalidateV2QuestionnaireRegistry(url, method)) {
+				invalidateV2QuestionnaireRegistry(queryClient);
+			}
 			if (shouldPublishMutationSync(url)) {
 				const scope = mutationScopeForUrl(url);
 				if (scope) {

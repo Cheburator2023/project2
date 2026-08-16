@@ -7,6 +7,7 @@
 import { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { AppModule } from "../src/app.module";
+import { runPostListenSeed } from "../src/shared/bootstrap/run-post-listen-seed";
 
 let app: INestApplication;
 
@@ -24,6 +25,7 @@ beforeAll(async () => {
 
 	app = moduleFixture.createNestApplication();
 	await app.init();
+	await runPostListenSeed(app);
 });
 
 afterAll(async () => {

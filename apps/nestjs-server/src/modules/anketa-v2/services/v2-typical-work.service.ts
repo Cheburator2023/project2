@@ -1,9 +1,4 @@
-import {
-	Injectable,
-	Logger,
-	NotFoundException,
-	OnModuleInit,
-} from "@nestjs/common";
+import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { IsNull, Not, In, Repository } from "typeorm";
 import { randomUUID } from "node:crypto";
@@ -214,7 +209,7 @@ function resolveSeedVersionConfigFormula(
 }
 
 @Injectable()
-export class V2TypicalWorkSeedService implements OnModuleInit {
+export class V2TypicalWorkSeedService {
 	private readonly logger = new Logger(V2TypicalWorkSeedService.name);
 	/** In-flight seed по templateVersionId — чтобы bulk schema-sync не гонялся с фоновым сидом. */
 	private readonly seedInFlight = new Map<string, Promise<number>>();
@@ -242,7 +237,7 @@ export class V2TypicalWorkSeedService implements OnModuleInit {
 		private readonly factorySnapshotService: V2FactorySnapshotService,
 	) {}
 
-	async onModuleInit(): Promise<void> {
+	async runStartupSeed(): Promise<void> {
 		await this.paramCatalogService.ensureSeededFromFactorySnapshot();
 		await this.purgeLegacyCatalogSeededWorks();
 		const count = await this.workRepository.count();

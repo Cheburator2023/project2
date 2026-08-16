@@ -32,9 +32,18 @@ import {
 	API_ENTITY_CREATE_TIMEOUT_MS,
 	API_REGISTRY_EXPORT_TIMEOUT_MS,
 } from "../helpers/apiClient";
+import {
+	invalidateV2QuestionnaireRegistry,
+	V2_QUESTIONNAIRES_LIST_KEY,
+	V2_QUESTIONNAIRES_REGISTRY_CONFIG_KEY,
+	V2_QUESTIONNAIRES_ROOT_KEY,
+} from "./v2-questionnaire-registry-cache";
 
-const ROOT_KEY = ["v2-questionnaires"] as const;
-const REGISTRY_CONFIG_KEY = [...ROOT_KEY, "registry-config"] as const;
+export { invalidateV2QuestionnaireRegistry } from "./v2-questionnaire-registry-cache";
+
+const ROOT_KEY = V2_QUESTIONNAIRES_ROOT_KEY;
+const LIST_KEY = V2_QUESTIONNAIRES_LIST_KEY;
+const REGISTRY_CONFIG_KEY = V2_QUESTIONNAIRES_REGISTRY_CONFIG_KEY;
 
 export const useV2Questionnaires = (query: V2QuestionnaireListQuery = {}) => {
 	const page = query.page ?? 1;
@@ -43,7 +52,7 @@ export const useV2Questionnaires = (query: V2QuestionnaireListQuery = {}) => {
 	const versionMode = query.versionMode;
 
 	return useQuery<PaginatedV2QuestionnaireResponseDto>({
-		queryKey: [...ROOT_KEY, "list", { page, limit, search, versionMode }],
+		queryKey: [...LIST_KEY, { page, limit, search, versionMode }],
 		queryFn: () =>
 			apiClient<PaginatedV2QuestionnaireResponseDto>({
 				url: "/v2/questionnaires",
@@ -56,6 +65,8 @@ export const useV2Questionnaires = (query: V2QuestionnaireListQuery = {}) => {
 				},
 			}),
 		placeholderData: keepPreviousData,
+		staleTime: 5 * 60 * 1000,
+		gcTime: 30 * 60 * 1000,
 	});
 };
 
@@ -67,6 +78,8 @@ export const useV2QuestionnaireRegistryConfig = () =>
 				url: "/v2/questionnaires/registry-config",
 				method: "GET",
 			}),
+		staleTime: 5 * 60 * 1000,
+		gcTime: 30 * 60 * 1000,
 	});
 
 export const useV2Questionnaire = (id: string) =>
@@ -104,7 +117,7 @@ export const useCreateV2Questionnaire = () => {
 				data: body,
 				timeout: API_ENTITY_CREATE_TIMEOUT_MS,
 			}),
-		onSuccess: () => qc.invalidateQueries({ queryKey: ROOT_KEY }),
+		onSuccess: () => invalidateV2QuestionnaireRegistry(qc),
 	});
 };
 
@@ -140,7 +153,7 @@ export const useUpdateV2Questionnaire = () => {
 					};
 				},
 			);
-			void qc.invalidateQueries({ queryKey: ROOT_KEY });
+			void invalidateV2QuestionnaireRegistry(qc, { includeConfig: false });
 		},
 	});
 };
@@ -161,7 +174,7 @@ export const useCreateV2QuestionnaireVersion = () => {
 				data: body,
 				timeout: API_ENTITY_CREATE_TIMEOUT_MS,
 			}),
-		onSuccess: () => qc.invalidateQueries({ queryKey: ROOT_KEY }),
+		onSuccess: () => invalidateV2QuestionnaireRegistry(qc),
 	});
 };
 
@@ -174,7 +187,7 @@ export const useHoldV2Questionnaire = () => {
 				method: "POST",
 			}),
 		onSuccess: (_data, id) => {
-			qc.invalidateQueries({ queryKey: ROOT_KEY });
+			invalidateV2QuestionnaireRegistry(qc, { includeConfig: false });
 			qc.invalidateQueries({ queryKey: [...ROOT_KEY, id] });
 			qc.invalidateQueries({
 				queryKey: [...ROOT_KEY, id, "form-package"],
@@ -195,7 +208,8 @@ export const useBulkHoldV2Questionnaires = () => {
 				method: "POST",
 				data: body,
 			}),
-		onSuccess: () => qc.invalidateQueries({ queryKey: ROOT_KEY }),
+		onSuccess: () =>
+			invalidateV2QuestionnaireRegistry(qc, { includeConfig: false }),
 	});
 };
 
@@ -215,7 +229,7 @@ export const useCreateV2QuestionnaireCopy = () => {
 				data: body,
 				timeout: API_ENTITY_CREATE_TIMEOUT_MS,
 			}),
-		onSuccess: () => qc.invalidateQueries({ queryKey: ROOT_KEY }),
+		onSuccess: () => invalidateV2QuestionnaireRegistry(qc),
 	});
 };
 
@@ -228,7 +242,7 @@ export const useBulkDeleteV2Questionnaires = () => {
 				method: "POST",
 				data: body,
 			}),
-		onSuccess: () => qc.invalidateQueries({ queryKey: ROOT_KEY }),
+		onSuccess: () => invalidateV2QuestionnaireRegistry(qc),
 	});
 };
 
@@ -242,7 +256,7 @@ export const useSeedV2TestQuestionnaires = () => {
 				data: body,
 				timeout: API_ENTITY_CREATE_TIMEOUT_MS,
 			}),
-		onSuccess: () => qc.invalidateQueries({ queryKey: ROOT_KEY }),
+		onSuccess: () => invalidateV2QuestionnaireRegistry(qc),
 	});
 };
 

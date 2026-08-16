@@ -30,6 +30,7 @@ import { V2AuditController } from "./controllers/v2-audit.controller";
 import { V2CalculationController } from "./controllers/v2-calculation.controller";
 import { V2CalculationService } from "./services/v2-calculation.service";
 import { V2QuestionnaireService } from "./services/v2-questionnaire.service";
+import { V2QuestionnaireRegistryReadCache } from "./services/v2-questionnaire-registry-read-cache.service";
 import { V2QuestionnaireCommentService } from "./services/v2-questionnaire-comment.service";
 import { V2QuestionnaireEditLockService } from "./services/v2-questionnaire-edit-lock.service";
 import { V2QuestionnaireController } from "./controllers/v2-questionnaire.controller";
@@ -123,6 +124,7 @@ import { V2StreamCatalogService } from "./services/v2-stream-catalog.service";
 		V2TemplateSeedService,
 		V2AuditService,
 		V2CalculationService,
+		V2QuestionnaireRegistryReadCache,
 		V2QuestionnaireService,
 		V2QuestionnaireCommentService,
 		V2QuestionnaireEditLockService,

@@ -83,8 +83,10 @@ export function buildSchemaBinding(
 export function mapV2QuestionnaireToDto(
 	entity: V2QuestionnaireEntity,
 	schemaBinding: V2SchemaBindingDto,
+	formDataOverride?: Record<string, unknown>,
 ): V2QuestionnaireDto {
-	const formData = migrateV2AnketaFormData(entity.formData ?? {});
+	const formData =
+		formDataOverride ?? migrateV2AnketaFormData(entity.formData ?? {});
 	const workflow = normalizeV2AnketaWorkflow(formData.workflow);
 	return {
 		id: entity.id,

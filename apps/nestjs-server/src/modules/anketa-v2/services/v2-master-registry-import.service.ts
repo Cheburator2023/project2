@@ -220,6 +220,10 @@ export class V2MasterRegistryImportService {
 			}
 		}
 
+		if (created.length > 0) {
+			this.questionnaireService.invalidateRegistryReadCache();
+		}
+
 		return {
 			dryRun: options.dryRun,
 			sheetName,

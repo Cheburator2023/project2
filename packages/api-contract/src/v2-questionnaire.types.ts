@@ -92,6 +92,10 @@ export type V2QuestionnaireDto = {
 	templateCode: string | null;
 	templateName: string | null;
 	boundTemplateVersionId: string;
+	/**
+	 * Полные данные анкеты в GET by id / form-package.
+	 * В списке реестра — только поля колонок + workflow/стрим (без формул и типовых работ).
+	 */
 	formData: Record<string, unknown>;
 	finalCoefficient: number | null;
 	author: string | null;

@@ -1,5 +1,6 @@
 import { ServiceUnavailableException } from "@nestjs/common";
 import { V2QuestionnaireService } from "../../../../src/modules/anketa-v2/services/v2-questionnaire.service";
+import { V2QuestionnaireRegistryReadCache } from "../../../../src/modules/anketa-v2/services/v2-questionnaire-registry-read-cache.service";
 import type { V2QuestionnaireEntity } from "../../../../src/modules/anketa-v2/entities/v2-questionnaire.entity";
 
 function entity(id: string, index: number): V2QuestionnaireEntity {
@@ -76,6 +77,7 @@ function createService(rows: V2QuestionnaireEntity[]) {
 		{
 			getStreamFilterSetting: jest.fn(async () => ({ enabled: false })),
 		} as never,
+		new V2QuestionnaireRegistryReadCache(),
 	);
 	return { service, questionnaireRepository };
 }

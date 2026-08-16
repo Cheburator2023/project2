@@ -11,6 +11,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import {
 	patchV2TypicalWorksLogicRules,
 	buildV2QuestionnaireRegistryConfig,
+	collectV2RegistryFormPaths,
 	canUserCopyV2Questionnaire,
 	canUserDeleteV2Questionnaire,
 	collectForbiddenV2AnketaWorkflowChanges,
@@ -32,6 +33,7 @@ import {
 	type V2QuestionnaireDto,
 	type V2QuestionnaireListQuery,
 	type V2QuestionnaireRegistryConfigDto,
+	pickV2QuestionnaireRegistryFormData,
 } from "@smart-anketa/api-contract";
 import { Writable } from "node:stream";
 import { finished } from "node:stream/promises";
@@ -42,6 +44,7 @@ import { V2TemplateVersionEntity } from "../entities/v2-template-version.entity"
 import { V2TemplateService } from "./v2-template.service";
 import { V2CalculationService } from "./v2-calculation.service";
 import { V2RuntimeSettingsService } from "./v2-runtime-settings.service";
+import { V2QuestionnaireRegistryReadCache } from "./v2-questionnaire-registry-read-cache.service";
 import {
 	buildTestQuestionnaireFormData,
 	V2_TEST_QUESTIONNAIRE_SEED_SPECS,
@@ -119,6 +122,10 @@ export class V2QuestionnaireService {
 		DEFAULT_EXPORT_HEAP_MB_MAX,
 		4000,
 	);
+	private registryConfigLoad: Promise<{
+		config: V2QuestionnaireRegistryConfigDto;
+		formPaths: string[];
+	}> | null = null;
 
 	constructor(
 		@InjectRepository(V2QuestionnaireEntity)
@@ -130,6 +137,7 @@ export class V2QuestionnaireService {
 		private readonly templateService: V2TemplateService,
 		private readonly calculationService: V2CalculationService,
 		private readonly runtimeSettingsService: V2RuntimeSettingsService,
+		private readonly registryReadCache: V2QuestionnaireRegistryReadCache,
 	) {}
 
 	async findAll(): Promise<V2QuestionnaireDto[]> {
@@ -142,7 +150,7 @@ export class V2QuestionnaireService {
 
 	/**
 	 * Реестр: серверная пагинация + поиск (+ стрим / versionMode).
-	 * Полный `findAll` — для registry-config; export идёт пачками в файл.
+	 * Строки — slim formData под колонки; export идёт пачками в файл.
 	 */
 	async findAllPaginated(
 		query: V2QuestionnaireListQuery,
@@ -166,6 +174,17 @@ export class V2QuestionnaireService {
 
 		const allowedStreams = await this.resolveAllowedStreamsForList(user);
 		if (allowedStreams && allowedStreams.length === 0) return empty();
+
+		const cacheGeneration = this.registryReadCache.getGeneration();
+		const cacheKey = this.registryReadCache.listKey({
+			streams: allowedStreams,
+			page,
+			limit,
+			search,
+			versionMode,
+		});
+		const cached = this.registryReadCache.getList(cacheKey);
+		if (cached) return cached;
 
 		if (versionMode) {
 			const leanQb = this.questionnaireRepository
@@ -201,10 +220,12 @@ export class V2QuestionnaireService {
 			const lastPage = total === 0 ? 0 : Math.ceil(total / limit);
 			const slice = picked.slice((page - 1) * limit, page * limit);
 			const data = await this.findAllByIds(slice.map((row) => row.id));
-			return {
+			const result = {
 				data,
 				meta: { total, page, limit, lastPage },
 			};
+			this.registryReadCache.setList(cacheKey, result, cacheGeneration);
+			return result;
 		}
 
 		const qb = this.questionnaireRepository
@@ -219,11 +240,17 @@ export class V2QuestionnaireService {
 			.take(limit)
 			.getManyAndCount();
 		const lastPage = total === 0 ? 0 : Math.ceil(total / limit);
-		const data = await Promise.all(rows.map((row) => this.toDto(row)));
-		return {
+		const data = await this.toRegistryListDtos(rows);
+		const result = {
 			data,
 			meta: { total, page, limit, lastPage },
 		};
+		this.registryReadCache.setList(cacheKey, result, cacheGeneration);
+		return result;
+	}
+
+	invalidateRegistryReadCache(): void {
+		this.registryReadCache.invalidateAll();
 	}
 
 	private applyRegistryListFilters(
@@ -451,17 +478,46 @@ export class V2QuestionnaireService {
 	}
 
 	async getRegistryConfig(): Promise<V2QuestionnaireRegistryConfigDto> {
-		const rows = await this.findAll();
-		const versionIds = [
-			...new Set(
-				rows
-					.map((row) => row.boundTemplateVersionId)
-					.filter((id): id is string => Boolean(id)),
-			),
-		];
+		const cached = await this.getRegistryConfigCached();
+		return cached.config;
+	}
+
+	private async getRegistryConfigCached(): Promise<{
+		config: V2QuestionnaireRegistryConfigDto;
+		formPaths: string[];
+	}> {
+		const hit = this.registryReadCache.getConfig();
+		if (hit) return hit;
+		if (this.registryConfigLoad) return this.registryConfigLoad;
+		const generation = this.registryReadCache.getGeneration();
+		this.registryConfigLoad = this.loadRegistryConfig()
+			.then((entry) => {
+				this.registryReadCache.setConfig(entry, generation);
+				return this.registryReadCache.getConfig() ?? entry;
+			})
+			.finally(() => {
+				this.registryConfigLoad = null;
+			});
+		return this.registryConfigLoad;
+	}
+
+	private async loadRegistryConfig(): Promise<{
+		config: V2QuestionnaireRegistryConfigDto;
+		formPaths: string[];
+	}> {
+		const versionIdRows = await this.questionnaireRepository
+			.createQueryBuilder("q")
+			.select("DISTINCT q.bound_template_version_id", "id")
+			.getRawMany<{ id: string }>();
+		const versionIds = versionIdRows
+			.map((row) => row.id)
+			.filter((id): id is string => Boolean(id));
 		const versions =
 			versionIds.length > 0
-				? await this.versionRepository.find({ where: { id: In(versionIds) } })
+				? await this.versionRepository.find({
+						where: { id: In(versionIds) },
+						select: ["id", "jsonSchema", "uiSchema"],
+					})
 				: [];
 		const schemas =
 			versions.length > 0
@@ -481,7 +537,19 @@ export class V2QuestionnaireService {
 							>,
 						},
 					];
-		return buildV2QuestionnaireRegistryConfig(schemas, rows);
+		const formDataRows = await this.questionnaireRepository.find({
+			select: ["id", "formData"],
+		});
+		const config = buildV2QuestionnaireRegistryConfig(
+			schemas,
+			formDataRows.map((row) => ({
+				formData: migrateV2AnketaFormData(row.formData ?? {}),
+			})),
+		);
+		return {
+			config,
+			formPaths: collectV2RegistryFormPaths(config.columnTree),
+		};
 	}
 
 	async exportRegistryXlsx(
@@ -503,9 +571,7 @@ export class V2QuestionnaireService {
 			order: { createdAt: "DESC" },
 		});
 		const byId = new Map(
-			await Promise.all(
-				rows.map(async (row) => [row.id, await this.toDto(row)] as const),
-			),
+			(await this.toRegistryListDtos(rows)).map((dto) => [dto.id, dto]),
 		);
 		return uniqueIds
 			.map((id) => byId.get(id))
@@ -586,6 +652,7 @@ export class V2QuestionnaireService {
 		user?: TUserLike | null,
 	): Promise<V2QuestionnaireDto> {
 		const saved = await this.createEntity(dto, user);
+		this.registryReadCache.invalidateAll();
 		return this.findOne(saved.id);
 	}
 
@@ -700,6 +767,9 @@ export class V2QuestionnaireService {
 			row.status = dto.status;
 		}
 		await this.questionnaireRepository.save(row);
+		if (dto.calcName !== undefined || dto.status !== undefined) {
+			this.registryReadCache.invalidateList();
+		}
 		return this.findOne(id);
 	}
 
@@ -753,6 +823,7 @@ export class V2QuestionnaireService {
 		}
 		row.formData = { ...formData, workflow: next };
 		await this.questionnaireRepository.save(row);
+		this.registryReadCache.invalidateList();
 		return this.findOne(id);
 	}
 
@@ -835,6 +906,7 @@ export class V2QuestionnaireService {
 		});
 
 		const saved = await this.questionnaireRepository.save(entity);
+		this.registryReadCache.invalidateAll();
 		const result = await this.findOne(saved.id);
 		return { ...result, formDataProjection };
 	}
@@ -892,6 +964,7 @@ export class V2QuestionnaireService {
 		});
 
 		const saved = await this.questionnaireRepository.save(entity);
+		this.registryReadCache.invalidateAll();
 		const result = await this.findOne(saved.id);
 		return { ...result, formDataProjection };
 	}
@@ -1036,6 +1109,9 @@ export class V2QuestionnaireService {
 			}
 		}
 
+		if (deletedIds.length > 0 || deactivatedIds.length > 0) {
+			this.registryReadCache.invalidateAll();
+		}
 		return { deletedIds, deactivatedIds, failed };
 	}
 
@@ -1077,6 +1153,64 @@ export class V2QuestionnaireService {
 		}
 
 		return { created };
+	}
+
+	private async toRegistryListDtos(
+		rows: V2QuestionnaireEntity[],
+	): Promise<V2QuestionnaireDto[]> {
+		if (rows.length === 0) return [];
+		const { formPaths } = await this.getRegistryConfigCached();
+		const extraVersionIds = [
+			...new Set(
+				rows.flatMap((row) => {
+					const currentId = row.template?.currentVersionId;
+					const boundId =
+						row.boundTemplateVersion?.id ?? row.boundTemplateVersionId;
+					if (currentId && currentId !== boundId) return [currentId];
+					return [];
+				}),
+			),
+		];
+		const extraVersions =
+			extraVersionIds.length > 0
+				? await this.versionRepository.find({
+						where: { id: In(extraVersionIds) },
+						select: ["id", "versionNumber", "status"],
+					})
+				: [];
+		const extraById = new Map(
+			extraVersions.map((version) => [version.id, version]),
+		);
+		return rows.map((row) => {
+			const template = row.template;
+			const boundVersion = row.boundTemplateVersion;
+			let currentVersion: Pick<
+				V2TemplateVersionEntity,
+				"id" | "versionNumber" | "status"
+			> | null = null;
+			if (template?.currentVersionId) {
+				if (boundVersion?.id === template.currentVersionId) {
+					currentVersion = boundVersion;
+				} else {
+					currentVersion =
+						extraById.get(template.currentVersionId) ?? null;
+				}
+			}
+			const binding = buildSchemaBinding(
+				template,
+				boundVersion,
+				currentVersion,
+			);
+			const formData = pickV2QuestionnaireRegistryFormData(
+				migrateV2AnketaFormData(row.formData ?? {}),
+				formPaths,
+			);
+			return mapV2QuestionnaireToDto(
+				{ ...row, template: template ?? undefined },
+				binding,
+				formData,
+			);
+		});
 	}
 
 	private async loadWithRelations(id: string): Promise<V2QuestionnaireEntity> {

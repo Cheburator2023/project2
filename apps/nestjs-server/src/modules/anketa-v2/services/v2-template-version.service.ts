@@ -17,6 +17,7 @@ import type {
 import { V2FactorySnapshotService } from "./v2-factory-snapshot.service";
 import { V2TypicalWorkSeedService } from "./v2-typical-work.service";
 import { V2TypicalWorkWriteService } from "./v2-typical-work-write.service";
+import { V2QuestionnaireRegistryReadCache } from "./v2-questionnaire-registry-read-cache.service";
 import {
 	type V2TemplateStatus,
 	prepareFactorySnapshotWithoutTypicalWorks,
@@ -53,6 +54,7 @@ export class V2TemplateVersionService {
 		private readonly factorySnapshotService: V2FactorySnapshotService,
 		private readonly typicalWorkSeedService: V2TypicalWorkSeedService,
 		private readonly typicalWorkWriteService: V2TypicalWorkWriteService,
+		private readonly registryReadCache: V2QuestionnaireRegistryReadCache,
 	) {}
 
 	async findAll(templateId: string): Promise<V2TemplateVersionEntity[]> {
@@ -79,11 +81,13 @@ export class V2TemplateVersionService {
 		if (!versionId) {
 			this.calculationSnapshots.clear();
 			this.calculationSnapshotOrder.length = 0;
+			this.registryReadCache.invalidateConfig();
 			return;
 		}
 		this.calculationSnapshots.delete(versionId);
 		const index = this.calculationSnapshotOrder.indexOf(versionId);
 		if (index >= 0) this.calculationSnapshotOrder.splice(index, 1);
+		this.registryReadCache.invalidateConfig();
 	}
 
 	/**

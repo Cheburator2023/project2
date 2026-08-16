@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { V2TemplateEntity } from "../entities/v2-template.entity";
@@ -13,7 +13,7 @@ export const V2_FACTORY_BOOTSTRAP_TEMPLATE_CODE = "factory-default";
  * из committed snapshot + публикует + черновик для редактора.
  */
 @Injectable()
-export class V2TemplateSeedService implements OnModuleInit {
+export class V2TemplateSeedService {
 	private readonly logger = new Logger(V2TemplateSeedService.name);
 
 	constructor(
@@ -22,10 +22,6 @@ export class V2TemplateSeedService implements OnModuleInit {
 		private readonly templateService: V2TemplateService,
 		private readonly versionService: V2TemplateVersionService,
 	) {}
-
-	async onModuleInit(): Promise<void> {
-		await this.ensureFactoryTemplateIfEmpty();
-	}
 
 	async ensureFactoryTemplateIfEmpty(): Promise<void> {
 		const count = await this.templateRepository.count();

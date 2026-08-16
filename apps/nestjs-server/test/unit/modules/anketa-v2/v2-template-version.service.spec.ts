@@ -58,6 +58,7 @@ describe("V2TemplateVersionService.createDraftFromDefault", () => {
 			factorySnapshotService as never,
 			typicalWorkSeedService as never,
 			typicalWorkWriteService as never,
+			{ invalidateConfig: jest.fn() } as never,
 		);
 
 		const resultPromise = service.createDraftFromDefault("template-1", "user-1");
@@ -159,6 +160,7 @@ describe("V2TemplateVersionService.update", () => {
 			{} as never,
 			{} as never,
 			{} as never,
+			{ invalidateConfig: jest.fn() } as never,
 		);
 
 		await service.update("version-1", {}, "user-1");
@@ -193,6 +195,7 @@ describe("V2TemplateVersionService.findOneForCalculation", () => {
 			{} as never,
 			{} as never,
 			{} as never,
+			{ invalidateConfig: jest.fn() } as never,
 		);
 
 		const first = await service.findOneForCalculation("version-1");

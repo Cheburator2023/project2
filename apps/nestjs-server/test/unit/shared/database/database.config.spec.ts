@@ -28,6 +28,9 @@ describe("database.config", () => {
 		expect(opts.host).toBe("h");
 		expect(opts.schema).toBe("sumd");
 		expect(opts.extra.options).toBe("-c search_path=sumd,public");
+		expect(opts.extra.connectionTimeoutMillis).toBe(5000);
+		expect(opts.retryAttempts).toBe(3);
+		expect(opts.verboseRetryLog).toBe(true);
 		expect(opts.synchronize).toBe(true);
 		expect(opts.autoLoadEntities).toBe(true);
 	});
@@ -42,6 +45,23 @@ describe("database.config", () => {
 		const opts: any = getTypeOrmModuleOptions(new ConfigService({}));
 		expect(opts.host).toBe("localhost");
 		expect(opts.port).toBe(5432);
+		expect(opts.extra.connectionTimeoutMillis).toBe(5000);
+		expect(opts.extra.options).toBeUndefined();
+	});
+
+	it("keeps a finite Postgres connect timeout so a blackholed DB_HOST cannot hang forever", () => {
+		const opts: any = getTypeOrmModuleOptions(buildCfg());
+		expect(opts.extra.connectionTimeoutMillis).toBe(5000);
+	});
+
+	it("still logs TypeORM errors when DB_LOGGING is off so connect failures are visible in k8s", () => {
+		const opts: any = getTypeOrmModuleOptions(buildCfg({ DB_LOGGING: false }));
+		expect(opts.logging).toEqual(["error", "warn", "migration"]);
+	});
+
+	it("logs all SQL when DB_LOGGING is true", () => {
+		const opts: any = getTypeOrmModuleOptions(buildCfg({ DB_LOGGING: true }));
+		expect(opts.logging).toBe(true);
 	});
 
 	it("disables synchronize in production even when DB_SYNCHRONIZE=true", () => {

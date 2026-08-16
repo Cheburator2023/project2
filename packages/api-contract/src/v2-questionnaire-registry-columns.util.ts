@@ -53,11 +53,15 @@ export type V2RegistryExportColumn = {
 	valueGetter: (row: V2QuestionnaireDto) => unknown;
 };
 
+export type V2RegistryFormDataRow = {
+	formData?: Record<string, unknown>;
+};
+
 export type V2RegistrySchemaColumnOptions = {
 	/** Сколько элементов массива разворачивать в колонки реестра (fallback без данных). */
 	arrayMaxItems?: number;
 	/** Строки реестра — для авто-индексов массивов и подписей групп. */
-	rows?: V2QuestionnaireDto[];
+	rows?: V2RegistryFormDataRow[];
 	/** Явные индексы массивов по dot-пути (например `summary.detailedCalculation`). */
 	arrayIndicesByPath?: Record<string, number[]>;
 	/** Подписи групп массивов: путь → индекс → заголовок. */
@@ -334,7 +338,7 @@ function arrayItemHasData(item: unknown): boolean {
 
 /** Индексы элементов массива, встречающиеся в данных анкет. */
 export function collectRegistryArrayIndicesFromRows(
-	rows: V2QuestionnaireDto[],
+	rows: V2RegistryFormDataRow[],
 	dotPath: string,
 ): number[] {
 	const indices = new Set<number>();
@@ -350,7 +354,7 @@ export function collectRegistryArrayIndicesFromRows(
 
 /** Подписи групп массива (stageName, streamName и т.п.) из данных анкет. */
 export function collectRegistryArrayGroupLabelsFromRows(
-	rows: V2QuestionnaireDto[],
+	rows: V2RegistryFormDataRow[],
 	dotPath: string,
 	nameField: string,
 ): Record<number, string> {
@@ -391,7 +395,7 @@ function collectArrayPathsInFormData(
 }
 
 export function deriveRegistryColumnOptionsFromRows(
-	rows: V2QuestionnaireDto[],
+	rows: V2RegistryFormDataRow[],
 ): V2RegistrySchemaColumnOptions {
 	const arrayIndicesByPath: Record<string, number[]> = {};
 	const arrayGroupLabelsByPath: Record<string, Record<number, string>> = {};
@@ -1067,7 +1071,7 @@ export function buildV2QuestionnaireRegistryConfig(
 		jsonSchema: Record<string, unknown>;
 		uiSchema: Record<string, unknown>;
 	}>,
-	rows: V2QuestionnaireDto[] = [],
+	rows: V2RegistryFormDataRow[] = [],
 ): V2QuestionnaireRegistryConfigDto {
 	const columnOptions = deriveRegistryColumnOptionsFromRows(rows);
 	const trees = schemas.map(({ jsonSchema, uiSchema }) =>

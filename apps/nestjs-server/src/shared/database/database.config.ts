@@ -1,7 +1,10 @@
 import { ConfigService } from "@nestjs/config";
 import { TypeOrmModuleOptions } from "@nestjs/typeorm";
 import { join } from "path";
-import { DataSourceOptions } from "typeorm";
+import { DataSourceOptions, LoggerOptions } from "typeorm";
+
+/** pg default 0 = wait forever; blackholed DB_HOST would hang NestFactory.create. */
+export const DB_CONNECT_TIMEOUT_MS = 5000;
 
 interface DatabaseConfig {
 	host: string;
@@ -11,6 +14,33 @@ interface DatabaseConfig {
 	database: string;
 	schema?: string;
 }
+
+const buildPostgresExtra = (schema?: string) => ({
+	connectionTimeoutMillis: DB_CONNECT_TIMEOUT_MS,
+	...(schema ? { options: `-c search_path=${schema},public` } : {}),
+});
+
+const resolveTypeOrmLogging = (configService: ConfigService): LoggerOptions => {
+	if (resolveDbLogging(configService)) {
+		return true;
+	}
+	return ["error", "warn", "migration"];
+};
+
+const logTypeOrmConnectTarget = (
+	dbConfig: DatabaseConfig,
+	migrationsRun: boolean,
+): void => {
+	if (process.env.JEST_WORKER_ID) {
+		return;
+	}
+	console.log(
+		`[startup] TypeORM connect ${dbConfig.host}:${dbConfig.port}/${dbConfig.database}` +
+			` schema=${dbConfig.schema || "-"}` +
+			` timeout=${DB_CONNECT_TIMEOUT_MS}ms` +
+			` migrationsRun=${migrationsRun}`,
+	);
+};
 
 const getDatabaseConfig = (configService: ConfigService): DatabaseConfig => {
 	const schema = configService.get<string>("DB_SCHEMA");
@@ -59,22 +89,23 @@ export const getTypeOrmModuleOptions = (
 ): TypeOrmModuleOptions => {
 	const dbConfig = getDatabaseConfig(configService);
 	const { schema, ...connectionConfig } = dbConfig;
+	const migrationsRun = readEnvFlag(configService, "DB_MIGRATIONS_RUN", true);
+	logTypeOrmConnectTarget(dbConfig, migrationsRun);
 
 	return {
 		type: "postgres",
 		...connectionConfig,
-		...(schema
-			? {
-					schema,
-					extra: { options: `-c search_path=${schema},public` },
-				}
-			: {}),
+		...(schema ? { schema } : {}),
+		extra: buildPostgresExtra(schema),
 		entities: [join(__dirname, "../../**/*.entity{.ts,.js}")],
 		migrations: [join(__dirname, "../../migrations/*{.ts,.js}")],
-		migrationsRun: readEnvFlag(configService, "DB_MIGRATIONS_RUN", true),
+		migrationsRun,
 		synchronize: resolveSynchronize(configService),
-		logging: resolveDbLogging(configService),
+		logging: resolveTypeOrmLogging(configService),
 		autoLoadEntities: readEnvFlag(configService, "AUTO_LOAD_ENTITIES", false),
+		retryAttempts: 3,
+		retryDelay: 2000,
+		verboseRetryLog: true,
 	};
 };
 
@@ -83,20 +114,17 @@ export const getDataSourceOptions = (
 ): DataSourceOptions => {
 	const dbConfig = getDatabaseConfig(configService);
 	const { schema, ...connectionConfig } = dbConfig;
+	const migrationsRun = readEnvFlag(configService, "DB_MIGRATIONS_RUN", true);
 
 	return {
 		type: "postgres",
 		...connectionConfig,
-		...(schema
-			? {
-					schema,
-					extra: { options: `-c search_path=${schema},public` },
-				}
-			: {}),
+		...(schema ? { schema } : {}),
+		extra: buildPostgresExtra(schema),
 		entities: [join(__dirname, "../../**/*.entity{.ts,.js}")],
 		migrations: [join(__dirname, "../../migrations/*{.ts,.js}")],
-		migrationsRun: readEnvFlag(configService, "DB_MIGRATIONS_RUN", true),
+		migrationsRun,
 		synchronize: resolveSynchronize(configService),
-		logging: resolveDbLogging(configService),
+		logging: resolveTypeOrmLogging(configService),
 	};
 };

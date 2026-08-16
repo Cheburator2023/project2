@@ -4,7 +4,6 @@ import {
 	Injectable,
 	Logger,
 	NotFoundException,
-	OnModuleInit,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import {
@@ -28,7 +27,7 @@ export type V2StreamWriteInput = {
 };
 
 @Injectable()
-export class V2StreamCatalogService implements OnModuleInit {
+export class V2StreamCatalogService {
 	private readonly logger = new Logger(V2StreamCatalogService.name);
 	private cache: V2ImplementationStreamCatalogEntry[] | null = null;
 
@@ -37,7 +36,7 @@ export class V2StreamCatalogService implements OnModuleInit {
 		private readonly streamRepository: Repository<V2StreamEntity>,
 	) {}
 
-	async onModuleInit(): Promise<void> {
+	async runStartupSeed(): Promise<void> {
 		try {
 			await this.ensureFactoryStreams();
 			await this.refresh();

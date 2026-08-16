@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { V2_ALL_DEFAULT_DICTIONARIES } from "../constants/v2-default-dictionary-codes";
@@ -18,7 +18,7 @@ import { V2TemplateVersionEntity } from "../entities/v2-template-version.entity"
 import { collectAllDictionaryCodesInUse } from "../utils/v2-schema-dictionary.util";
 
 @Injectable()
-export class V2DictionarySeedService implements OnModuleInit {
+export class V2DictionarySeedService {
 	private readonly logger = new Logger(V2DictionarySeedService.name);
 
 	constructor(
@@ -30,7 +30,7 @@ export class V2DictionarySeedService implements OnModuleInit {
 		private readonly versionRepository: Repository<V2TemplateVersionEntity>,
 	) {}
 
-	async onModuleInit(): Promise<void> {
+	async runStartupSeed(): Promise<void> {
 		await this.removeSupersededDuplicates();
 		await this.removeObsoleteFactoryDictionaries();
 		await this.ensureDefaultDictionaries();

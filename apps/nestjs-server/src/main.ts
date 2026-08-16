@@ -1,20 +1,39 @@
 import { BadRequestException, ValidationPipe } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import * as express from "express";
 import { AppModule } from "./app.module";
+import { runPostListenSeed } from "./shared/bootstrap/run-post-listen-seed";
+import {
+	envFromConfigService,
+	logStartupDiagnostics,
+	startupLog,
+} from "./shared/bootstrap/startup-diagnostics";
 import { logger } from "./shared/logger/logger.config";
 import { CustomLogger } from "./shared/services/logger.service";
 import { RateLimiterMiddleware } from "./shared/middleware/rate-limiter.middleware";
 
 async function bootstrap() {
+    startupLog(`process started pid=${process.pid}`);
+    logStartupDiagnostics("container env (before NestFactory.create)");
+
     const customLogger = new CustomLogger();
 
+    startupLog(
+        "NestFactory.create starting — blocks on Postgres connect + migrations",
+    );
+    const createStarted = Date.now();
     const app = await NestFactory.create(AppModule, {
         bodyParser: true,
-        bufferLogs: true,
+        bufferLogs: false,
         logger: customLogger,
     });
+    startupLog(`NestFactory.create done in ${Date.now() - createStarted}ms`);
+    logStartupDiagnostics(
+        "resolved config (after ConfigModule)",
+        envFromConfigService(app.get(ConfigService)),
+    );
 
 	const rateLimiter = app.get(RateLimiterMiddleware);
     app.use(rateLimiter.use.bind(rateLimiter));
@@ -85,10 +104,20 @@ async function bootstrap() {
 	});
 
     const port = process.env.PORT || 3000;
+    startupLog(`listen() on port ${port}`);
     const server = await app.listen(port);
     // Заводская схема и bulk-reconcile могут выполняться несколько минут — не обрываем по HTTP-таймауту Node.
     if (typeof server.setTimeout === "function") {
         server.setTimeout(0);
+    }
+    startupLog(`port ${port} is open`);
+    try {
+        await runPostListenSeed(app);
+    } catch (error) {
+        startupLog("post-listen seed failed (server stays up)", {
+            message: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+        });
     }
     logger.log(`🔄 Application is running on port ${port}`);
 
@@ -104,4 +133,10 @@ async function bootstrap() {
         process.exit(0);
     });
 }
-bootstrap();
+bootstrap().catch((error) => {
+    console.error(
+        "[startup] fatal",
+        error instanceof Error ? error.stack || error.message : error,
+    );
+    process.exit(1);
+});
