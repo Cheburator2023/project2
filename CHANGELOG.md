@@ -1,5 +1,13 @@
 # Semantic Versioning Changelog
 
+# [1.63.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.62.0...v1.63.0) (2026-08-16)
+
+
+### Features
+
+* add load testing scripts for v2 calculate ([d9d88bd](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/d9d88bd0c15dad548d4018714d145df8bc7dd87f))
+* implement v2 questionnaire export functionality ([f055447](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/f055447f8cd2e8f93852b4fd5b8eaf83a208cfc6))
+
 # [1.62.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.61.0...v1.62.0) (2026-08-13)
 
 
