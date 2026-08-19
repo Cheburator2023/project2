@@ -14,4 +14,27 @@ describe("sanitizeWsLogArg", () => {
 			nested: { Authorization: "[redacted]" },
 		});
 	});
+
+	it("does not recurse forever on Socket.IO packets that point back at the socket", () => {
+		const packet: { type: string; socket?: unknown } = { type: "message" };
+		const socket = { packet, nsp: "/" };
+		packet.socket = socket;
+
+		expect(sanitizeWsLogArg(packet)).toEqual({
+			type: "message",
+			socket: {
+				packet: "[Circular]",
+				nsp: "/",
+			},
+		});
+	});
+
+	it("summarizes Error without instanceof, which overflows on some engine objects", () => {
+		const err = new Error("transport close");
+		expect(sanitizeWsLogArg(err)).toEqual({
+			name: "Error",
+			message: "transport close",
+			stack: err.stack,
+		});
+	});
 });

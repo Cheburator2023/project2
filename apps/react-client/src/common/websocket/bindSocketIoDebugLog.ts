@@ -45,29 +45,119 @@ type EngineLike = {
 
 const boundEngines = new WeakSet<object>();
 
-export function sanitizeWsLogArg(value: unknown): unknown {
-	if (value instanceof Error) {
-		return {
-			name: value.name,
-			message: value.message,
-			stack: value.stack,
-		};
+const MAX_LOG_DEPTH = 5;
+const MAX_LOG_KEYS = 40;
+const MAX_LOG_ARRAY = 50;
+const SKIP_CTOR =
+	/^(Socket|Manager|Engine|Transport|Polling|WS|WebSocket|XMLHttpRequest|Emitter|Window|Document|HTML|SVG|Node|EventTarget|Event)/;
+
+function ctorName(value: object): string {
+	try {
+		return value.constructor?.name || "Object";
+	} catch {
+		return "Object";
 	}
-	if (typeof value !== "object" || value === null) return value;
-	if (Array.isArray(value)) return value.map(sanitizeWsLogArg);
+}
+
+function isErrorLike(value: object): boolean {
+	try {
+		const tag = Object.prototype.toString.call(value);
+		if (tag === "[object Error]" || tag === "[object DOMException]") {
+			return true;
+		}
+	} catch {
+		return false;
+	}
+	const rec = value as { message?: unknown; stack?: unknown };
+	return typeof rec.message === "string" && typeof rec.stack === "string";
+}
+
+function sanitizeWsLogArgDeep(
+	value: unknown,
+	seen: WeakSet<object>,
+	depth: number,
+): unknown {
+	if (value === null || value === undefined) return value;
+	const valueType = typeof value;
+	if (
+		valueType === "string" ||
+		valueType === "number" ||
+		valueType === "boolean" ||
+		valueType === "bigint"
+	) {
+		return value;
+	}
+	if (valueType === "function") {
+		return `[Function ${(value as { name?: string }).name || "anonymous"}]`;
+	}
+	if (valueType !== "object") return String(value);
+
+	const obj = value as object;
+	if (seen.has(obj)) return "[Circular]";
+	if (depth >= MAX_LOG_DEPTH) return `[${ctorName(obj)}]`;
+
+	if (isErrorLike(obj)) {
+		const err = obj as { name?: string; message?: string; stack?: string };
+		return { name: err.name, message: err.message, stack: err.stack };
+	}
+
+	try {
+		if (Object.prototype.toString.call(obj) === "[object Date]") {
+			return (obj as Date).toISOString();
+		}
+	} catch {
+		return `[${ctorName(obj)}]`;
+	}
+
+	if (SKIP_CTOR.test(ctorName(obj)) && !Array.isArray(obj)) {
+		return `[${ctorName(obj)}]`;
+	}
+
+	seen.add(obj);
+
+	if (Array.isArray(obj)) {
+		const sliced = obj.slice(0, MAX_LOG_ARRAY);
+		const mapped = sliced.map((item) =>
+			sanitizeWsLogArgDeep(item, seen, depth + 1),
+		);
+		if (obj.length > MAX_LOG_ARRAY) {
+			mapped.push(`[+${obj.length - MAX_LOG_ARRAY} more]`);
+		}
+		return mapped;
+	}
+
 	const out: Record<string, unknown> = {};
-	for (const [key, nested] of Object.entries(value as Record<string, unknown>)) {
+	let entries: [string, unknown][];
+	try {
+		entries = Object.entries(obj as Record<string, unknown>);
+	} catch {
+		return `[${ctorName(obj)}]`;
+	}
+	const limited = entries.slice(0, MAX_LOG_KEYS);
+	for (const [key, nested] of limited) {
+		if (typeof nested === "function") continue;
 		out[key] = REDACT_KEY.test(key)
 			? nested
 				? "[redacted]"
 				: nested
-			: sanitizeWsLogArg(nested);
+			: sanitizeWsLogArgDeep(nested, seen, depth + 1);
+	}
+	if (entries.length > MAX_LOG_KEYS) {
+		out["…"] = `+${entries.length - MAX_LOG_KEYS} keys`;
 	}
 	return out;
 }
 
+export function sanitizeWsLogArg(value: unknown): unknown {
+	return sanitizeWsLogArgDeep(value, new WeakSet(), 0);
+}
+
 function logWs(namespace: string, phase: string, ...args: unknown[]): void {
-	console.log(`[ws:${namespace}]`, phase, ...args.map(sanitizeWsLogArg));
+	try {
+		console.log(`[ws:${namespace}]`, phase, ...args.map(sanitizeWsLogArg));
+	} catch (error) {
+		console.log(`[ws:${namespace}]`, phase, "[unserializable]", error);
+	}
 }
 
 function transportName(client: Socket): string | undefined {
@@ -97,9 +187,7 @@ export function logSocketIoAction(
 export function bindSocketIoDebugLog(client: Socket, namespace: string): void {
 	logWs(namespace, "bind", {
 		id: client.id ?? null,
-		nsp: client.nsp,
 		connected: client.connected,
-		uri: client.io.uri,
 		path: client.io.opts.path,
 		transports: client.io.opts.transports,
 	});
