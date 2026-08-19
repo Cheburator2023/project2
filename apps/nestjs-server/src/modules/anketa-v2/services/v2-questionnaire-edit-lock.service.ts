@@ -8,9 +8,26 @@ import {
 	V2_QUESTIONNAIRE_EDIT_LOCK_TTL_MS,
 	type V2QuestionnaireEditLockDto,
 } from "@smart-anketa/api-contract";
-import { In, Repository } from "typeorm";
+import { In, QueryFailedError, Repository } from "typeorm";
 import { V2QuestionnaireEditLockEntity } from "../entities/v2-questionnaire-edit-lock.entity";
 import { V2QuestionnaireEntity } from "../entities/v2-questionnaire.entity";
+
+function wait(ms: number): Promise<void> {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isPostgresForeignKeyViolation(error: unknown): boolean {
+	if (error instanceof QueryFailedError) {
+		const driver = error.driverError as { code?: string } | undefined;
+		return driver?.code === "23503";
+	}
+	return (
+		typeof error === "object" &&
+		error !== null &&
+		"code" in error &&
+		(error as { code?: string }).code === "23503"
+	);
+}
 
 export type V2QuestionnaireEditLockHolder = {
 	label: string;
@@ -55,7 +72,6 @@ export class V2QuestionnaireEditLockService {
 		holder: V2QuestionnaireEditLockHolder,
 		socketId?: string,
 	): Promise<V2QuestionnaireEditLockDto> {
-		await this.ensureQuestionnaireExists(questionnaireId);
 		const label = holder.label.trim();
 		if (!label) {
 			throw new ConflictException("Укажите, кто редактирует анкету");
@@ -86,7 +102,12 @@ export class V2QuestionnaireEditLockService {
 		entity.lockedByLabel = label;
 		entity.lockedByUserId = holder.userId ?? null;
 		entity.expiresAt = expiresAt;
-		await this.lockRepository.save(entity);
+		/**
+		 * Не делаем SELECT анкеты до INSERT: на контуре read-replica
+		 * часто не видит только что созданную строку, а клиент уже открыл форму по HTTP.
+		 * FK на v2_questionnaire — достаточная проверка; 23503 ретраим.
+		 */
+		await this.saveLockRow(entity);
 		if (socketId) this.trackSocket(socketId, questionnaireId);
 		return this.toDto(entity);
 	}
@@ -188,6 +209,25 @@ export class V2QuestionnaireEditLockService {
 			.delete()
 			.where("expires_at <= :now", { now: new Date() })
 			.execute();
+	}
+
+	private async saveLockRow(
+		entity: V2QuestionnaireEditLockEntity,
+	): Promise<V2QuestionnaireEditLockEntity> {
+		const delaysMs = [0, 100, 250, 500];
+		let lastError: unknown;
+		for (const delayMs of delaysMs) {
+			if (delayMs) await wait(delayMs);
+			try {
+				return await this.lockRepository.save(entity);
+			} catch (error) {
+				lastError = error;
+				if (!isPostgresForeignKeyViolation(error)) throw error;
+			}
+		}
+		throw lastError instanceof NotFoundException
+			? lastError
+			: new NotFoundException("Анкета не найдена");
 	}
 
 	private async ensureQuestionnaireExists(questionnaireId: string) {

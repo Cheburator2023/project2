@@ -1,5 +1,6 @@
 import {
 	ConflictException,
+	NotFoundException,
 	OnModuleDestroy,
 	OnModuleInit,
 } from "@nestjs/common";
@@ -172,11 +173,22 @@ export class V2QuestionnaireEditLockGateway
 			this.emitChanged({ type: "acquired", lock });
 			return { ok: true, lock };
 		} catch (error) {
+			if (error instanceof NotFoundException) {
+				return {
+					ok: false,
+					message:
+						typeof error.message === "string"
+							? error.message
+							: "Анкета не найдена",
+					reason: "not_found",
+				};
+			}
 			const denied = conflictLockPayload(error);
 			return {
 				ok: false,
 				message: denied.message,
 				lock: denied.lock,
+				reason: denied.lock ? "lock" : undefined,
 			};
 		}
 	}

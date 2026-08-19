@@ -52,6 +52,8 @@ export type V2EditLockJoinAck =
 			ok: false;
 			message: string;
 			lock?: V2QuestionnaireEditLockDto;
+			/** lock = чужой holder; not_found = анкета ещё не видна реплике / нет строки. */
+			reason?: "lock" | "not_found";
 	  };
 
 /** Состав реестра v2: клиент один раз подтягивает список, без интервала. */

@@ -3,7 +3,6 @@ import type { V2QuestionnaireEditLockDto } from "@smart-anketa/api-contract";
 import {
 	V2_EDIT_LOCK_WS_EVENTS,
 	V2_QUESTIONNAIRE_EDIT_IDLE_TIMEOUT_MS,
-	V2_QUESTIONNAIRE_EDIT_LOCK_TTL_MS,
 	type V2EditLockChangedPayload,
 } from "@smart-anketa/api-contract";
 import { useQuestionnaireEditLocksStore } from "../stores/questionnaireEditLocksStore";
@@ -13,7 +12,10 @@ import {
 	joinV2QuestionnaireEditLock,
 	leaveV2QuestionnaireEditLock,
 } from "../utils/v2EditLockSocket";
-import { isOwnV2QuestionnaireEditLock } from "../utils/isOwnV2QuestionnaireEditLock";
+import {
+	isForeignV2EditLockJoinDenial,
+	isOwnV2QuestionnaireEditLock,
+} from "../utils/isOwnV2QuestionnaireEditLock";
 import { useUserStore } from "@react-client/common/store/userStore";
 
 const IDLE_CHECK_MS = 15_000;
@@ -69,33 +71,52 @@ export function useQuestionnaireEditLock({
 			heldRef.current = false;
 			setHolding(false);
 			setLockError(message);
-			if (lock) {
-				setForeignLock(lock);
-				upsertLock(lock);
+			if (!lock) {
+				setForeignLock(null);
 				return;
 			}
-			if (!questionnaireId) return;
-			setForeignLock({
-				questionnaireId,
-				lockedByLabel: "другой пользователь",
-				lockedByUserId: null,
-				expiresAt: new Date(
-					Date.now() + V2_QUESTIONNAIRE_EDIT_LOCK_TTL_MS,
-				).toISOString(),
-			});
+			setForeignLock(lock);
+			upsertLock(lock);
 		},
-		[questionnaireId, upsertLock],
+		[upsertLock],
 	);
 
 	const tryAcquire = useCallback(async () => {
 		if (!questionnaireId || !enabled) return false;
 		try {
-			const ack = await joinV2QuestionnaireEditLock(
+			let ack = await joinV2QuestionnaireEditLock(
 				questionnaireId,
 				labelRef.current,
 			);
+			for (let attempt = 0; attempt < 4; attempt += 1) {
+				if (
+					!ack ||
+					ack.ok ||
+					ack.lock ||
+					(ack.reason !== "not_found" &&
+						ack.message !== "Анкета не найдена")
+				) {
+					break;
+				}
+				await new Promise((resolve) => {
+					window.setTimeout(resolve, 200 * (attempt + 1));
+				});
+				ack = await joinV2QuestionnaireEditLock(
+					questionnaireId,
+					labelRef.current,
+				);
+			}
 			if (!ack?.ok) {
-				applyDenied(ack?.lock, ack?.message ?? "Анкета сейчас редактируется");
+				if (ack && isForeignV2EditLockJoinDenial(ack)) {
+					applyDenied(ack.lock, ack.message);
+					return false;
+				}
+				heldRef.current = false;
+				setHolding(false);
+				setForeignLock(null);
+				setLockError(
+					ack?.message ?? "Не удалось захватить анкету",
+				);
 				return false;
 			}
 			heldRef.current = true;

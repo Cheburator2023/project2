@@ -51,7 +51,7 @@ function createService() {
 		lockRepository as never,
 		questionnaireRepository as never,
 	);
-	return { service, rows, lockRepository };
+	return { service, rows, lockRepository, questionnaireRepository };
 }
 
 describe("V2QuestionnaireEditLockService socket occupancy", () => {
@@ -122,5 +122,17 @@ describe("V2QuestionnaireEditLockService socket occupancy", () => {
 		await service.bumpExpiryForTracked();
 
 		expect(lockRepository.update).toHaveBeenCalledTimes(1);
+	});
+
+	it("acquires occupancy even if a replica read would miss a freshly inserted questionnaire", async () => {
+		const { service, questionnaireRepository } = createService();
+		questionnaireRepository.findOne.mockResolvedValue(null);
+
+		await expect(
+			service.acquire(Q_ID, LEAD, "socket-lead"),
+		).resolves.toMatchObject({
+			questionnaireId: Q_ID,
+			lockedByLabel: "test_ds_lead",
+		});
 	});
 });
