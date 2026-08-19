@@ -5,6 +5,7 @@ import {
 	type V2EditLockJoinAck,
 	type V2EditLockSnapshotPayload,
 	type V2QuestionnaireExportJobStatusDto,
+	type V2QuestionnaireRegistrySyncPayload,
 	type V2TemplateReadyPayload,
 } from "@smart-anketa/api-contract";
 import {
@@ -36,6 +37,9 @@ const exportJobListeners = new Set<
 >();
 const templateReadyListeners = new Set<
 	(payload: V2TemplateReadyPayload) => void
+>();
+const registrySyncListeners = new Set<
+	(payload: V2QuestionnaireRegistrySyncPayload) => void
 >();
 
 function resolveApiBaseUrl(): string {
@@ -69,6 +73,10 @@ function applyTemplateReady(payload: V2TemplateReadyPayload): void {
 	for (const listener of templateReadyListeners) listener(payload);
 }
 
+function applyRegistrySync(payload: V2QuestionnaireRegistrySyncPayload): void {
+	for (const listener of registrySyncListeners) listener(payload);
+}
+
 function applySnapshot(payload: V2EditLockSnapshotPayload): void {
 	const store = useQuestionnaireEditLocksStore.getState();
 	store.setLocks(payload.locks ?? []);
@@ -96,6 +104,7 @@ function bindSocketListeners(next: Socket): void {
 	next.on(V2_EDIT_LOCK_WS_EVENTS.changed, applyChanged);
 	next.on(V2_EDIT_LOCK_WS_EVENTS.exportJob, applyExportJob);
 	next.on(V2_EDIT_LOCK_WS_EVENTS.templateReady, applyTemplateReady);
+	next.on(V2_EDIT_LOCK_WS_EVENTS.registrySync, applyRegistrySync);
 }
 
 function asJoinAck(raw: unknown): V2EditLockJoinAck {
@@ -391,4 +400,13 @@ export async function waitForV2TemplateReady(
 			reject(error);
 		});
 	});
+}
+
+export function subscribeV2QuestionnaireRegistrySync(
+	listener: (payload: V2QuestionnaireRegistrySyncPayload) => void,
+): () => void {
+	registrySyncListeners.add(listener);
+	return () => {
+		registrySyncListeners.delete(listener);
+	};
 }

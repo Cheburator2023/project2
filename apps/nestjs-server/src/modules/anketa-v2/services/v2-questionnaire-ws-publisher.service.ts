@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import type {
 	V2QuestionnaireExportJobStatusDto,
 	V2QuestionnaireExportLockDto,
+	V2QuestionnaireRegistrySyncPayload,
 	V2TemplateReadyPayload,
 } from "@smart-anketa/api-contract";
 
@@ -20,6 +21,10 @@ export class V2QuestionnaireWsPublisher {
 	private emitTemplateReady:
 		| ((payload: V2TemplateReadyPayload) => void)
 		| null = null;
+	private emitRegistrySync:
+		| ((payload: V2QuestionnaireRegistrySyncPayload) => void)
+		| null = null;
+	private registryTimer: ReturnType<typeof setTimeout> | null = null;
 	private lastBusy: boolean | undefined;
 
 	attachExportLock(
@@ -40,6 +45,12 @@ export class V2QuestionnaireWsPublisher {
 		this.emitTemplateReady = emit;
 	}
 
+	attachRegistrySync(
+		emit: (payload: V2QuestionnaireRegistrySyncPayload) => void,
+	): void {
+		this.emitRegistrySync = emit;
+	}
+
 	publishExportLock(lock: V2QuestionnaireExportLockDto): void {
 		if (this.lastBusy === lock.busy) return;
 		this.lastBusy = lock.busy;
@@ -52,5 +63,14 @@ export class V2QuestionnaireWsPublisher {
 
 	publishTemplateReady(payload: V2TemplateReadyPayload): void {
 		this.emitTemplateReady?.(payload);
+	}
+
+	/** Состав реестра (create/copy/delete/import): один emit на пачку, не N. */
+	publishRegistrySync(): void {
+		if (this.registryTimer) clearTimeout(this.registryTimer);
+		this.registryTimer = setTimeout(() => {
+			this.registryTimer = null;
+			this.emitRegistrySync?.({ at: Date.now() });
+		}, 50);
 	}
 }

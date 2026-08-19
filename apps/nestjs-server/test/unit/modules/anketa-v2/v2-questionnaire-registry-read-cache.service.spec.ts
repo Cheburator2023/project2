@@ -33,4 +33,13 @@ describe("V2QuestionnaireRegistryReadCache", () => {
 		);
 		expect(cache.getConfig()).toBeNull();
 	});
+
+	it("notifies other browsers when the registry composition changes", () => {
+		const wsPublisher = { publishRegistrySync: jest.fn() };
+		const cache = new V2QuestionnaireRegistryReadCache(wsPublisher as never);
+
+		cache.invalidateList();
+
+		expect(wsPublisher.publishRegistrySync).toHaveBeenCalledTimes(1);
+	});
 });

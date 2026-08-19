@@ -45,11 +45,10 @@ type EngineLike = {
 
 const boundEngines = new WeakSet<object>();
 
-const MAX_LOG_DEPTH = 5;
-const MAX_LOG_KEYS = 40;
-const MAX_LOG_ARRAY = 50;
-const SKIP_CTOR =
-	/^(Socket|Manager|Engine|Transport|Polling|WS|WebSocket|XMLHttpRequest|Emitter|Window|Document|HTML|SVG|Node|EventTarget|Event)/;
+const MAX_LOG_DEPTH = 3;
+const MAX_LOG_KEYS = 24;
+const MAX_LOG_ARRAY = 20;
+const MAX_LOG_NODES = 80;
 
 function ctorName(value: object): string {
 	try {
@@ -57,6 +56,21 @@ function ctorName(value: object): string {
 	} catch {
 		return "Object";
 	}
+}
+
+function isPlainObjectOrArray(value: object): boolean {
+	if (Array.isArray(value)) return true;
+	try {
+		const proto = Object.getPrototypeOf(value);
+		return proto === Object.prototype || proto === null;
+	} catch {
+		return false;
+	}
+}
+
+function errorSummary(value: object): { name?: string; message?: string } {
+	const rec = value as { name?: string; message?: string };
+	return { name: rec.name, message: rec.message };
 }
 
 function isErrorLike(value: object): boolean {
@@ -72,11 +86,7 @@ function isErrorLike(value: object): boolean {
 	return typeof rec.message === "string" && typeof rec.stack === "string";
 }
 
-function sanitizeWsLogArgDeep(
-	value: unknown,
-	seen: WeakSet<object>,
-	depth: number,
-): unknown {
+function leafSummary(value: unknown): unknown {
 	if (value === null || value === undefined) return value;
 	const valueType = typeof value;
 	if (
@@ -91,72 +101,118 @@ function sanitizeWsLogArgDeep(
 		return `[Function ${(value as { name?: string }).name || "anonymous"}]`;
 	}
 	if (valueType !== "object") return String(value);
-
 	const obj = value as object;
-	if (seen.has(obj)) return "[Circular]";
-	if (depth >= MAX_LOG_DEPTH) return `[${ctorName(obj)}]`;
-
-	if (isErrorLike(obj)) {
-		const err = obj as { name?: string; message?: string; stack?: string };
-		return { name: err.name, message: err.message, stack: err.stack };
-	}
-
-	try {
-		if (Object.prototype.toString.call(obj) === "[object Date]") {
-			return (obj as Date).toISOString();
-		}
-	} catch {
-		return `[${ctorName(obj)}]`;
-	}
-
-	if (SKIP_CTOR.test(ctorName(obj)) && !Array.isArray(obj)) {
-		return `[${ctorName(obj)}]`;
-	}
-
-	seen.add(obj);
-
-	if (Array.isArray(obj)) {
-		const sliced = obj.slice(0, MAX_LOG_ARRAY);
-		const mapped = sliced.map((item) =>
-			sanitizeWsLogArgDeep(item, seen, depth + 1),
-		);
-		if (obj.length > MAX_LOG_ARRAY) {
-			mapped.push(`[+${obj.length - MAX_LOG_ARRAY} more]`);
-		}
-		return mapped;
-	}
-
-	const out: Record<string, unknown> = {};
-	let entries: [string, unknown][];
-	try {
-		entries = Object.entries(obj as Record<string, unknown>);
-	} catch {
-		return `[${ctorName(obj)}]`;
-	}
-	const limited = entries.slice(0, MAX_LOG_KEYS);
-	for (const [key, nested] of limited) {
-		if (typeof nested === "function") continue;
-		out[key] = REDACT_KEY.test(key)
-			? nested
-				? "[redacted]"
-				: nested
-			: sanitizeWsLogArgDeep(nested, seen, depth + 1);
-	}
-	if (entries.length > MAX_LOG_KEYS) {
-		out["…"] = `+${entries.length - MAX_LOG_KEYS} keys`;
-	}
-	return out;
+	if (isErrorLike(obj)) return errorSummary(obj);
+	return `[${ctorName(obj)}]`;
 }
 
+/** Итеративно: Engine.IO packet/socket циклические, рекурсия рвёт стек. */
 export function sanitizeWsLogArg(value: unknown): unknown {
-	return sanitizeWsLogArgDeep(value, new WeakSet(), 0);
+	try {
+		if (value === null || typeof value !== "object") return leafSummary(value);
+		const root = value as object;
+		if (!isPlainObjectOrArray(root)) {
+			return isErrorLike(root) ? errorSummary(root) : `[${ctorName(root)}]`;
+		}
+
+		const seen = new WeakMap<object, unknown>();
+		const rootClone: unknown = Array.isArray(root) ? [] : {};
+		seen.set(root, rootClone);
+		const stack: Array<{
+			src: object;
+			dst: Record<string, unknown>;
+			depth: number;
+		}> = [{ src: root, dst: rootClone as Record<string, unknown>, depth: 0 }];
+		let nodes = 0;
+
+		while (stack.length > 0 && nodes < MAX_LOG_NODES) {
+			const frame = stack.pop();
+			if (!frame) break;
+			nodes += 1;
+			if (frame.depth >= MAX_LOG_DEPTH) continue;
+
+			let keys: string[];
+			try {
+				keys = Array.isArray(frame.src)
+					? Object.keys(frame.src).slice(0, MAX_LOG_ARRAY)
+					: Object.keys(frame.src as Record<string, unknown>).slice(
+							0,
+							MAX_LOG_KEYS,
+						);
+			} catch {
+				continue;
+			}
+
+			for (const key of keys) {
+				let nested: unknown;
+				try {
+					nested = (frame.src as Record<string, unknown>)[key];
+				} catch {
+					frame.dst[key] = "[throw]";
+					continue;
+				}
+				if (typeof nested === "function") continue;
+				if (REDACT_KEY.test(key)) {
+					frame.dst[key] = nested ? "[redacted]" : nested;
+					continue;
+				}
+				if (nested === null || typeof nested !== "object") {
+					frame.dst[key] = leafSummary(nested);
+					continue;
+				}
+				const nestedObj = nested as object;
+				if (seen.has(nestedObj)) {
+					frame.dst[key] = "[Circular]";
+					continue;
+				}
+				if (!isPlainObjectOrArray(nestedObj)) {
+					frame.dst[key] = isErrorLike(nestedObj)
+						? errorSummary(nestedObj)
+						: `[${ctorName(nestedObj)}]`;
+					continue;
+				}
+				if (frame.depth + 1 >= MAX_LOG_DEPTH) {
+					frame.dst[key] = `[${ctorName(nestedObj)}]`;
+					continue;
+				}
+				const child: unknown = Array.isArray(nestedObj) ? [] : {};
+				seen.set(nestedObj, child);
+				frame.dst[key] = child;
+				stack.push({
+					src: nestedObj,
+					dst: child as Record<string, unknown>,
+					depth: frame.depth + 1,
+				});
+			}
+		}
+		return rootClone;
+	} catch {
+		return "[unserializable]";
+	}
+}
+
+function summarizeOpaqueArgs(args: unknown[]): unknown[] {
+	return args.map((arg) => {
+		if (arg === null || typeof arg !== "object") return leafSummary(arg);
+		const rec = arg as Record<string, unknown>;
+		const summary: Record<string, unknown> = { $: ctorName(arg) };
+		if ("type" in rec) summary.type = rec.type;
+		if ("nsp" in rec) summary.nsp = rec.nsp;
+		if ("data" in rec) {
+			const data = rec.data;
+			if (data === null || typeof data !== "object") summary.data = data;
+			else if (Array.isArray(data)) summary.data = `array(${data.length})`;
+			else summary.data = `[${ctorName(data)}]`;
+		}
+		return summary;
+	});
 }
 
 function logWs(namespace: string, phase: string, ...args: unknown[]): void {
 	try {
 		console.log(`[ws:${namespace}]`, phase, ...args.map(sanitizeWsLogArg));
-	} catch (error) {
-		console.log(`[ws:${namespace}]`, phase, "[unserializable]", error);
+	} catch {
+		console.log(`[ws:${namespace}]`, phase, "[unserializable]");
 	}
 }
 
@@ -170,7 +226,7 @@ function bindEngineLog(namespace: string, engine: object | undefined): void {
 	const typed = engine as EngineLike;
 	for (const event of ENGINE_EVENTS) {
 		typed.on(event, (...args: unknown[]) => {
-			logWs(namespace, `engine:${event}`, ...args);
+			logWs(namespace, `engine:${event}`, ...summarizeOpaqueArgs(args));
 		});
 	}
 }
@@ -212,7 +268,7 @@ export function bindSocketIoDebugLog(client: Socket, namespace: string): void {
 	const manager = client.io;
 	for (const event of MANAGER_EVENTS) {
 		manager.on(event, (...args: unknown[]) => {
-			logWs(namespace, `io:${event}`, ...args);
+			logWs(namespace, `io:${event}`, ...summarizeOpaqueArgs(args));
 		});
 	}
 

@@ -1,8 +1,9 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Optional } from "@nestjs/common";
 import type {
 	PaginatedV2QuestionnaireResponseDto,
 	V2QuestionnaireRegistryConfigDto,
 } from "@smart-anketa/api-contract";
+import { V2QuestionnaireWsPublisher } from "./v2-questionnaire-ws-publisher.service";
 
 export type V2RegistryConfigCacheEntry = {
 	config: V2QuestionnaireRegistryConfigDto;
@@ -28,6 +29,10 @@ export class V2QuestionnaireRegistryReadCache {
 	private generation = 0;
 	private config: V2RegistryConfigCacheEntry | null = null;
 	private readonly list = new Map<string, PaginatedV2QuestionnaireResponseDto>();
+
+	constructor(
+		@Optional() private readonly wsPublisher?: V2QuestionnaireWsPublisher,
+	) {}
 
 	getGeneration(): number {
 		return this.generation;
@@ -68,12 +73,14 @@ export class V2QuestionnaireRegistryReadCache {
 	invalidateList(): void {
 		this.generation += 1;
 		this.list.clear();
+		this.wsPublisher?.publishRegistrySync();
 	}
 
 	invalidateConfig(): void {
 		this.generation += 1;
 		this.config = null;
 		this.list.clear();
+		this.wsPublisher?.publishRegistrySync();
 	}
 
 	invalidateAll(): void {

@@ -14,6 +14,7 @@ export const V2_EDIT_LOCK_WS_EVENTS = {
 	changed: "lock:changed",
 	exportJob: "export:job",
 	templateReady: "template:ready",
+	registrySync: "registry:sync",
 } as const;
 
 export type V2EditLockJoinPayload = {
@@ -52,3 +53,8 @@ export type V2EditLockJoinAck =
 			message: string;
 			lock?: V2QuestionnaireEditLockDto;
 	  };
+
+/** Состав реестра v2: клиент один раз подтягивает список, без интервала. */
+export type V2QuestionnaireRegistrySyncPayload = {
+	at: number;
+};

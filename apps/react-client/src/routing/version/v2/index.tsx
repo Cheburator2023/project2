@@ -1,6 +1,7 @@
 import { PermissionGuard } from "@react-client/common/primitives/PermissionGuard";
 import { MainLayout } from "@react-client/common/layouts/MainLayout";
 import { useV2EditLockSocketConnection } from "@react-client/features/v2/anketaCRUD/hooks/useV2EditLockSocketConnection";
+import { useV2QuestionnaireRegistrySync } from "@react-client/features/v2/anketaCRUD/hooks/useV2QuestionnaireRegistrySync";
 import { routes } from "@react-client/routing/version/v2/routes";
 import {
 	AnketaCreatePageV2,
@@ -12,6 +13,7 @@ import {
 
 function V2AppShell({ onLogout }: { onLogout?: () => void }) {
 	useV2EditLockSocketConnection();
+	useV2QuestionnaireRegistrySync();
 	return <MainLayout onLogout={onLogout} />;
 }
 

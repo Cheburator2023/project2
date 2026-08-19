@@ -116,6 +116,9 @@ export class V2QuestionnaireEditLockGateway
 		this.wsPublisher.attachTemplateReady((payload) => {
 			this.server?.emit(V2_EDIT_LOCK_WS_EVENTS.templateReady, payload);
 		});
+		this.wsPublisher.attachRegistrySync((payload) => {
+			this.server?.emit(V2_EDIT_LOCK_WS_EVENTS.registrySync, payload);
+		});
 		this.bumpTimer = setInterval(() => {
 			void this.editLockService.bumpExpiryForTracked();
 		}, BUMP_EXPIRY_MS);

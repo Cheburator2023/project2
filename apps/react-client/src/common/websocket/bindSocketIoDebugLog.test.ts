@@ -34,7 +34,18 @@ describe("sanitizeWsLogArg", () => {
 		expect(sanitizeWsLogArg(err)).toEqual({
 			name: "Error",
 			message: "transport close",
-			stack: err.stack,
 		});
+	});
+
+	it("does not blow the call stack on a long unique object chain", () => {
+		let cursor: Record<string, unknown> = { n: 0 };
+		const root = cursor;
+		for (let i = 1; i < 5000; i += 1) {
+			const next = { n: i };
+			cursor.next = next;
+			cursor = next;
+		}
+		expect(() => sanitizeWsLogArg(root)).not.toThrow();
+		expect(sanitizeWsLogArg(root)).toMatchObject({ n: 0 });
 	});
 });
