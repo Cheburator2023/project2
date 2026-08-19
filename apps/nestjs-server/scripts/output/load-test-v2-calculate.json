@@ -1,6 +1,6 @@
 {
-  "startedAt": "2026-08-15T12:47:43.803Z",
-  "finishedAt": "2026-08-15T12:48:54.802Z",
+  "startedAt": "2026-08-19T11:34:45.259Z",
+  "finishedAt": "2026-08-19T11:35:58.057Z",
   "baseUrl": "http://127.0.0.1:3010",
   "users": 56,
   "durationSec": 60,
@@ -9,267 +9,286 @@
   "templateId": "73c76257-fcbc-42d9-bafc-f09ab69e0f0b",
   "versionId": "abf703d6-16a8-4b2c-9002-90819c35db22",
   "questionnaireIds": 50,
-  "requests": 2033,
-  "ok": 2033,
+  "requests": 1869,
+  "ok": 1869,
   "errors": 0,
   "timeouts": 0,
   "statusCounts": {
     "200": 12,
-    "201": 2021
+    "201": 1857
   },
   "latencyMs": {
-    "min": 13.80999999999949,
-    "p50": 923.0247090000012,
-    "p95": 1335.3058077999976,
-    "p99": 2327.935844880006,
-    "max": 2480.049625000007
+    "min": 60.37445799999841,
+    "p50": 1101.0928749999948,
+    "p95": 1290.3235332000008,
+    "p99": 1713.9285281200007,
+    "max": 1816.839333
   },
   "calculateLatencyMs": {
-    "min": 177.97920800000065,
-    "p50": 923.4357500000006,
-    "p95": 1336.9277079999956,
-    "p99": 2329.416949800004,
-    "max": 2480.049625000007
+    "min": 260.7460409999985,
+    "p50": 1101.8994160000002,
+    "p95": 1291.4019581999999,
+    "p99": 1714.0341480400002,
+    "max": 1816.839333
   },
-  "rps": 32.82089036558912,
+  "rps": 29.794331930887758,
   "errorRate": 0,
   "heap": {
     "samples": [
       {
         "sec": 0,
-        "rssMb": 315.7,
-        "heapUsedMb": 105.6,
-        "heapTotalMb": 231.1,
-        "externalMb": 6.4
+        "rssMb": 319.7,
+        "heapUsedMb": 149.6,
+        "heapTotalMb": 234,
+        "externalMb": 5.8
       },
       {
         "sec": 2,
-        "rssMb": 394.1,
-        "heapUsedMb": 138.3,
-        "heapTotalMb": 260.2,
-        "externalMb": 6.9
+        "rssMb": 366.1,
+        "heapUsedMb": 203.8,
+        "heapTotalMb": 272.8,
+        "externalMb": 7.5
       },
       {
         "sec": 4,
-        "rssMb": 410.3,
-        "heapUsedMb": 96.3,
-        "heapTotalMb": 284.9,
-        "externalMb": 7.4
+        "rssMb": 441.5,
+        "heapUsedMb": 104.3,
+        "heapTotalMb": 297.2,
+        "externalMb": 9.3
       },
       {
         "sec": 6,
-        "rssMb": 412.9,
-        "heapUsedMb": 174.5,
-        "heapTotalMb": 295.2,
-        "externalMb": 6.5
+        "rssMb": 443.7,
+        "heapUsedMb": 183.5,
+        "heapTotalMb": 306.7,
+        "externalMb": 7.8
       },
       {
         "sec": 8,
-        "rssMb": 412.2,
-        "heapUsedMb": 176.6,
-        "heapTotalMb": 293.7,
-        "externalMb": 7.6
+        "rssMb": 442.9,
+        "heapUsedMb": 171.2,
+        "heapTotalMb": 298.7,
+        "externalMb": 8.9
       },
       {
         "sec": 10,
-        "rssMb": 413.6,
-        "heapUsedMb": 162.7,
-        "heapTotalMb": 277.4,
-        "externalMb": 8.3
+        "rssMb": 437.9,
+        "heapUsedMb": 175.8,
+        "heapTotalMb": 303.9,
+        "externalMb": 8.5
       },
       {
         "sec": 12,
-        "rssMb": 435.8,
-        "heapUsedMb": 120.1,
-        "heapTotalMb": 291.9,
+        "rssMb": 428.4,
+        "heapUsedMb": 185.6,
+        "heapTotalMb": 301.7,
         "externalMb": 7.1
       },
       {
         "sec": 14,
-        "rssMb": 436.5,
-        "heapUsedMb": 124.9,
-        "heapTotalMb": 292.7,
-        "externalMb": 6.5
-      },
-      {
-        "sec": 16,
-        "rssMb": 436.7,
-        "heapUsedMb": 107.6,
-        "heapTotalMb": 293.7,
-        "externalMb": 7.7
-      },
-      {
-        "sec": 18,
-        "rssMb": 436.9,
-        "heapUsedMb": 191.4,
-        "heapTotalMb": 295.4,
+        "rssMb": 438,
+        "heapUsedMb": 171,
+        "heapTotalMb": 302.7,
         "externalMb": 7.8
       },
       {
+        "sec": 16,
+        "rssMb": 439.6,
+        "heapUsedMb": 102.7,
+        "heapTotalMb": 296.2,
+        "externalMb": 7.9
+      },
+      {
+        "sec": 18,
+        "rssMb": 439.8,
+        "heapUsedMb": 179,
+        "heapTotalMb": 297.4,
+        "externalMb": 7.2
+      },
+      {
         "sec": 20,
-        "rssMb": 437.3,
-        "heapUsedMb": 180,
-        "heapTotalMb": 288.2,
-        "externalMb": 7.7
+        "rssMb": 440.2,
+        "heapUsedMb": 153.6,
+        "heapTotalMb": 296.9,
+        "externalMb": 7.3
       },
       {
         "sec": 22,
-        "rssMb": 437.5,
-        "heapUsedMb": 147.7,
-        "heapTotalMb": 296.9,
-        "externalMb": 7.7
+        "rssMb": 440.7,
+        "heapUsedMb": 151,
+        "heapTotalMb": 307.2,
+        "externalMb": 7.1
       },
       {
         "sec": 24,
-        "rssMb": 448.1,
-        "heapUsedMb": 112.2,
-        "heapTotalMb": 291.7,
-        "externalMb": 7.4
+        "rssMb": 440.9,
+        "heapUsedMb": 230.5,
+        "heapTotalMb": 310.7,
+        "externalMb": 8
       },
       {
         "sec": 26,
-        "rssMb": 448.2,
-        "heapUsedMb": 163.3,
-        "heapTotalMb": 293.2,
-        "externalMb": 6.7
+        "rssMb": 447.4,
+        "heapUsedMb": 190.3,
+        "heapTotalMb": 301.2,
+        "externalMb": 8.2
       },
       {
         "sec": 28,
-        "rssMb": 449.2,
-        "heapUsedMb": 142.1,
-        "heapTotalMb": 294.4,
-        "externalMb": 6.4
+        "rssMb": 448.5,
+        "heapUsedMb": 160.1,
+        "heapTotalMb": 304.7,
+        "externalMb": 9
       },
       {
         "sec": 30,
-        "rssMb": 449.4,
-        "heapUsedMb": 171.8,
-        "heapTotalMb": 291.9,
-        "externalMb": 9.2
+        "rssMb": 448.7,
+        "heapUsedMb": 193.4,
+        "heapTotalMb": 304.7,
+        "externalMb": 9
       },
       {
         "sec": 32,
-        "rssMb": 449.4,
-        "heapUsedMb": 141.8,
-        "heapTotalMb": 293.4,
-        "externalMb": 8.4
+        "rssMb": 448.5,
+        "heapUsedMb": 171.1,
+        "heapTotalMb": 312.4,
+        "externalMb": 9
       },
       {
         "sec": 34,
-        "rssMb": 449.5,
-        "heapUsedMb": 202.9,
-        "heapTotalMb": 296.4,
+        "rssMb": 448,
+        "heapUsedMb": 164.8,
+        "heapTotalMb": 304.2,
         "externalMb": 8.3
       },
       {
         "sec": 36,
-        "rssMb": 452.8,
-        "heapUsedMb": 126.6,
-        "heapTotalMb": 292.4,
-        "externalMb": 8.8
+        "rssMb": 444.8,
+        "heapUsedMb": 152.2,
+        "heapTotalMb": 300.7,
+        "externalMb": 8.2
       },
       {
         "sec": 38,
-        "rssMb": 452.9,
-        "heapUsedMb": 106.7,
-        "heapTotalMb": 300.7,
-        "externalMb": 6.8
-      },
-      {
-        "sec": 40,
-        "rssMb": 453,
-        "heapUsedMb": 157.8,
-        "heapTotalMb": 291.2,
-        "externalMb": 6.6
-      },
-      {
-        "sec": 42,
-        "rssMb": 453,
-        "heapUsedMb": 182.4,
-        "heapTotalMb": 291.7,
-        "externalMb": 7.2
-      },
-      {
-        "sec": 44,
-        "rssMb": 453.8,
-        "heapUsedMb": 174.6,
-        "heapTotalMb": 302.9,
-        "externalMb": 7.2
-      },
-      {
-        "sec": 46,
-        "rssMb": 454.3,
-        "heapUsedMb": 120.2,
-        "heapTotalMb": 295.7,
-        "externalMb": 7.1
-      },
-      {
-        "sec": 48,
-        "rssMb": 454.4,
-        "heapUsedMb": 106.8,
-        "heapTotalMb": 285.2,
-        "externalMb": 6.7
-      },
-      {
-        "sec": 50,
-        "rssMb": 454.4,
-        "heapUsedMb": 176.5,
-        "heapTotalMb": 290.9,
-        "externalMb": 7.6
-      },
-      {
-        "sec": 52,
-        "rssMb": 455.3,
-        "heapUsedMb": 162.5,
-        "heapTotalMb": 281.4,
-        "externalMb": 7.5
-      },
-      {
-        "sec": 54,
-        "rssMb": 455.3,
-        "heapUsedMb": 156.5,
-        "heapTotalMb": 295.2,
+        "rssMb": 450.7,
+        "heapUsedMb": 144,
+        "heapTotalMb": 304.2,
         "externalMb": 7.8
       },
       {
-        "sec": 56,
-        "rssMb": 450.9,
-        "heapUsedMb": 143,
+        "sec": 40,
+        "rssMb": 450.8,
+        "heapUsedMb": 201,
         "heapTotalMb": 295.4,
+        "externalMb": 8.8
+      },
+      {
+        "sec": 42,
+        "rssMb": 450.9,
+        "heapUsedMb": 171.4,
+        "heapTotalMb": 295.9,
+        "externalMb": 8.6
+      },
+      {
+        "sec": 44,
+        "rssMb": 451.5,
+        "heapUsedMb": 116.7,
+        "heapTotalMb": 299.4,
+        "externalMb": 6.7
+      },
+      {
+        "sec": 46,
+        "rssMb": 451.5,
+        "heapUsedMb": 209.7,
+        "heapTotalMb": 304.9,
+        "externalMb": 8.4
+      },
+      {
+        "sec": 48,
+        "rssMb": 451.6,
+        "heapUsedMb": 173.1,
+        "heapTotalMb": 304.9,
+        "externalMb": 8.2
+      },
+      {
+        "sec": 50,
+        "rssMb": 451.6,
+        "heapUsedMb": 239.1,
+        "heapTotalMb": 314.2,
+        "externalMb": 8.9
+      },
+      {
+        "sec": 52,
+        "rssMb": 451.6,
+        "heapUsedMb": 159.3,
+        "heapTotalMb": 304.4,
+        "externalMb": 6.9
+      },
+      {
+        "sec": 54,
+        "rssMb": 451.7,
+        "heapUsedMb": 139.3,
+        "heapTotalMb": 298.4,
+        "externalMb": 7.5
+      },
+      {
+        "sec": 56,
+        "rssMb": 439.2,
+        "heapUsedMb": 195.1,
+        "heapTotalMb": 314.7,
         "externalMb": 6.8
       },
       {
         "sec": 58,
-        "rssMb": 417.4,
-        "heapUsedMb": 135.9,
-        "heapTotalMb": 290.9,
-        "externalMb": 6.2
+        "rssMb": 439.6,
+        "heapUsedMb": 140.1,
+        "heapTotalMb": 306.2,
+        "externalMb": 8.6
       },
       {
         "sec": 60,
-        "rssMb": 418.6,
-        "heapUsedMb": 131.7,
-        "heapTotalMb": 285.9,
-        "externalMb": 7.9
+        "rssMb": 440.2,
+        "heapUsedMb": 159.7,
+        "heapTotalMb": 312.2,
+        "externalMb": 8.1
       },
       {
         "sec": 62,
-        "rssMb": 419,
-        "heapUsedMb": 98.4,
-        "heapTotalMb": 280.9,
-        "externalMb": 6.7
+        "rssMb": 434.9,
+        "heapUsedMb": 196.3,
+        "heapTotalMb": 307.9,
+        "externalMb": 7.8
+      },
+      {
+        "sec": 63,
+        "rssMb": 434.9,
+        "heapUsedMb": 198.8,
+        "heapTotalMb": 307.9,
+        "externalMb": 7.8
       }
     ],
-    "peakHeapUsedMb": 202.9,
-    "peakRssMb": 455.3,
-    "startHeapUsedMb": 105.6,
-    "endHeapUsedMb": 98.4
+    "peakHeapUsedMb": 239.1,
+    "peakRssMb": 451.7,
+    "startHeapUsedMb": 149.6,
+    "endHeapUsedMb": 198.8
   },
   "slo": {
     "errorRateMax": 0.02,
     "p95MsMax": 20000,
     "heapMbMax": 1400,
+    "wsConnectErrorRateMax": 0.02,
     "pass": true,
     "failures": []
+  },
+  "ws": {
+    "skip": false,
+    "connectAttempts": 70,
+    "connectOk": 70,
+    "connectErrors": 0,
+    "snapshots": 70,
+    "joinsOk": 64,
+    "joinsDenied": 0,
+    "joinErrors": 0,
+    "kanbanConnectOk": 14
   }
 }

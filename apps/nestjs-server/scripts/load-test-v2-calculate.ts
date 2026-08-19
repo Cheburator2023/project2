@@ -18,6 +18,7 @@
  *   LOAD_P95_MS_MAX     default 20000
  *   LOAD_BEARER_TOKEN   optional JWT
  *   LOAD_SAME_IP=1      все VU с одного IP (офисный NAT) — ловит 429
+ *   LOAD_SKIP_WS=1      только HTTP calculate, без Socket.IO
  *   LOAD_PORT           default 3010 when spawning API
  */
 import { execFileSync, spawn, type ChildProcess } from "node:child_process";
@@ -25,6 +26,12 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { performance } from "node:perf_hooks";
+import { io, type Socket } from "socket.io-client";
+
+const V2_EDIT_LOCK_WS_NAMESPACE = "/v2-edit-locks";
+const KANBAN_WS_NAMESPACE = "/kanban";
+const WS_JOIN = "lock:join";
+const WS_SNAPSHOT = "lock:snapshot";
 
 type Sample = {
 	ok: boolean;
@@ -79,8 +86,20 @@ type Report = {
 		errorRateMax: number;
 		p95MsMax: number;
 		heapMbMax: number;
+		wsConnectErrorRateMax: number;
 		pass: boolean;
 		failures: string[];
+	};
+	ws: {
+		skip: boolean;
+		connectAttempts: number;
+		connectOk: number;
+		connectErrors: number;
+		snapshots: number;
+		joinsOk: number;
+		joinsDenied: number;
+		joinErrors: number;
+		kanbanConnectOk: number;
 	};
 };
 
@@ -92,6 +111,10 @@ const HEAP_MB_MAX = Number(process.env.LOAD_HEAP_MB_MAX ?? 1400);
 const ERROR_RATE_MAX = Number(process.env.LOAD_ERROR_RATE_MAX ?? 0.02);
 const P95_MS_MAX = Number(process.env.LOAD_P95_MS_MAX ?? 20_000);
 const SAME_IP = process.env.LOAD_SAME_IP === "1";
+const SKIP_WS = process.env.LOAD_SKIP_WS === "1";
+const WS_CONNECT_ERROR_RATE_MAX = Number(
+	process.env.LOAD_WS_CONNECT_ERROR_RATE_MAX ?? 0.02,
+);
 const BEARER = process.env.LOAD_BEARER_TOKEN?.trim() || "";
 const SPAWN_PORT = process.env.LOAD_PORT ?? "3010";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -145,6 +168,72 @@ function authHeaders(ip: string): Record<string, string> {
 	};
 	if (BEARER) headers.authorization = `Bearer ${BEARER}`;
 	return headers;
+}
+
+type WsCounters = Report["ws"];
+
+function connectSocket(
+	baseUrl: string,
+	namespace: string,
+	label: string,
+	snapshotEvent: string,
+): Promise<{ client: Socket; snapshot: boolean }> {
+	return new Promise((resolveConnect, rejectConnect) => {
+		const client = io(`${baseUrl}${namespace}`, {
+			path: "/socket.io",
+			transports: ["websocket"],
+			auth: { lockedByLabel: label, ...(BEARER ? { token: BEARER } : {}) },
+			reconnection: false,
+			timeout: 8_000,
+		});
+		let snapshot = false;
+		const onSnapshot = () => {
+			snapshot = true;
+		};
+		client.once(snapshotEvent, onSnapshot);
+		const timer = setTimeout(() => {
+			client.removeAllListeners();
+			client.disconnect();
+			rejectConnect(new Error("ws timeout"));
+		}, 8_000);
+		client.once("connect", () => {
+			const finish = () => {
+				clearTimeout(timer);
+				resolveConnect({ client, snapshot });
+			};
+			if (snapshot) {
+				finish();
+				return;
+			}
+			const wait = setTimeout(finish, 5_000);
+			client.once(snapshotEvent, () => {
+				snapshot = true;
+				clearTimeout(wait);
+				finish();
+			});
+		});
+		client.once("connect_error", (error) => {
+			clearTimeout(timer);
+			client.removeAllListeners();
+			client.disconnect();
+			rejectConnect(error);
+		});
+	});
+}
+
+async function emitJoin(
+	client: Socket,
+	event: string,
+	payload: Record<string, string>,
+): Promise<"ok" | "denied" | "error"> {
+	try {
+		const ack = (await client
+			.timeout(8_000)
+			.emitWithAck(event, payload)) as { ok?: boolean };
+		return ack?.ok === true ? "ok" : "denied";
+	} catch {
+		return "error";
+	}
 }
 
 function stage210FormData(vu: number, tick: number): Record<string, unknown> {
@@ -250,6 +339,7 @@ async function discoverTarget(baseUrl: string): Promise<{
 	templateId: string;
 	versionId: string | null;
 	questionnaireIds: string[];
+	taskIds: string[];
 }> {
 	const templatesRes = await fetch(`${baseUrl}/v2/templates`, {
 		headers: authHeaders("203.0.113.1"),
@@ -279,10 +369,29 @@ async function discoverTarget(baseUrl: string): Promise<{
 		questionnaireIds = (page.data ?? []).map((row) => row.id);
 	}
 
+	let taskIds: string[] = [];
+	try {
+		const tasksRes = await fetch(`${baseUrl}/kanban-board/tasks`, {
+			headers: authHeaders("203.0.113.1"),
+			signal: AbortSignal.timeout(30_000),
+		});
+		if (tasksRes.ok) {
+			const rows = (await readJson(tasksRes)) as Array<{ id?: string }>;
+			if (Array.isArray(rows)) {
+				taskIds = rows
+					.map((row) => row.id)
+					.filter((id): id is string => Boolean(id));
+			}
+		}
+	} catch {
+		taskIds = [];
+	}
+
 	return {
 		templateId: withVersion.id,
 		versionId: withVersion.currentVersionId ?? null,
 		questionnaireIds,
+		taskIds,
 	};
 }
 
@@ -341,7 +450,7 @@ async function main(): Promise<void> {
 	try {
 		const target = await discoverTarget(baseUrl);
 		console.log(
-			`Load: users=${USERS} duration=${DURATION_SEC}s think=${THINK_MS}ms template=${target.templateId} version=${target.versionId ?? "—"} questionnaires=${target.questionnaireIds.length} sameIp=${SAME_IP}`,
+			`Load: users=${USERS} duration=${DURATION_SEC}s think=${THINK_MS}ms template=${target.templateId} version=${target.versionId ?? "—"} questionnaires=${target.questionnaireIds.length} kanbanTasks=${target.taskIds.length} sameIp=${SAME_IP} ws=${SKIP_WS ? "off" : "on"}`,
 		);
 
 		const calculatePath = target.versionId
@@ -349,15 +458,87 @@ async function main(): Promise<void> {
 			: `/v2/templates/${target.templateId}/calculate`;
 
 		const samples: Sample[] = [];
+		const ws: WsCounters = {
+			skip: SKIP_WS,
+			connectAttempts: 0,
+			connectOk: 0,
+			connectErrors: 0,
+			snapshots: 0,
+			joinsOk: 0,
+			joinsDenied: 0,
+			joinErrors: 0,
+			kanbanConnectOk: 0,
+		};
 		const deadline = Date.now() + DURATION_SEC * 1000;
 
 		const runVu = async (vu: number) => {
 			const ip = vuIp(vu);
+			const label = `load-vu-${vu}`;
 			const questionnaireId =
 				target.questionnaireIds.length > 0
 					? target.questionnaireIds[vu % target.questionnaireIds.length]
 					: null;
+			const editorJoin =
+				Boolean(questionnaireId) && vu < target.questionnaireIds.length;
+			const taskId =
+				target.taskIds.length > 0 && vu % 4 === 0
+					? target.taskIds[Math.floor(vu / 4) % target.taskIds.length]
+					: null;
 			let tick = 0;
+			let v2Socket: Socket | null = null;
+			let kanbanSocket: Socket | null = null;
+
+			if (!SKIP_WS) {
+				ws.connectAttempts += 1;
+				try {
+					const v2 = await connectSocket(
+						baseUrl,
+						V2_EDIT_LOCK_WS_NAMESPACE,
+						label,
+						WS_SNAPSHOT,
+					);
+					v2Socket = v2.client;
+					ws.connectOk += 1;
+					if (v2.snapshot) ws.snapshots += 1;
+					if (editorJoin && questionnaireId) {
+						const join = await emitJoin(v2Socket, WS_JOIN, {
+							questionnaireId,
+							lockedByLabel: label,
+						});
+						if (join === "ok") ws.joinsOk += 1;
+						else if (join === "denied") ws.joinsDenied += 1;
+						else ws.joinErrors += 1;
+					}
+				} catch {
+					ws.connectErrors += 1;
+				}
+				if (taskId) {
+					ws.connectAttempts += 1;
+					try {
+						const kanban = await connectSocket(
+							baseUrl,
+							KANBAN_WS_NAMESPACE,
+							label,
+							WS_SNAPSHOT,
+						);
+						kanbanSocket = kanban.client;
+						ws.connectOk += 1;
+						ws.kanbanConnectOk += 1;
+						if (kanban.snapshot) ws.snapshots += 1;
+						const join = await emitJoin(kanbanSocket, WS_JOIN, {
+							taskId,
+							lockedByLabel: label,
+						});
+						if (join === "ok") ws.joinsOk += 1;
+						else if (join === "denied") ws.joinsDenied += 1;
+						else ws.joinErrors += 1;
+					} catch {
+						ws.connectErrors += 1;
+					}
+				}
+			}
+
+			try {
 
 			if (questionnaireId && vu % 5 === 0) {
 				const started = performance.now();
@@ -416,6 +597,10 @@ async function main(): Promise<void> {
 				}
 				if (THINK_MS > 0) await sleep(THINK_MS);
 			}
+			} finally {
+				kanbanSocket?.disconnect();
+				v2Socket?.disconnect();
+			}
 		};
 
 		await Promise.all(Array.from({ length: USERS }, (_, index) => runVu(index)));
@@ -459,6 +644,13 @@ async function main(): Promise<void> {
 		if (heapSamples.length > 0 && peakHeapUsedMb > HEAP_MB_MAX) {
 			failures.push(`heapUsed ${peakHeapUsedMb}MB > ${HEAP_MB_MAX}MB`);
 		}
+		const wsConnectErrorRate =
+			ws.connectAttempts === 0 ? 0 : ws.connectErrors / ws.connectAttempts;
+		if (!SKIP_WS && wsConnectErrorRate > WS_CONNECT_ERROR_RATE_MAX) {
+			failures.push(
+				`ws connect errorRate ${(wsConnectErrorRate * 100).toFixed(2)}% > ${(WS_CONNECT_ERROR_RATE_MAX * 100).toFixed(0)}%`,
+			);
+		}
 
 		const report: Report = {
 			startedAt,
@@ -495,9 +687,11 @@ async function main(): Promise<void> {
 				errorRateMax: ERROR_RATE_MAX,
 				p95MsMax: P95_MS_MAX,
 				heapMbMax: HEAP_MB_MAX,
+				wsConnectErrorRateMax: WS_CONNECT_ERROR_RATE_MAX,
 				pass: failures.length === 0,
 				failures,
 			},
+			ws,
 		};
 
 		const outDir = resolve(dirname(fileURLToPath(import.meta.url)), "output");
