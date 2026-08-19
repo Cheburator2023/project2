@@ -82,6 +82,29 @@ describe("V2QuestionnaireService.bulkDelete", () => {
 		expect(em.delete).toHaveBeenCalledWith(V2QuestionnaireEntity, [DRAFT_ID]);
 	});
 
+	it("hard-deletes leftover inactive drafts after DADM new version", async () => {
+		const { service, em } = createService({
+			dadmEnabled: true,
+			leanRows: [
+				{
+					id: DRAFT_ID,
+					status: "inactive",
+					workflowGlobalStatus: "Черновик",
+					implementationStream: "dadm",
+				},
+			],
+		});
+
+		const result = await service.bulkDelete([DRAFT_ID], {
+			groups: ["/sacfg"],
+		});
+
+		expect(result.deletedIds).toEqual([DRAFT_ID]);
+		expect(result.deactivatedIds).toEqual([]);
+		expect(result.failed).toEqual([]);
+		expect(em.delete).toHaveBeenCalledWith(V2QuestionnaireEntity, [DRAFT_ID]);
+	});
+
 	it("deactivates an approved version when DADM is on", async () => {
 		const { service, questionnaireRepository, em, execute } = createService({
 			dadmEnabled: true,

@@ -1,4 +1,5 @@
 import { ConflictException } from "@nestjs/common";
+import { QueryFailedError } from "typeorm";
 import { V2QuestionnaireEditLockEntity } from "../../../../src/modules/anketa-v2/entities/v2-questionnaire-edit-lock.entity";
 import { V2QuestionnaireEditLockService } from "../../../../src/modules/anketa-v2/services/v2-questionnaire-edit-lock.service";
 
@@ -10,7 +11,7 @@ const DS = { label: "test_ds", userId: "ds-1" };
 
 function createService() {
 	const rows = new Map<string, V2QuestionnaireEditLockEntity>();
-	const deleteQb = {
+	const qb = {
 		delete: jest.fn().mockReturnThis(),
 		where: jest.fn().mockReturnThis(),
 		execute: jest.fn(async () => {
@@ -19,6 +20,10 @@ function createService() {
 				if (row.expiresAt.getTime() <= now) rows.delete(id);
 			}
 			return { affected: 0 };
+		}),
+		getMany: jest.fn(async () => {
+			const now = Date.now();
+			return [...rows.values()].filter((row) => row.expiresAt.getTime() > now);
 		}),
 	};
 	const lockRepository = {
@@ -40,7 +45,7 @@ function createService() {
 			return { affected: 1 };
 		}),
 		update: jest.fn(async () => ({ affected: 1 })),
-		createQueryBuilder: jest.fn(() => deleteQb),
+		createQueryBuilder: jest.fn(() => qb),
 	};
 	const questionnaireRepository = {
 		findOne: jest.fn(async ({ where }: { where: { id: string } }) =>
@@ -134,5 +139,30 @@ describe("V2QuestionnaireEditLockService socket occupancy", () => {
 			questionnaireId: Q_ID,
 			lockedByLabel: "test_ds_lead",
 		});
+	});
+
+	it("still broadcasts occupancy when lock INSERT hits FK of a different v2_questionnaire table", async () => {
+		const { service, lockRepository } = createService();
+		lockRepository.save.mockRejectedValue(
+			new QueryFailedError(
+				"INSERT",
+				[],
+				Object.assign(new Error("fk"), { code: "23503" }),
+			),
+		);
+
+		await expect(
+			service.acquire(Q_ID, LEAD, "socket-lead"),
+		).resolves.toMatchObject({
+			questionnaireId: Q_ID,
+			lockedByLabel: "test_ds_lead",
+		});
+
+		await expect(service.listActive()).resolves.toEqual([
+			expect.objectContaining({
+				questionnaireId: Q_ID,
+				lockedByLabel: "test_ds_lead",
+			}),
+		]);
 	});
 });

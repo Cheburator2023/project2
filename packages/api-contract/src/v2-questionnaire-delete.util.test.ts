@@ -6,6 +6,7 @@ import {
 	userCanCreateV2Questionnaire,
 	userHasV2QuestionnaireCreateRole,
 	userHasV2QuestionnaireDeleteRole,
+	v2QuestionnaireDeleteToolbarCopy,
 } from "./v2-questionnaire-delete.util";
 
 const formWithStream = (stream: string) => ({
@@ -146,17 +147,32 @@ describe("resolveV2QuestionnaireDeleteAction", () => {
 		});
 	});
 
-	it("denies already inactive or archived", () => {
+	it("hard-deletes leftover inactive drafts after DADM new version", () => {
 		expect(resolveV2QuestionnaireDeleteAction("Черновик", "inactive")).toEqual({
-			action: "deny",
-			reason: "already_inactive",
+			action: "hard_delete",
 		});
-		expect(resolveV2QuestionnaireDeleteAction("Заполнено", "archived")).toEqual(
+		expect(resolveV2QuestionnaireDeleteAction("Заполнено", "inactive")).toEqual({
+			action: "hard_delete",
+		});
+	});
+
+	it("keeps approved inactive/archived historical slices", () => {
+		expect(resolveV2QuestionnaireDeleteAction("Утверждена", "inactive")).toEqual(
 			{
 				action: "deny",
 				reason: "already_inactive",
 			},
 		);
+		expect(resolveV2QuestionnaireDeleteAction("Утверждена", "archived")).toEqual(
+			{
+				action: "deny",
+				reason: "already_inactive",
+			},
+		);
+		expect(resolveV2QuestionnaireDeleteAction("Заполнено", "archived")).toEqual({
+			action: "deny",
+			reason: "already_inactive",
+		});
 	});
 });
 
@@ -198,5 +214,34 @@ describe("summarizeV2QuestionnaireDeleteSelection", () => {
 				false,
 			),
 		).toEqual({ kind: "hard_delete", hardDeleteCount: 1, deactivateCount: 0 });
+	});
+
+	it("inactive drafts count as hard-delete so leftover versions can be removed", () => {
+		expect(
+			summarizeV2QuestionnaireDeleteSelection(
+				[{ workflowGlobalStatus: "Черновик", status: "inactive" }],
+				true,
+			),
+		).toEqual({ kind: "hard_delete", hardDeleteCount: 1, deactivateCount: 0 });
+	});
+
+	it("approved inactive slice alone is not actionable", () => {
+		expect(
+			summarizeV2QuestionnaireDeleteSelection(
+				[{ workflowGlobalStatus: "Утверждена", status: "inactive" }],
+				true,
+			),
+		).toEqual({ kind: "none", hardDeleteCount: 0, deactivateCount: 0 });
+	});
+});
+
+describe("v2QuestionnaireDeleteToolbarCopy", () => {
+	it("keeps deactivate wording for an already-inactive approved selection", () => {
+		const copy = v2QuestionnaireDeleteToolbarCopy(
+			{ kind: "none", hardDeleteCount: 0, deactivateCount: 0 },
+			[{ workflowGlobalStatus: "Утверждена", status: "inactive" }],
+		);
+		expect(copy.button).toBe("Сделать неактивной");
+		expect(copy.tooltip).toMatch(/уже неактивен/);
 	});
 });

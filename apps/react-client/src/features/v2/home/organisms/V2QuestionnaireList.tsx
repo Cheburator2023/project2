@@ -98,6 +98,7 @@ import {
 	canHoldQuestionnaire,
 	canUserDeleteV2Questionnaire,
 	summarizeV2QuestionnaireDeleteSelection,
+	v2QuestionnaireDeleteToolbarCopy,
 	v2QuestionnaireDeleteUiCopy,
 	V2_ANKETA_HOLD_LABEL,
 	V2_QUESTIONNAIRE_REGISTRY_PAGE_SIZE,
@@ -531,11 +532,28 @@ export function V2QuestionnaireList() {
 		[dadmProgramManagerEnabled, deletableSelectedVersions],
 	);
 	const deleteCopy = useMemo(
-		() => v2QuestionnaireDeleteUiCopy(deleteSelection),
-		[deleteSelection],
+		() =>
+			v2QuestionnaireDeleteToolbarCopy(
+				deleteSelection,
+				deletableSelectedVersions,
+				{
+					selectedCount: selectedVersions.length,
+					streamDenied:
+						selectedVersions.length > 0 &&
+						deletableSelectedVersions.length === 0,
+				},
+			),
+		[deleteSelection, deletableSelectedVersions, selectedVersions.length],
 	);
 	const deleteActionDisabled =
 		deleteSelection.kind === "none" || bulkDelete.isPending;
+	const deleteLooksLikeDeactivate =
+		deleteSelection.kind === "deactivate" ||
+		(deleteSelection.kind === "none" &&
+			deletableSelectedVersions.length > 0 &&
+			deletableSelectedVersions.every(
+				(row) => row.workflowGlobalStatus === "Утверждена",
+			));
 
 	useEffect(() => {
 		setPage(1);
@@ -1041,12 +1059,10 @@ export function V2QuestionnaireList() {
 										size="small"
 										fullWidth
 										color={
-											deleteSelection.kind === "deactivate"
-												? "primary"
-												: "error"
+											deleteLooksLikeDeactivate ? "primary" : "error"
 										}
 										startIcon={
-											deleteSelection.kind === "deactivate" ? (
+											deleteLooksLikeDeactivate ? (
 												<HideSourceOutlinedIcon />
 											) : (
 												<DeleteOutlineIcon />
@@ -1154,11 +1170,9 @@ export function V2QuestionnaireList() {
 								<Button
 									variant="outlined"
 									size="small"
-									color={
-										deleteSelection.kind === "deactivate" ? "primary" : "error"
-									}
+									color={deleteLooksLikeDeactivate ? "primary" : "error"}
 									startIcon={
-										deleteSelection.kind === "deactivate" ? (
+										deleteLooksLikeDeactivate ? (
 											<HideSourceOutlinedIcon />
 										) : (
 											<DeleteOutlineIcon />

@@ -136,8 +136,10 @@ export function canUserDeleteV2Questionnaire(
 }
 
 /**
- * Неутверждённые (Черновик / Заполнено / …) → полное удаление.
- * Утверждённые → деактивация (срез сохраняется).
+ * Неутверждённые (Черновик / Заполнено / …) → полное удаление, в том числе
+ * leftover-версии после «создать новую версию» (ДАДМ гасит предыдущие в inactive).
+ * Утверждённые активные → деактивация (срез сохраняется).
+ * Утверждённые inactive/archived — исторический срез, повторно не трогаем.
  */
 export function resolveV2QuestionnaireDeleteAction(
 	workflowGlobalStatus: V2AnketaGlobalStatus | string | null | undefined,
@@ -145,10 +147,13 @@ export function resolveV2QuestionnaireDeleteAction(
 ):
 	| { action: V2QuestionnaireDeleteAction }
 	| { action: "deny"; reason: V2QuestionnaireDeleteDenyReason } {
-	if (entityStatus === "inactive" || entityStatus === "archived") {
+	if (entityStatus === "archived") {
 		return { action: "deny", reason: "already_inactive" };
 	}
 	if (workflowGlobalStatus === "Утверждена") {
+		if (entityStatus === "inactive") {
+			return { action: "deny", reason: "already_inactive" };
+		}
 		return { action: "deactivate" };
 	}
 	return { action: "hard_delete" };
@@ -249,5 +254,51 @@ export function v2QuestionnaireDeleteUiCopy(
 			"Анкета будет удалена из реестра безвозвратно. Действие применяется только к анкетам, доступным вашей роли и стриму.",
 		confirm: "Удалить",
 		tooltip: "Неутверждённые анкеты удаляются безвозвратно",
+	};
+}
+
+/**
+ * Подпись/тултип кнопки реестра: для утверждённого inactive-среза оставляем
+ * формулировку деактивации (иначе UI навсегда показывает серое «Удалить»).
+ */
+export function v2QuestionnaireDeleteToolbarCopy(
+	summary: V2QuestionnaireDeleteSelectionSummary,
+	selectedRoleOk: readonly V2QuestionnaireDeleteSelectionRow[],
+	options?: { selectedCount?: number; streamDenied?: boolean },
+): V2QuestionnaireDeleteUiCopy {
+	if (summary.kind !== "none") {
+		return v2QuestionnaireDeleteUiCopy(summary);
+	}
+	const selectedCount = options?.selectedCount ?? selectedRoleOk.length;
+	if (selectedCount === 0) {
+		return {
+			...v2QuestionnaireDeleteUiCopy(summary),
+			tooltip: "Выберите анкету в реестре",
+		};
+	}
+	if (options?.streamDenied) {
+		return {
+			...v2QuestionnaireDeleteUiCopy(summary),
+			tooltip: "Удаление доступно только для анкет своего стрима",
+		};
+	}
+	const onlyApproved =
+		selectedRoleOk.length > 0 &&
+		selectedRoleOk.every((row) => row.workflowGlobalStatus === "Утверждена");
+	if (onlyApproved) {
+		return {
+			...v2QuestionnaireDeleteUiCopy({
+				kind: "deactivate",
+				hardDeleteCount: 0,
+				deactivateCount: selectedRoleOk.length,
+			}),
+			tooltip:
+				"Утверждённый срез уже неактивен и сохраняется в истории. Чтобы удалить — выберите черновик; чтобы деактивировать — активную утверждённую анкету.",
+		};
+	}
+	return {
+		...v2QuestionnaireDeleteUiCopy(summary),
+		tooltip:
+			"Среди выбранных нет анкет, которые можно удалить или деактивировать",
 	};
 }

@@ -1,8 +1,4 @@
-import {
-	ConflictException,
-	Injectable,
-	NotFoundException,
-} from "@nestjs/common";
+import { ConflictException, Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import {
 	V2_QUESTIONNAIRE_EDIT_LOCK_TTL_MS,
@@ -11,10 +7,6 @@ import {
 import { In, QueryFailedError, Repository } from "typeorm";
 import { V2QuestionnaireEditLockEntity } from "../entities/v2-questionnaire-edit-lock.entity";
 import { V2QuestionnaireEntity } from "../entities/v2-questionnaire.entity";
-
-function wait(ms: number): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 function isPostgresForeignKeyViolation(error: unknown): boolean {
 	if (error instanceof QueryFailedError) {
@@ -34,10 +26,21 @@ export type V2QuestionnaireEditLockHolder = {
 	userId?: string | null;
 };
 
+type LockHolderRow = {
+	lockedByLabel: string;
+	lockedByUserId: string | null;
+};
+
 @Injectable()
 export class V2QuestionnaireEditLockService {
+	private readonly logger = new Logger(V2QuestionnaireEditLockService.name);
 	/** socketId → questionnaireIds, которые этот сокет держит. */
 	private readonly holdsBySocket = new Map<string, Set<string>>();
+	/**
+	 * Occupancy, если INSERT в БД падает по FK (контур: FK смотрит в другую
+	 * схему, чем TypeORM-таблица анкет). Snapshot/changed всё равно работают.
+	 */
+	private readonly fallbackLocks = new Map<string, V2QuestionnaireEditLockDto>();
 
 	constructor(
 		@InjectRepository(V2QuestionnaireEditLockEntity)
@@ -52,19 +55,24 @@ export class V2QuestionnaireEditLockService {
 			.createQueryBuilder("lock")
 			.where("lock.expires_at > :now", { now: new Date() })
 			.getMany();
-		return rows.map((row) => this.toDto(row));
+		const byId = new Map(
+			rows.map((row) => [row.questionnaireId, this.toDto(row)]),
+		);
+		for (const [id, dto] of this.fallbackLocks) {
+			if (!byId.has(id)) byId.set(id, dto);
+		}
+		return [...byId.values()];
 	}
 
 	async getLock(
 		questionnaireId: string,
 	): Promise<V2QuestionnaireEditLockDto | null> {
-		await this.ensureQuestionnaireExists(questionnaireId);
 		await this.purgeExpired();
 		const row = await this.lockRepository.findOne({
 			where: { questionnaireId },
 		});
-		if (!row || row.expiresAt.getTime() <= Date.now()) return null;
-		return this.toDto(row);
+		if (row && row.expiresAt.getTime() > Date.now()) return this.toDto(row);
+		return this.fallbackLocks.get(questionnaireId) ?? null;
 	}
 
 	async acquire(
@@ -77,39 +85,24 @@ export class V2QuestionnaireEditLockService {
 			throw new ConflictException("Укажите, кто редактирует анкету");
 		}
 		await this.purgeExpired();
-		const existing = await this.lockRepository.findOne({
-			where: { questionnaireId },
-		});
-		if (
-			existing &&
-			existing.expiresAt.getTime() > Date.now() &&
-			!this.isSameHolder(existing, holder)
-		) {
+		const existing = await this.findActiveLock(questionnaireId);
+		if (existing && !this.isSameHolder(existing, holder)) {
 			throw new ConflictException({
 				message: "Анкета сейчас редактируется другим пользователем",
 				reason: "lock",
-				lock: this.toDto(existing),
+				lock: existing,
 			});
 		}
 		const expiresAt = new Date(Date.now() + V2_QUESTIONNAIRE_EDIT_LOCK_TTL_MS);
-		const entity =
-			existing ??
-			this.lockRepository.create({
-				questionnaireId,
-				lockedByLabel: label,
-				lockedByUserId: holder.userId ?? null,
-			});
-		entity.lockedByLabel = label;
-		entity.lockedByUserId = holder.userId ?? null;
-		entity.expiresAt = expiresAt;
-		/**
-		 * Не делаем SELECT анкеты до INSERT: на контуре read-replica
-		 * часто не видит только что созданную строку, а клиент уже открыл форму по HTTP.
-		 * FK на v2_questionnaire — достаточная проверка; 23503 ретраим.
-		 */
-		await this.saveLockRow(entity);
+		const entity = this.lockRepository.create({
+			questionnaireId,
+			lockedByLabel: label,
+			lockedByUserId: holder.userId ?? null,
+			expiresAt,
+		});
+		const dto = await this.persistLock(entity);
 		if (socketId) this.trackSocket(socketId, questionnaireId);
-		return this.toDto(entity);
+		return dto;
 	}
 
 	async renew(
@@ -127,12 +120,10 @@ export class V2QuestionnaireEditLockService {
 		if (socketId) this.untrackSocket(socketId, questionnaireId);
 		if (this.socketCountFor(questionnaireId) > 0) return false;
 		await this.purgeExpired();
-		const existing = await this.lockRepository.findOne({
-			where: { questionnaireId },
-		});
+		const existing = await this.findActiveLock(questionnaireId);
 		if (!existing) return false;
 		if (!this.isSameHolder(existing, holder)) return false;
-		await this.lockRepository.delete({ questionnaireId });
+		await this.deleteLock(questionnaireId);
 		return true;
 	}
 
@@ -146,7 +137,7 @@ export class V2QuestionnaireEditLockService {
 		const released: string[] = [];
 		for (const questionnaireId of held) {
 			if (this.socketCountFor(questionnaireId) > 0) continue;
-			await this.lockRepository.delete({ questionnaireId });
+			await this.deleteLock(questionnaireId);
 			released.push(questionnaireId);
 		}
 		return released;
@@ -160,10 +151,54 @@ export class V2QuestionnaireEditLockService {
 		}
 		if (ids.size === 0) return;
 		const expiresAt = new Date(Date.now() + V2_QUESTIONNAIRE_EDIT_LOCK_TTL_MS);
+		const iso = expiresAt.toISOString();
+		for (const id of ids) {
+			const current = this.fallbackLocks.get(id);
+			if (current) this.fallbackLocks.set(id, { ...current, expiresAt: iso });
+		}
 		await this.lockRepository.update(
 			{ questionnaireId: In([...ids]) },
 			{ expiresAt },
 		);
+	}
+
+	private async findActiveLock(
+		questionnaireId: string,
+	): Promise<V2QuestionnaireEditLockDto | null> {
+		const row = await this.lockRepository.findOne({
+			where: { questionnaireId },
+		});
+		if (row && row.expiresAt.getTime() > Date.now()) return this.toDto(row);
+		const fallback = this.fallbackLocks.get(questionnaireId);
+		if (fallback && Date.parse(fallback.expiresAt) > Date.now()) return fallback;
+		return null;
+	}
+
+	private async persistLock(
+		entity: V2QuestionnaireEditLockEntity,
+	): Promise<V2QuestionnaireEditLockDto> {
+		const dto = this.toDto(entity);
+		try {
+			await this.lockRepository.save(entity);
+			this.fallbackLocks.delete(entity.questionnaireId);
+			return dto;
+		} catch (error) {
+			if (!isPostgresForeignKeyViolation(error)) throw error;
+			const seen = await this.questionnaireRepository.findOne({
+				where: { id: entity.questionnaireId },
+				select: ["id"],
+			});
+			this.logger.warn(
+				`edit-lock INSERT FK miss questionnaireId=${entity.questionnaireId} typeormSeesRow=${Boolean(seen)} — occupancy in-memory`,
+			);
+			this.fallbackLocks.set(entity.questionnaireId, dto);
+			return dto;
+		}
+	}
+
+	private async deleteLock(questionnaireId: string): Promise<void> {
+		this.fallbackLocks.delete(questionnaireId);
+		await this.lockRepository.delete({ questionnaireId });
 	}
 
 	private trackSocket(socketId: string, questionnaireId: string): void {
@@ -188,7 +223,7 @@ export class V2QuestionnaireEditLockService {
 	}
 
 	private isSameHolder(
-		row: V2QuestionnaireEditLockEntity,
+		row: LockHolderRow,
 		holder: V2QuestionnaireEditLockHolder,
 	): boolean {
 		const label = holder.label.trim();
@@ -204,38 +239,15 @@ export class V2QuestionnaireEditLockService {
 	}
 
 	private async purgeExpired() {
+		const now = Date.now();
+		for (const [id, dto] of this.fallbackLocks) {
+			if (Date.parse(dto.expiresAt) <= now) this.fallbackLocks.delete(id);
+		}
 		await this.lockRepository
 			.createQueryBuilder()
 			.delete()
 			.where("expires_at <= :now", { now: new Date() })
 			.execute();
-	}
-
-	private async saveLockRow(
-		entity: V2QuestionnaireEditLockEntity,
-	): Promise<V2QuestionnaireEditLockEntity> {
-		const delaysMs = [0, 100, 250, 500];
-		let lastError: unknown;
-		for (const delayMs of delaysMs) {
-			if (delayMs) await wait(delayMs);
-			try {
-				return await this.lockRepository.save(entity);
-			} catch (error) {
-				lastError = error;
-				if (!isPostgresForeignKeyViolation(error)) throw error;
-			}
-		}
-		throw lastError instanceof NotFoundException
-			? lastError
-			: new NotFoundException("Анкета не найдена");
-	}
-
-	private async ensureQuestionnaireExists(questionnaireId: string) {
-		const row = await this.questionnaireRepository.findOne({
-			where: { id: questionnaireId },
-		});
-		if (!row) throw new NotFoundException("Анкета не найдена");
-		return row;
 	}
 
 	private toDto(row: V2QuestionnaireEditLockEntity): V2QuestionnaireEditLockDto {
