@@ -15,6 +15,7 @@ import {
 	canUserCopyV2Questionnaire,
 	canUserDeleteV2Questionnaire,
 	collectForbiddenV2AnketaWorkflowChanges,
+	expandV2QuestionnaireRegistrySeriesMembers,
 	filterV2QuestionnairesByRegistryVersionMode,
 	isV2UserStreamFilteredByGroups,
 	projectAndDefaultFormDataOntoJsonSchema,
@@ -33,6 +34,7 @@ import {
 	type V2QuestionnaireDto,
 	type V2QuestionnaireListQuery,
 	type V2QuestionnaireRegistryConfigDto,
+	type V2QuestionnaireStatus,
 	pickV2QuestionnaireRegistryFormData,
 } from "@smart-anketa/api-contract";
 import { Writable } from "node:stream";
@@ -150,6 +152,7 @@ export class V2QuestionnaireService {
 
 	/**
 	 * Реестр: серверная пагинация + поиск (+ стрим / versionMode).
+	 * versionMode: пагинация по сериям, в data — все версии серий страницы.
 	 * Строки — slim formData под колонки; export идёт пачками в файл.
 	 */
 	async findAllPaginated(
@@ -219,7 +222,11 @@ export class V2QuestionnaireService {
 			const total = picked.length;
 			const lastPage = total === 0 ? 0 : Math.ceil(total / limit);
 			const slice = picked.slice((page - 1) * limit, page * limit);
-			const data = await this.findAllByIds(slice.map((row) => row.id));
+			const pageRows = expandV2QuestionnaireRegistrySeriesMembers(
+				leanRows,
+				slice,
+			);
+			const data = await this.findAllByIds(pageRows.map((row) => row.id));
 			const result = {
 				data,
 				meta: { total, page, limit, lastPage },
@@ -987,10 +994,21 @@ export class V2QuestionnaireService {
 		const sourceFormData = migrateV2AnketaFormData(
 			dto.formData ?? { ...(parent.formData as Record<string, unknown>) },
 		);
-		const projected = projectAndDefaultFormDataOntoJsonSchema(
-			sourceFormData,
-			boundVersion.jsonSchema,
-		);
+		/** Prune только при смене схемы; иначе runtime-ключи (groupActivation, типовые работы) теряются. */
+		const projected =
+			dto.useCurrentSchema === true
+				? projectAndDefaultFormDataOntoJsonSchema(
+						sourceFormData,
+						boundVersion.jsonSchema,
+					)
+				: {
+						formData: sourceFormData,
+						report: {
+							droppedPaths: [],
+							defaultedPaths: [],
+							summary: null,
+						},
+					};
 		const formData = migrateV2AnketaFormData(
 			resetWorkflowForCopy(projected.formData),
 		);
@@ -1042,70 +1060,110 @@ export class V2QuestionnaireService {
 		const failed: BulkDeleteV2QuestionnairesResultDto["failed"] = [];
 		const groups = Array.isArray(user?.groups) ? user.groups : [];
 
+		if (uniqueIds.length === 0) {
+			return { deletedIds, deactivatedIds, failed };
+		}
+
+		let dadmEnabled = false;
+		try {
+			dadmEnabled =
+				await this.runtimeSettingsService.isDadmProgramManagerEnabled();
+		} catch (error) {
+			this.logger.warn(
+				`bulkDelete: не удалось прочитать флаг ДАДМ (${(error as Error).message})`,
+			);
+		}
+
+		type LeanDeleteRow = {
+			id: string;
+			status: string | null;
+			workflowGlobalStatus: string | null;
+			implementationStream: string | null;
+		};
+		const leanRows = await this.questionnaireRepository
+			.createQueryBuilder("q")
+			.select("q.id", "id")
+			.addSelect("q.status", "status")
+			.addSelect(
+				"q.form_data->'workflow'->>'globalStatus'",
+				"workflowGlobalStatus",
+			)
+			.addSelect(
+				"q.form_data->'generalInfo'->>'implementationStream'",
+				"implementationStream",
+			)
+			.where("q.id IN (:...ids)", { ids: uniqueIds })
+			.getRawMany<LeanDeleteRow>();
+		const byId = new Map(leanRows.map((row) => [row.id, row]));
+
+		const hardDeleteIds: string[] = [];
+		const deactivateIds: string[] = [];
+
 		for (const id of uniqueIds) {
-			try {
-				const row = await this.questionnaireRepository.findOne({
-					where: { id },
-				});
-				if (!row) {
-					failed.push({
-						id,
-						reason: "not_found",
-						message: "Анкета не найдена",
-					});
-					continue;
-				}
-
-				const access = canUserDeleteV2Questionnaire(groups, row.formData);
-				if (!access.ok) {
-					failed.push({
-						id,
-						reason: access.reason,
-						message:
-							access.reason === "wrong_stream"
-								? "Удаление доступно только для анкет своего стрима"
-								: "Недостаточно прав для удаления анкеты",
-					});
-					continue;
-				}
-
-				const workflow = normalizeV2AnketaWorkflow(
-					migrateV2AnketaFormData(row.formData ?? {}).workflow,
-				);
-				const dadmEnabled =
-					await this.runtimeSettingsService.isDadmProgramManagerEnabled();
-				const resolved = resolveV2QuestionnaireDeleteAction(
-					workflow.globalStatus,
-					row.status,
-				);
-				if (resolved.action === "deny") {
-					failed.push({
-						id,
-						reason: resolved.reason,
-						message:
-							resolved.reason === "already_inactive"
-								? "Анкета уже неактивна"
-								: "Удаление недоступно",
-					});
-					continue;
-				}
-
-				/** Без фичи ДАДМ — всегда hard-delete (старое поведение). */
-				if (!dadmEnabled || resolved.action === "hard_delete") {
-					await this.questionnaireRepository.remove(row);
-					deletedIds.push(id);
-					continue;
-				}
-
-				row.status = "inactive";
-				await this.questionnaireRepository.save(row);
-				deactivatedIds.push(id);
-			} catch {
+			const row = byId.get(id);
+			if (!row) {
 				failed.push({
 					id,
-					reason: "delete_failed",
-					message: "Не удалось удалить анкету",
+					reason: "not_found",
+					message: "Анкета не найдена",
 				});
+				continue;
+			}
+
+			const access = canUserDeleteV2Questionnaire(groups, {
+				generalInfo: {
+					implementationStream: row.implementationStream ?? "",
+				},
+				workflow: { globalStatus: row.workflowGlobalStatus },
+			});
+			if (!access.ok) {
+				failed.push({
+					id,
+					reason: access.reason,
+					message:
+						access.reason === "wrong_stream"
+							? "Удаление доступно только для анкет своего стрима"
+							: "Недостаточно прав для удаления анкеты",
+				});
+				continue;
+			}
+
+			const resolved = resolveV2QuestionnaireDeleteAction(
+				row.workflowGlobalStatus,
+				(row.status as V2QuestionnaireStatus) || "active",
+			);
+			if (resolved.action === "deny") {
+				failed.push({
+					id,
+					reason: resolved.reason,
+					message:
+						resolved.reason === "already_inactive"
+							? "Анкета уже неактивна"
+							: "Удаление недоступно",
+				});
+				continue;
+			}
+
+			/** Без фичи ДАДМ — всегда hard-delete (старое поведение). */
+			if (!dadmEnabled || resolved.action === "hard_delete") {
+				hardDeleteIds.push(id);
+			} else {
+				deactivateIds.push(id);
+			}
+		}
+
+		try {
+			await this.applyBulkDeleteMutations(hardDeleteIds, deactivateIds);
+			deletedIds.push(...hardDeleteIds);
+			deactivatedIds.push(...deactivateIds);
+		} catch (error) {
+			const message =
+				error instanceof Error && error.message.trim()
+					? error.message
+					: "Не удалось удалить анкету";
+			this.logger.error(`bulkDelete: ${message}`);
+			for (const id of [...hardDeleteIds, ...deactivateIds]) {
+				failed.push({ id, reason: "delete_failed", message });
 			}
 		}
 
@@ -1113,6 +1171,39 @@ export class V2QuestionnaireService {
 			this.registryReadCache.invalidateAll();
 		}
 		return { deletedIds, deactivatedIds, failed };
+	}
+
+	/**
+	 * SQL DELETE без TypeORM `remove()`: не грузит jsonb form_data и не упирается
+	 * в FK parent_questionnaire_id у следующих версий серии (ДАДМ).
+	 */
+	private async applyBulkDeleteMutations(
+		hardDeleteIds: string[],
+		deactivateIds: string[],
+	): Promise<void> {
+		if (hardDeleteIds.length === 0 && deactivateIds.length === 0) return;
+
+		await this.questionnaireRepository.manager.transaction(async (em) => {
+			if (hardDeleteIds.length > 0) {
+				await em
+					.createQueryBuilder()
+					.update(V2QuestionnaireEntity)
+					.set({ parentQuestionnaireId: null })
+					.where("parent_questionnaire_id IN (:...ids)", {
+						ids: hardDeleteIds,
+					})
+					.execute();
+				await em.delete(V2QuestionnaireEntity, hardDeleteIds);
+			}
+			if (deactivateIds.length > 0) {
+				await em
+					.createQueryBuilder()
+					.update(V2QuestionnaireEntity)
+					.set({ status: "inactive" })
+					.where("id IN (:...ids)", { ids: deactivateIds })
+					.execute();
+			}
+		});
 	}
 
 	async seedTestQuestionnaires(

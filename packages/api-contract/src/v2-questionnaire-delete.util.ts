@@ -153,3 +153,101 @@ export function resolveV2QuestionnaireDeleteAction(
 	}
 	return { action: "hard_delete" };
 }
+
+export type V2QuestionnaireDeleteSelectionKind =
+	| "hard_delete"
+	| "deactivate"
+	| "mixed"
+	| "none";
+
+export type V2QuestionnaireDeleteSelectionSummary = {
+	kind: V2QuestionnaireDeleteSelectionKind;
+	hardDeleteCount: number;
+	deactivateCount: number;
+};
+
+export type V2QuestionnaireDeleteSelectionRow = {
+	workflowGlobalStatus?: string | null;
+	status?: string | null;
+};
+
+/** Разбивка выбранных анкет: удалить / деактивировать (ДАДМ). */
+export function summarizeV2QuestionnaireDeleteSelection(
+	rows: readonly V2QuestionnaireDeleteSelectionRow[],
+	dadmEnabled: boolean,
+): V2QuestionnaireDeleteSelectionSummary {
+	let hardDeleteCount = 0;
+	let deactivateCount = 0;
+	for (const row of rows) {
+		const resolved = resolveV2QuestionnaireDeleteAction(
+			row.workflowGlobalStatus,
+			(row.status as V2QuestionnaireStatus) ?? "active",
+		);
+		if (resolved.action === "deny") continue;
+		if (!dadmEnabled || resolved.action === "hard_delete") {
+			hardDeleteCount += 1;
+		} else {
+			deactivateCount += 1;
+		}
+	}
+	const kind: V2QuestionnaireDeleteSelectionKind =
+		hardDeleteCount === 0 && deactivateCount === 0
+			? "none"
+			: hardDeleteCount > 0 && deactivateCount > 0
+				? "mixed"
+				: deactivateCount > 0
+					? "deactivate"
+					: "hard_delete";
+	return { kind, hardDeleteCount, deactivateCount };
+}
+
+export type V2QuestionnaireDeleteUiCopy = {
+	button: string;
+	menu: string;
+	dialogTitle: string;
+	dialogBody: string;
+	confirm: string;
+	tooltip: string;
+};
+
+export function v2QuestionnaireDeleteUiCopy(
+	summary: V2QuestionnaireDeleteSelectionSummary,
+): V2QuestionnaireDeleteUiCopy {
+	const n = summary.hardDeleteCount + summary.deactivateCount;
+	if (summary.kind === "deactivate") {
+		return {
+			button:
+				n === 1 ? "Сделать неактивной" : `Сделать неактивными (${n})`,
+			menu: n === 1 ? "Сделать неактивной" : `Сделать неактивными (${n})`,
+			dialogTitle:
+				n === 1
+					? "Сделать анкету неактивной?"
+					: "Сделать выбранные анкеты неактивными?",
+			dialogBody:
+				"Утверждённая анкета не удаляется. Запись перейдёт в статус «Неактивная», срез сохранится.",
+			confirm: n === 1 ? "Сделать неактивной" : "Сделать неактивными",
+			tooltip:
+				"Утверждённые анкеты переводятся в «Неактивная», срез сохраняется",
+		};
+	}
+	if (summary.kind === "mixed") {
+		return {
+			button: `Удалить / сделать неактивными (${n})`,
+			menu: `Удалить / сделать неактивными (${n})`,
+			dialogTitle: "Удалить черновики и деактивировать утверждённые?",
+			dialogBody: `Черновики (${summary.hardDeleteCount}) будут удалены безвозвратно. Утверждённые (${summary.deactivateCount}) перейдут в статус «Неактивная», срез сохранится.`,
+			confirm: "Подтвердить",
+			tooltip:
+				"Черновики удаляются, утверждённые становятся неактивными",
+		};
+	}
+	return {
+		button: n <= 1 ? "Удалить" : `Удалить выбранные (${n})`,
+		menu: n <= 1 ? "Удалить анкету" : `Удалить выбранные (${n})`,
+		dialogTitle: n <= 1 ? "Удалить анкету?" : "Удалить выбранные анкеты?",
+		dialogBody:
+			"Анкета будет удалена из реестра безвозвратно. Действие применяется только к анкетам, доступным вашей роли и стриму.",
+		confirm: "Удалить",
+		tooltip: "Неутверждённые анкеты удаляются безвозвратно",
+	};
+}

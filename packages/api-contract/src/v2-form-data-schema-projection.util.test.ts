@@ -67,4 +67,131 @@ describe("projectFormDataOntoJsonSchema", () => {
 		expect((formData.generalInfo as { stream: string }).stream).toBe("A");
 		expect(report.defaultedPaths).toContain("generalInfo.stream");
 	});
+
+	it("preserves groupActivation even when it is not a schema property", () => {
+		const source = {
+			generalInfo: { name: "X" },
+			groupActivation: {
+				streamDataSources: true,
+				streamModelControl: false,
+			},
+		};
+		const { formData, report } = projectFormDataOntoJsonSchema(source, schema);
+		expect(formData.groupActivation).toEqual({
+			streamDataSources: true,
+			streamModelControl: false,
+		});
+		expect(report.droppedPaths).not.toContain("groupActivation");
+		expect(report.droppedPaths).not.toContain(
+			"groupActivation.streamDataSources",
+		);
+	});
+
+	it("keeps additionalProperties map entries that are not in properties", () => {
+		const withTags = {
+			...schema,
+			properties: {
+				...schema.properties,
+				tags: {
+					type: "object",
+					additionalProperties: { type: "string" },
+				},
+			},
+		};
+		const { formData, report } = projectFormDataOntoJsonSchema(
+			{ generalInfo: { name: "X" }, tags: { env: "prod" } },
+			withTags,
+		);
+		expect(formData.tags).toEqual({ env: "prod" });
+		expect(report.droppedPaths).not.toContain("tags.env");
+	});
+
+	it("keeps typical-work arrays that are not jsonSchema properties", () => {
+		const source = {
+			generalInfo: {
+				name: "X",
+				modelService: { controlTypicalTasks: [{ name: "ПиРМ" }] },
+			},
+			detailInfo: { sourceTypicalTasks: [{ name: "Источник" }] },
+			streamDataSources: { sourceTypicalTasks: [{ name: "Стрим" }] },
+			streamModelControl: {
+				control: { controlTypicalTasks: [{ name: "КМ" }] },
+			},
+		};
+		const { formData, report } = projectFormDataOntoJsonSchema(source, {
+			type: "object",
+			properties: {
+				generalInfo: {
+					type: "object",
+					properties: {
+						name: { type: "string" },
+						modelService: { type: "object", properties: {} },
+					},
+				},
+				detailInfo: { type: "object", properties: {} },
+				streamDataSources: { type: "object", properties: {} },
+				streamModelControl: { type: "object", properties: {} },
+			},
+		});
+		expect(
+			(formData.detailInfo as { sourceTypicalTasks: unknown })
+				.sourceTypicalTasks,
+		).toEqual([{ name: "Источник" }]);
+		expect(
+			(
+				formData.generalInfo as {
+					modelService: { controlTypicalTasks: unknown };
+				}
+			).modelService.controlTypicalTasks,
+		).toEqual([{ name: "ПиРМ" }]);
+		expect(
+			(
+				formData.streamDataSources as { sourceTypicalTasks: unknown }
+			).sourceTypicalTasks,
+		).toEqual([{ name: "Стрим" }]);
+		expect(
+			(
+				formData.streamModelControl as {
+					control: { controlTypicalTasks: unknown };
+				}
+			).control.controlTypicalTasks,
+		).toEqual([{ name: "КМ" }]);
+		expect(report.droppedPaths).toEqual([]);
+	});
+
+	it("does not report workflow schema defaults when workflow is preserved", () => {
+		const withWorkflow = {
+			type: "object",
+			properties: {
+				...schema.properties,
+				workflow: {
+					type: "object",
+					properties: {
+						globalStatus: { type: "string", default: "Черновик" },
+						sections: {
+							type: "object",
+							properties: {
+								generalInfo: { type: "string", default: "Создано" },
+							},
+						},
+					},
+				},
+			},
+		};
+		const source = {
+			generalInfo: { name: "X" },
+			workflow: {
+				globalStatus: "Утверждена",
+				sections: { generalInfo: "Заполнено" },
+			},
+		};
+		const { formData, report } = projectFormDataOntoJsonSchema(
+			source,
+			withWorkflow,
+		);
+		expect(formData.workflow).toEqual(source.workflow);
+		expect(report.defaultedPaths.some((p) => p.startsWith("workflow"))).toBe(
+			false,
+		);
+	});
 });

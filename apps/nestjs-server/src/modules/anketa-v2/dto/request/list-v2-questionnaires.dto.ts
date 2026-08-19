@@ -50,7 +50,7 @@ export class ListV2QuestionnairesDto {
 
 	@ApiPropertyOptional({
 		description:
-			"Режим версий ДАДМ: actual | approved (пагинация после выбора версии на серию)",
+			"Режим версий ДАДМ: actual | approved (пагинация по сериям; в ответе все версии серии)",
 		enum: ["actual", "approved"],
 	})
 	@IsOptional()

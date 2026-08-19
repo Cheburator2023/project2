@@ -1,4 +1,4 @@
-import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import Box from "@mui/material/Box";
 import Divider from "@mui/material/Divider";
 import IconButton from "@mui/material/IconButton";
@@ -164,28 +164,33 @@ function NavSectionHeader({
 	return (
 		<ListItem
 			disablePadding
-			sx={{ display: "block", mb: 0.2 }}
+			sx={{
+				display: "block",
+				mb: 0.2,
+				"& .MuiListItemSecondaryAction-root": {
+					right: -14,
+				},
+			}}
 			secondaryAction={
 				settingsPath ? (
 					<IconButton
 						component={RouterLink}
 						to={settingsPath}
 						size="small"
-						edge="end"
 						title="Настройки"
 						aria-label="Настройки"
 						color={settingsSelected ? "primary" : "default"}
 						data-test-id={`nav-section-settings--${settingsPath}`}
-						sx={{ mr: 0.25 }}
+						sx={{ p: 0.25 }}
 					>
-						<SettingsOutlinedIcon fontSize="small" />
+						<MoreVertIcon fontSize="small" />
 					</IconButton>
 				) : undefined
 			}
 		>
 			<ListItemButton
 				disabled
-				sx={{ pl, pr: settingsPath ? 6 : undefined }}
+				sx={{ pl, pr: settingsPath ? 3.5 : undefined }}
 			>
 				<ListItemText secondary={title} />
 			</ListItemButton>

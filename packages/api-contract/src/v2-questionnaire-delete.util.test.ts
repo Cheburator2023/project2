@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	canUserDeleteV2Questionnaire,
 	resolveV2QuestionnaireDeleteAction,
+	summarizeV2QuestionnaireDeleteSelection,
 	userCanCreateV2Questionnaire,
 	userHasV2QuestionnaireCreateRole,
 	userHasV2QuestionnaireDeleteRole,
@@ -156,5 +157,46 @@ describe("resolveV2QuestionnaireDeleteAction", () => {
 				reason: "already_inactive",
 			},
 		);
+	});
+});
+
+describe("summarizeV2QuestionnaireDeleteSelection", () => {
+	it("drafts are hard-deleted even with DADM on", () => {
+		expect(
+			summarizeV2QuestionnaireDeleteSelection(
+				[{ workflowGlobalStatus: "Черновик", status: "active" }],
+				true,
+			),
+		).toEqual({ kind: "hard_delete", hardDeleteCount: 1, deactivateCount: 0 });
+	});
+
+	it("approved become inactive when DADM is on", () => {
+		expect(
+			summarizeV2QuestionnaireDeleteSelection(
+				[{ workflowGlobalStatus: "Утверждена", status: "active" }],
+				true,
+			),
+		).toEqual({ kind: "deactivate", hardDeleteCount: 0, deactivateCount: 1 });
+	});
+
+	it("mixes draft delete and approved deactivate", () => {
+		expect(
+			summarizeV2QuestionnaireDeleteSelection(
+				[
+					{ workflowGlobalStatus: "Черновик", status: "active" },
+					{ workflowGlobalStatus: "Утверждена", status: "active" },
+				],
+				true,
+			),
+		).toEqual({ kind: "mixed", hardDeleteCount: 1, deactivateCount: 1 });
+	});
+
+	it("without DADM approved are also hard-deleted", () => {
+		expect(
+			summarizeV2QuestionnaireDeleteSelection(
+				[{ workflowGlobalStatus: "Утверждена", status: "active" }],
+				false,
+			),
+		).toEqual({ kind: "hard_delete", hardDeleteCount: 1, deactivateCount: 0 });
 	});
 });

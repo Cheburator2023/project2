@@ -45,7 +45,7 @@ export class V2QuestionnaireRegistryReadCache {
 	listKey(input: V2RegistryListCacheKeyInput): string {
 		const streams =
 			input.streams == null ? "*" : [...input.streams].sort().join(",");
-		return `${streams}|${input.page}|${input.limit}|${input.search}|${input.versionMode ?? ""}`;
+		return `${streams}|${input.page}|${input.limit}|${input.search}|${input.versionMode ?? ""}|seriesAll`;
 	}
 
 	getList(key: string): PaginatedV2QuestionnaireResponseDto | undefined {

@@ -1,6 +1,8 @@
 import {
 	V2_QUESTIONNAIRE_REGISTRY_PAGE_SIZE,
+	expandV2QuestionnaireRegistrySeriesMembers,
 	filterV2QuestionnairesByRegistryVersionMode,
+	summarizeV2QuestionnaireDeleteSelection,
 	type V2QuestionnaireListQuery,
 } from "@smart-anketa/api-contract";
 
@@ -9,19 +11,26 @@ describe("v2 questionnaire registry pagination contract", () => {
 		expect(V2_QUESTIONNAIRE_REGISTRY_PAGE_SIZE).toBe(50);
 	});
 
-	it("versionMode picks one row per series before paging", () => {
+	it("versionMode paging keeps all versions of the series on the page", () => {
 		const rows = [
 			{
 				id: "a1",
 				seriesId: "s1",
 				version: "1",
 				status: "inactive",
-				workflowGlobalStatus: "Утверждена",
+				workflowGlobalStatus: "Черновик",
 			},
 			{
 				id: "a2",
 				seriesId: "s1",
 				version: "2",
+				status: "inactive",
+				workflowGlobalStatus: "Черновик",
+			},
+			{
+				id: "a3",
+				seriesId: "s1",
+				version: "3",
 				status: "active",
 				workflowGlobalStatus: "Черновик",
 			},
@@ -34,13 +43,24 @@ describe("v2 questionnaire registry pagination contract", () => {
 			},
 		];
 		const actual = filterV2QuestionnairesByRegistryVersionMode(rows, "actual");
-		expect(actual.map((r) => r.id)).toEqual(["a2", "b1"]);
+		expect(actual.map((r) => r.id)).toEqual(["a3", "b1"]);
+		expect(
+			expandV2QuestionnaireRegistrySeriesMembers(rows, actual).map((r) => r.id),
+		).toEqual(["a1", "a2", "a3", "b1"]);
+	});
 
-		const approved = filterV2QuestionnairesByRegistryVersionMode(
-			rows,
-			"approved",
-		);
-		expect(approved.map((r) => r.id)).toEqual(["a1"]);
+	it("actual mode paging includes a series with only an inactive approved slice", () => {
+		const rows = [
+			{
+				id: "d1",
+				seriesId: "s4",
+				version: "1",
+				status: "inactive",
+				workflowGlobalStatus: "Утверждена",
+			},
+		];
+		const actual = filterV2QuestionnairesByRegistryVersionMode(rows, "actual");
+		expect(actual.map((r) => r.id)).toEqual(["d1"]);
 	});
 
 	it("list query shape accepts page/search/versionMode", () => {
@@ -52,5 +72,20 @@ describe("v2 questionnaire registry pagination contract", () => {
 		};
 		expect(query.limit).toBe(50);
 		expect(query.versionMode).toBe("actual");
+	});
+
+	it("DADM delete: draft is removed, approved is deactivated", () => {
+		expect(
+			summarizeV2QuestionnaireDeleteSelection(
+				[{ workflowGlobalStatus: "Черновик", status: "active" }],
+				true,
+			).kind,
+		).toBe("hard_delete");
+		expect(
+			summarizeV2QuestionnaireDeleteSelection(
+				[{ workflowGlobalStatus: "Утверждена", status: "active" }],
+				true,
+			).kind,
+		).toBe("deactivate");
 	});
 });

@@ -106,6 +106,10 @@ describe("v2-questionnaire-registry-columns.util", () => {
 		expect(ids).toContain("form.detailInfo.parameters.streamNames");
 		expect(ids).toContain("form.detailInfo.parameters.streamsOutsideDADM");
 		expect(ids).toContain("form.detailInfo.modelsList[0].field_role");
+		expect(ids).toContain("status");
+		expect(leaves.find((leaf) => leaf.id === "status")?.header).toBe(
+			"Статус записи",
+		);
 	});
 
 	it("falls back to static russian risk labels without schema", () => {

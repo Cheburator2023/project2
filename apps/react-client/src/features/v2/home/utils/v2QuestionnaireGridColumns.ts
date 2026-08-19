@@ -2,6 +2,7 @@ import type { ColDef, ColGroupDef } from "ag-grid-community";
 import {
 	buildV2QuestionnaireRegistryColumnTree,
 	estimateRegistryColumnWidth,
+	formatV2QuestionnaireStatus,
 	formatV2TemplateVersionDisplayName,
 	resolveImplementationStreamLabel,
 	type V2RegistryColumnNode,
@@ -20,6 +21,7 @@ import {
 import { V2SchemaBindingStatusCell } from "../molecules/V2SchemaBindingStatusCell";
 import { V2EditLockStatusCell } from "../molecules/V2EditLockStatusCell";
 import { V2QuestionnaireNameCell } from "../molecules/V2QuestionnaireNameCell";
+import { V2QuestionnaireRecordStatusCell } from "../molecules/V2QuestionnaireRecordStatusCell";
 import type { V2QuestionnaireGridRow } from "../types/v2QuestionnaireGrid.types";
 import {
 	formatGridCellValue,
@@ -98,6 +100,19 @@ function leafToColDef(leaf: V2RegistryLeafColumn): ColDef<V2QuestionnaireGridRow
 				cellRenderer: V2WorkflowGlobalStatusCell,
 				valueGetter: (p) =>
 					resolveVersionRow(p.data)?.workflowGlobalStatus ?? null,
+			};
+		}
+		if (leaf.id === "status") {
+			return {
+				colId: leaf.id,
+				headerName: leaf.header,
+				minWidth,
+				resizable: true,
+				...baseFilter,
+				cellRenderer: V2QuestionnaireRecordStatusCell,
+				valueGetter: (p) =>
+					formatV2QuestionnaireStatus(resolveVersionRow(p.data)?.status) ||
+					null,
 			};
 		}
 		if (leaf.id === "editLock") {

@@ -12,6 +12,14 @@ export function apiErrorMessage(error: unknown): string {
 		return bodyMsg;
 	}
 
+	const axCode = ax.code;
+	if (
+		axCode === "ERR_NETWORK" ||
+		(error instanceof Error && error.message === "Network Error")
+	) {
+		return "Нет ответа сервера. Повторите попытку или проверьте, что API доступен.";
+	}
+
 	if (error instanceof Error && error.message) {
 		return error.message;
 	}

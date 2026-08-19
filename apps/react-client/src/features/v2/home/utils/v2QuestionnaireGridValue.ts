@@ -11,6 +11,25 @@ export function resolveVersionRow(
 	return row;
 }
 
+/** Выбранные версии: группа серии разворачивается в детей. */
+export function collectSelectedVersionRows(
+	rows: readonly V2QuestionnaireGridRow[],
+): V2QuestionnaireVersionRow[] {
+	const byId = new Map<string, V2QuestionnaireVersionRow>();
+	for (const row of rows) {
+		if (row.rowKind === "series") {
+			for (const child of row.children) {
+				byId.set(child.id, child);
+			}
+			continue;
+		}
+		if (row.rowKind === "version") {
+			byId.set(row.id, row);
+		}
+	}
+	return [...byId.values()];
+}
+
 export function versionFormData(
 	row: V2QuestionnaireGridRow | undefined,
 ): Record<string, unknown> | null {

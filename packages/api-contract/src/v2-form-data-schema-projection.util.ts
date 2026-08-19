@@ -5,7 +5,9 @@
  * — boolean без значения → false (через applyBooleanDefaults отдельно на вызывающей стороне).
  */
 
+import { V2_ANKETA_SYSTEM_ROOT_KEYS } from "./v2-anketa-system-scaffold.util";
 import { applyBooleanDefaultsToFormData } from "./v2-boolean-form-defaults.util";
+import { LEGACY_GENERATED_TYPICAL_WORK_ARRAY_PATHS } from "./v2-typical-work-output-paths.util";
 
 export type V2FormDataProjectionReportDto = {
 	droppedPaths: string[];
@@ -22,14 +24,19 @@ export type V2FormDataProjectionResult = {
 type JsonSchemaNode = {
 	type?: string | string[];
 	properties?: Record<string, unknown>;
+	additionalProperties?: unknown;
 	items?: unknown;
 	default?: unknown;
 	enum?: unknown[];
 	const?: unknown;
 };
 
-/** Корневые ключи, не являющиеся полями опросника схемы. */
-const PRESERVED_ROOT_KEYS = new Set(["workflow"]);
+/**
+ * Системные корневые ключи (workflow, groupActivation, …): копируются как есть.
+ * Их нет в `properties` или они заданы через `additionalProperties` — prune
+ * иначе выкидывает флаги стримов и пишет ложные defaultedPaths по workflow.
+ */
+const PRESERVED_ROOT_KEYS = new Set<string>(V2_ANKETA_SYSTEM_ROOT_KEYS);
 
 function asRecord(value: unknown): Record<string, unknown> | null {
 	if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -104,6 +111,50 @@ type VisitResult = {
 	present: boolean;
 };
 
+function isRuntimeTypicalWorkPath(path: string): boolean {
+	return LEGACY_GENERATED_TYPICAL_WORK_ARRAY_PATHS.some(
+		(legacy) =>
+			path === legacy ||
+			legacy.startsWith(`${path}.`) ||
+			path.startsWith(`${legacy}.`),
+	);
+}
+
+/**
+ * Ключ не из `properties`. JSON Schema: `additionalProperties` schema/true —
+ * оставить; false/отсутствует — отбросить (prune при смене версии схемы).
+ * Массивы типовых работ живут в formData/uiSchema даже без jsonSchema.properties.
+ */
+function projectAdditionalProperty(
+	value: unknown,
+	additionalProperties: unknown,
+	childPath: string,
+	dropped: string[],
+	defaulted: string[],
+): VisitResult & { dropped: boolean } {
+	if (additionalProperties === true) {
+		return { value, present: true, dropped: false };
+	}
+	if (additionalProperties && typeof additionalProperties === "object") {
+		const additionalSchema = asSchema(additionalProperties);
+		if (!additionalSchema) {
+			return { value, present: true, dropped: false };
+		}
+		const child = visit(
+			value,
+			additionalSchema,
+			childPath,
+			dropped,
+			defaulted,
+		);
+		return { ...child, dropped: false };
+	}
+	if (isRuntimeTypicalWorkPath(childPath)) {
+		return { value, present: true, dropped: false };
+	}
+	return { value: undefined, present: false, dropped: true };
+}
+
 function visit(
 	data: unknown,
 	schema: JsonSchemaNode,
@@ -119,15 +170,33 @@ function visit(
 		for (const key of Object.keys(src)) {
 			const childPath = path ? `${path}.${key}` : key;
 			const propSchema = asSchema(props[key]);
-			if (!propSchema) {
+			if (propSchema) {
+				const child = visit(
+					src[key],
+					propSchema,
+					childPath,
+					dropped,
+					defaulted,
+				);
+				if (child.present) out[key] = child.value;
+				continue;
+			}
+			const extra = projectAdditionalProperty(
+				src[key],
+				schema.additionalProperties,
+				childPath,
+				dropped,
+				defaulted,
+			);
+			if (extra.dropped) {
 				dropped.push(childPath);
 				continue;
 			}
-			const child = visit(src[key], propSchema, childPath, dropped, defaulted);
-			if (child.present) out[key] = child.value;
+			if (extra.present) out[key] = extra.value;
 		}
 
 		for (const [key, rawProp] of Object.entries(props)) {
+			if (path === "" && PRESERVED_ROOT_KEYS.has(key)) continue;
 			if (Object.prototype.hasOwnProperty.call(out, key)) continue;
 			const propSchema = asSchema(rawProp);
 			if (!propSchema) continue;

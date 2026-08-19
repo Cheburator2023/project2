@@ -31,6 +31,7 @@ import {
 	userMasksAllWorkEstimates,
 	V2_ANKETA_GLOBAL_COMPLETE_LABEL,
 	V2_ANKETA_HOLD_LABEL,
+	V2_ANKETA_NEW_VERSION_LABEL,
 } from "@smart-anketa/api-contract";
 import { useDadmProgramManagerFeature } from "@react-client/common/api/queries/v2-runtime-settings";
 import {
@@ -438,6 +439,13 @@ export function AnketaFormShell({
 		(workflow.globalStatus === "Утверждена" ||
 			workflow.globalStatus === "Заполнено");
 
+	const goToNewVersion = useCallback(() => {
+		if (!questionnaireId) return;
+		navigate(
+			`/v2/${v2Routes.calculationNewVersion.rootPath.replace(":id", questionnaireId)}`,
+		);
+	}, [navigate, questionnaireId]);
+
 	const copyAccess = useMemo(
 		() =>
 			canUserCopyV2Questionnaire(groups, engine.formData, {
@@ -615,20 +623,19 @@ export function AnketaFormShell({
 					</Button>
 				) : null}
 				{canShowNewVersion ? (
-					<IconButton
+					<Button
+						variant="outlined"
+						color="primary"
 						size="small"
-						title="Создать новую версию для корректировки (тот же ID, версия +1)"
-						aria-label="Создать новую версию"
-						onClick={() => {
-							if (!questionnaireId) return;
-							navigate(
-								`/v2/${v2Routes.calculationNewVersion.rootPath.replace(":id", questionnaireId)}`,
-							);
-						}}
+						startIcon={<LibraryAddOutlinedIcon fontSize="small" />}
+						title="Тот же ID, версия +1. Утверждённая версия останется историческим срезом."
+						aria-label={V2_ANKETA_NEW_VERSION_LABEL}
+						onClick={goToNewVersion}
+						sx={{ fontWeight: 600, whiteSpace: "nowrap" }}
 						data-test-id={`${dataTestId}--new-version`}
 					>
-						<LibraryAddOutlinedIcon fontSize="small" />
-					</IconButton>
+						{V2_ANKETA_NEW_VERSION_LABEL}
+					</Button>
 				) : null}
 				{canShowCopy ? (
 					<IconButton
@@ -694,11 +701,11 @@ export function AnketaFormShell({
 			deleteIsHard,
 			effectiveReadOnly,
 			globallyLocked,
+			goToNewVersion,
 			headerExtra,
 			holdMutation.isPending,
 			isEditingQuestionnaire,
 			mayCompleteWholeAnketa,
-			navigate,
 			onSave,
 			openCompleteDialog,
 			openCopyNameDialog,
@@ -800,11 +807,8 @@ export function AnketaFormShell({
 				onSave={() => onSave?.()}
 				onCreateCopy={openCopyNameDialog}
 				onNewVersion={() => {
-					if (!questionnaireId) return;
 					closeCompleteDialog();
-					navigate(
-						`/v2/${v2Routes.calculationNewVersion.rootPath.replace(":id", questionnaireId)}`,
-					);
+					goToNewVersion();
 				}}
 				onGoToRegistry={() => {
 					closeCompleteDialog();

@@ -1,6 +1,7 @@
 import DownloadIcon from "@mui/icons-material/Download";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import HideSourceOutlinedIcon from "@mui/icons-material/HideSourceOutlined";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import TaskAltIcon from "@mui/icons-material/TaskAlt";
 import {
@@ -96,6 +97,8 @@ import { useDebouncedValue } from "@react-client/features/v2/admin_constructor/h
 import {
 	canHoldQuestionnaire,
 	canUserDeleteV2Questionnaire,
+	summarizeV2QuestionnaireDeleteSelection,
+	v2QuestionnaireDeleteUiCopy,
 	V2_ANKETA_HOLD_LABEL,
 	V2_QUESTIONNAIRE_REGISTRY_PAGE_SIZE,
 	V2_QUESTIONNAIRE_REGISTRY_VERSION_MODE_LABELS,
@@ -113,7 +116,7 @@ import {
 	type QuestionnaireGridPresetApi,
 } from "../utils/v2QuestionnaireGridFactoryPresets";
 import { buildV2QuestionnaireRegistryTree } from "../utils/buildV2QuestionnaireRegistryTree";
-import { resolveVersionRow } from "../utils/v2QuestionnaireGridValue";
+import { resolveVersionRow, collectSelectedVersionRows } from "../utils/v2QuestionnaireGridValue";
 import { V2RegistryPagingPanel } from "./V2RegistryPagingPanel";
 
 export type {
@@ -489,7 +492,7 @@ export function V2QuestionnaireList() {
 			headerCheckbox: true,
 			enableClickSelection: false,
 			isRowSelectable: (node: { data?: V2QuestionnaireGridRow }) =>
-				node.data?.rowKind === "version",
+				node.data?.rowKind === "version" || node.data?.rowKind === "series",
 		}),
 		[],
 	);
@@ -501,6 +504,28 @@ export function V2QuestionnaireList() {
 	 * Не дублируем `userHasV2QuestionnaireDeleteRole` — в god mode groups=[] и кнопка пропадала.
 	 */
 	const canDeleteInRegistry = canDeleteCalculation;
+
+	const deletableSelectedVersions = useMemo(
+		() =>
+			selectedVersions.filter(
+				(row) => canUserDeleteV2Questionnaire(groups, row.formData).ok,
+			),
+		[groups, selectedVersions],
+	);
+	const deleteSelection = useMemo(
+		() =>
+			summarizeV2QuestionnaireDeleteSelection(
+				deletableSelectedVersions,
+				dadmProgramManagerEnabled,
+			),
+		[dadmProgramManagerEnabled, deletableSelectedVersions],
+	);
+	const deleteCopy = useMemo(
+		() => v2QuestionnaireDeleteUiCopy(deleteSelection),
+		[deleteSelection],
+	);
+	const deleteActionDisabled =
+		deleteSelection.kind === "none" || bulkDelete.isPending;
 
 	useEffect(() => {
 		setPage(1);
@@ -527,7 +552,9 @@ export function V2QuestionnaireList() {
 	/** Дерево версий — только при фиче ДАДМ; иначе плоский реестр. */
 	const rowData = useMemo<V2QuestionnaireGridRow[]>(() => {
 		if (!dadmProgramManagerEnabled) return versionRows;
-		return buildV2QuestionnaireRegistryTree(versionRows, registryVersionMode);
+		return buildV2QuestionnaireRegistryTree(versionRows, registryVersionMode, {
+			includeAllVersions: true,
+		});
 	}, [versionRows, registryVersionMode, dadmProgramManagerEnabled]);
 
 	useEffect(() => {
@@ -681,22 +708,30 @@ export function V2QuestionnaireList() {
 		(
 			params: GetContextMenuItemsParams<V2QuestionnaireGridRow>,
 		): MenuItemDef[] => {
-			const row = resolveVersionRow(params.node?.data);
-			if (!row) {
+			const clicked = params.node?.data;
+			const clickedVersions =
+				clicked?.rowKind === "series"
+					? clicked.children
+					: (() => {
+							const version = resolveVersionRow(clicked);
+							return version ? [version] : [];
+						})();
+			if (clickedVersions.length === 0) {
 				return [];
 			}
-			const selectedRows = params.api
-				.getSelectedRows()
-				.map((item) => resolveVersionRow(item))
-				.filter((item): item is V2QuestionnaireVersionRow => item != null);
-			const exportIds =
-				selectedRows.length > 0
-					? selectedRows.map((item) => item.id)
-					: [row.id];
+			const selectedRows = collectSelectedVersionRows(
+				params.api.getSelectedRows(),
+			);
+			const clickedIds = new Set(clickedVersions.map((item) => item.id));
+			const targets = selectedRows.some((item) => clickedIds.has(item.id))
+				? selectedRows
+				: clickedVersions;
+			const exportIds = targets.map((item) => item.id);
 			const exportLabel =
 				exportIds.length > 1
 					? `Экспорт в XLSX (${exportIds.length})`
 					: "Экспорт в XLSX";
+			const row = clickedVersions[0]!;
 			const hardLocked = editLockHardDisable && row.isEditLocked;
 			const lockedHint = hardLocked
 				? "Анкета сейчас редактируется"
@@ -704,7 +739,7 @@ export function V2QuestionnaireList() {
 					? "уже редактируется — можно открыть"
 					: undefined;
 
-			return [
+			const menu: MenuItemDef[] = [
 				{
 					name: lockedHint ? `Открыть (${lockedHint})` : "Открыть",
 					disabled: Boolean(hardLocked),
@@ -732,8 +767,39 @@ export function V2QuestionnaireList() {
 					},
 				},
 			];
+
+			if (canDeleteInRegistry) {
+				const deletable = targets.filter(
+					(item) => canUserDeleteV2Questionnaire(groups, item.formData).ok,
+				);
+				const summary = summarizeV2QuestionnaireDeleteSelection(
+					deletable,
+					dadmProgramManagerEnabled,
+				);
+				if (summary.kind !== "none") {
+					const copy = v2QuestionnaireDeleteUiCopy(summary);
+					menu.push({
+						name: copy.menu,
+						action: () => {
+							setSelectedVersions(deletable);
+							setDeleteDialogOpen(true);
+						},
+					});
+				}
+			}
+
+			return menu;
 		},
-		[editLockHardDisable, navigate, exportBlocked, exportBusy, handleExportXlsx],
+		[
+			canDeleteInRegistry,
+			dadmProgramManagerEnabled,
+			editLockHardDisable,
+			exportBlocked,
+			exportBusy,
+			groups,
+			handleExportXlsx,
+			navigate,
+		],
 	);
 
 	const holdableSelectedIds = useMemo(
@@ -784,9 +850,7 @@ export function V2QuestionnaireList() {
 	}, [bulkHold, holdableSelectedIds]);
 
 	const runBulkDelete = useCallback(() => {
-		const ids = selectedVersions
-			.filter((row) => canUserDeleteV2Questionnaire(groups, row.formData).ok)
-			.map((row) => row.id);
+		const ids = deletableSelectedVersions.map((row) => row.id);
 		if (!ids.length) {
 			toast.error(
 				"Нет доступных для удаления анкет среди выбранных (роль/стрим)",
@@ -815,7 +879,7 @@ export function V2QuestionnaireList() {
 					} else if (failed > 0) {
 						toast.error(
 							result.failed[0]?.message ??
-								"Не удалось удалить выбранные анкеты",
+								"Не удалось обработать выбранные анкеты",
 						);
 					}
 				},
@@ -825,7 +889,7 @@ export function V2QuestionnaireList() {
 					}),
 			},
 		);
-	}, [bulkDelete, groups, selectedVersions]);
+	}, [bulkDelete, deletableSelectedVersions]);
 
 	const versionModeToggle = dadmProgramManagerEnabled ? (
 		<SegmentBar<V2QuestionnaireRegistryVersionMode>
@@ -836,13 +900,13 @@ export function V2QuestionnaireList() {
 				{
 					id: "actual",
 					label: V2_QUESTIONNAIRE_REGISTRY_VERSION_MODE_LABELS.actual,
-					title: "Последняя актуальная версия каждой анкеты",
+					title: "Серии с активной версией; в строке — все версии анкеты",
 					"data-test-id": "anketa-registry-version-mode-actual",
 				},
 				{
 					id: "approved",
 					label: V2_QUESTIONNAIRE_REGISTRY_VERSION_MODE_LABELS.approved,
-					title: "Последняя утверждённая версия каждой анкеты",
+					title: "Серии с утверждённой версией; в строке — все версии анкеты",
 					"data-test-id": "anketa-registry-version-mode-approved",
 				},
 			]}
@@ -958,20 +1022,27 @@ export function V2QuestionnaireList() {
 										variant="outlined"
 										size="small"
 										fullWidth
-										color="error"
-										startIcon={<DeleteOutlineIcon />}
-										disabled={!selectedVersions.length || bulkDelete.isPending}
-										title={
-											dadmProgramManagerEnabled
-												? "Неутверждённые — полное удаление; утверждённые — статус «Неактивная»."
-												: "Удалить выбранные анкеты безвозвратно"
+										color={
+											deleteSelection.kind === "deactivate"
+												? "primary"
+												: "error"
 										}
+										startIcon={
+											deleteSelection.kind === "deactivate" ? (
+												<HideSourceOutlinedIcon />
+											) : (
+												<DeleteOutlineIcon />
+											)
+										}
+										disabled={deleteActionDisabled}
+										title={deleteCopy.tooltip}
 										onClick={() => {
 											setHeaderMenuAnchor(null);
 											setDeleteDialogOpen(true);
 										}}
+										data-test-id="anketa-registry-bulk-delete"
 									>
-										Удалить выбранные ({selectedVersions.length})
+										{deleteCopy.button}
 									</Button>
 								) : null}
 								{canCreateCalculation ? (
@@ -1065,17 +1136,23 @@ export function V2QuestionnaireList() {
 								<Button
 									variant="outlined"
 									size="small"
-									color="error"
-									startIcon={<DeleteOutlineIcon />}
-									disabled={!selectedVersions.length || bulkDelete.isPending}
-									title={
-										dadmProgramManagerEnabled
-											? "Неутверждённые — полное удаление; утверждённые — статус «Неактивная»."
-											: "Удалить выбранные анкеты безвозвратно"
+									color={
+										deleteSelection.kind === "deactivate" ? "primary" : "error"
 									}
+									startIcon={
+										deleteSelection.kind === "deactivate" ? (
+											<HideSourceOutlinedIcon />
+										) : (
+											<DeleteOutlineIcon />
+										)
+									}
+									disabled={deleteActionDisabled}
+									title={deleteCopy.tooltip}
 									onClick={() => setDeleteDialogOpen(true)}
+									data-test-id="anketa-registry-bulk-delete"
+									sx={{ whiteSpace: "nowrap" }}
 								>
-									Удалить выбранные ({selectedVersions.length})
+									{deleteCopy.button}
 								</Button>
 							) : null}
 							{canCreateCalculation ? (
@@ -1133,23 +1210,19 @@ export function V2QuestionnaireList() {
 				open={deleteDialogOpen}
 				onClose={() => setDeleteDialogOpen(false)}
 			>
-				<DialogTitle>Удалить выбранные анкеты?</DialogTitle>
+				<DialogTitle>{deleteCopy.dialogTitle}</DialogTitle>
 				<DialogContent>
-					<DialogContentText>
-						{dadmProgramManagerEnabled
-							? `Будет обработано записей: ${selectedVersions.length}. Неутверждённые анкеты удаляются из реестра безвозвратно; утверждённые переводятся в статус записи «Неактивная» (срез сохраняется). Действие применяется только к анкетам, доступным вашей роли и стриму.`
-							: `Будет удалено записей: ${selectedVersions.length}. Удаление безвозвратное. Действие применяется только к анкетам, доступным вашей роли и стриму.`}
-					</DialogContentText>
+					<DialogContentText>{deleteCopy.dialogBody}</DialogContentText>
 				</DialogContent>
 				<DialogActions>
 					<Button onClick={() => setDeleteDialogOpen(false)}>Отмена</Button>
 					<Button
-						color="error"
+						color={deleteSelection.kind === "deactivate" ? "primary" : "error"}
 						variant="contained"
-						disabled={bulkDelete.isPending}
+						disabled={bulkDelete.isPending || deleteSelection.kind === "none"}
 						onClick={runBulkDelete}
 					>
-						Подтвердить
+						{bulkDelete.isPending ? "Обработка…" : deleteCopy.confirm}
 					</Button>
 				</DialogActions>
 			</Dialog>
@@ -1191,10 +1264,7 @@ export function V2QuestionnaireList() {
 						e: SelectionChangedEvent<V2QuestionnaireGridRow>,
 					) => {
 						setSelectedVersions(
-							e.api
-								.getSelectedRows()
-								.map((row) => resolveVersionRow(row))
-								.filter((row): row is V2QuestionnaireVersionRow => row != null),
+							collectSelectedVersionRows(e.api.getSelectedRows()),
 						);
 					}}
 					domLayout="normal"

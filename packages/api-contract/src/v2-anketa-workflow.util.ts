@@ -292,6 +292,8 @@ export const V2_ANKETA_GLOBAL_COMPLETE_LABEL =
 
 export const V2_ANKETA_HOLD_LABEL = "Утвердить оценку по анкете";
 
+export const V2_ANKETA_NEW_VERSION_LABEL = "Создать новую версию";
+
 export const V2_ANKETA_SECTION_COMPLETE_LABELS: Record<
 	V2AnketaMainSectionId,
 	string

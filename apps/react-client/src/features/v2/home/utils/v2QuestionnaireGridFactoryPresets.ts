@@ -99,6 +99,7 @@ const DEFAULT_REGISTRY_VISIBLE = [
 	pathCol("generalInfo.implementationStream"),
 	"version",
 	"workflowGlobalStatus",
+	"status",
 	"workflowSection.generalInfo",
 	"workflowSection.detailInfo",
 	"workflowSection.streamDataSources",

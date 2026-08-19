@@ -731,6 +731,7 @@ function buildMetaRegistryGroup(): V2RegistryGroupColumn {
 			metaLeaf("readableId", "ID анкеты", "readableId"),
 			metaLeaf("version", "Версия", "version"),
 			metaLeaf("workflowGlobalStatus", "Статус анкеты", "workflowGlobalStatus"),
+			metaLeaf("status", "Статус записи", "status"),
 			metaLeaf("editLock", "Редактирование", "editLock"),
 			metaLeaf("author", "Автор", "author"),
 			metaLeaf("templateName", "Схема", "templateName"),

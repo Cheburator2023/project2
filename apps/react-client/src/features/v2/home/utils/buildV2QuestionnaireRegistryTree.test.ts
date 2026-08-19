@@ -62,6 +62,24 @@ describe("buildV2QuestionnaireRegistryTree", () => {
 		]);
 	});
 
+	it("actual mode keeps a series that only has an inactive approved version", () => {
+		const rows = [
+			version({
+				id: "d1",
+				seriesId: "s4",
+				version: "1",
+				calcName: "Деактивированная",
+				status: "inactive",
+				workflowGlobalStatus: "Утверждена",
+				createdAt: "2026-04-01T00:00:00.000Z",
+			}),
+		];
+		const tree = buildV2QuestionnaireRegistryTree(rows, "actual");
+		expect(tree).toHaveLength(1);
+		expect(tree[0]?.children.map((c) => c.id)).toEqual(["d1"]);
+		expect(tree[0]?.children[0]?.status).toBe("inactive");
+	});
+
 	it("approved mode: latest approved per series (incl. inactive)", () => {
 		const rows = [
 			version({
@@ -93,7 +111,7 @@ describe("buildV2QuestionnaireRegistryTree", () => {
 		expect(tree[0]?.children.map((c) => c.id)).toEqual(["a1"]);
 	});
 
-	it("includeAllVersions: все версии серии без фильтра режимов", () => {
+	it("includeAllVersions: все версии серии (копия + последующие версии)", () => {
 		const rows = [
 			version({
 				id: "a1",
@@ -118,5 +136,44 @@ describe("buildV2QuestionnaireRegistryTree", () => {
 		});
 		expect(tree).toHaveLength(1);
 		expect(tree[0]?.children.map((c) => c.id)).toEqual(["a1", "a2"]);
+		expect(tree[0]?.children.map((c) => c.displayLabel)).toEqual(["v1", "v2"]);
+	});
+
+	it("includeAllVersions: копия и две последующие версии — три ребёнка в одной группе", () => {
+		const rows = [
+			version({
+				id: "c1",
+				seriesId: "copy-series",
+				version: "1",
+				calcName: "Копия",
+				status: "inactive",
+				createdAt: "2026-03-01T00:00:00.000Z",
+			}),
+			version({
+				id: "c2",
+				seriesId: "copy-series",
+				version: "2",
+				calcName: "Копия",
+				status: "inactive",
+				createdAt: "2026-03-02T00:00:00.000Z",
+			}),
+			version({
+				id: "c3",
+				seriesId: "copy-series",
+				version: "3",
+				calcName: "Копия",
+				status: "active",
+				createdAt: "2026-03-03T00:00:00.000Z",
+			}),
+		];
+		const tree = buildV2QuestionnaireRegistryTree(rows, "actual", {
+			includeAllVersions: true,
+		});
+		expect(tree).toHaveLength(1);
+		expect(tree[0]?.children.map((c) => c.displayLabel)).toEqual([
+			"v1",
+			"v2",
+			"v3",
+		]);
 	});
 });

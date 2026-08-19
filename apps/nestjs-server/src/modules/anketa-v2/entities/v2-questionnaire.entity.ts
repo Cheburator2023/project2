@@ -37,7 +37,7 @@ export class V2QuestionnaireEntity {
 	@Column({ name: "parent_questionnaire_id", type: "uuid", nullable: true })
 	parentQuestionnaireId: string | null;
 
-	@ManyToOne(() => V2QuestionnaireEntity, { nullable: true })
+	@ManyToOne(() => V2QuestionnaireEntity, { nullable: true, onDelete: "SET NULL" })
 	@JoinColumn({ name: "parent_questionnaire_id" })
 	parentQuestionnaire?: V2QuestionnaireEntity | null;
 

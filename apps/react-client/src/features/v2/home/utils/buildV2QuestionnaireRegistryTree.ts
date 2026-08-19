@@ -18,10 +18,10 @@ function formatAnketaVersionLabel(version: string): string {
 }
 
 /**
- * Дерево реестра: группа (серия) → версии, отобранные режимом.
- * Актуальные / Утверждённые — по одной версии на серию
- * (`filterV2QuestionnairesByRegistryVersionMode`).
- * `includeAllVersions` — без фильтра режимов (фича ДАДМ выкл.).
+ * Дерево реестра: группа (серия) → версии.
+ * По умолчанию в детях — representative режима (одна версия на серию).
+ * `includeAllVersions` — все переданные версии серии (ДАДМ: бэкенд уже
+ * отобрал серии режимом actual/approved и отдал полный набор версий).
  * Имя группы — calcName первой версии серии (мин. номер среди всех).
  */
 export function buildV2QuestionnaireRegistryTree(
