@@ -8,7 +8,7 @@ import {
 	V2_QUESTIONNAIRE_EDIT_LOCK_TTL_MS,
 	type V2QuestionnaireEditLockDto,
 } from "@smart-anketa/api-contract";
-import { Repository } from "typeorm";
+import { In, Repository } from "typeorm";
 import { V2QuestionnaireEditLockEntity } from "../entities/v2-questionnaire-edit-lock.entity";
 import { V2QuestionnaireEntity } from "../entities/v2-questionnaire.entity";
 
@@ -19,6 +19,9 @@ export type V2QuestionnaireEditLockHolder = {
 
 @Injectable()
 export class V2QuestionnaireEditLockService {
+	/** socketId → questionnaireIds, которые этот сокет держит. */
+	private readonly holdsBySocket = new Map<string, Set<string>>();
+
 	constructor(
 		@InjectRepository(V2QuestionnaireEditLockEntity)
 		private readonly lockRepository: Repository<V2QuestionnaireEditLockEntity>,
@@ -50,6 +53,7 @@ export class V2QuestionnaireEditLockService {
 	async acquire(
 		questionnaireId: string,
 		holder: V2QuestionnaireEditLockHolder,
+		socketId?: string,
 	): Promise<V2QuestionnaireEditLockDto> {
 		await this.ensureQuestionnaireExists(questionnaireId);
 		const label = holder.label.trim();
@@ -83,6 +87,7 @@ export class V2QuestionnaireEditLockService {
 		entity.lockedByUserId = holder.userId ?? null;
 		entity.expiresAt = expiresAt;
 		await this.lockRepository.save(entity);
+		if (socketId) this.trackSocket(socketId, questionnaireId);
 		return this.toDto(entity);
 	}
 
@@ -96,14 +101,69 @@ export class V2QuestionnaireEditLockService {
 	async release(
 		questionnaireId: string,
 		holder: V2QuestionnaireEditLockHolder,
-	): Promise<void> {
+		socketId?: string,
+	): Promise<boolean> {
+		if (socketId) this.untrackSocket(socketId, questionnaireId);
+		if (this.socketCountFor(questionnaireId) > 0) return false;
 		await this.purgeExpired();
 		const existing = await this.lockRepository.findOne({
 			where: { questionnaireId },
 		});
-		if (!existing) return;
-		if (!this.isSameHolder(existing, holder)) return;
+		if (!existing) return false;
+		if (!this.isSameHolder(existing, holder)) return false;
 		await this.lockRepository.delete({ questionnaireId });
+		return true;
+	}
+
+	/**
+	 * Снимает lock'и, которые держал сокет (закрытие вкладки / logout / обрыв WS).
+	 * Если ту же анкету держит другой сокет того же пользователя — запись остаётся.
+	 */
+	async releaseAllForSocket(socketId: string): Promise<string[]> {
+		const held = [...(this.holdsBySocket.get(socketId) ?? [])];
+		this.holdsBySocket.delete(socketId);
+		const released: string[] = [];
+		for (const questionnaireId of held) {
+			if (this.socketCountFor(questionnaireId) > 0) continue;
+			await this.lockRepository.delete({ questionnaireId });
+			released.push(questionnaireId);
+		}
+		return released;
+	}
+
+	/** Пока сокет жив, TTL не должен сработать из‑за отсутствия HTTP-heartbeat. */
+	async bumpExpiryForTracked(): Promise<void> {
+		const ids = new Set<string>();
+		for (const held of this.holdsBySocket.values()) {
+			for (const id of held) ids.add(id);
+		}
+		if (ids.size === 0) return;
+		const expiresAt = new Date(Date.now() + V2_QUESTIONNAIRE_EDIT_LOCK_TTL_MS);
+		await this.lockRepository.update(
+			{ questionnaireId: In([...ids]) },
+			{ expiresAt },
+		);
+	}
+
+	private trackSocket(socketId: string, questionnaireId: string): void {
+		const held = this.holdsBySocket.get(socketId) ?? new Set<string>();
+		held.add(questionnaireId);
+		this.holdsBySocket.set(socketId, held);
+	}
+
+	private untrackSocket(socketId: string, questionnaireId: string): void {
+		const held = this.holdsBySocket.get(socketId);
+		if (!held) return;
+		held.delete(questionnaireId);
+		if (held.size === 0) this.holdsBySocket.delete(socketId);
+	}
+
+	private socketCountFor(questionnaireId: string): number {
+		let count = 0;
+		for (const held of this.holdsBySocket.values()) {
+			if (held.has(questionnaireId)) count += 1;
+		}
+		return count;
 	}
 
 	private isSameHolder(

@@ -297,7 +297,7 @@ export class V2QuestionnaireController {
 		@Body() body: AcquireV2QuestionnaireEditLockDto,
 		@CurrentUser() user: Record<string, unknown> | undefined,
 	): Promise<void> {
-		return this.editLockService.release(id, {
+		await this.editLockService.release(id, {
 			label: body.lockedByLabel,
 			userId: questionnaireAuditUserId(user),
 		});
@@ -318,7 +318,7 @@ export class V2QuestionnaireController {
 		@Query("lockedByLabel") lockedByLabel: string,
 		@CurrentUser() user: Record<string, unknown> | undefined,
 	): Promise<void> {
-		return this.editLockService.release(id, {
+		await this.editLockService.release(id, {
 			label: typeof lockedByLabel === "string" ? lockedByLabel : "",
 			userId: questionnaireAuditUserId(user),
 		});

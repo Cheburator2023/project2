@@ -135,6 +135,27 @@ describe("V2QuestionnaireExportJobService", () => {
 		await expect(service.getLock()).resolves.toEqual({ busy: true });
 	});
 
+	it("pushes busy over the occupancy socket when a job is enqueued so other clients stop polling HTTP", async () => {
+		const publishExportLock = jest.fn();
+		const jobRepository = {
+			create: jest.fn((row) => row),
+			save: jest.fn(async () => ({ id: "job-1" })),
+			find: jest.fn(async () => []),
+			findOne: jest.fn(),
+			update: jest.fn(),
+		};
+		const service = new V2QuestionnaireExportJobService(
+			jobRepository as never,
+			{ findOne: jest.fn() } as never,
+			{ find: jest.fn(), findOne: jest.fn() } as never,
+			{ publishExportLock } as never,
+		);
+
+		await service.enqueue(undefined, { preferred_username: "ivan" });
+
+		expect(publishExportLock).toHaveBeenCalledWith({ busy: true });
+	});
+
 	it("refuses download until the job is done", async () => {
 		const service = createService({
 			findOne: jest.fn(async () => ({

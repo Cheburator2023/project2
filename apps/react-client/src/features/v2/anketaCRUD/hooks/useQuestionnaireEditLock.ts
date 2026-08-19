@@ -1,26 +1,22 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { V2QuestionnaireEditLockDto } from "@smart-anketa/api-contract";
 import {
+	V2_EDIT_LOCK_WS_EVENTS,
 	V2_QUESTIONNAIRE_EDIT_IDLE_TIMEOUT_MS,
 	V2_QUESTIONNAIRE_EDIT_LOCK_TTL_MS,
+	type V2EditLockChangedPayload,
 } from "@smart-anketa/api-contract";
-import {
-	useAcquireV2QuestionnaireEditLock,
-	useReleaseV2QuestionnaireEditLock,
-	useRenewV2QuestionnaireEditLock,
-} from "@react-client/common/api/queries/v2-questionnaires";
 import { useQuestionnaireEditLocksStore } from "../stores/questionnaireEditLocksStore";
 import { releaseV2QuestionnaireEditLockOnUnload } from "../utils/releaseV2QuestionnaireEditLockOnUnload";
+import {
+	connectV2EditLockSocket,
+	joinV2QuestionnaireEditLock,
+	leaveV2QuestionnaireEditLock,
+} from "../utils/v2EditLockSocket";
+import { isOwnV2QuestionnaireEditLock } from "../utils/isOwnV2QuestionnaireEditLock";
 import { useUserStore } from "@react-client/common/store/userStore";
-import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
-import { useQueryClient } from "@tanstack/react-query";
 
-const HEARTBEAT_MS = Math.max(
-	30_000,
-	Math.floor(V2_QUESTIONNAIRE_EDIT_LOCK_TTL_MS / 2),
-);
 const IDLE_CHECK_MS = 15_000;
-const EDIT_LOCKS_QUERY_KEY = ["v2-questionnaires", "edit-locks"] as const;
 
 const ACTIVITY_EVENTS = [
 	"pointerdown",
@@ -37,41 +33,15 @@ type Options = {
 	idleTimeoutMs?: number;
 };
 
-function lockFromAxiosError(
-	err: unknown,
-): V2QuestionnaireEditLockDto | undefined {
-	const payload = (
-		err as {
-			response?: {
-				data?: {
-					lock?: V2QuestionnaireEditLockDto;
-					message?:
-						| string
-						| {
-								lock?: V2QuestionnaireEditLockDto;
-								message?: string;
-						  };
-				};
-			};
-		}
-	)?.response?.data;
-	return (
-		payload?.lock ??
-		(typeof payload?.message === "object" ? payload.message?.lock : undefined)
-	);
-}
-
 /**
- * Захват / heartbeat / release блокировки редактирования анкеты.
- * При конфликте — readOnly + сообщение.
- * При бездействии idleTimeoutMs — снимаем lock и сигналим sessionTimedOut.
+ * Occupancy через Socket.IO: join при входе, leave / disconnect снимает lock.
+ * HTTP-heartbeat больше не нужен — TTL продлевает сервер, пока сокет жив.
  */
 export function useQuestionnaireEditLock({
 	questionnaireId,
 	enabled = true,
 	idleTimeoutMs = V2_QUESTIONNAIRE_EDIT_IDLE_TIMEOUT_MS,
 }: Options) {
-	const qc = useQueryClient();
 	const username = useUserStore((s) => s.username);
 	const lockedByLabel = useMemo(
 		() => (username?.trim() ? username.trim() : "Пользователь"),
@@ -79,80 +49,83 @@ export function useQuestionnaireEditLock({
 	);
 	const upsertLock = useQuestionnaireEditLocksStore((s) => s.upsertLock);
 	const removeLock = useQuestionnaireEditLocksStore((s) => s.removeLock);
-	const acquire = useAcquireV2QuestionnaireEditLock();
-	const renew = useRenewV2QuestionnaireEditLock();
-	const release = useReleaseV2QuestionnaireEditLock();
 	const [foreignLock, setForeignLock] = useState<V2QuestionnaireEditLockDto | null>(
 		null,
 	);
 	const [lockError, setLockError] = useState<string | null>(null);
-	/** Реактивный флаг: иначе heartbeat не стартует после async acquire. */
 	const [holding, setHolding] = useState(false);
 	const [sessionTimedOut, setSessionTimedOut] = useState(false);
 	const heldRef = useRef(false);
 	const lastActivityAtRef = useRef(Date.now());
 	const labelRef = useRef(lockedByLabel);
+	const sessionTimedOutRef = useRef(false);
 	labelRef.current = lockedByLabel;
 
 	const lockedByOther = Boolean(foreignLock);
 	const readOnlyByLock = lockedByOther || sessionTimedOut;
 
-	const bumpRegistryLocks = useCallback(() => {
-		void qc.invalidateQueries({ queryKey: EDIT_LOCKS_QUERY_KEY });
-	}, [qc]);
-
-	const releaseHeldLock = useCallback(() => {
-		if (!questionnaireId || !heldRef.current) return;
-		heldRef.current = false;
-		setHolding(false);
-		removeLock(questionnaireId);
-		release.mutate(
-			{ id: questionnaireId, body: { lockedByLabel: labelRef.current } },
-			{ onSettled: () => bumpRegistryLocks() },
-		);
-	}, [bumpRegistryLocks, questionnaireId, release, removeLock]);
+	const applyDenied = useCallback(
+		(lock: V2QuestionnaireEditLockDto | undefined, message: string) => {
+			heldRef.current = false;
+			setHolding(false);
+			setLockError(message);
+			if (lock) {
+				setForeignLock(lock);
+				upsertLock(lock);
+				return;
+			}
+			if (!questionnaireId) return;
+			setForeignLock({
+				questionnaireId,
+				lockedByLabel: "другой пользователь",
+				lockedByUserId: null,
+				expiresAt: new Date(
+					Date.now() + V2_QUESTIONNAIRE_EDIT_LOCK_TTL_MS,
+				).toISOString(),
+			});
+		},
+		[questionnaireId, upsertLock],
+	);
 
 	const tryAcquire = useCallback(async () => {
 		if (!questionnaireId || !enabled) return false;
 		try {
-			const lock = await acquire.mutateAsync({
-				id: questionnaireId,
-				body: { lockedByLabel: labelRef.current },
-			});
+			const ack = await joinV2QuestionnaireEditLock(
+				questionnaireId,
+				labelRef.current,
+			);
+			if (!ack?.ok) {
+				applyDenied(ack?.lock, ack?.message ?? "Анкета сейчас редактируется");
+				return false;
+			}
 			heldRef.current = true;
 			setHolding(true);
 			setForeignLock(null);
 			setLockError(null);
 			setSessionTimedOut(false);
 			lastActivityAtRef.current = Date.now();
-			upsertLock(lock);
-			bumpRegistryLocks();
+			upsertLock(ack.lock);
 			return true;
 		} catch (err) {
 			heldRef.current = false;
 			setHolding(false);
-			const message = apiErrorMessage(err);
-			setLockError(message);
-			const lockFromError = lockFromAxiosError(err);
-			if (lockFromError) {
-				setForeignLock(lockFromError);
-				upsertLock(lockFromError);
-			} else if (questionnaireId) {
-				setForeignLock({
-					questionnaireId,
-					lockedByLabel: "другой пользователь",
-					lockedByUserId: null,
-					expiresAt: new Date(
-						Date.now() + V2_QUESTIONNAIRE_EDIT_LOCK_TTL_MS,
-					).toISOString(),
-				});
-			}
-			bumpRegistryLocks();
+			setLockError(
+				err instanceof Error ? err.message : "Не удалось захватить анкету",
+			);
 			return false;
 		}
-	}, [acquire, bumpRegistryLocks, enabled, questionnaireId, upsertLock]);
+	}, [applyDenied, enabled, questionnaireId, upsertLock]);
+
+	const releaseHeldLock = useCallback(() => {
+		if (!questionnaireId || !heldRef.current) return;
+		heldRef.current = false;
+		setHolding(false);
+		removeLock(questionnaireId);
+		void leaveV2QuestionnaireEditLock(questionnaireId);
+	}, [questionnaireId, removeLock]);
 
 	const resumeAfterTimeout = useCallback(async () => {
+		sessionTimedOutRef.current = false;
 		setSessionTimedOut(false);
 		return tryAcquire();
 	}, [tryAcquire]);
@@ -164,53 +137,17 @@ export function useQuestionnaireEditLock({
 		setForeignLock(null);
 		setLockError(null);
 		setSessionTimedOut(false);
+		sessionTimedOutRef.current = false;
 		lastActivityAtRef.current = Date.now();
 		if (!questionnaireId || !enabled) return;
 
 		void (async () => {
-			try {
-				const lock = await acquire.mutateAsync({
-					id: questionnaireId,
-					body: { lockedByLabel: labelRef.current },
-				});
-				if (cancelled) {
-					removeLock(questionnaireId);
-					release.mutate(
-						{
-							id: questionnaireId,
-							body: { lockedByLabel: labelRef.current },
-						},
-						{ onSettled: () => bumpRegistryLocks() },
-					);
-					return;
-				}
-				heldRef.current = true;
-				setHolding(true);
-				setForeignLock(null);
-				setLockError(null);
-				upsertLock(lock);
-				bumpRegistryLocks();
-			} catch (err) {
-				if (cancelled) return;
+			const ok = await tryAcquire();
+			if (cancelled && ok) {
 				heldRef.current = false;
 				setHolding(false);
-				const message = apiErrorMessage(err);
-				setLockError(message);
-				const lockFromError = lockFromAxiosError(err);
-				if (lockFromError) {
-					setForeignLock(lockFromError);
-					upsertLock(lockFromError);
-				} else {
-					setForeignLock({
-						questionnaireId,
-						lockedByLabel: "другой пользователь",
-						lockedByUserId: null,
-						expiresAt: new Date(
-							Date.now() + V2_QUESTIONNAIRE_EDIT_LOCK_TTL_MS,
-						).toISOString(),
-					});
-				}
-				bumpRegistryLocks();
+				removeLock(questionnaireId);
+				void leaveV2QuestionnaireEditLock(questionnaireId);
 			}
 		})();
 
@@ -220,40 +157,41 @@ export function useQuestionnaireEditLock({
 			heldRef.current = false;
 			setHolding(false);
 			removeLock(questionnaireId);
-			release.mutate(
-				{ id: questionnaireId, body: { lockedByLabel: labelRef.current } },
-				{ onSettled: () => bumpRegistryLocks() },
-			);
+			void leaveV2QuestionnaireEditLock(questionnaireId);
 		};
 		// eslint-disable-next-line react-hooks/exhaustive-deps -- acquire once per id/enabled
 	}, [questionnaireId, enabled]);
 
 	useEffect(() => {
-		if (!questionnaireId || !enabled || !holding || sessionTimedOut) return;
-		const timer = window.setInterval(() => {
-			if (!heldRef.current) return;
-			renew.mutate(
-				{ id: questionnaireId, body: { lockedByLabel: labelRef.current } },
-				{
-					onSuccess: (lock) => upsertLock(lock),
-					onError: () => {
-						heldRef.current = false;
-						setHolding(false);
-						void tryAcquire();
-					},
-				},
-			);
-		}, HEARTBEAT_MS);
-		return () => window.clearInterval(timer);
-	}, [
-		enabled,
-		holding,
-		questionnaireId,
-		renew,
-		sessionTimedOut,
-		tryAcquire,
-		upsertLock,
-	]);
+		if (!questionnaireId || !enabled) return;
+		const client = connectV2EditLockSocket(labelRef.current);
+
+		const onReconnect = () => {
+			if (sessionTimedOutRef.current) return;
+			void tryAcquire();
+		};
+		const onChanged = (payload: V2EditLockChangedPayload) => {
+			if (payload.type === "export") return;
+			if (payload.type === "released") {
+				if (payload.questionnaireId !== questionnaireId) return;
+				if (heldRef.current || sessionTimedOutRef.current) return;
+				setForeignLock(null);
+				void tryAcquire();
+				return;
+			}
+			if (payload.lock.questionnaireId !== questionnaireId) return;
+			if (isOwnV2QuestionnaireEditLock(payload.lock, labelRef.current)) return;
+			if (heldRef.current) return;
+			setForeignLock(payload.lock);
+		};
+
+		client.io.on("reconnect", onReconnect);
+		client.on(V2_EDIT_LOCK_WS_EVENTS.changed, onChanged);
+		return () => {
+			client.io.off("reconnect", onReconnect);
+			client.off(V2_EDIT_LOCK_WS_EVENTS.changed, onChanged);
+		};
+	}, [enabled, questionnaireId, tryAcquire]);
 
 	useEffect(() => {
 		if (!questionnaireId || !enabled || !holding || sessionTimedOut) return;
@@ -272,6 +210,7 @@ export function useQuestionnaireEditLock({
 			if (!heldRef.current) return;
 			if (Date.now() - lastActivityAtRef.current < idleTimeoutMs) return;
 			releaseHeldLock();
+			sessionTimedOutRef.current = true;
 			setSessionTimedOut(true);
 		}, IDLE_CHECK_MS);
 
@@ -302,7 +241,6 @@ export function useQuestionnaireEditLock({
 				labelRef.current,
 			);
 		};
-		// pagehide надёжнее beforeunload; оба — на случай разных браузеров.
 		window.addEventListener("pagehide", onUnload);
 		window.addEventListener("beforeunload", onUnload);
 		return () => {

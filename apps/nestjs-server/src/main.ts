@@ -1,6 +1,7 @@
 import { BadRequestException, ValidationPipe } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { NestFactory } from "@nestjs/core";
+import { IoAdapter } from "@nestjs/platform-socket.io";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import * as express from "express";
 import { AppModule } from "./app.module";
@@ -29,6 +30,7 @@ async function bootstrap() {
         bufferLogs: false,
         logger: customLogger,
     });
+    app.useWebSocketAdapter(new IoAdapter(app));
     startupLog(`NestFactory.create done in ${Date.now() - createStarted}ms`);
     logStartupDiagnostics(
         "resolved config (after ConfigModule)",

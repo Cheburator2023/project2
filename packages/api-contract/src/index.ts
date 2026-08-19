@@ -7,6 +7,7 @@ export * from "./questionnaire.types";
 export * from "./v2-template.types";
 export * from "./v2-template-version-label.util";
 export * from "./v2-questionnaire.types";
+export * from "./v2-questionnaire-edit-lock-ws";
 export * from "./v2-form-data-schema-projection.util";
 export * from "./v2-questionnaire-delete.util";
 export * from "./v2-questionnaire-copy.util";

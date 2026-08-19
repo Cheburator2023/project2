@@ -220,12 +220,14 @@ export type V2QuestionnaireCommentDto = {
 	createdAt: string;
 };
 
-/** TTL блокировки редактирования анкеты (heartbeat продлевает). */
+/**
+ * TTL occupancy-lock: страховка, если сокет оборвался без disconnect.
+ * Пока сокет жив, сервер продлевает expiresAt сам.
+ */
 export const V2_QUESTIONNAIRE_EDIT_LOCK_TTL_MS = 2 * 60 * 1000;
 
 /**
- * Бездействие в открытой анкете: снимаем occupancy-lock и показываем экран выхода.
- * Heartbeat сам по себе не удерживает сессию дольше этого окна без активности.
+ * Бездействие в открытой анкете: клиент шлёт leave и показывает экран выхода.
  */
 export const V2_QUESTIONNAIRE_EDIT_IDLE_TIMEOUT_MS = 3 * 60 * 1000;
 

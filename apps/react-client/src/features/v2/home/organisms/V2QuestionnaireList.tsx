@@ -24,7 +24,6 @@ import {
 import {
 	useBulkDeleteV2Questionnaires,
 	useBulkHoldV2Questionnaires,
-	useV2QuestionnaireEditLocks,
 	useV2QuestionnaireExportLock,
 	useV2QuestionnaireRegistryConfig,
 	useV2Questionnaires,
@@ -458,13 +457,7 @@ export function V2QuestionnaireList() {
 	});
 	const questionnaires = listResponse?.data ?? [];
 	const listMeta = listResponse?.meta;
-	const { data: editLocksPayload } = useV2QuestionnaireEditLocks(true);
-	const setEditLocks = useQuestionnaireEditLocksStore((s) => s.setLocks);
 	const locksById = useQuestionnaireEditLocksStore((s) => s.locksById);
-
-	useEffect(() => {
-		setEditLocks(editLocksPayload?.locks ?? []);
-	}, [editLocksPayload, setEditLocks]);
 
 	const defaultColDef = useMemo(
 		() => ({

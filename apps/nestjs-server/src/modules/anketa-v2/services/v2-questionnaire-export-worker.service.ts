@@ -11,7 +11,11 @@ import { V2QuestionnaireExportJobFileEntity } from "../entities/v2-questionnaire
 import { V2QuestionnaireExportJobFileChunkEntity } from "../entities/v2-questionnaire-export-job-file-chunk.entity";
 import { createExportChunkWritable } from "../utils/v2-questionnaire-export-chunk.util";
 import { V2QuestionnaireService } from "./v2-questionnaire.service";
-import { EXPORT_JOB_ORPHAN_MS } from "./v2-questionnaire-export-job.service";
+import {
+	EXPORT_JOB_ORPHAN_MS,
+	V2QuestionnaireExportJobService,
+} from "./v2-questionnaire-export-job.service";
+import { V2QuestionnaireWsPublisher } from "./v2-questionnaire-ws-publisher.service";
 
 const TICK_MS = 2000;
 const CLEANUP_EVERY_MS = 6 * 60 * 60 * 1000;
@@ -38,6 +42,8 @@ export class V2QuestionnaireExportWorkerService
 		@InjectRepository(V2QuestionnaireExportJobFileChunkEntity)
 		private readonly chunkRepository: Repository<V2QuestionnaireExportJobFileChunkEntity>,
 		private readonly questionnaireService: V2QuestionnaireService,
+		private readonly exportJobService?: V2QuestionnaireExportJobService,
+		private readonly wsPublisher?: V2QuestionnaireWsPublisher,
 	) {}
 
 	onModuleInit(): void {
@@ -154,6 +160,7 @@ export class V2QuestionnaireExportWorkerService
 			`,
 			[minutes],
 		);
+		await this.publishExportLock();
 	}
 
 	private async cleanupOldJobs(): Promise<void> {
@@ -215,7 +222,14 @@ export class V2QuestionnaireExportWorkerService
 				status: "failed",
 				error: message,
 			});
+		} finally {
+			await this.publishExportLock();
 		}
+	}
+
+	private async publishExportLock(): Promise<void> {
+		if (!this.exportJobService || !this.wsPublisher) return;
+		this.wsPublisher.publishExportLock(await this.exportJobService.getLock());
 	}
 }
 

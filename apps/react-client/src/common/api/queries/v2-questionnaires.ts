@@ -22,7 +22,6 @@ import type {
 	V2QuestionnaireRegistryConfigDto,
 	V2QuestionnaireExportJobCreateDto,
 	V2QuestionnaireExportJobStatusDto,
-	V2QuestionnaireExportLockDto,
 } from "@smart-anketa/api-contract";
 import {
 	V2_QUESTIONNAIRE_REGISTRY_PAGE_SIZE,
@@ -38,6 +37,7 @@ import {
 	V2_QUESTIONNAIRES_REGISTRY_CONFIG_KEY,
 	V2_QUESTIONNAIRES_ROOT_KEY,
 } from "./v2-questionnaire-registry-cache";
+import { useQuestionnaireEditLocksStore } from "@react-client/features/v2/anketaCRUD/stores/questionnaireEditLocksStore";
 
 export { invalidateV2QuestionnaireRegistry } from "./v2-questionnaire-registry-cache";
 
@@ -260,17 +260,10 @@ export const useSeedV2TestQuestionnaires = () => {
 	});
 };
 
-export const useV2QuestionnaireExportLock = (enabled = true) =>
-	useQuery<V2QuestionnaireExportLockDto>({
-		queryKey: [...ROOT_KEY, "export-lock"],
-		queryFn: () =>
-			apiClient<V2QuestionnaireExportLockDto>({
-				url: "/v2/questionnaires/export/xlsx/lock",
-				method: "GET",
-			}),
-		enabled,
-		refetchInterval: 3_000,
-	});
+export const useV2QuestionnaireExportLock = (enabled = true) => {
+	const busy = useQuestionnaireEditLocksStore((s) => s.exportBusy);
+	return { data: { busy: Boolean(enabled && busy) } };
+};
 
 export const v2QuestionnairesStartExportJob = (
 	options?: { ids?: string[]; signal?: AbortSignal },
@@ -392,7 +385,6 @@ export const useV2QuestionnaireEditLocks = (enabled = true) =>
 				method: "GET",
 			}),
 		enabled,
-		refetchInterval: 5_000,
 		refetchOnWindowFocus: true,
 	});
 

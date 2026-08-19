@@ -9,6 +9,7 @@ import { In, QueryFailedError, Repository } from "typeorm";
 import { V2QuestionnaireExportJobEntity } from "../entities/v2-questionnaire-export-job.entity";
 import { V2QuestionnaireExportJobFileEntity } from "../entities/v2-questionnaire-export-job-file.entity";
 import { V2QuestionnaireExportJobFileChunkEntity } from "../entities/v2-questionnaire-export-job-file-chunk.entity";
+import { V2QuestionnaireWsPublisher } from "./v2-questionnaire-ws-publisher.service";
 
 export type V2QuestionnaireExportJobStatusDto = {
 	jobId: string;
@@ -35,6 +36,7 @@ export class V2QuestionnaireExportJobService {
 		private readonly fileRepository: Repository<V2QuestionnaireExportJobFileEntity>,
 		@InjectRepository(V2QuestionnaireExportJobFileChunkEntity)
 		private readonly chunkRepository: Repository<V2QuestionnaireExportJobFileChunkEntity>,
+		private readonly wsPublisher?: V2QuestionnaireWsPublisher,
 	) {}
 
 	async enqueue(
@@ -64,7 +66,10 @@ export class V2QuestionnaireExportJobService {
 			const openAll = live.find(
 				(job) => job.requestedIds == null && job.createdBy === createdBy,
 			);
-			if (openAll) return { jobId: openAll.id };
+			if (openAll) {
+				this.publishExportBusy(true);
+				return { jobId: openAll.id };
+			}
 		}
 
 		if (live.length > 0) {
@@ -93,9 +98,11 @@ export class V2QuestionnaireExportJobService {
 		});
 		try {
 			const saved = await this.jobRepository.save(job);
+			this.publishExportBusy(true);
 			return { jobId: saved.id };
 		} catch (error) {
 			if (isPostgresUniqueViolation(error)) {
+				this.publishExportBusy(true);
 				throw new ConflictException(V2_EXPORT_IN_FLIGHT_MESSAGE);
 			}
 			throw error;
@@ -110,6 +117,10 @@ export class V2QuestionnaireExportJobService {
 		return {
 			busy: inFlight.some((job) => !isAbandonedExportJob(job)),
 		};
+	}
+
+	private publishExportBusy(busy: boolean): void {
+		this.wsPublisher?.publishExportLock({ busy });
 	}
 
 	async getStatus(jobId: string): Promise<V2QuestionnaireExportJobStatusDto> {

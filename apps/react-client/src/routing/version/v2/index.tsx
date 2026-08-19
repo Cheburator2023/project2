@@ -1,5 +1,6 @@
 import { PermissionGuard } from "@react-client/common/primitives/PermissionGuard";
 import { MainLayout } from "@react-client/common/layouts/MainLayout";
+import { useV2EditLockSocketConnection } from "@react-client/features/v2/anketaCRUD/hooks/useV2EditLockSocketConnection";
 import { routes } from "@react-client/routing/version/v2/routes";
 import {
 	AnketaCreatePageV2,
@@ -9,10 +10,15 @@ import {
 	V2RegistryPage,
 } from "@react-client/routing/lazyPages";
 
+function V2AppShell({ onLogout }: { onLogout?: () => void }) {
+	useV2EditLockSocketConnection();
+	return <MainLayout onLogout={onLogout} />;
+}
+
 export const v2Routes = ({ onLogout }: { onLogout?: () => void }) => {
 	return {
 		path: "/v2",
-		element: <MainLayout onLogout={onLogout} />,
+		element: <V2AppShell onLogout={onLogout} />,
 		children: [
 			{
 				index: true,

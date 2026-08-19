@@ -34,9 +34,11 @@ import { V2QuestionnaireRegistryReadCache } from "./services/v2-questionnaire-re
 import { V2QuestionnaireCommentService } from "./services/v2-questionnaire-comment.service";
 import { V2QuestionnaireEditLockService } from "./services/v2-questionnaire-edit-lock.service";
 import { V2QuestionnaireController } from "./controllers/v2-questionnaire.controller";
+import { V2QuestionnaireEditLockGateway } from "./gateways/v2-questionnaire-edit-lock.gateway";
 import { V2QuestionnaireExportController } from "./controllers/v2-questionnaire-export.controller";
 import { V2QuestionnaireExportJobService } from "./services/v2-questionnaire-export-job.service";
 import { V2QuestionnaireExportWorkerService } from "./services/v2-questionnaire-export-worker.service";
+import { V2QuestionnaireWsPublisher } from "./services/v2-questionnaire-ws-publisher.service";
 import { V2TypicalWorkEntity } from "./entities/v2-typical-work.entity";
 import { V2TypicalWorkNormEntity } from "./entities/v2-typical-work-norm.entity";
 import { V2TypicalWorkRuleEntity } from "./entities/v2-typical-work-rule.entity";
@@ -128,6 +130,8 @@ import { V2StreamCatalogService } from "./services/v2-stream-catalog.service";
 		V2QuestionnaireService,
 		V2QuestionnaireCommentService,
 		V2QuestionnaireEditLockService,
+		V2QuestionnaireEditLockGateway,
+		V2QuestionnaireWsPublisher,
 		V2QuestionnaireExportJobService,
 		V2QuestionnaireExportWorkerService,
 		V2TypicalWorkSeedService,
