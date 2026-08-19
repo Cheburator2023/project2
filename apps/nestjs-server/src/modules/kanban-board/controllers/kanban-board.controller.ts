@@ -540,7 +540,7 @@ export class KanbanBoardController {
 		@Body() dto: AcquireKanbanBoardTaskLockRequestDto,
 		@CurrentUser() user: Record<string, unknown> | undefined,
 	): Promise<void> {
-		return this.taskLockService.release(taskId, {
+		await this.taskLockService.release(taskId, {
 			label: dto.lockedByLabel,
 			userId: kanbanAuditUserId(user),
 		});

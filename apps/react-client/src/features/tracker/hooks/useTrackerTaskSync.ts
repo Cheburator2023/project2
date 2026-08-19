@@ -1,12 +1,14 @@
 import { kanbanBoardGetTaskByRef } from "@react-client/common/api/queries/kanban-board";
-import {
-	KANBAN_BOARD_SYNC_POLL_INTERVAL_MS,
-	type KanbanBoardTaskRegistryDto,
+import type {
+	KanbanBoardTaskRegistryDto,
+	KanbanSyncPayload,
 } from "@smart-anketa/api-contract";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
+import { subscribeKanbanBoardSync } from "../utils/kanbanSocket";
 
 type Options = {
+	taskId: string | undefined;
 	taskRef: string | undefined;
 	enabled: boolean;
 	baselineUpdatedAt: string | undefined;
@@ -19,6 +21,7 @@ type Options = {
 };
 
 export function useTrackerTaskSync({
+	taskId,
 	taskRef,
 	enabled,
 	baselineUpdatedAt,
@@ -43,37 +46,39 @@ export function useTrackerTaskSync({
 		onRemoteAppliedRef.current = onRemoteApplied;
 	}, [isLocalBusy, onRemoteApplied, onRemoteStale]);
 
-	const pollQuery = useQuery({
-		queryKey: ["kanbanBoardTaskSync", taskRef],
-		enabled: Boolean(enabled && taskRef),
-		queryFn: ({ signal }) => kanbanBoardGetTaskByRef(taskRef!, signal),
-		refetchInterval: () =>
-			document.visibilityState === "visible"
-				? KANBAN_BOARD_SYNC_POLL_INTERVAL_MS
-				: false,
-	});
-
 	useEffect(() => {
-		const remote = pollQuery.data;
-		const remoteUpdatedAt = remote?.updatedAt;
-		if (!remote || !remoteUpdatedAt || !baselineRef.current) return;
-		if (remoteUpdatedAt === baselineRef.current) {
-			appliedUpdatedAtRef.current = null;
-			return;
-		}
-		if (appliedUpdatedAtRef.current === remoteUpdatedAt) return;
+		if (!enabled || !taskId || !taskRef) return;
 
-		if (isLocalBusyRef.current()) {
-			onRemoteStaleRef.current();
-			return;
-		}
+		const applyRemote = (remote: KanbanBoardTaskRegistryDto) => {
+			const remoteUpdatedAt = remote.updatedAt;
+			if (!remoteUpdatedAt || !baselineRef.current) return;
+			if (remoteUpdatedAt === baselineRef.current) {
+				appliedUpdatedAtRef.current = null;
+				return;
+			}
+			if (appliedUpdatedAtRef.current === remoteUpdatedAt) return;
 
-		appliedUpdatedAtRef.current = remoteUpdatedAt;
-		queryClient.setQueryData<KanbanBoardTaskRegistryDto>(
-			["kanbanBoardTaskRef", taskRef],
-			remote,
-		);
-		baselineRef.current = remoteUpdatedAt;
-		onRemoteAppliedRef.current?.();
-	}, [pollQuery.data, queryClient, taskRef]);
+			if (isLocalBusyRef.current()) {
+				onRemoteStaleRef.current();
+				return;
+			}
+
+			appliedUpdatedAtRef.current = remoteUpdatedAt;
+			queryClient.setQueryData<KanbanBoardTaskRegistryDto>(
+				["kanbanBoardTaskRef", taskRef],
+				remote,
+			);
+			baselineRef.current = remoteUpdatedAt;
+			onRemoteAppliedRef.current?.();
+		};
+
+		const onSync = (payload: KanbanSyncPayload) => {
+			if (!payload.taskIds.includes(taskId)) return;
+			void kanbanBoardGetTaskByRef(taskRef)
+				.then(applyRemote)
+				.catch(() => undefined);
+		};
+
+		return subscribeKanbanBoardSync(onSync);
+	}, [enabled, queryClient, taskId, taskRef]);
 }

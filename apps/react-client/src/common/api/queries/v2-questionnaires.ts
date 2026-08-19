@@ -38,6 +38,7 @@ import {
 	V2_QUESTIONNAIRES_ROOT_KEY,
 } from "./v2-questionnaire-registry-cache";
 import { useQuestionnaireEditLocksStore } from "@react-client/features/v2/anketaCRUD/stores/questionnaireEditLocksStore";
+import { waitForV2ExportJob } from "@react-client/features/v2/anketaCRUD/utils/v2EditLockSocket";
 
 export { invalidateV2QuestionnaireRegistry } from "./v2-questionnaire-registry-cache";
 
@@ -304,21 +305,14 @@ export const v2QuestionnairesExportXlsx = async (
 	options?: { ids?: string[]; signal?: AbortSignal },
 ) => {
 	const started = await v2QuestionnairesStartExportJob(options);
-	const deadline = Date.now() + API_REGISTRY_EXPORT_TIMEOUT_MS;
-	while (Date.now() < deadline) {
-		const status = await v2QuestionnairesExportJobStatus(
-			started.jobId,
-			options?.signal,
-		);
-		if (status.status === "done") {
-			return v2QuestionnairesExportJobDownload(started.jobId, options?.signal);
-		}
-		if (status.status === "failed") {
-			throw new Error(status.error || "Экспорт завершился с ошибкой");
-		}
-		await new Promise((resolve) => setTimeout(resolve, 1500));
+	const status = await waitForV2ExportJob(started.jobId, {
+		signal: options?.signal,
+		timeoutMs: API_REGISTRY_EXPORT_TIMEOUT_MS,
+	});
+	if (status.status === "failed") {
+		throw new Error(status.error || "Экспорт завершился с ошибкой");
 	}
-	throw new Error("Экспорт не завершился вовремя");
+	return v2QuestionnairesExportJobDownload(started.jobId, options?.signal);
 };
 
 const commentsKey = (questionnaireId: string) =>

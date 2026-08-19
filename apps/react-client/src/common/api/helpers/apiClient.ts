@@ -22,6 +22,14 @@ import {
 	invalidateV2QuestionnaireRegistry,
 	shouldInvalidateV2QuestionnaireRegistry,
 } from "../queries/v2-questionnaire-registry-cache";
+import {
+	describeServerUnreachable,
+	isServerUnreachableError,
+} from "@react-client/common/serverStatus/isServerUnreachableError";
+import {
+	reportServerReachable,
+	reportServerUnreachable,
+} from "@react-client/common/serverStatus/serverNoticesStore";
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
 
@@ -125,6 +133,7 @@ axiosInstance.interceptors.request.use(
 
 axiosInstance.interceptors.response.use(
 	(response: AxiosResponse) => {
+		reportServerReachable();
 		const method = response.config.method?.toLowerCase();
 		if (method && !["get", "head", "options"].includes(method)) {
 			const url = response.config.url;
@@ -141,6 +150,9 @@ axiosInstance.interceptors.response.use(
 		return response;
 	},
 	async (error: AxiosError) => {
+		if (isServerUnreachableError(error)) {
+			reportServerUnreachable(describeServerUnreachable(error));
+		}
 		const originalRequest = error.config as RetriableAxiosConfig | undefined;
 		const status = error.response?.status;
 

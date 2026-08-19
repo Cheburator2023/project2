@@ -24,6 +24,9 @@ import { KanbanBoardTaskLockEntity } from "./entities/kanban-board-task-lock.ent
 import { KanbanBoardTaskImageCleanupService } from "./services/kanban-board-task-image-cleanup.service";
 import { KanbanBoardTaskHistoryEntity } from "./entities/kanban-board-task-history.entity";
 import { KanbanBoardHistoryService } from "./services/kanban-board-history.service";
+import { KanbanWsPublisher } from "./services/kanban-ws-publisher.service";
+import { KanbanTaskWsSubscriber } from "./services/kanban-task-ws.subscriber";
+import { KanbanGateway } from "./gateways/kanban.gateway";
 
 @Module({
 	imports: [
@@ -55,6 +58,9 @@ import { KanbanBoardHistoryService } from "./services/kanban-board-history.servi
 		KanbanBoardTaskLockService,
 		KanbanBoardTaskImageCleanupService,
 		KanbanBoardHistoryService,
+		KanbanWsPublisher,
+		KanbanTaskWsSubscriber,
+		KanbanGateway,
 	],
 	exports: [
 		KanbanBoardService,

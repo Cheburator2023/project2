@@ -2,6 +2,11 @@ import {
 	apiClient,
 	API_DEFAULT_TIMEOUT_MS,
 } from "@react-client/common/api/helpers/apiClient";
+import { useUserStore } from "@react-client/common/store/userStore";
+import {
+	connectV2EditLockSocket,
+	waitForV2TemplateReady,
+} from "@react-client/features/v2/anketaCRUD/utils/v2EditLockSocket";
 import type {
 	V2TemplateVersionDto,
 	V2TypicalWorkListResponseDto,
@@ -13,14 +18,7 @@ import type {
  * пока фоновый seed ещё пишет строки (гонка → 500).
  */
 const FACTORY_TYPICAL_WORKS_MIN_COUNT = 113;
-const POLL_INTERVAL_MS = 2_000;
 const MAX_WAIT_MS = 600_000;
-
-function sleep(ms: number): Promise<void> {
-	return new Promise((resolve) => {
-		setTimeout(resolve, ms);
-	});
-}
 
 async function listTemplateVersions(
 	templateId: string,
@@ -42,40 +40,59 @@ async function listTemplateTypicalWorks(
 	});
 }
 
-async function waitForDraftVersion(templateId: string): Promise<boolean> {
-	const deadline = Date.now() + MAX_WAIT_MS;
-	while (Date.now() < deadline) {
-		const versions = await listTemplateVersions(templateId);
-		if (versions.some((version) => version.status === "draft")) {
-			return true;
-		}
-		await sleep(POLL_INTERVAL_MS);
+async function isAlreadyReady(
+	templateId: string,
+	withoutTypicalWorks?: boolean,
+): Promise<boolean> {
+	const versions = await listTemplateVersions(templateId);
+	if (!versions.some((version) => version.status === "draft")) {
+		return false;
 	}
-	return false;
+	if (withoutTypicalWorks) {
+		return true;
+	}
+	const works = await listTemplateTypicalWorks(templateId);
+	return works.total >= FACTORY_TYPICAL_WORKS_MIN_COUNT;
 }
 
-async function waitForTypicalWorks(templateId: string): Promise<boolean> {
-	const deadline = Date.now() + MAX_WAIT_MS;
-	while (Date.now() < deadline) {
-		const works = await listTemplateTypicalWorks(templateId);
-		if (works.total >= FACTORY_TYPICAL_WORKS_MIN_COUNT) {
-			return true;
-		}
-		await sleep(POLL_INTERVAL_MS);
-	}
-	return false;
+function isAbortError(error: unknown): boolean {
+	return (
+		(error instanceof DOMException && error.name === "AbortError") ||
+		(error instanceof Error && error.name === "AbortError")
+	);
 }
 
 export async function waitForV2FactoryTemplateReady(
 	templateId: string,
 	options?: { withoutTypicalWorks?: boolean },
 ): Promise<boolean> {
-	const hasDraft = await waitForDraftVersion(templateId);
-	if (!hasDraft) {
-		return false;
+	connectV2EditLockSocket(
+		useUserStore.getState().username?.trim() || "Пользователь",
+	);
+	const ac = new AbortController();
+	const pending = waitForV2TemplateReady(templateId, {
+		signal: ac.signal,
+		timeoutMs: MAX_WAIT_MS,
+	});
+
+	try {
+		if (await isAlreadyReady(templateId, options?.withoutTypicalWorks)) {
+			ac.abort();
+			return true;
+		}
+		const payload = await pending;
+		return payload.typicalWorksReady && !payload.error;
+	} catch (error) {
+		if (ac.signal.aborted || isAbortError(error)) {
+			return true;
+		}
+		if (
+			error instanceof Error &&
+			error.message === "Не удалось дождаться загрузки типовых работ"
+		) {
+			return false;
+		}
+		ac.abort();
+		throw error;
 	}
-	if (options?.withoutTypicalWorks) {
-		return true;
-	}
-	return waitForTypicalWorks(templateId);
 }

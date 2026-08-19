@@ -23,7 +23,13 @@ import {
 	TrackerLegacyBoardRedirect,
 	TrackerLegacyTaskRedirect,
 } from "@react-client/features/tracker/components/TrackerLegacyRedirects";
+import { useKanbanSocketConnection } from "@react-client/features/tracker/hooks/useKanbanSocketConnection";
 import { commonRoutes } from "./routes";
+
+function TrackerAppShell({ onLogout }: { onLogout?: () => void }) {
+	useKanbanSocketConnection();
+	return <MainLayout onLogout={onLogout} />;
+}
 
 export function trackerRoutes({
 	onLogout,
@@ -37,7 +43,7 @@ export function trackerRoutes({
 				check={(p) => p.canAccessTracker}
 				message="У вас нет прав на доступ к трекеру задач"
 			>
-				<MainLayout onLogout={onLogout} />
+				<TrackerAppShell onLogout={onLogout} />
 			</PermissionGuard>
 		),
 		children: [

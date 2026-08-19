@@ -480,6 +480,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	);
 
 	useTrackerTaskSync({
+		taskId: !isCreate ? taskId : undefined,
 		taskRef: !isCreate ? taskKey : undefined,
 		enabled: !isCreate && Boolean(task),
 		baselineUpdatedAt: task?.updatedAt,

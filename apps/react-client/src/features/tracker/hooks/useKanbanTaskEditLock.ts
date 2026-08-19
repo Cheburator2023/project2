@@ -1,20 +1,20 @@
-import {
-	useAcquireKanbanBoardTaskLock,
-	useKanbanBoardTaskLock,
-	useReleaseKanbanBoardTaskLock,
-	useRenewKanbanBoardTaskLock,
-} from "@react-client/common/api/queries/kanban-board";
 import { publishAppSync } from "@react-client/common/crossTab/appBroadcast";
 import {
 	KANBAN_BOARD_TASK_EDIT_IDLE_TIMEOUT_MS,
 	KANBAN_BOARD_TASK_LOCK_TTL_MS,
-	parseKanbanBoardTaskEditBlockedError,
+	KANBAN_WS_EVENTS,
 	type KanbanBoardTaskLockDto,
+	type KanbanLockChangedPayload,
 } from "@smart-anketa/api-contract";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useKanbanTaskLocksStore } from "../stores/kanbanTaskLocksStore";
+import {
+	connectKanbanSocket,
+	joinKanbanTaskEditLock,
+	leaveKanbanTaskEditLock,
+} from "../utils/kanbanSocket";
 import { useTrackerEditIdentity } from "./useTrackerEditIdentity";
 
-const RENEW_MS = Math.max(30_000, Math.floor(KANBAN_BOARD_TASK_LOCK_TTL_MS / 2));
 const IDLE_CHECK_MS = 15_000;
 const ACTIVITY_EVENTS = [
 	"pointerdown",
@@ -29,6 +29,18 @@ type Options = {
 	onIdleTimeout?: () => void;
 };
 
+function isOwnLock(
+	lock: KanbanBoardTaskLockDto | null | undefined,
+	label: string,
+): boolean {
+	if (!lock || !label.trim()) return false;
+	return lock.lockedByLabel.trim() === label.trim();
+}
+
+/**
+ * Occupancy через Socket.IO: join при входе, leave / disconnect снимает lock.
+ * HTTP-heartbeat больше не нужен — TTL продлевает сервер, пока сокет жив.
+ */
 export function useKanbanTaskEditLock(
 	taskId: string | undefined,
 	enabled: boolean,
@@ -39,10 +51,11 @@ export function useKanbanTaskEditLock(
 		onIdleTimeout,
 	} = options;
 	const editLabel = useTrackerEditIdentity();
-	const lockQuery = useKanbanBoardTaskLock(enabled ? taskId : undefined);
-	const acquireLock = useAcquireKanbanBoardTaskLock();
-	const renewLock = useRenewKanbanBoardTaskLock();
-	const releaseLock = useReleaseKanbanBoardTaskLock();
+	const upsertLock = useKanbanTaskLocksStore((s) => s.upsertLock);
+	const removeLock = useKanbanTaskLocksStore((s) => s.removeLock);
+	const lockFromStore = useKanbanTaskLocksStore((s) =>
+		taskId ? s.locksById[taskId] : undefined,
+	);
 	const holderRef = useRef(editLabel);
 	const heldRef = useRef(false);
 	const [holding, setHolding] = useState(false);
@@ -51,161 +64,149 @@ export function useKanbanTaskEditLock(
 	);
 	const [sessionTimedOut, setSessionTimedOut] = useState(false);
 	const lastActivityAtRef = useRef(Date.now());
-	const lastAcquireAtRef = useRef(0);
+	const sessionTimedOutRef = useRef(false);
 	const onIdleTimeoutRef = useRef(onIdleTimeout);
 	onIdleTimeoutRef.current = onIdleTimeout;
+	holderRef.current = editLabel;
 
-	useEffect(() => {
-		holderRef.current = editLabel;
-	}, [editLabel]);
-
-	const releaseHeldLock = useCallback(() => {
-		if (!taskId || !heldRef.current || !holderRef.current) return;
-		heldRef.current = false;
-		setHolding(false);
-		const label = holderRef.current;
-		void releaseLock
-			.mutateAsync({
-				taskId,
-				data: { lockedByLabel: label },
-			})
-			.then(() => {
+	const applyDenied = useCallback(
+		(lock: KanbanBoardTaskLockDto | undefined, message?: string) => {
+			heldRef.current = false;
+			setHolding(false);
+			if (lock) {
+				setBlockedLock(lock);
+				upsertLock(lock);
 				publishAppSync({
 					type: "tracker:lock-changed",
-					taskId,
-					action: "released",
+					taskId: lock.taskId,
+					action: "blocked",
 				});
-			})
-			.catch(() => undefined);
-	}, [releaseLock, taskId]);
+				return;
+			}
+			if (!taskId) return;
+			setBlockedLock({
+				taskId,
+				lockedByLabel: message?.trim() || "другой пользователь",
+				lockedByUserId: null,
+				expiresAt: new Date(
+					Date.now() + KANBAN_BOARD_TASK_LOCK_TTL_MS,
+				).toISOString(),
+			});
+			publishAppSync({
+				type: "tracker:lock-changed",
+				taskId,
+				action: "blocked",
+			});
+		},
+		[taskId, upsertLock],
+	);
 
 	const tryAcquire = useCallback(async () => {
-		if (!enabled || !taskId || !editLabel || sessionTimedOut) return false;
-		const now = Date.now();
-		if (now - lastAcquireAtRef.current < 2_500) return false;
-		lastAcquireAtRef.current = now;
+		if (!enabled || !taskId || !editLabel || sessionTimedOutRef.current) {
+			return false;
+		}
 		try {
-			await acquireLock.mutateAsync({
-				taskId,
-				data: { lockedByLabel: editLabel },
-			});
+			const ack = await joinKanbanTaskEditLock(taskId, holderRef.current);
+			if (!ack?.ok) {
+				applyDenied(ack?.lock, ack?.message);
+				return false;
+			}
 			heldRef.current = true;
 			setHolding(true);
 			setBlockedLock(null);
 			lastActivityAtRef.current = Date.now();
+			upsertLock(ack.lock);
 			publishAppSync({
 				type: "tracker:lock-changed",
 				taskId,
 				action: "acquired",
 			});
 			return true;
-		} catch (error) {
+		} catch {
 			heldRef.current = false;
 			setHolding(false);
-			const blocked = parseKanbanBoardTaskEditBlockedError(error);
-			if (blocked?.reason === "lock") {
-				setBlockedLock(
-					blocked.lock ?? {
-						taskId,
-						lockedByLabel: "другой пользователь",
-						lockedByUserId: null,
-						expiresAt: new Date(
-							Date.now() + KANBAN_BOARD_TASK_LOCK_TTL_MS,
-						).toISOString(),
-					},
-				);
-				publishAppSync({
-					type: "tracker:lock-changed",
-					taskId,
-					action: "blocked",
-				});
-			}
 			return false;
 		}
-	}, [acquireLock, editLabel, enabled, sessionTimedOut, taskId]);
+	}, [applyDenied, editLabel, enabled, taskId, upsertLock]);
+
+	const releaseHeldLock = useCallback(() => {
+		if (!taskId || !heldRef.current) return;
+		heldRef.current = false;
+		setHolding(false);
+		removeLock(taskId);
+		void leaveKanbanTaskEditLock(taskId);
+		publishAppSync({
+			type: "tracker:lock-changed",
+			taskId,
+			action: "released",
+		});
+	}, [removeLock, taskId]);
 
 	useEffect(() => {
+		let cancelled = false;
 		heldRef.current = false;
 		setHolding(false);
 		setBlockedLock(null);
 		setSessionTimedOut(false);
+		sessionTimedOutRef.current = false;
 		lastActivityAtRef.current = Date.now();
 		if (!enabled || !taskId || !editLabel) return;
 
-		void tryAcquire();
+		void (async () => {
+			const ok = await tryAcquire();
+			if (cancelled && ok) {
+				heldRef.current = false;
+				setHolding(false);
+				removeLock(taskId);
+				void leaveKanbanTaskEditLock(taskId);
+			}
+		})();
 
 		return () => {
-			if (!heldRef.current) return;
+			cancelled = true;
+			if (!taskId || !heldRef.current) return;
 			heldRef.current = false;
 			setHolding(false);
-			const label = holderRef.current;
-			if (!label) return;
-			void releaseLock
-				.mutateAsync({
-					taskId,
-					data: { lockedByLabel: label },
-				})
-				.then(() => {
-					publishAppSync({
-						type: "tracker:lock-changed",
-						taskId,
-						action: "released",
-					});
-				})
-				.catch(() => undefined);
+			removeLock(taskId);
+			void leaveKanbanTaskEditLock(taskId);
+			publishAppSync({
+				type: "tracker:lock-changed",
+				taskId,
+				action: "released",
+			});
 		};
-		// eslint-disable-next-line react-hooks/exhaustive-deps -- mount/unmount per task
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- acquire once per id/enabled
 	}, [enabled, taskId, editLabel]);
 
 	useEffect(() => {
-		if (!enabled || !taskId || !editLabel || !holding || sessionTimedOut) return;
-		const timer = window.setInterval(() => {
-			if (!heldRef.current) return;
-			void renewLock
-				.mutateAsync({
-					taskId,
-					data: { lockedByLabel: holderRef.current },
-				})
-				.catch(() => {
-					heldRef.current = false;
-					setHolding(false);
-					void tryAcquire();
-				});
-		}, RENEW_MS);
-		return () => window.clearInterval(timer);
-	}, [
-		editLabel,
-		enabled,
-		holding,
-		renewLock,
-		sessionTimedOut,
-		taskId,
-		tryAcquire,
-	]);
+		if (!enabled || !taskId || !editLabel) return;
+		const client = connectKanbanSocket(holderRef.current);
 
-	/** Если чужой lock исчез — пробуем захватить снова. */
-	useEffect(() => {
-		if (!enabled || !taskId || !editLabel || holding || sessionTimedOut) return;
-		if (lockQuery.isLoading) return;
-		const lock = lockQuery.data ?? null;
-		if (lock && lock.lockedByLabel !== editLabel) {
-			setBlockedLock(lock);
-			return;
-		}
-		if (!blockedLock) return;
-		setBlockedLock(null);
-		void tryAcquire();
-	}, [
-		blockedLock,
-		editLabel,
-		enabled,
-		holding,
-		lockQuery.data,
-		lockQuery.isLoading,
-		sessionTimedOut,
-		taskId,
-		tryAcquire,
-	]);
+		const onReconnect = () => {
+			if (sessionTimedOutRef.current) return;
+			void tryAcquire();
+		};
+		const onChanged = (payload: KanbanLockChangedPayload) => {
+			if (payload.type === "released") {
+				if (payload.taskId !== taskId) return;
+				if (heldRef.current || sessionTimedOutRef.current) return;
+				setBlockedLock(null);
+				void tryAcquire();
+				return;
+			}
+			if (payload.lock.taskId !== taskId) return;
+			if (isOwnLock(payload.lock, holderRef.current)) return;
+			if (heldRef.current) return;
+			setBlockedLock(payload.lock);
+		};
+
+		client.io.on("reconnect", onReconnect);
+		client.on(KANBAN_WS_EVENTS.changed, onChanged);
+		return () => {
+			client.io.off("reconnect", onReconnect);
+			client.off(KANBAN_WS_EVENTS.changed, onChanged);
+		};
+	}, [editLabel, enabled, taskId, tryAcquire]);
 
 	useEffect(() => {
 		if (!enabled || !taskId || !holding || sessionTimedOut) return;
@@ -224,6 +225,7 @@ export function useKanbanTaskEditLock(
 			if (!heldRef.current) return;
 			if (Date.now() - lastActivityAtRef.current < idleTimeoutMs) return;
 			releaseHeldLock();
+			sessionTimedOutRef.current = true;
 			setSessionTimedOut(true);
 			onIdleTimeoutRef.current?.();
 		}, IDLE_CHECK_MS);
@@ -244,18 +246,18 @@ export function useKanbanTaskEditLock(
 	]);
 
 	const foreignLock = useMemo(() => {
-		if (blockedLock && blockedLock.lockedByLabel !== editLabel) {
+		if (blockedLock && !isOwnLock(blockedLock, editLabel)) {
 			return blockedLock;
 		}
-		const lock = lockQuery.data;
-		if (!lock || !editLabel) return null;
-		if (lock.lockedByLabel === editLabel) return null;
-		return lock;
-	}, [blockedLock, editLabel, lockQuery.data]);
+		if (lockFromStore && !isOwnLock(lockFromStore, editLabel) && !holding) {
+			return lockFromStore;
+		}
+		return null;
+	}, [blockedLock, editLabel, holding, lockFromStore]);
 
 	return {
 		editLabel,
-		lock: lockQuery.data,
+		lock: lockFromStore,
 		foreignLock,
 		isLockedByOther: Boolean(foreignLock) && !holding,
 		holding,

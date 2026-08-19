@@ -1,5 +1,6 @@
 import type {
 	V2QuestionnaireEditLockDto,
+	V2QuestionnaireExportJobStatusDto,
 	V2QuestionnaireExportLockDto,
 } from "./v2-questionnaire.types";
 
@@ -11,6 +12,8 @@ export const V2_EDIT_LOCK_WS_EVENTS = {
 	leave: "lock:leave",
 	snapshot: "lock:snapshot",
 	changed: "lock:changed",
+	exportJob: "export:job",
+	templateReady: "template:ready",
 } as const;
 
 export type V2EditLockJoinPayload = {
@@ -27,6 +30,14 @@ export type V2EditLockSnapshotPayload = {
 	locks: V2QuestionnaireEditLockDto[];
 	/** Глобальная выгрузка XLSX (бывший GET .../export/xlsx/lock). */
 	exportLock?: V2QuestionnaireExportLockDto;
+	/** Джобы выгрузки в полёте — чтобы не поллить status после reconnect. */
+	exportJobs?: V2QuestionnaireExportJobStatusDto[];
+};
+
+export type V2TemplateReadyPayload = {
+	templateId: string;
+	typicalWorksReady: boolean;
+	error?: string;
 };
 
 export type V2EditLockChangedPayload =

@@ -21,6 +21,7 @@ import {
 	useColorScheme,
 	useMediaQuery,
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import {
 	useBulkDeleteV2Questionnaires,
 	useBulkHoldV2Questionnaires,
@@ -158,10 +159,26 @@ const GridWrapper = styled(Flex)`
 		min-height: 0;
 	}
 
-	.ag-row.v2-questionnaire-row--edit-locked {
-		opacity: 0.55;
-		filter: grayscale(0.35);
-		cursor: not-allowed;
+	.ag-row.v2-questionnaire-row--editing-other,
+	.ag-row.v2-questionnaire-row--editing-other .ag-cell,
+	.ag-row.v2-questionnaire-row--editing-other.ag-row-hover .ag-cell,
+	.ag-row.v2-questionnaire-row--editing-other.ag-row-selected .ag-cell {
+		background-color: ${({ theme }) =>
+			alpha(
+				theme.palette.warning.main,
+				theme.palette.mode === "dark" ? 0.28 : 0.18,
+			)} !important;
+	}
+
+	.ag-row.v2-questionnaire-row--editing-own,
+	.ag-row.v2-questionnaire-row--editing-own .ag-cell,
+	.ag-row.v2-questionnaire-row--editing-own.ag-row-hover .ag-cell,
+	.ag-row.v2-questionnaire-row--editing-own.ag-row-selected .ag-cell {
+		background-color: ${({ theme }) =>
+			alpha(
+				theme.palette.info.main,
+				theme.palette.mode === "dark" ? 0.28 : 0.16,
+			)} !important;
 	}
 `;
 
@@ -538,6 +555,11 @@ export function V2QuestionnaireList() {
 				displayLabel: q.calcName,
 				/** Блокируем только чужой lock; свой — можно открыть повторно. */
 				isEditLocked: lockedByOther,
+				editLockKind: lock
+					? lockedByOther
+						? ("other" as const)
+						: ("own" as const)
+					: undefined,
 			};
 		});
 	}, [questionnaires, locksById, username]);
@@ -557,9 +579,12 @@ export function V2QuestionnaireList() {
 
 	const rowClassRules = useMemo(
 		() => ({
-			"v2-questionnaire-row--edit-locked": (params: {
+			"v2-questionnaire-row--editing-other": (params: {
 				data?: V2QuestionnaireGridRow | undefined;
-			}) => Boolean(resolveVersionRow(params.data)?.isEditLocked),
+			}) => resolveVersionRow(params.data)?.editLockKind === "other",
+			"v2-questionnaire-row--editing-own": (params: {
+				data?: V2QuestionnaireGridRow | undefined;
+			}) => resolveVersionRow(params.data)?.editLockKind === "own",
 		}),
 		[],
 	);

@@ -21,4 +21,14 @@ describe("resolveV2EditLockSocketTarget", () => {
 		expect(target.uri).toBe(`http://localhost:3000${V2_EDIT_LOCK_WS_NAMESPACE}`);
 		expect(target.path).toBe("/socket.io");
 	});
+
+	it("keeps a different namespace off the HTTP API prefix", () => {
+		const target = resolveV2EditLockSocketTarget(
+			"https://shell.example/proxy/smart-anketa-api",
+			"https://shell.example",
+			"/kanban",
+		);
+		expect(target.uri).toBe("https://shell.example/kanban");
+		expect(target.path).toBe("/proxy/smart-anketa-api/socket.io");
+	});
 });

@@ -196,6 +196,14 @@ export class V2QuestionnaireExportWorkerService
 						total,
 						updatedAt: new Date(),
 					});
+					this.wsPublisher?.publishExportJob({
+						jobId: job.id,
+						status: "processing",
+						progress: done,
+						total,
+						error: null,
+						filename: job.filename,
+					});
 				},
 				sink,
 			);
@@ -212,6 +220,14 @@ export class V2QuestionnaireExportWorkerService
 				total: result.rowCount,
 				error: null,
 			});
+			this.wsPublisher?.publishExportJob({
+				jobId: job.id,
+				status: "done",
+				progress: result.rowCount,
+				total: result.rowCount,
+				error: null,
+				filename: job.filename,
+			});
 			this.logger.log(
 				`Export job ${job.id}: done, ${result.rowCount} rows, ${sink.sizeBytes} bytes, ${sink.chunkCount} chunks`,
 			);
@@ -221,6 +237,14 @@ export class V2QuestionnaireExportWorkerService
 			await this.jobRepository.update(job.id, {
 				status: "failed",
 				error: message,
+			});
+			this.wsPublisher?.publishExportJob({
+				jobId: job.id,
+				status: "failed",
+				progress: job.progress,
+				total: job.total,
+				error: message,
+				filename: job.filename,
 			});
 		} finally {
 			await this.publishExportLock();

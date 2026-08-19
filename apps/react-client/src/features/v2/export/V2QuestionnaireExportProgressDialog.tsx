@@ -13,14 +13,12 @@ import { Spacer } from "@react-client/common/primitives/Spacer";
 import { downloadBlob } from "@react-client/common/api/queries/kanban-board";
 import {
 	v2QuestionnairesExportJobDownload,
-	v2QuestionnairesExportJobStatus,
 	v2QuestionnairesStartExportJob,
 } from "@react-client/common/api/queries/v2-questionnaires";
+import { waitForV2ExportJob } from "@react-client/features/v2/anketaCRUD/utils/v2EditLockSocket";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { toast } from "@react-client/common/toasts";
 import type { V2QuestionnaireExportJobStatusDto } from "@smart-anketa/api-contract";
-
-const POLL_MS = 2000;
 
 type Props = {
 	open: boolean;
@@ -57,24 +55,12 @@ export function V2QuestionnaireExportProgressDialog({
 					ids,
 					signal: ac.signal,
 				});
-				let current = await v2QuestionnairesExportJobStatus(
-					started.jobId,
-					ac.signal,
-				);
-				setStatus(current);
-				while (
-					!ac.signal.aborted &&
-					(current.status === "pending" || current.status === "processing")
-				) {
-					await new Promise((resolve) => setTimeout(resolve, POLL_MS));
-					if (ac.signal.aborted) return;
-					current = await v2QuestionnairesExportJobStatus(
-						started.jobId,
-						ac.signal,
-					);
-					setStatus(current);
-				}
+				const current = await waitForV2ExportJob(started.jobId, {
+					signal: ac.signal,
+					onStatus: setStatus,
+				});
 				if (ac.signal.aborted) return;
+				setStatus(current);
 				if (current.status === "failed") {
 					setError(current.error || "Экспорт завершился с ошибкой");
 					return;

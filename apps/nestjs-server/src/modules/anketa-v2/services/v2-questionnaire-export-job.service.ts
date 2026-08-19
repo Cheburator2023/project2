@@ -99,6 +99,7 @@ export class V2QuestionnaireExportJobService {
 		try {
 			const saved = await this.jobRepository.save(job);
 			this.publishExportBusy(true);
+			this.wsPublisher?.publishExportJob(this.toStatusDto(saved));
 			return { jobId: saved.id };
 		} catch (error) {
 			if (isPostgresUniqueViolation(error)) {
@@ -126,6 +127,22 @@ export class V2QuestionnaireExportJobService {
 	async getStatus(jobId: string): Promise<V2QuestionnaireExportJobStatusDto> {
 		const job = await this.jobRepository.findOne({ where: { id: jobId } });
 		if (!job) throw new NotFoundException(`Экспорт ${jobId} не найден`);
+		return this.toStatusDto(job);
+	}
+
+	async listInFlightStatuses(): Promise<V2QuestionnaireExportJobStatusDto[]> {
+		const inFlight = await this.jobRepository.find({
+			where: { status: In(["pending", "processing"]) },
+			take: 16,
+		});
+		return inFlight
+			.filter((job) => !isAbandonedExportJob(job))
+			.map((job) => this.toStatusDto(job));
+	}
+
+	toStatusDto(
+		job: V2QuestionnaireExportJobEntity,
+	): V2QuestionnaireExportJobStatusDto {
 		return {
 			jobId: job.id,
 			status: job.status,

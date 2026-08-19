@@ -1,9 +1,11 @@
 import { kanbanBoardGetBoardTasks } from "@react-client/common/api/queries/kanban-board";
-import { KANBAN_BOARD_SYNC_POLL_INTERVAL_MS } from "@smart-anketa/api-contract";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import type { KanbanSyncPayload } from "@smart-anketa/api-contract";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
+import { subscribeKanbanBoardSync } from "../utils/kanbanSocket";
 
 type Options = {
+	boardId: string | undefined;
 	boardRef: string | undefined;
 	enabled: boolean;
 	onRemoteUpdate: () => void;
@@ -20,40 +22,37 @@ function versionsSignature(
 }
 
 export function useTrackerBoardSync({
+	boardId,
 	boardRef,
 	enabled,
 	onRemoteUpdate,
 }: Options) {
 	const queryClient = useQueryClient();
-	const baselineRef = useRef("");
+	const onRemoteUpdateRef = useRef(onRemoteUpdate);
+	onRemoteUpdateRef.current = onRemoteUpdate;
 
 	useEffect(() => {
-		if (!boardRef) return;
-		const cached = queryClient.getQueryData<Array<{ id: string; updatedAt: string }>>(
-			["kanbanBoardTasks", boardRef],
-		);
-		baselineRef.current = versionsSignature(cached);
-	}, [boardRef, queryClient]);
+		if (!enabled || !boardId || !boardRef) return;
 
-	const pollQuery = useQuery({
-		queryKey: ["kanbanBoardBoardSync", boardRef],
-		enabled: Boolean(enabled && boardRef),
-		queryFn: ({ signal }) => kanbanBoardGetBoardTasks(boardRef!, signal),
-		refetchInterval: () =>
-			document.visibilityState === "visible"
-				? KANBAN_BOARD_SYNC_POLL_INTERVAL_MS
-				: false,
-	});
+		const onSync = (payload: KanbanSyncPayload) => {
+			if (payload.boardId !== boardId) return;
+			void (async () => {
+				try {
+					const remote = await kanbanBoardGetBoardTasks(boardRef);
+					const remoteSig = versionsSignature(remote);
+					const local = queryClient.getQueryData<
+						Array<{ id: string; updatedAt: string }>
+					>(["kanbanBoardTasks", boardRef]);
+					const localSig = versionsSignature(local);
+					if (remoteSig && remoteSig !== localSig) {
+						onRemoteUpdateRef.current();
+					}
+				} catch {
+					return;
+				}
+			})();
+		};
 
-	useEffect(() => {
-		const signature = versionsSignature(pollQuery.data);
-		if (!signature || !baselineRef.current) {
-			if (signature) baselineRef.current = signature;
-			return;
-		}
-		if (signature !== baselineRef.current) {
-			onRemoteUpdate();
-			baselineRef.current = signature;
-		}
-	}, [pollQuery.data, onRemoteUpdate]);
+		return subscribeKanbanBoardSync(onSync);
+	}, [boardId, boardRef, enabled, queryClient]);
 }

@@ -1,3 +1,4 @@
+import { recordToastNotice } from "@react-client/common/serverStatus/serverNoticesStore";
 import {
 	CSSProperties,
 	useCallback,
@@ -6,7 +7,7 @@ import {
 	useRef,
 	useState,
 } from "react";
-import ReactDOM from "react-dom";
+import { createPortal, flushSync } from "react-dom";
 import {
 	GAP,
 	TOAST_WIDTH,
@@ -87,34 +88,40 @@ export const Toaster = ({
 	);
 
 	useEffect(() => {
-		return ToastState.subscribe((toast) => {
-			if ((toast as ToastToDismiss).dismiss) {
+		return ToastState.subscribe((event) => {
+			if ((event as ToastToDismiss).dismiss) {
 				setToasts((toasts) =>
-					toasts.map((t) => (t.id === toast.id ? { ...t, delete: true } : t)),
+					toasts.map((t) => (t.id === event.id ? { ...t, delete: true } : t)),
 				);
 				return;
 			}
 
-			// Prevent batching, temp solution.
 			setTimeout(() => {
-				ReactDOM.flushSync(() => {
-					setToasts((toasts) => {
-						const indexOfExistingToast = toasts.findIndex(
-							(t) => t.id === toast.id,
+				const apply = () => {
+					setToasts((current) => {
+						const indexOfExistingToast = current.findIndex(
+							(t) => t.id === event.id,
 						);
-
-						// Update the toast if it already exists
 						if (indexOfExistingToast !== -1) {
 							return [
-								...toasts.slice(0, indexOfExistingToast),
-								{ ...toasts[indexOfExistingToast], ...toast },
-								...toasts.slice(indexOfExistingToast + 1),
+								...current.slice(0, indexOfExistingToast),
+								{ ...current[indexOfExistingToast], ...event },
+								...current.slice(indexOfExistingToast + 1),
 							] as ToastT[];
 						}
-
-						return [toast, ...toasts] as ToastT[];
+						return [event, ...current] as ToastT[];
 					});
-				});
+				};
+				try {
+					flushSync(apply);
+				} catch {
+					apply();
+				}
+				try {
+					recordToastNotice(event as ToastT);
+				} catch {
+					// панель не должна срывать показ тоста
+				}
 			});
 		});
 	}, []);
@@ -163,8 +170,9 @@ export const Toaster = ({
 	}, [listRef.current]);
 
 	if (!toasts.length) return null;
+	if (typeof document === "undefined") return null;
 
-	return (
+	return createPortal(
 		// Remove item from normal navigation flow, only available via hotkey
 		<section aria-label={`${containerAriaLabel} ${hotkeyLabel}`} tabIndex={-1}>
 			{possiblePositions.map((position, index) => {
@@ -263,6 +271,7 @@ export const Toaster = ({
 					</ol>
 				);
 			})}
-		</section>
+		</section>,
+		document.body,
 	);
 };

@@ -137,9 +137,17 @@ describe("V2QuestionnaireExportJobService", () => {
 
 	it("pushes busy over the occupancy socket when a job is enqueued so other clients stop polling HTTP", async () => {
 		const publishExportLock = jest.fn();
+		const publishExportJob = jest.fn();
 		const jobRepository = {
 			create: jest.fn((row) => row),
-			save: jest.fn(async () => ({ id: "job-1" })),
+			save: jest.fn(async () => ({
+				id: "job-1",
+				status: "pending",
+				progress: 0,
+				total: null,
+				error: null,
+				filename: "out.xlsx",
+			})),
 			find: jest.fn(async () => []),
 			findOne: jest.fn(),
 			update: jest.fn(),
@@ -148,12 +156,15 @@ describe("V2QuestionnaireExportJobService", () => {
 			jobRepository as never,
 			{ findOne: jest.fn() } as never,
 			{ find: jest.fn(), findOne: jest.fn() } as never,
-			{ publishExportLock } as never,
+			{ publishExportLock, publishExportJob } as never,
 		);
 
 		await service.enqueue(undefined, { preferred_username: "ivan" });
 
 		expect(publishExportLock).toHaveBeenCalledWith({ busy: true });
+		expect(publishExportJob).toHaveBeenCalledWith(
+			expect.objectContaining({ jobId: "job-1", status: "pending" }),
+		);
 	});
 
 	it("refuses download until the job is done", async () => {

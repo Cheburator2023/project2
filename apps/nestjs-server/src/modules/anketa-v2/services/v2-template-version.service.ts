@@ -18,6 +18,7 @@ import { V2FactorySnapshotService } from "./v2-factory-snapshot.service";
 import { V2TypicalWorkSeedService } from "./v2-typical-work.service";
 import { V2TypicalWorkWriteService } from "./v2-typical-work-write.service";
 import { V2QuestionnaireRegistryReadCache } from "./v2-questionnaire-registry-read-cache.service";
+import { V2QuestionnaireWsPublisher } from "./v2-questionnaire-ws-publisher.service";
 import {
 	type V2TemplateStatus,
 	prepareFactorySnapshotWithoutTypicalWorks,
@@ -55,6 +56,7 @@ export class V2TemplateVersionService {
 		private readonly typicalWorkSeedService: V2TypicalWorkSeedService,
 		private readonly typicalWorkWriteService: V2TypicalWorkWriteService,
 		private readonly registryReadCache: V2QuestionnaireRegistryReadCache,
+		private readonly wsPublisher?: V2QuestionnaireWsPublisher,
 	) {}
 
 	async findAll(templateId: string): Promise<V2TemplateVersionEntity[]> {
@@ -314,12 +316,21 @@ export class V2TemplateVersionService {
 		if (!options?.withoutTypicalWorks) {
 			/**
 			 * Сид работ + reconcile — самая тяжёлая часть и может упираться в HTTP timeout.
-			 * Возвращаем draft сразу, а сид выполняем в фоне; UI уже ждёт готовность poll-ом.
+			 * Возвращаем draft сразу; UI ждёт template:ready по WebSocket.
 			 */
 			this.logger.log(
 				`Start async typical works seed for template ${templateId} version ${version.id}`,
 			);
+			this.wsPublisher?.publishTemplateReady({
+				templateId,
+				typicalWorksReady: false,
+			});
 			this.seedTypicalWorksInBackground(templateId, version.id);
+		} else {
+			this.wsPublisher?.publishTemplateReady({
+				templateId,
+				typicalWorksReady: true,
+			});
 		}
 		return version;
 	}
@@ -352,14 +363,27 @@ export class V2TemplateVersionService {
 		templateId: string,
 		versionId: string,
 	): void {
-		void this.seedTypicalWorksForVersion(templateId, versionId).catch(
-			(error) => {
+		void this.seedTypicalWorksForVersion(templateId, versionId)
+			.then(() => {
+				this.wsPublisher?.publishTemplateReady({
+					templateId,
+					typicalWorksReady: true,
+				});
+			})
+			.catch((error) => {
 				this.logger.error(
 					`Background typical works seed failed for template ${templateId} version ${versionId}`,
 					error instanceof Error ? error.stack : String(error),
 				);
-			},
-		);
+				this.wsPublisher?.publishTemplateReady({
+					templateId,
+					typicalWorksReady: false,
+					error:
+						error instanceof Error
+							? error.message
+							: "Не удалось загрузить типовые работы",
+				});
+			});
 	}
 
 	async resetToDefault(

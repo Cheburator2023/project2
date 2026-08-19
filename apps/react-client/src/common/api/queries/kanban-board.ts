@@ -46,7 +46,6 @@ import type {
 	KanbanBoardTaskLockDto,
 	ResetKanbanBoardColumnsResultDto,
 } from "@smart-anketa/api-contract";
-import { KANBAN_BOARD_TASK_LOCK_POLL_INTERVAL_MS } from "@smart-anketa/api-contract";
 import { apiClient } from "../helpers/apiClient";
 
 export interface KanbanBoardConfig {
@@ -1185,10 +1184,6 @@ export const useKanbanBoardTaskLock = (taskId: string | undefined) =>
 		queryKey: ["kanbanBoardTaskLock", taskId],
 		enabled: Boolean(taskId),
 		queryFn: ({ signal }) => kanbanBoardGetTaskLock(taskId!, signal),
-		refetchInterval: () =>
-			document.visibilityState === "visible"
-				? KANBAN_BOARD_TASK_LOCK_POLL_INTERVAL_MS
-				: false,
 	});
 
 export const useAcquireKanbanBoardTaskLock = () => {

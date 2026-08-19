@@ -16,6 +16,8 @@ export type V2QuestionnaireVersionRow = V2QuestionnaireDto & {
 	displayLabel: string;
 	/** Чужой lock: ряд в реестре заблокирован (свой lock не блокирует). */
 	isEditLocked?: boolean;
+	/** Кто держит occupancy: подсветка всего ряда в реестре. */
+	editLockKind?: "own" | "other";
 };
 
 export type V2QuestionnaireGridRow =

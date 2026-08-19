@@ -4,6 +4,7 @@ import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Divider from "@mui/material/Divider";
 import { IconButton, Typography } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { beginLogoutOverlay } from "@react-client/common/auth/logoutOverlayState";
@@ -16,6 +17,7 @@ import { useNavigate, useOutletContext } from "react-router";
 import { Flex } from "../../primitives/Flex";
 import { useGlobalSettingsStore } from "../../store/globalSettingsStore";
 import { ColorModeIconDropdown } from "../../../theme/ColorModeIconDropdown";
+import { HeaderServerNotices } from "./HeaderServerNotices";
 import { MenuButton } from "../molecules/MenuButton";
 import { NavbarBreadcrumbs } from "@react-client/common/navigation/molecules/NavbarBreadcrumbs";
 import { useLayoutEffect, useRef, useState } from "react";
@@ -183,6 +185,13 @@ export function Header({
 							data-test-id="header--Flex-2"
 						>
 							{children}
+							{children ? (
+								<Divider
+									orientation="vertical"
+									flexItem
+									sx={{ mx: 0.5, alignSelf: "center", height: 24 }}
+								/>
+							) : null}
 							{noAccessiblePages ? (
 								<Button
 									size="small"
@@ -203,6 +212,7 @@ export function Header({
 									Выйти
 								</Button>
 							) : null}
+							<HeaderServerNotices />
 							<ColorModeIconDropdown data-test-id="header--ColorModeIconDropdown-0" />
 						</Flex>
 					</Flex>

@@ -50,6 +50,9 @@ describe("V2TemplateVersionService.createDraftFromDefault", () => {
 				consistencyIssues: [],
 			})),
 		};
+		const wsPublisher = {
+			publishTemplateReady: jest.fn(),
+		};
 
 		const service = new V2TemplateVersionService(
 			versionRepository as never,
@@ -59,12 +62,17 @@ describe("V2TemplateVersionService.createDraftFromDefault", () => {
 			typicalWorkSeedService as never,
 			typicalWorkWriteService as never,
 			{ invalidateConfig: jest.fn() } as never,
+			wsPublisher as never,
 		);
 
 		const resultPromise = service.createDraftFromDefault("template-1", "user-1");
 		const version = await resultPromise;
 
 		expect(version.id).toBe("version-1");
+		expect(wsPublisher.publishTemplateReady).toHaveBeenCalledWith({
+			templateId: "template-1",
+			typicalWorksReady: false,
+		});
 		expect(
 			typicalWorkSeedService.seedTemplateTypicalWorksFromFactorySnapshot,
 		).toHaveBeenCalledWith("template-1", "version-1");
@@ -80,6 +88,11 @@ describe("V2TemplateVersionService.createDraftFromDefault", () => {
 			typicalWorkWriteService.reconcileAllSchemaFieldsForVersion,
 		).toHaveBeenCalledWith("version-1", "apply", {
 			skipConsistencyReport: true,
+		});
+		await new Promise((resolve) => setImmediate(resolve));
+		expect(wsPublisher.publishTemplateReady).toHaveBeenCalledWith({
+			templateId: "template-1",
+			typicalWorksReady: true,
 		});
 	});
 });

@@ -8,7 +8,7 @@ import {
 	KANBAN_BOARD_TASK_LOCK_TTL_MS,
 	type KanbanBoardTaskLockDto,
 } from "@smart-anketa/api-contract";
-import { Repository } from "typeorm";
+import { In, Repository } from "typeorm";
 import { KanbanBoardTaskLockEntity } from "../entities/kanban-board-task-lock.entity";
 import { KanbanBoardTaskEntity } from "../entities/kanban-board-task.entity";
 
@@ -19,12 +19,23 @@ export type KanbanBoardTaskLockHolder = {
 
 @Injectable()
 export class KanbanBoardTaskLockService {
+	private readonly holdsBySocket = new Map<string, Set<string>>();
+
 	constructor(
 		@InjectRepository(KanbanBoardTaskLockEntity)
 		private readonly lockRepository: Repository<KanbanBoardTaskLockEntity>,
 		@InjectRepository(KanbanBoardTaskEntity)
 		private readonly taskRepository: Repository<KanbanBoardTaskEntity>,
 	) {}
+
+	async listActive(): Promise<KanbanBoardTaskLockDto[]> {
+		await this.purgeExpired();
+		const rows = await this.lockRepository
+			.createQueryBuilder("lock")
+			.where("lock.expires_at > :now", { now: new Date() })
+			.getMany();
+		return rows.map((row) => this.toDto(row));
+	}
 
 	async getLock(taskId: string): Promise<KanbanBoardTaskLockDto | null> {
 		await this.ensureTaskExists(taskId);
@@ -39,6 +50,7 @@ export class KanbanBoardTaskLockService {
 	async acquire(
 		taskId: string,
 		holder: KanbanBoardTaskLockHolder,
+		socketId?: string,
 	): Promise<KanbanBoardTaskLockDto> {
 		await this.ensureTaskExists(taskId);
 		const label = holder.label.trim();
@@ -70,6 +82,7 @@ export class KanbanBoardTaskLockService {
 		entity.lockedByUserId = holder.userId ?? null;
 		entity.expiresAt = expiresAt;
 		await this.lockRepository.save(entity);
+		if (socketId) this.trackSocket(socketId, taskId);
 		return this.toDto(entity);
 	}
 
@@ -80,12 +93,65 @@ export class KanbanBoardTaskLockService {
 		return this.acquire(taskId, holder);
 	}
 
-	async release(taskId: string, holder: KanbanBoardTaskLockHolder): Promise<void> {
+	async release(
+		taskId: string,
+		holder: KanbanBoardTaskLockHolder,
+		socketId?: string,
+	): Promise<boolean> {
+		if (socketId) this.untrackSocket(socketId, taskId);
+		if (this.socketCountFor(taskId) > 0) return false;
 		await this.purgeExpired();
 		const existing = await this.lockRepository.findOne({ where: { taskId } });
-		if (!existing) return;
-		if (!this.isSameHolder(existing, holder)) return;
+		if (!existing) return false;
+		if (!this.isSameHolder(existing, holder)) return false;
 		await this.lockRepository.delete({ taskId });
+		return true;
+	}
+
+	async releaseAllForSocket(socketId: string): Promise<string[]> {
+		const held = [...(this.holdsBySocket.get(socketId) ?? [])];
+		this.holdsBySocket.delete(socketId);
+		const released: string[] = [];
+		for (const taskId of held) {
+			if (this.socketCountFor(taskId) > 0) continue;
+			await this.lockRepository.delete({ taskId });
+			released.push(taskId);
+		}
+		return released;
+	}
+
+	async bumpExpiryForTracked(): Promise<void> {
+		const ids = new Set<string>();
+		for (const held of this.holdsBySocket.values()) {
+			for (const id of held) ids.add(id);
+		}
+		if (ids.size === 0) return;
+		const expiresAt = new Date(Date.now() + KANBAN_BOARD_TASK_LOCK_TTL_MS);
+		await this.lockRepository.update(
+			{ taskId: In([...ids]) },
+			{ expiresAt },
+		);
+	}
+
+	private trackSocket(socketId: string, taskId: string): void {
+		const held = this.holdsBySocket.get(socketId) ?? new Set<string>();
+		held.add(taskId);
+		this.holdsBySocket.set(socketId, held);
+	}
+
+	private untrackSocket(socketId: string, taskId: string): void {
+		const held = this.holdsBySocket.get(socketId);
+		if (!held) return;
+		held.delete(taskId);
+		if (held.size === 0) this.holdsBySocket.delete(socketId);
+	}
+
+	private socketCountFor(taskId: string): number {
+		let count = 0;
+		for (const held of this.holdsBySocket.values()) {
+			if (held.has(taskId)) count += 1;
+		}
+		return count;
 	}
 
 	async assertEditable(

@@ -113,17 +113,17 @@ const App: React.FC<LayoutProps> = (props) => {
 		<QueryClientProvider client={queryClient}>
 			<BrowserRouter basename={getRouterBasename(bridged)}>
 				<AppTheme themeComponents={xThemeComponents}>
-					<ErrorBoundary ErrorPage={ErrorPage}>
-						<StyledEngineProvider injectFirst>
-							<Toaster />
+					<StyledEngineProvider injectFirst>
+						<Toaster />
+						<ErrorBoundary ErrorPage={ErrorPage}>
 							<LogoutOverlay />
 							<Suspense fallback={<FullScreenLoader height="100vh" />}>
 								<LocalizationProvider dateAdapter={AdapterDateFns}>
 									<AppRoutes onLogout={onLogoutHandler} />
 								</LocalizationProvider>
 							</Suspense>
-						</StyledEngineProvider>
-					</ErrorBoundary>
+						</ErrorBoundary>
+					</StyledEngineProvider>
 				</AppTheme>
 			</BrowserRouter>
 		</QueryClientProvider>

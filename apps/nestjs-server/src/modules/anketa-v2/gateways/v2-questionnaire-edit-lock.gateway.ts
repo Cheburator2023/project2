@@ -25,6 +25,10 @@ import {
 import type { Server, Socket } from "socket.io";
 import { Public } from "../../../shared/decorators/public.decorator";
 import {
+	holderFromSocket,
+	requireHandshakeToken,
+} from "../../../shared/websocket/ws-handshake";
+import {
 	V2QuestionnaireEditLockService,
 	type V2QuestionnaireEditLockHolder,
 } from "../services/v2-questionnaire-edit-lock.service";
@@ -35,64 +39,11 @@ const UUID_RE =
 	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const BUMP_EXPIRY_MS = 30_000;
 
-function readHandshakeAuth(client: Socket): Record<string, unknown> {
-	const auth = client.handshake?.auth;
-	return auth && typeof auth === "object" && !Array.isArray(auth)
-		? (auth as Record<string, unknown>)
-		: {};
-}
-
-function decodeJwtPayload(token: string): Record<string, unknown> | null {
-	const parts = token.split(".");
-	if (parts.length < 2) return null;
-	try {
-		const json = Buffer.from(parts[1]!, "base64url").toString("utf8");
-		const payload = JSON.parse(json) as unknown;
-		if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
-			return null;
-		}
-		return payload as Record<string, unknown>;
-	} catch {
-		return null;
-	}
-}
-
-function holderFromSocket(client: Socket): V2QuestionnaireEditLockHolder {
-	const auth = readHandshakeAuth(client);
-	const token =
-		typeof auth.token === "string"
-			? auth.token
-			: typeof client.handshake?.headers?.authorization === "string" &&
-					client.handshake.headers.authorization.startsWith("Bearer ")
-				? client.handshake.headers.authorization.slice(7)
-				: "";
-	const payload = token ? decodeJwtPayload(token) : null;
-	const fromAuth =
-		typeof auth.lockedByLabel === "string" ? auth.lockedByLabel.trim() : "";
-	const fromJwt =
-		typeof payload?.preferred_username === "string"
-			? payload.preferred_username.trim()
-			: typeof payload?.username === "string"
-				? payload.username.trim()
-				: "";
-	const userIdRaw = payload?.sub ?? payload?.id ?? payload?.preferred_username;
-	const userId =
-		typeof userIdRaw === "string" && userIdRaw.trim() ? userIdRaw.trim() : null;
-	return {
-		label: fromAuth || fromJwt || "Пользователь",
-		userId,
-	};
-}
-
 function holderFromJoin(
 	client: Socket,
 	body: V2EditLockJoinPayload,
 ): V2QuestionnaireEditLockHolder {
-	const holder = holderFromSocket(client);
-	const fromBody =
-		typeof body?.lockedByLabel === "string" ? body.lockedByLabel.trim() : "";
-	if (fromBody) holder.label = fromBody;
-	return holder;
+	return holderFromSocket(client, body?.lockedByLabel);
 }
 
 function conflictLockPayload(error: unknown): {
@@ -159,6 +110,12 @@ export class V2QuestionnaireEditLockGateway
 		this.wsPublisher.attachExportLock((lock) => {
 			this.emitChanged({ type: "export", lock });
 		});
+		this.wsPublisher.attachExportJob((job) => {
+			this.server?.emit(V2_EDIT_LOCK_WS_EVENTS.exportJob, job);
+		});
+		this.wsPublisher.attachTemplateReady((payload) => {
+			this.server?.emit(V2_EDIT_LOCK_WS_EVENTS.templateReady, payload);
+		});
 		this.bumpTimer = setInterval(() => {
 			void this.editLockService.bumpExpiryForTracked();
 		}, BUMP_EXPIRY_MS);
@@ -170,25 +127,20 @@ export class V2QuestionnaireEditLockGateway
 	}
 
 	async handleConnection(client: Socket): Promise<void> {
-		if (process.env.NO_ROLES !== "true") {
-			const auth = readHandshakeAuth(client);
-			const header = client.handshake?.headers?.authorization;
-			const token =
-				typeof auth.token === "string"
-					? auth.token
-					: typeof header === "string" && header.startsWith("Bearer ")
-						? header.slice(7)
-						: "";
-			if (!token) {
-				client.disconnect(true);
-				return;
-			}
+		if (!requireHandshakeToken(client)) {
+			client.disconnect(true);
+			return;
 		}
-		const [locks, exportLock] = await Promise.all([
+		const [locks, exportLock, exportJobs] = await Promise.all([
 			this.editLockService.listActive(),
 			this.exportJobService.getLock(),
+			this.exportJobService.listInFlightStatuses(),
 		]);
-		const snapshot: V2EditLockSnapshotPayload = { locks, exportLock };
+		const snapshot: V2EditLockSnapshotPayload = {
+			locks,
+			exportLock,
+			exportJobs,
+		};
 		client.emit(V2_EDIT_LOCK_WS_EVENTS.snapshot, snapshot);
 	}
 

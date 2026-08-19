@@ -262,6 +262,7 @@ export function KanbanBoardPage() {
 	});
 
 	useTrackerBoardSync({
+		boardId: resolvedBoardId,
 		boardRef: boardApiRef,
 		enabled: isReady && !saveMutation.isPending,
 		onRemoteUpdate: useCallback(() => setRemoteStale(true), []),
