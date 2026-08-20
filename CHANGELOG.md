@@ -1,5 +1,20 @@
 # Semantic Versioning Changelog
 
+# [1.65.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.64.0...v1.65.0) (2026-08-20)
+
+
+### Features
+
+* add migration for foreign key constraint on questionnaire edit locks ([ddb992a](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/ddb992a37bcec590603e542cbfd02e88aac1939d))
+* enhance load testing script with WebSocket support ([f3d8fba](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/f3d8fba9fe4c2c15d1db9da5ff49a2b33e70f1e9))
+* enhance questionnaire edit lock handling and error management ([6da1eb0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/6da1eb0dfc692adc9a79544e223093e5749f61ac))
+* enhance WebSocket functionality for Kanban board task management ([cbbde14](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/cbbde14ee4682bc02a25596f1d51b3f5ebc1199e))
+* enhance WebSocket logging functionality ([9f3730a](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/9f3730ae356dc54da61ff650dd96311363847f78))
+* implement Kanban board release planning functionality ([13d6ae7](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/13d6ae7be1220a79c418feefbcaf458b0d86ccec))
+* implement ON DELETE SET NULL for parent questionnaire relationships ([599cbd5](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/599cbd56e9bc797db67be8754e155a7f5d0d472c))
+* implement registry synchronization via WebSocket ([62e5443](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/62e54438941ef3405904b98092e937869cc7859c))
+* implement WebSocket support for questionnaire edit locks ([f8402f3](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/f8402f365d125a4a042751733f45fe3a56aee2d1))
+
 # [1.64.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.63.0...v1.64.0) (2026-08-16)
 
 
