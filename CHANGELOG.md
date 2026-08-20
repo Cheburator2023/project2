@@ -1,5 +1,13 @@
 # Semantic Versioning Changelog
 
+# [1.66.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.65.0...v1.66.0) (2026-08-20)
+
+
+### Features
+
+* enhance mutation handling and improve questionnaire registry logic ([cde7fb5](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/cde7fb574354cfd9a3238dbb55c394fab2e41c5c))
+* refactor API URL handling and enhance socket connection logic ([e79a123](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/e79a1234ebc2d08e667dd9f7d2a445255fec5363))
+
 # [1.65.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.64.0...v1.65.0) (2026-08-20)
 
 
