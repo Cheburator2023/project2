@@ -14,7 +14,7 @@ import {
 } from "@react-client/common/auth/godMode";
 import { resolveFreshAccessToken } from "@react-client/common/auth/syncMfeAuth";
 import { apiClient, API_REGISTRY_EXPORT_TIMEOUT_MS } from "@react-client/common/api/helpers/apiClient";
-import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
+import { getSmartAnketaApiBaseUrl } from "@react-client/common/api/helpers/getSmartAnketaApiBaseUrl";
 import { useUserStore } from "@react-client/common/store/userStore";
 import { useQuestionnaireEditLocksStore } from "../stores/questionnaireEditLocksStore";
 import { resolveV2EditLockSocketTarget } from "./v2EditLockSocketTarget";
@@ -24,11 +24,10 @@ import {
 	logSocketIoAction,
 } from "@react-client/common/websocket/bindSocketIoDebugLog";
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
-const IS_DEV = process.env.NODE_ENV === "development";
 const JOIN_TIMEOUT_MS = 8_000;
 
 let socket: Socket | null = null;
+let socketTarget: { uri: string; path: string } | null = null;
 let lockedByLabel = "Пользователь";
 
 const exportJobsById = new Map<string, V2QuestionnaireExportJobStatusDto>();
@@ -41,15 +40,6 @@ const templateReadyListeners = new Set<
 const registrySyncListeners = new Set<
 	(payload: V2QuestionnaireRegistrySyncPayload) => void
 >();
-
-function resolveApiBaseUrl(): string {
-	const fromConfig =
-		useGlobalSettingsStore.getState().configMap?.SMART_ANKETA_API;
-	return (IS_DEV ? API_BASE_URL : fromConfig || API_BASE_URL).replace(
-		/\/$/,
-		"",
-	);
-}
 
 function handshakeAuth(): { token?: string; lockedByLabel: string } {
 	const token = resolveFreshAccessToken();
@@ -123,6 +113,21 @@ function defaultLockLabel(): string {
 
 export function connectV2EditLockSocket(label: string): Socket {
 	lockedByLabel = label.trim() || "Пользователь";
+	const pageOrigin =
+		typeof window !== "undefined"
+			? window.location.origin
+			: "http://localhost:8004";
+	const target = resolveV2EditLockSocketTarget(
+		getSmartAnketaApiBaseUrl(),
+		pageOrigin,
+	);
+	if (
+		socket &&
+		socketTarget &&
+		(socketTarget.uri !== target.uri || socketTarget.path !== target.path)
+	) {
+		disconnectV2EditLockSocket();
+	}
 	if (socket) {
 		socket.auth = handshakeAuth();
 		logSocketIoAction("v2-edit-locks", "reuse", {
@@ -133,22 +138,15 @@ export function connectV2EditLockSocket(label: string): Socket {
 		if (!socket.connected) socket.connect();
 		return socket;
 	}
-	const pageOrigin =
-		typeof window !== "undefined"
-			? window.location.origin
-			: "http://localhost:8004";
-	const { uri, path } = resolveV2EditLockSocketTarget(
-		resolveApiBaseUrl(),
-		pageOrigin,
-	);
 	logSocketIoAction("v2-edit-locks", "connect", {
-		uri,
-		path,
+		uri: target.uri,
+		path: target.path,
 		label: lockedByLabel,
 		auth: handshakeAuth(),
 	});
-	socket = io(uri, {
-		path,
+	socketTarget = target;
+	socket = io(target.uri, {
+		path: target.path,
 		transports: ["polling", "websocket"],
 		autoConnect: true,
 		reconnection: true,
@@ -173,6 +171,7 @@ export function disconnectV2EditLockSocket(): void {
 	socket.removeAllListeners();
 	socket.disconnect();
 	socket = null;
+	socketTarget = null;
 	exportJobsById.clear();
 	const store = useQuestionnaireEditLocksStore.getState();
 	store.setLocks([]);

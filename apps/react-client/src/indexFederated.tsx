@@ -207,6 +207,10 @@ const MfeRoot = (props: Props) => {
 		userName: user ? getKeycloakUserDisplayName(user) : undefined,
 	};
 
+	if (props.urlConfig) {
+		window.urlConfig = props.urlConfig;
+	}
+
 	useDeepEffect(() => {
 		if (props?.urlConfig) {
 			window.urlConfig = props.urlConfig;

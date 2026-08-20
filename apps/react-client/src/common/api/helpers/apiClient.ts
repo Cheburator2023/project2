@@ -11,7 +11,7 @@ import {
 	publishAppSync,
 	type AppQueryScope,
 } from "@react-client/common/crossTab/appBroadcast";
-import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
+import { getSmartAnketaApiBaseUrl } from "@react-client/common/api/helpers/getSmartAnketaApiBaseUrl";
 import axios, {
 	type AxiosError,
 	type AxiosRequestConfig,
@@ -30,10 +30,6 @@ import {
 	reportServerReachable,
 	reportServerUnreachable,
 } from "@react-client/common/serverStatus/serverNoticesStore";
-
-const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
-
-const IS_DEV = process.env.NODE_ENV === "development";
 
 /** Базовый таймаут для GET и лёгких запросов */
 export const API_DEFAULT_TIMEOUT_MS = 63_000;
@@ -99,11 +95,7 @@ function queueTokenRefresh(): Promise<string | null> {
 
 axiosInstance.interceptors.request.use(
 	(config) => {
-		const configMap = useGlobalSettingsStore.getState().configMap;
-
-		config.baseURL = IS_DEV
-			? API_BASE_URL
-			: configMap?.SMART_ANKETA_API || API_BASE_URL;
+		config.baseURL = getSmartAnketaApiBaseUrl();
 
 		const token = resolveFreshAccessToken();
 		if (token && (!isGodModeAccessToken(token) || isNoRolesGodMode())) {

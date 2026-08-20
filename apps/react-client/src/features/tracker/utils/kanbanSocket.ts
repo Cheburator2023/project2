@@ -12,7 +12,7 @@ import {
 	isNoRolesGodMode,
 } from "@react-client/common/auth/godMode";
 import { resolveFreshAccessToken } from "@react-client/common/auth/syncMfeAuth";
-import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
+import { getSmartAnketaApiBaseUrl } from "@react-client/common/api/helpers/getSmartAnketaApiBaseUrl";
 import { resolveV2EditLockSocketTarget } from "@react-client/features/v2/anketaCRUD/utils/v2EditLockSocketTarget";
 import { useKanbanTaskLocksStore } from "../stores/kanbanTaskLocksStore";
 import { bindServerStatusSocket } from "@react-client/common/serverStatus/bindServerStatusSocket";
@@ -21,23 +21,13 @@ import {
 	logSocketIoAction,
 } from "@react-client/common/websocket/bindSocketIoDebugLog";
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
-const IS_DEV = process.env.NODE_ENV === "development";
 const JOIN_TIMEOUT_MS = 8_000;
 
 let socket: Socket | null = null;
+let socketTarget: { uri: string; path: string } | null = null;
 let lockedByLabel = "Пользователь";
 
 const syncListeners = new Set<(payload: KanbanSyncPayload) => void>();
-
-function resolveApiBaseUrl(): string {
-	const fromConfig =
-		useGlobalSettingsStore.getState().configMap?.SMART_ANKETA_API;
-	return (IS_DEV ? API_BASE_URL : fromConfig || API_BASE_URL).replace(
-		/\/$/,
-		"",
-	);
-}
 
 function handshakeAuth(): { token?: string; lockedByLabel: string } {
 	const token = resolveFreshAccessToken();
@@ -88,6 +78,22 @@ function asJoinAck(raw: unknown): KanbanLockJoinAck {
 
 export function connectKanbanSocket(label: string): Socket {
 	lockedByLabel = label.trim() || "Пользователь";
+	const pageOrigin =
+		typeof window !== "undefined"
+			? window.location.origin
+			: "http://localhost:8004";
+	const target = resolveV2EditLockSocketTarget(
+		getSmartAnketaApiBaseUrl(),
+		pageOrigin,
+		KANBAN_WS_NAMESPACE,
+	);
+	if (
+		socket &&
+		socketTarget &&
+		(socketTarget.uri !== target.uri || socketTarget.path !== target.path)
+	) {
+		disconnectKanbanSocket();
+	}
 	if (socket) {
 		socket.auth = handshakeAuth();
 		logSocketIoAction("kanban", "reuse", {
@@ -98,23 +104,15 @@ export function connectKanbanSocket(label: string): Socket {
 		if (!socket.connected) socket.connect();
 		return socket;
 	}
-	const pageOrigin =
-		typeof window !== "undefined"
-			? window.location.origin
-			: "http://localhost:8004";
-	const { uri, path } = resolveV2EditLockSocketTarget(
-		resolveApiBaseUrl(),
-		pageOrigin,
-		KANBAN_WS_NAMESPACE,
-	);
 	logSocketIoAction("kanban", "connect", {
-		uri,
-		path,
+		uri: target.uri,
+		path: target.path,
 		label: lockedByLabel,
 		auth: handshakeAuth(),
 	});
-	socket = io(uri, {
-		path,
+	socketTarget = target;
+	socket = io(target.uri, {
+		path: target.path,
 		transports: ["polling", "websocket"],
 		autoConnect: true,
 		reconnection: true,
@@ -135,6 +133,7 @@ export function disconnectKanbanSocket(): void {
 	socket.removeAllListeners();
 	socket.disconnect();
 	socket = null;
+	socketTarget = null;
 	useKanbanTaskLocksStore.getState().setLocks([]);
 }
 

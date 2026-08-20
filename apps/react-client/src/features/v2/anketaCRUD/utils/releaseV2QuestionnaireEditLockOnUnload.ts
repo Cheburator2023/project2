@@ -3,19 +3,7 @@ import {
 	isNoRolesGodMode,
 } from "@react-client/common/auth/godMode";
 import { resolveFreshAccessToken } from "@react-client/common/auth/syncMfeAuth";
-import { useGlobalSettingsStore } from "@react-client/common/store/globalSettingsStore";
-
-const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
-const IS_DEV = process.env.NODE_ENV === "development";
-
-function resolveApiBaseUrl(): string {
-	const fromConfig =
-		useGlobalSettingsStore.getState().configMap?.SMART_ANKETA_API;
-	return (IS_DEV ? API_BASE_URL : fromConfig || API_BASE_URL).replace(
-		/\/$/,
-		"",
-	);
-}
+import { getSmartAnketaApiBaseUrl } from "@react-client/common/api/helpers/getSmartAnketaApiBaseUrl";
 
 /**
  * Снятие edit-lock при закрытии вкладки/браузера.
@@ -29,7 +17,7 @@ export function releaseV2QuestionnaireEditLockOnUnload(
 	lockedByLabel: string,
 ): void {
 	const url =
-		`${resolveApiBaseUrl()}/v2/questionnaires/` +
+		`${getSmartAnketaApiBaseUrl()}/v2/questionnaires/` +
 		`${encodeURIComponent(questionnaireId)}/edit-lock/release` +
 		`?lockedByLabel=${encodeURIComponent(lockedByLabel)}`;
 

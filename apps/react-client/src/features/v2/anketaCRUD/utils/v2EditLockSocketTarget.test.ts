@@ -13,6 +13,17 @@ describe("resolveV2EditLockSocketTarget", () => {
 		expect(target.path).toBe("/proxy/smart-anketa-api/socket.io");
 	});
 
+	it("keeps Socket.IO namespace off a relative shell proxy path", () => {
+		const target = resolveV2EditLockSocketTarget(
+			"/proxy/smart-anketa-api",
+			"https://shell.example",
+		);
+		expect(target.uri).toBe(
+			`https://shell.example${V2_EDIT_LOCK_WS_NAMESPACE}`,
+		);
+		expect(target.path).toBe("/proxy/smart-anketa-api/socket.io");
+	});
+
 	it("uses /socket.io when API is a bare origin", () => {
 		const target = resolveV2EditLockSocketTarget(
 			"http://localhost:3000",
