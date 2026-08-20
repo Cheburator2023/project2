@@ -227,7 +227,8 @@ export const useV2EditLockHardDisableSetting = () =>
 				url: "/v2/runtime-settings/edit-lock-hard-disable",
 				method: "GET",
 			}),
-		staleTime: 30_000,
+		staleTime: 5 * 60 * 1000,
+		refetchOnMount: false,
 	});
 
 export const useUpdateV2EditLockHardDisableSetting = () => {

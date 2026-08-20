@@ -154,7 +154,9 @@ export const useUpdateV2Questionnaire = () => {
 					};
 				},
 			);
-			void invalidateV2QuestionnaireRegistry(qc, { includeConfig: false });
+			// Автосейв formData не трогает реестр: иначе грид уходит в loading
+			// на каждый PATCH, а соседние вкладки рефетчат список.
+			// Переименование / смена status — через server cache + WS registry:sync.
 		},
 	});
 };

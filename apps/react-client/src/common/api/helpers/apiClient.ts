@@ -66,7 +66,7 @@ function mutationScopeForUrl(url?: string): AppQueryScope | null {
 }
 
 /** Внутренние/фоновые мутации не должны триггерить cross-tab refetch всего v2. */
-function shouldPublishMutationSync(url?: string): boolean {
+function shouldPublishMutationSync(url?: string, method?: string): boolean {
 	if (!url) return false;
 	// POST как read/query — не меняют серверное состояние, invalidation → бесконечный refetch.
 	if (url.includes("/schema-field-sync")) return false;
@@ -80,6 +80,10 @@ function shouldPublishMutationSync(url?: string): boolean {
 		!/[?&]dryRun=(false|0)(?:&|$)/.test(url)
 	) {
 		return false;
+	}
+	// Автосейв анкеты: список обновляют create/copy/delete/hold и WS registry:sync.
+	if (url.includes("/v2/questionnaires")) {
+		return shouldInvalidateV2QuestionnaireRegistry(url, method);
 	}
 	return mutationScopeForUrl(url) !== null;
 }
@@ -132,7 +136,7 @@ axiosInstance.interceptors.response.use(
 			if (shouldInvalidateV2QuestionnaireRegistry(url, method)) {
 				invalidateV2QuestionnaireRegistry(queryClient);
 			}
-			if (shouldPublishMutationSync(url)) {
+			if (shouldPublishMutationSync(url, method)) {
 				const scope = mutationScopeForUrl(url);
 				if (scope) {
 					publishAppSync({ type: "query:invalidate", scope });

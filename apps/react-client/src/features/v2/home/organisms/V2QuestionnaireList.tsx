@@ -425,6 +425,10 @@ export function V2QuestionnaireList() {
 	} = usePermissions();
 	const dadmProgramManagerEnabled = useDadmProgramManagerFeature();
 	const editLockHardDisable = useEditLockHardDisableFeature();
+	const gridContext = useMemo(
+		() => ({ editLockHardDisable }),
+		[editLockHardDisable],
+	);
 	const bulkDelete = useBulkDeleteV2Questionnaires();
 	const bulkHold = useBulkHoldV2Questionnaires();
 	const canShowHoldActions = dadmProgramManagerEnabled && canHoldCalculation;
@@ -463,11 +467,7 @@ export function V2QuestionnaireList() {
 			? agGridCustomMUITheme
 			: agGridCustomMUIThemeDark;
 
-	const {
-		data: listResponse,
-		isLoading,
-		isFetching,
-	} = useV2Questionnaires({
+	const { data: listResponse, isLoading } = useV2Questionnaires({
 		page,
 		limit: V2_QUESTIONNAIRE_REGISTRY_PAGE_SIZE,
 		search: debouncedSearch,
@@ -1290,7 +1290,8 @@ export function V2QuestionnaireList() {
 					onColumnResized={(event) => {
 						if (event.finished) persistColumnState(event.api);
 					}}
-					loading={isLoading || isRegistryConfigLoading || isFetching}
+					loading={isLoading || isRegistryConfigLoading}
+					context={gridContext}
 					rowSelection={rowSelection}
 					onSelectionChanged={(
 						e: SelectionChangedEvent<V2QuestionnaireGridRow>,
@@ -1307,7 +1308,7 @@ export function V2QuestionnaireList() {
 					limit={listMeta?.limit ?? V2_QUESTIONNAIRE_REGISTRY_PAGE_SIZE}
 					total={listMeta?.total ?? 0}
 					lastPage={listMeta?.lastPage ?? 0}
-					disabled={isFetching}
+					disabled={isLoading}
 					onPageChange={setPage}
 					hostEl={pagingHostEl}
 				/>
