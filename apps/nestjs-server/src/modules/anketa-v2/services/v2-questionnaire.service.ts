@@ -878,20 +878,6 @@ export class V2QuestionnaireService {
 		const nextVersion = String(maxVersion + 1);
 		const readableId = `V2-${parent.seriesId}-v${nextVersion}`;
 
-		/**
-		 * Режим менеджера программ ДАДМ: в серии активна только одна версия —
-		 * предыдущие уходят в исторический срез.
-		 */
-		if (await this.runtimeSettingsService.isDadmProgramManagerEnabled()) {
-			const toDeactivate = siblings.filter((s) => s.status === "active");
-			for (const row of toDeactivate) {
-				row.status = "inactive";
-			}
-			if (toDeactivate.length > 0) {
-				await this.questionnaireRepository.save(toDeactivate);
-			}
-		}
-
 		const { boundVersion, formData, formDataProjection } =
 			await this.prepareVersionFormDataFromParent(parent, dto);
 
