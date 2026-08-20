@@ -3286,3 +3286,14 @@ div.dv-scrollable > .dv-tabs-container {
 	border-radius: 6px;
 	padding: 2px 8px;
 }
+
+.dv-tab .dv-default-tab .dv-default-tab-action {
+	margin-left: 6px;
+}
+
+.dv-groupview.dv-inactive-group
+	> .dv-tabs-and-actions-container
+	.dv-tabs-container
+	> .dv-tab.dv-inactive-tab {
+	background-color: transparent;
+}

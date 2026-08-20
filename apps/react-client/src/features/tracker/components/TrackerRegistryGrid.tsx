@@ -15,7 +15,10 @@ import {
 	type CellContextMenuEvent,
 	type CellValueChangedEvent,
 	type ColDef,
+	type GetRowIdParams,
 	type GridApi,
+	type IRowNode,
+	type RowDragEndEvent,
 	type SelectionChangedEvent,
 } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
@@ -62,6 +65,13 @@ type Props<TRow extends object> = {
 	onCellValueChanged?: (row: TRow, field: string, value: unknown) => void;
 	contextActions?: TrackerRegistryContextAction<TRow>[];
 	bulkContextActions?: TrackerRegistryBulkContextAction<TRow>[];
+	treeData?: boolean;
+	treeDataChildrenField?: string;
+	autoGroupColumnDef?: ColDef<TRow>;
+	getRowId?: (params: GetRowIdParams<TRow>) => string;
+	isRowSelectable?: (node: IRowNode<TRow>) => boolean;
+	onRowDragEnd?: (event: RowDragEndEvent<TRow>) => void;
+	pagination?: boolean;
 };
 
 export function TrackerRegistryGrid<TRow extends object>({
@@ -75,6 +85,13 @@ export function TrackerRegistryGrid<TRow extends object>({
 	onCellValueChanged,
 	contextActions = [],
 	bulkContextActions = [],
+	treeData = false,
+	treeDataChildrenField,
+	autoGroupColumnDef,
+	getRowId,
+	isRowSelectable,
+	onRowDragEnd,
+	pagination = true,
 }: Props<TRow>) {
 	const { mode } = useColorScheme();
 	const gridRef = useRef<AgGridReact<TRow>>(null);
@@ -142,6 +159,13 @@ export function TrackerRegistryGrid<TRow extends object>({
 				icons={agGridIconSet}
 				rowData={rowData}
 				columnDefs={columnDefs}
+				autoGroupColumnDef={autoGroupColumnDef}
+				treeData={treeData}
+				treeDataChildrenField={treeData ? treeDataChildrenField : undefined}
+				getRowId={getRowId}
+				isRowSelectable={isRowSelectable}
+				groupDefaultExpanded={treeData ? -1 : undefined}
+				onRowDragEnd={onRowDragEnd}
 				defaultColDef={{
 					sortable: true,
 					filter: true,
@@ -151,7 +175,7 @@ export function TrackerRegistryGrid<TRow extends object>({
 					mainMenuItems: getAgGridMainMenuItems,
 				}}
 				loading={loading}
-				pagination
+				pagination={pagination}
 				localeText={AG_GRID_LOCALE_RU}
 				rowSelection={{
 					mode: "multiRow",
@@ -176,12 +200,10 @@ export function TrackerRegistryGrid<TRow extends object>({
 					if (event.data) onRowDoubleClick?.(event.data);
 				}}
 				onCellValueChanged={(event: CellValueChangedEvent<TRow>) => {
-					if (!event.data || !event.colDef.field) return;
-					onCellValueChanged?.(
-						event.data,
-						event.colDef.field,
-						event.newValue,
-					);
+					if (!event.data) return;
+					const field = event.colDef.field ?? event.colDef.colId;
+					if (!field) return;
+					onCellValueChanged?.(event.data, field, event.newValue);
 				}}
 				singleClickEdit
 				suppressCsvExport

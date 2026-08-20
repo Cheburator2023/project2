@@ -76,6 +76,7 @@ export * from "./v2-param-dependency-logic.util";
 export * from "./v2-binary-boolean-schema.util";
 export * from "./v2-boolean-form-defaults.util";
 export * from "./kanban-board.types";
+export * from "./kanban-board-planning.util";
 export * from "./kanban-board-ws";
 export * from "./kanban-board.util";
 export * from "./kanban-board-edit.util";

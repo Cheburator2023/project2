@@ -11,12 +11,18 @@ import type {
 	CreateKanbanBoardStreamRequestDto,
 	CreateKanbanBoardSupersprintRequestDto,
 	CreateKanbanBoardTaskRequestDto,
+	CreateKanbanBoardPlanningRequestDto,
+	CreateKanbanBoardReleaseThemeRequestDto,
 	KanbanBoardAssigneeDto,
 	KanbanBoardBoardDto,
 	KanbanBoardColumnDto,
 	KanbanBoardCustomerDto,
 	KanbanBoardData,
 	KanbanBoardPlanningImportResultDto,
+	KanbanBoardPlanningDto,
+	KanbanBoardPlanningDetailDto,
+	KanbanBoardReleaseDto,
+	KanbanBoardReleaseThemeDto,
 	KanbanBoardProjectDto,
 	KanbanBoardSprintDto,
 	KanbanBoardSettingsDto,
@@ -41,6 +47,13 @@ import type {
 	UpdateKanbanBoardStreamRequestDto,
 	UpdateKanbanBoardSupersprintRequestDto,
 	UpdateKanbanBoardTaskRequestDto,
+	UpdateKanbanBoardPlanningRequestDto,
+	UpdateKanbanBoardPlanningLayoutRequestDto,
+	UpdateKanbanBoardReleaseRequestDto,
+	UpdateKanbanBoardReleaseThemeRequestDto,
+	AttachKanbanBoardReleaseTasksRequestDto,
+	ReorderKanbanBoardReleaseTasksRequestDto,
+	MoveKanbanBoardReleaseTaskStatusRequestDto,
 	SaveKanbanBoardTasksRequestDto,
 	AcquireKanbanBoardTaskLockRequestDto,
 	KanbanBoardTaskLockDto,
@@ -81,6 +94,10 @@ const invalidateTracker = (queryClient: ReturnType<typeof useQueryClient>) => {
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardTaskHistory"] });
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardHistory"] });
 	queryClient.invalidateQueries({ queryKey: ["kanbanBoardHistoryOverview"] });
+	queryClient.invalidateQueries({ queryKey: ["kanbanBoardPlannings"] });
+	queryClient.invalidateQueries({ queryKey: ["kanbanBoardPlanning"] });
+	queryClient.invalidateQueries({ queryKey: ["kanbanBoardReleases"] });
+	queryClient.invalidateQueries({ queryKey: ["kanbanBoardTaskRef"] });
 };
 
 const patchKanbanBoardTaskInCaches = (
@@ -105,10 +122,16 @@ const patchKanbanBoardTaskInCaches = (
 							content: updated.content,
 							origin: updated.origin,
 							updatedAt: updated.updatedAt,
+							releases: updated.releases,
 						}
 					: task,
 			);
 		},
+	);
+	queryClient.setQueriesData<KanbanBoardTaskRegistryDto>(
+		{ queryKey: ["kanbanBoardTaskRef"] },
+		(cached) =>
+			cached?.id === updated.id ? { ...cached, ...updated } : cached,
 	);
 };
 
@@ -1269,6 +1292,288 @@ export const kanbanBoardImportBoardSnapshot = async (
 		method: "POST",
 		data: formData,
 		signal,
+	});
+};
+
+const invalidatePlanning = (queryClient: ReturnType<typeof useQueryClient>) => {
+	queryClient.invalidateQueries({ queryKey: ["kanbanBoardPlannings"] });
+	queryClient.invalidateQueries({ queryKey: ["kanbanBoardPlanning"] });
+	queryClient.invalidateQueries({ queryKey: ["kanbanBoardReleases"] });
+	queryClient.invalidateQueries({ queryKey: ["kanbanBoardTasksRegistry"] });
+	queryClient.invalidateQueries({ queryKey: ["kanbanBoardTasks"] });
+	queryClient.invalidateQueries({ queryKey: ["kanbanBoardTaskRef"] });
+};
+
+export const useKanbanBoardPlannings = () =>
+	useQuery({
+		queryKey: ["kanbanBoardPlannings"],
+		queryFn: ({ signal }) =>
+			apiClient<KanbanBoardPlanningDto[]>({
+				url: "/kanban-board/plannings",
+				method: "GET",
+				signal,
+			}),
+	});
+
+export const useKanbanBoardPlanning = (id: string) =>
+	useQuery({
+		queryKey: ["kanbanBoardPlanning", id],
+		enabled: Boolean(id),
+		queryFn: ({ signal }) =>
+			apiClient<KanbanBoardPlanningDetailDto>({
+				url: `/kanban-board/plannings/${id}`,
+				method: "GET",
+				signal,
+			}),
+	});
+
+export const useCreateKanbanBoardPlanning = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (data: CreateKanbanBoardPlanningRequestDto) =>
+			apiClient<KanbanBoardPlanningDetailDto>({
+				url: "/kanban-board/plannings",
+				method: "POST",
+				data,
+			}),
+		onSuccess: () => invalidatePlanning(queryClient),
+	});
+};
+
+export const useUpdateKanbanBoardPlanning = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			id,
+			data,
+		}: {
+			id: string;
+			data: UpdateKanbanBoardPlanningRequestDto;
+		}) =>
+			apiClient<KanbanBoardPlanningDetailDto>({
+				url: `/kanban-board/plannings/${id}`,
+				method: "PUT",
+				data,
+			}),
+		onSuccess: (detail) => {
+			queryClient.setQueryData(["kanbanBoardPlanning", detail.id], detail);
+			invalidatePlanning(queryClient);
+		},
+	});
+};
+
+export const useUpdateKanbanBoardPlanningLayout = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			id,
+			data,
+		}: {
+			id: string;
+			data: UpdateKanbanBoardPlanningLayoutRequestDto;
+		}) =>
+			apiClient<KanbanBoardPlanningDetailDto>({
+				url: `/kanban-board/plannings/${id}/layout`,
+				method: "PUT",
+				data,
+			}),
+		onSuccess: (detail) => {
+			queryClient.setQueryData(["kanbanBoardPlanning", detail.id], detail);
+		},
+	});
+};
+
+export const useDeleteKanbanBoardPlanning = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (id: string) =>
+			apiClient<void>({
+				url: `/kanban-board/plannings/${id}`,
+				method: "DELETE",
+			}),
+		onSuccess: () => invalidatePlanning(queryClient),
+	});
+};
+
+export const useKanbanBoardReleases = (availableOnly = false) =>
+	useQuery({
+		queryKey: ["kanbanBoardReleases", availableOnly],
+		queryFn: ({ signal }) =>
+			apiClient<KanbanBoardReleaseDto[]>({
+				url: availableOnly
+					? "/kanban-board/releases?available=1"
+					: "/kanban-board/releases",
+				method: "GET",
+				signal,
+			}),
+	});
+
+export const useUpdateKanbanBoardRelease = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			id,
+			data,
+		}: {
+			id: string;
+			data: UpdateKanbanBoardReleaseRequestDto;
+		}) =>
+			apiClient<KanbanBoardPlanningDetailDto>({
+				url: `/kanban-board/releases/${id}`,
+				method: "PUT",
+				data,
+			}),
+		onSuccess: (detail) => {
+			queryClient.setQueryData(["kanbanBoardPlanning", detail.id], detail);
+			invalidatePlanning(queryClient);
+		},
+	});
+};
+
+export const useCreateKanbanBoardReleaseTheme = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			releaseId,
+			data,
+		}: {
+			releaseId: string;
+			data: CreateKanbanBoardReleaseThemeRequestDto;
+		}) =>
+			apiClient<KanbanBoardReleaseThemeDto>({
+				url: `/kanban-board/releases/${releaseId}/themes`,
+				method: "POST",
+				data,
+			}),
+		onSuccess: () => invalidatePlanning(queryClient),
+	});
+};
+
+export const useUpdateKanbanBoardReleaseTheme = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			releaseId,
+			themeId,
+			data,
+		}: {
+			releaseId: string;
+			themeId: string;
+			data: UpdateKanbanBoardReleaseThemeRequestDto;
+		}) =>
+			apiClient<KanbanBoardReleaseThemeDto>({
+				url: `/kanban-board/releases/${releaseId}/themes/${themeId}`,
+				method: "PUT",
+				data,
+			}),
+		onSuccess: () => invalidatePlanning(queryClient),
+	});
+};
+
+export const useDeleteKanbanBoardReleaseTheme = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			releaseId,
+			themeId,
+		}: {
+			releaseId: string;
+			themeId: string;
+		}) =>
+			apiClient<void>({
+				url: `/kanban-board/releases/${releaseId}/themes/${themeId}`,
+				method: "DELETE",
+			}),
+		onSuccess: () => invalidatePlanning(queryClient),
+	});
+};
+
+export const useAttachKanbanBoardReleaseTasks = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			releaseId,
+			data,
+		}: {
+			releaseId: string;
+			data: AttachKanbanBoardReleaseTasksRequestDto;
+		}) =>
+			apiClient<KanbanBoardPlanningDetailDto>({
+				url: `/kanban-board/releases/${releaseId}/tasks`,
+				method: "POST",
+				data,
+			}),
+		onSuccess: (detail) => {
+			queryClient.setQueryData(["kanbanBoardPlanning", detail.id], detail);
+			invalidatePlanning(queryClient);
+		},
+	});
+};
+
+export const useDetachKanbanBoardReleaseTask = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			releaseId,
+			taskId,
+		}: {
+			releaseId: string;
+			taskId: string;
+		}) =>
+			apiClient<KanbanBoardPlanningDetailDto>({
+				url: `/kanban-board/releases/${releaseId}/tasks/${taskId}`,
+				method: "DELETE",
+			}),
+		onSuccess: (detail) => {
+			queryClient.setQueryData(["kanbanBoardPlanning", detail.id], detail);
+			invalidatePlanning(queryClient);
+		},
+	});
+};
+
+export const useReorderKanbanBoardReleaseTasks = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			releaseId,
+			data,
+		}: {
+			releaseId: string;
+			data: ReorderKanbanBoardReleaseTasksRequestDto;
+		}) =>
+			apiClient<KanbanBoardPlanningDetailDto>({
+				url: `/kanban-board/releases/${releaseId}/tasks/reorder`,
+				method: "PUT",
+				data,
+			}),
+		onSuccess: (detail) => {
+			queryClient.setQueryData(["kanbanBoardPlanning", detail.id], detail);
+			invalidatePlanning(queryClient);
+		},
+	});
+};
+
+export const useMoveKanbanBoardReleaseTaskStatus = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			releaseId,
+			taskId,
+			data,
+		}: {
+			releaseId: string;
+			taskId: string;
+			data: MoveKanbanBoardReleaseTaskStatusRequestDto;
+		}) =>
+			apiClient<KanbanBoardPlanningDetailDto>({
+				url: `/kanban-board/releases/${releaseId}/tasks/${taskId}/status`,
+				method: "PUT",
+				data,
+			}),
+		onSuccess: (detail) => {
+			queryClient.setQueryData(["kanbanBoardPlanning", detail.id], detail);
+			invalidatePlanning(queryClient);
+		},
 	});
 };
 

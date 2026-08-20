@@ -9,6 +9,7 @@ import {
 	normalizeKanbanBoardTaskContent,
 } from "@smart-anketa/api-contract";
 import { KanbanBoardTaskEntity } from "../entities/kanban-board-task.entity";
+import { KanbanBoardReleaseTaskEntity } from "../entities/kanban-board-release-task.entity";
 import { KanbanBoardEntity } from "../entities/kanban-board.entity";
 import { KanbanBoardHistoryService } from "./kanban-board-history.service";
 import { KanbanBoardTaskImageService } from "./kanban-board-task-image.service";
@@ -28,6 +29,7 @@ import {
 	exportXlsx,
 	importXlsx,
 } from "../utils/kanban-board-snapshot.util";
+import { loadReleasesByTaskIds } from "../utils/kanban-board-task-releases.util";
 
 export {
 	SnapshotIntegrityError,
@@ -52,6 +54,8 @@ export class KanbanBoardService {
 		private readonly taskRepository: Repository<KanbanBoardTaskEntity>,
 		@InjectRepository(KanbanBoardEntity)
 		private readonly boardRepository: Repository<KanbanBoardEntity>,
+		@InjectRepository(KanbanBoardReleaseTaskEntity)
+		private readonly membershipRepository: Repository<KanbanBoardReleaseTaskEntity>,
 		private readonly dataSource: DataSource,
 		private readonly configService: ConfigService,
 		private readonly historyService: KanbanBoardHistoryService,
@@ -88,9 +92,14 @@ export class KanbanBoardService {
 		const commentCounts = await this.taskCommentService.countByTaskIds(
 			rows.map((row) => row.id),
 		);
+		const releasesByTaskId = await loadReleasesByTaskIds(
+			this.membershipRepository,
+			rows.map((row) => row.id),
+		);
 		return rows.map((row) => ({
 			...this.toRecord(row),
 			commentCount: commentCounts.get(row.id) ?? 0,
+			releases: releasesByTaskId.get(row.id) ?? [],
 		}));
 	}
 

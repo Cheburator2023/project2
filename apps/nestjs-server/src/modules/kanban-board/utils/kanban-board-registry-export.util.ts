@@ -31,6 +31,7 @@ const TASK_EXPORT_COLUMNS = [
 	{ header: "Исполнитель", key: "assignee", width: 18 },
 	{ header: "Родитель", key: "parentTask", width: 24 },
 	{ header: "Спринт", key: "sprint", width: 18 },
+	{ header: "Релиз", key: "release", width: 22 },
 	{ header: "Стрим", key: "stream", width: 18 },
 	{ header: "Стенд", key: "stand", width: 12 },
 	{ header: "Стенд данных", key: "origin", width: 14 },
@@ -113,6 +114,7 @@ function taskToExportRow(task: KanbanBoardTaskRegistryDto): Record<string, strin
 		assignee: task.assigneeTitle,
 		parentTask: task.parentTask ?? "",
 		sprint: task.sprintTitle ?? "",
+		release: task.releaseTitle ?? "",
 		stream: task.streamCustomer ?? "",
 		stand:
 			task.standTitle ??

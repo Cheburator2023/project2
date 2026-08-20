@@ -138,3 +138,32 @@ describe("resolveTrackerGanttTimelineBounds", () => {
 		expect(bounds.end.getDate()).toBe(27);
 	});
 });
+
+describe("buildTrackerGanttTasks planning filters", () => {
+	it("keeps only listed tasks without sprint rows", () => {
+		const rows = buildTrackerGanttTasks({
+			sprints: [sprint({ id: "s1" })],
+			tasks: [
+				task({
+					id: "t1",
+					content: { title: "Keep", sprintId: "s1" },
+					title: "Keep",
+				}),
+				task({
+					id: "t2",
+					content: { title: "Skip", sprintId: "s1" },
+					title: "Skip",
+				}),
+			],
+			filters: {
+				taskIds: ["t1"],
+				hideSprintRows: true,
+				barColorByTaskId: { t1: "#2563eb" },
+			},
+		});
+		expect(rows).toHaveLength(1);
+		expect(rows[0]?.id).toBe("t1");
+		expect(rows[0]?.parent).toBeUndefined();
+		expect(rows[0]?.color).toBe("#2563eb");
+	});
+});

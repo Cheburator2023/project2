@@ -22,6 +22,7 @@ import {
 	kanbanBoardTaskAssignees,
 	kanbanBoardTaskAssigneesTitle,
 	kanbanBoardStandTitle,
+	kanbanBoardTaskReleasesTitle,
 	kanbanBoardTaskTypeTitle,
 	kanbanBoardWorkTypeTitle,
 	isKanbanBoardAssigneeRoleId,
@@ -58,6 +59,7 @@ import {
 	type KanbanBoardTaskContent,
 	type KanbanBoardTaskRecord,
 	type KanbanBoardTaskRegistryDto,
+	type KanbanBoardTaskReleaseRefDto,
 	type UpdateKanbanBoardCustomerRequestDto,
 	type UpdateKanbanBoardAssigneeRequestDto,
 	type UpdateKanbanBoardBoardRequestDto,
@@ -78,6 +80,8 @@ import { KanbanBoardStreamEntity } from "../entities/kanban-board-stream.entity"
 import { KanbanBoardCustomerEntity } from "../entities/kanban-board-customer.entity";
 import { KanbanBoardSupersprintEntity } from "../entities/kanban-board-supersprint.entity";
 import { KanbanBoardTaskEntity } from "../entities/kanban-board-task.entity";
+import { KanbanBoardReleaseEntity } from "../entities/kanban-board-release.entity";
+import { KanbanBoardReleaseTaskEntity } from "../entities/kanban-board-release-task.entity";
 import {
 	KANBAN_BOARD_SETTINGS_DEFAULT_ID,
 	KanbanBoardSettingsEntity,
@@ -106,6 +110,7 @@ import { KanbanBoardTaskFileService } from "./kanban-board-task-file.service";
 import { KanbanBoardTaskLockService } from "./kanban-board-task-lock.service";
 import { KanbanBoardHistoryService } from "./kanban-board-history.service";
 import { assertKanbanBoardTaskVersion } from "../utils/kanban-board-task-edit.util";
+import { loadReleasesByTaskIds } from "../utils/kanban-board-task-releases.util";
 
 @Injectable()
 export class KanbanBoardRegistryService {
@@ -128,6 +133,10 @@ export class KanbanBoardRegistryService {
 		private readonly customerRepository: Repository<KanbanBoardCustomerEntity>,
 		@InjectRepository(KanbanBoardTaskEntity)
 		private readonly taskRepository: Repository<KanbanBoardTaskEntity>,
+		@InjectRepository(KanbanBoardReleaseEntity)
+		private readonly releaseRepository: Repository<KanbanBoardReleaseEntity>,
+		@InjectRepository(KanbanBoardReleaseTaskEntity)
+		private readonly membershipRepository: Repository<KanbanBoardReleaseTaskEntity>,
 		@InjectRepository(KanbanBoardSettingsEntity)
 		private readonly settingsRepository: Repository<KanbanBoardSettingsEntity>,
 		private readonly kanbanBoardService: KanbanBoardService,
@@ -696,17 +705,9 @@ export class KanbanBoardRegistryService {
 	async findTaskByRef(ref: string): Promise<KanbanBoardTaskRegistryDto> {
 		const task = await this.findTaskEntityByRef(ref);
 		await this.repairTaskImagesContent(task);
-		const columnTitles = await this.loadColumnTitleMap([task.boardId]);
-		const sprintTitles = await this.loadSprintTitleMap(
-			task.content.sprintId ? [task.content.sprintId] : [],
-		);
-		const assigneeRoleByName = await this.loadAssigneeRoleByNameMap();
-		return this.toTaskRegistryDto(
-			task,
-			columnTitles,
-			sprintTitles,
-			assigneeRoleByName,
-		);
+		const [dto] = await this.mapTasksToRegistry([task]);
+		if (!dto) throw new NotFoundException("Задача не найдена");
+		return dto;
 	}
 
 	async createBoard(
@@ -970,10 +971,32 @@ export class KanbanBoardRegistryService {
 				.filter((value): value is string => Boolean(value)),
 		);
 		const assigneeRoleByName = await this.loadAssigneeRoleByNameMap();
+		const releasesByTaskId = await loadReleasesByTaskIds(
+			this.membershipRepository,
+			rows.map((row) => row.id),
+		);
 
 		return rows.map((row) =>
-			this.toTaskRegistryDto(row, columnTitles, sprintTitles, assigneeRoleByName),
+			this.toTaskRegistryDto(
+				row,
+				columnTitles,
+				sprintTitles,
+				assigneeRoleByName,
+				releasesByTaskId.get(row.id) ?? [],
+			),
 		);
+	}
+
+	async findRegistryTasksByIds(
+		ids: string[],
+	): Promise<KanbanBoardTaskRegistryDto[]> {
+		const uniqueIds = [...new Set(ids.filter(Boolean))];
+		if (!uniqueIds.length) return [];
+		const rows = await this.taskRepository.find({
+			where: { id: In(uniqueIds), deletedAt: IsNull() },
+			relations: { board: { project: true } },
+		});
+		return this.mapTasksToRegistry(rows);
 	}
 
 	async importPlanningTasks(
@@ -1337,17 +1360,10 @@ export class KanbanBoardRegistryService {
 			],
 			createdBy,
 		});
-		const columnTitles = await this.loadColumnTitleMap([entity.boardId]);
-		const sprintTitles = await this.loadSprintTitleMap(
-			content.sprintId ? [content.sprintId] : [],
-		);
-		const assigneeRoleByName = await this.loadAssigneeRoleByNameMap();
-		return this.toTaskRegistryDto(
-			entity,
-			columnTitles,
-			sprintTitles,
-			assigneeRoleByName,
-		);
+		await this.syncTaskReleases(entity.id, dto.releaseIds);
+		const [created] = await this.mapTasksToRegistry([entity]);
+		if (!created) throw new NotFoundException("Задача не найдена");
+		return created;
 	}
 
 	async updateTask(
@@ -1434,17 +1450,10 @@ export class KanbanBoardRegistryService {
 			columnTitle,
 			createdBy,
 		});
-		const columnTitlesForDto = await this.loadColumnTitleMap([task.boardId]);
-		const sprintTitles = await this.loadSprintTitleMap(
-			task.content.sprintId ? [task.content.sprintId] : [],
-		);
-		const assigneeRoleByName = await this.loadAssigneeRoleByNameMap();
-		return this.toTaskRegistryDto(
-			task,
-			columnTitlesForDto,
-			sprintTitles,
-			assigneeRoleByName,
-		);
+		await this.syncTaskReleases(task.id, dto.releaseIds);
+		const [updated] = await this.mapTasksToRegistry([task]);
+		if (!updated) throw new NotFoundException("Задача не найдена");
+		return updated;
 	}
 
 	async trashTask(id: string, createdBy?: string | null): Promise<void> {
@@ -1932,6 +1941,7 @@ export class KanbanBoardRegistryService {
 		columnTitles: Map<string, string> = new Map(),
 		sprintTitles: Map<string, string> = new Map(),
 		assigneeRoleByName: ReadonlyMap<string, KanbanBoardAssigneeRoleId | null> = new Map(),
+		releases: KanbanBoardTaskReleaseRefDto[] = [],
 	): KanbanBoardTaskRegistryDto {
 		const { content } = task;
 		const projectCode = task.board?.project?.code ?? task.project?.code ?? "";
@@ -1988,7 +1998,62 @@ export class KanbanBoardRegistryService {
 			standTitle: content.stand
 				? kanbanBoardStandTitle(content.stand)
 				: undefined,
+			releases,
+			releaseTitle: kanbanBoardTaskReleasesTitle(releases) || undefined,
 		};
+	}
+
+	private async syncTaskReleases(
+		taskId: string,
+		releaseIds: string[] | undefined,
+	): Promise<void> {
+		if (releaseIds === undefined) return;
+		const uniqueIds = [
+			...new Set(releaseIds.map((id) => id.trim()).filter(Boolean)),
+		];
+		if (uniqueIds.length) {
+			const found = await this.releaseRepository.find({
+				where: { id: In(uniqueIds) },
+			});
+			if (found.length !== uniqueIds.length) {
+				throw new BadRequestException("Некоторые релизы не найдены");
+			}
+		}
+
+		const existing = await this.membershipRepository.find({
+			where: { taskId },
+		});
+		const existingIds = new Set(existing.map((item) => item.releaseId));
+		const wanted = new Set(uniqueIds);
+		const toRemove = existing.filter((item) => !wanted.has(item.releaseId));
+		if (toRemove.length) {
+			await this.membershipRepository.remove(toRemove);
+		}
+
+		for (const releaseId of uniqueIds) {
+			if (existingIds.has(releaseId)) continue;
+			const position = await this.nextReleaseMembershipPosition(releaseId);
+			await this.membershipRepository.save(
+				this.membershipRepository.create({
+					releaseId,
+					taskId,
+					themeId: null,
+					position,
+				}),
+			);
+		}
+	}
+
+	private async nextReleaseMembershipPosition(
+		releaseId: string,
+	): Promise<number> {
+		const max = await this.membershipRepository
+			.createQueryBuilder("item")
+			.select("COALESCE(MAX(item.position), -1)", "max")
+			.where("item.release_id = :releaseId", { releaseId })
+			.andWhere("item.theme_id IS NULL")
+			.getRawOne<{ max: string }>();
+		return Number(max?.max ?? -1) + 1;
 	}
 
 	private async loadColumnTitleMap(

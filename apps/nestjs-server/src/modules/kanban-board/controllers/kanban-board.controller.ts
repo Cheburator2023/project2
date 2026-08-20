@@ -41,6 +41,19 @@ import type {
 	KanbanBoardColumnDto,
 	KanbanBoardProjectDto,
 	KanbanBoardPlanningImportResultDto,
+	KanbanBoardPlanningDto,
+	KanbanBoardPlanningDetailDto,
+	KanbanBoardReleaseDto,
+	KanbanBoardReleaseThemeDto,
+	CreateKanbanBoardPlanningRequestDto,
+	CreateKanbanBoardReleaseThemeRequestDto,
+	UpdateKanbanBoardPlanningRequestDto,
+	UpdateKanbanBoardPlanningLayoutRequestDto,
+	UpdateKanbanBoardReleaseRequestDto,
+	UpdateKanbanBoardReleaseThemeRequestDto,
+	AttachKanbanBoardReleaseTasksRequestDto,
+	ReorderKanbanBoardReleaseTasksRequestDto,
+	MoveKanbanBoardReleaseTaskStatusRequestDto,
 	ResetKanbanBoardColumnsResultDto,
 	KanbanBoardSprintDto,
 	KanbanBoardSettingsDto,
@@ -83,6 +96,7 @@ import {
 	SnapshotSchemaError,
 } from "../services/kanban-board.service";
 import { KanbanBoardHistoryService } from "../services/kanban-board-history.service";
+import { KanbanBoardPlanningService } from "../services/kanban-board-planning.service";
 import { CurrentUser } from "../../../shared/decorators/user.decorator";
 
 const kanbanAuditUserId = (
@@ -105,6 +119,7 @@ export class KanbanBoardController {
 		private readonly taskCommentService: KanbanBoardTaskCommentService,
 		private readonly taskLockService: KanbanBoardTaskLockService,
 		private readonly historyService: KanbanBoardHistoryService,
+		private readonly planningService: KanbanBoardPlanningService,
 	) {}
 
 	@Get("config")
@@ -240,6 +255,125 @@ export class KanbanBoardController {
 	@Delete("sprints/:id")
 	async deleteSprint(@Param("id") id: string): Promise<void> {
 		return this.registryService.deleteSprint(id);
+	}
+
+	@Get("plannings")
+	async findAllPlannings(): Promise<KanbanBoardPlanningDto[]> {
+		return this.planningService.findAllPlannings();
+	}
+
+	@Post("plannings")
+	async createPlanning(
+		@Body() dto: CreateKanbanBoardPlanningRequestDto,
+	): Promise<KanbanBoardPlanningDetailDto> {
+		return this.planningService.createPlanning(dto);
+	}
+
+	@Get("plannings/:id")
+	async findPlanning(
+		@Param("id") id: string,
+	): Promise<KanbanBoardPlanningDetailDto> {
+		return this.planningService.findPlanningById(id);
+	}
+
+	@Put("plannings/:id")
+	async updatePlanning(
+		@Param("id") id: string,
+		@Body() dto: UpdateKanbanBoardPlanningRequestDto,
+	): Promise<KanbanBoardPlanningDetailDto> {
+		return this.planningService.updatePlanning(id, dto);
+	}
+
+	@Put("plannings/:id/layout")
+	async updatePlanningLayout(
+		@Param("id") id: string,
+		@Body() dto: UpdateKanbanBoardPlanningLayoutRequestDto,
+	): Promise<KanbanBoardPlanningDetailDto> {
+		return this.planningService.updatePlanningLayout(id, dto);
+	}
+
+	@Delete("plannings/:id")
+	async deletePlanning(@Param("id") id: string): Promise<void> {
+		return this.planningService.deletePlanning(id);
+	}
+
+	@Get("releases")
+	async findAllReleases(
+		@Query("available") available?: string,
+	): Promise<KanbanBoardReleaseDto[]> {
+		return this.planningService.findAllReleases(
+			available === "1" || available === "true",
+		);
+	}
+
+	@Put("releases/:id")
+	async updateRelease(
+		@Param("id") id: string,
+		@Body() dto: UpdateKanbanBoardReleaseRequestDto,
+	): Promise<KanbanBoardPlanningDetailDto> {
+		return this.planningService.updateRelease(id, dto);
+	}
+
+	@Post("releases/:id/themes")
+	async createReleaseTheme(
+		@Param("id") id: string,
+		@Body() dto: CreateKanbanBoardReleaseThemeRequestDto,
+	): Promise<KanbanBoardReleaseThemeDto> {
+		return this.planningService.createTheme(id, dto);
+	}
+
+	@Put("releases/:id/themes/:themeId")
+	async updateReleaseTheme(
+		@Param("id") id: string,
+		@Param("themeId") themeId: string,
+		@Body() dto: UpdateKanbanBoardReleaseThemeRequestDto,
+	): Promise<KanbanBoardReleaseThemeDto> {
+		return this.planningService.updateTheme(id, themeId, dto);
+	}
+
+	@Delete("releases/:id/themes/:themeId")
+	async deleteReleaseTheme(
+		@Param("id") id: string,
+		@Param("themeId") themeId: string,
+	): Promise<void> {
+		return this.planningService.deleteTheme(id, themeId);
+	}
+
+	@Post("releases/:id/tasks")
+	async attachReleaseTasks(
+		@Param("id") id: string,
+		@Body() dto: AttachKanbanBoardReleaseTasksRequestDto,
+	): Promise<KanbanBoardPlanningDetailDto> {
+		return this.planningService.attachTasks(id, dto);
+	}
+
+	@Put("releases/:id/tasks/reorder")
+	async reorderReleaseTasks(
+		@Param("id") id: string,
+		@Body() dto: ReorderKanbanBoardReleaseTasksRequestDto,
+	): Promise<KanbanBoardPlanningDetailDto> {
+		return this.planningService.reorderTasks(id, dto);
+	}
+
+	@Put("releases/:id/tasks/:taskId/status")
+	async moveReleaseTaskStatus(
+		@Param("id") id: string,
+		@Param("taskId") taskId: string,
+		@Body() dto: MoveKanbanBoardReleaseTaskStatusRequestDto,
+		@CurrentUser() user: Record<string, unknown> | undefined,
+	): Promise<KanbanBoardPlanningDetailDto> {
+		return this.planningService.moveTaskStatus(id, taskId, dto, {
+			createdBy: kanbanAuditUserId(user),
+			lockHolderLabel: dto.lockHolderLabel,
+		});
+	}
+
+	@Delete("releases/:id/tasks/:taskId")
+	async detachReleaseTask(
+		@Param("id") id: string,
+		@Param("taskId") taskId: string,
+	): Promise<KanbanBoardPlanningDetailDto> {
+		return this.planningService.detachTask(id, taskId);
 	}
 
 	@Get("streams")

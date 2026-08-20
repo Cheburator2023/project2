@@ -28,6 +28,7 @@ import {
 	kanbanBoardTaskAssignees,
 	kanbanBoardTaskTypeColor,
 	kanbanBoardWorkTypeColor,
+	kanbanBoardTaskReleaseLabel,
 	normalizeKanbanBoardTaskContent,
 	normalizeKanbanBoardSubtasks,
 	kanbanBoardRoleEstimatesTotal,
@@ -52,6 +53,7 @@ import {
 	useKanbanBoardColumns,
 	useKanbanBoardCustomers,
 	useKanbanBoardSprints,
+	useKanbanBoardReleases,
 	useKanbanBoardSettings,
 	useKanbanBoardStreams,
 	useKanbanBoardTaskByRef,
@@ -101,6 +103,7 @@ const DEFAULT_COLUMN_ID = "todo";
 const BOARD_SELECT_COLOR = "#6366f1";
 const ASSIGNEE_SELECT_COLOR = "#2563eb";
 const SPRINT_SELECT_COLOR = "#0891b2";
+const RELEASE_SELECT_COLOR = "#d97706";
 const STREAM_SELECT_COLOR = "#7c3aed";
 const CUSTOMER_SELECT_COLOR = "#0d9488";
 const AUTOSAVE_DEBOUNCE_MS = 800;
@@ -239,6 +242,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	const [parentTask, setParentTask] = useState("");
 	const [customer, setCustomer] = useState("");
 	const [sprintId, setSprintId] = useState("");
+	const [releaseIds, setReleaseIds] = useState<string[]>([]);
 	const [streamCustomer, setStreamCustomer] = useState("");
 	const [description, setDescription] = useState("");
 	const [subtasks, setSubtasks] = useState<KanbanBoardSubtaskItem[]>([]);
@@ -248,6 +252,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	const assigneesQuery = useKanbanBoardAssignees();
 	const settingsQuery = useKanbanBoardSettings();
 	const sprintsQuery = useKanbanBoardSprints();
+	const releasesQuery = useKanbanBoardReleases();
 	const streamsQuery = useKanbanBoardStreams();
 	const customersQuery = useKanbanBoardCustomers();
 	const tasksRegistryQuery = useKanbanBoardTasksRegistry();
@@ -358,6 +363,23 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 			})),
 		[sprintsQuery.data],
 	);
+
+	const releaseOptions = useMemo(() => {
+		const options = (releasesQuery.data ?? []).map((item) => ({
+			value: item.id,
+			label: kanbanBoardTaskReleaseLabel(item),
+			color: RELEASE_SELECT_COLOR,
+		}));
+		for (const release of taskByRefQuery.data?.releases ?? []) {
+			if (options.some((option) => option.value === release.id)) continue;
+			options.push({
+				value: release.id,
+				label: kanbanBoardTaskReleaseLabel(release),
+				color: RELEASE_SELECT_COLOR,
+			});
+		}
+		return options;
+	}, [releasesQuery.data, taskByRefQuery.data?.releases]);
 
 	const streamOptions = useMemo(
 		() =>
@@ -529,6 +551,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 		setParentTask(task.content.parentTask ?? "");
 		setCustomer(task.content.customer ?? "");
 		setSprintId(task.content.sprintId ?? "");
+		setReleaseIds((task.releases ?? []).map((item) => item.id));
 		setStreamCustomer(task.content.streamCustomer ?? "");
 		setDescription(task.content.description ?? "");
 		setSubtasks(normalizeKanbanBoardSubtasks(task.content.subtasks) ?? []);
@@ -630,6 +653,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 				parentTask,
 				customer,
 				sprintId,
+				releaseIds,
 				streamCustomer,
 				subtasks,
 			}),
@@ -652,6 +676,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 			parentTask,
 			customer,
 			sprintId,
+			releaseIds,
 			streamCustomer,
 			subtasks,
 		],
@@ -667,6 +692,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 				parentId,
 				content,
 				createdBy: createdByName.trim() || null,
+				releaseIds,
 			});
 			navigate(trackerTaskPath(created.taskKey));
 			return;
@@ -688,6 +714,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 					expectedUpdatedAt,
 					forceOverwrite,
 					lockHolderLabel: editLabel || undefined,
+					releaseIds,
 				},
 			});
 			expectedUpdatedAtRef.current = updated.updatedAt;
@@ -1406,6 +1433,14 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 											onChange={setSprintId}
 											fullWidth
 											disabled={formLocked}
+										/>
+										<KanbanTaskMultiSelectField
+											label="Релиз"
+											value={releaseIds}
+											options={releaseOptions}
+											onChange={setReleaseIds}
+											fullWidth
+											disabled={formLocked || releasesQuery.isLoading}
 										/>
 										<KanbanTaskSelectField
 											label="Стрим-заказчик"

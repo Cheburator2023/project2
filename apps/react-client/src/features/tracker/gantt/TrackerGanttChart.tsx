@@ -46,7 +46,15 @@ import {
 	type KanbanBoardTaskEditBlockedErrorDto,
 	type KanbanBoardTaskRegistryDto,
 } from "@smart-anketa/api-contract";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+	useState,
+	type RefObject,
+} from "react";
 import { useNavigate } from "react-router";
 
 type Props = {
@@ -60,6 +68,39 @@ type PendingGanttUpdate = {
 	content: KanbanBoardTaskRegistryDto["content"];
 	expectedUpdatedAt?: string;
 };
+
+function useElementSize(
+	ref: RefObject<HTMLElement | null>,
+	enabled: boolean,
+) {
+	const [size, setSize] = useState({ width: 0, height: 0 });
+
+	useLayoutEffect(() => {
+		if (!enabled) {
+			setSize({ width: 0, height: 0 });
+			return;
+		}
+		const el = ref.current;
+		if (!el) return;
+
+		const apply = () => {
+			const width = Math.floor(el.clientWidth);
+			const height = Math.floor(el.clientHeight);
+			setSize((prev) =>
+				prev.width === width && prev.height === height
+					? prev
+					: { width, height },
+			);
+		};
+
+		apply();
+		const observer = new ResizeObserver(apply);
+		observer.observe(el);
+		return () => observer.disconnect();
+	}, [enabled, ref]);
+
+	return size;
+}
 
 export function TrackerGanttChart({ filters, scalePresetId }: Props) {
 	const navigate = useNavigate();
@@ -264,6 +305,11 @@ export function TrackerGanttChart({ filters, scalePresetId }: Props) {
 
 	const loading = tasksQuery.isLoading || sprintsQuery.isLoading;
 	const ThemeShell = mode === "dark" ? WillowDark : Willow;
+	const viewportRef = useRef<HTMLDivElement | null>(null);
+	const viewportSize = useElementSize(
+		viewportRef,
+		!loading && tasks.length > 0,
+	);
 
 	if (loading) {
 		return (
@@ -319,7 +365,8 @@ export function TrackerGanttChart({ filters, scalePresetId }: Props) {
 			<Box
 				className="tracker-gantt-body"
 				sx={{
-					flex: 1,
+					flex: "1 1 0",
+					height: 0,
 					minHeight: 0,
 					minWidth: 0,
 				}}
@@ -330,21 +377,38 @@ export function TrackerGanttChart({ filters, scalePresetId }: Props) {
 							<Toolbar api={api} items={TRACKER_GANTT_TOOLBAR_ITEMS} />
 						</Box>
 						<Box
+							ref={viewportRef}
 							className="tracker-gantt-viewport"
-							sx={{ borderRadius: `${TRACKER_GANTT_BORDER_RADIUS}px` }}
+							sx={{
+								flex: "1 1 0",
+								height: 0,
+								minHeight: 0,
+								minWidth: 0,
+								borderRadius: `${TRACKER_GANTT_BORDER_RADIUS}px`,
+							}}
 						>
-							<Gantt
-								key={scalePreset.id}
-								tasks={tasks}
-								scales={scalePreset.scales}
-								columns={columns}
-								start={timeline.start}
-								end={timeline.end}
-								cellWidth={scalePreset.cellWidth}
-								gridWidth={TRACKER_GANTT_GRID_WIDTH}
-								autoScale={false}
-								init={setApi}
-							/>
+							{viewportSize.height > 0 ? (
+								<div
+									className="tracker-gantt-chart-frame"
+									style={{
+										width: viewportSize.width,
+										height: viewportSize.height,
+									}}
+								>
+									<Gantt
+										key={scalePreset.id}
+										tasks={tasks}
+										scales={scalePreset.scales}
+										columns={columns}
+										start={timeline.start}
+										end={timeline.end}
+										cellWidth={scalePreset.cellWidth}
+										gridWidth={TRACKER_GANTT_GRID_WIDTH}
+										autoScale={false}
+										init={setApi}
+									/>
+								</div>
+							) : null}
 						</Box>
 					</ThemeShell>
 				</Box>

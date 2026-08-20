@@ -20,11 +20,15 @@ export type TrackerGanttTaskMeta = {
 	trackerBoardId?: string;
 	projectCode?: string;
 	sprintId?: string | null;
+	color?: string;
 };
 
 export type TrackerGanttFilters = {
 	projectCode?: string;
 	sprintId?: string;
+	taskIds?: string[];
+	hideSprintRows?: boolean;
+	barColorByTaskId?: Record<string, string>;
 };
 
 const DEFAULT_TASK_DURATION_DAYS = 1;
@@ -108,7 +112,11 @@ function filterRegistryTasks(
 	tasks: KanbanBoardTaskRegistryDto[],
 	filters: TrackerGanttFilters,
 ): KanbanBoardTaskRegistryDto[] {
+	const allowedIds = filters.taskIds ? new Set(filters.taskIds) : null;
 	return tasks.filter((task) => {
+		if (allowedIds && !allowedIds.has(task.id)) {
+			return false;
+		}
 		if (filters.projectCode && task.projectCode !== filters.projectCode) {
 			return false;
 		}
@@ -169,7 +177,10 @@ function buildUnassignedSummaryTask(
 	};
 }
 
-function buildTaskRow(task: KanbanBoardTaskRegistryDto): ITask & TrackerGanttTaskMeta {
+function buildTaskRow(
+	task: KanbanBoardTaskRegistryDto,
+	color?: string,
+): ITask & TrackerGanttTaskMeta {
 	const sprintId = task.content.sprintId ?? null;
 	const { start, end, duration } = resolveTaskBarDates(task);
 	const details = [
@@ -191,6 +202,7 @@ function buildTaskRow(task: KanbanBoardTaskRegistryDto): ITask & TrackerGanttTas
 		end,
 		duration,
 		progress: 0,
+		...(color ? { color } : {}),
 		trackerKind: "task",
 		trackerTaskId: task.id,
 		trackerTaskKey: task.taskKey,
@@ -207,6 +219,14 @@ export function buildTrackerGanttTasks(input: {
 }): Array<ITask & TrackerGanttTaskMeta> {
 	const filters = input.filters ?? {};
 	const filteredTasks = filterRegistryTasks(input.tasks, filters);
+	const colorByTaskId = filters.barColorByTaskId ?? {};
+
+	if (filters.hideSprintRows) {
+		return filteredTasks.map((task) => {
+			const row = buildTaskRow(task, colorByTaskId[task.id]);
+			return { ...row, parent: undefined };
+		});
+	}
 	const sprintIdsInData = new Set(
 		filteredTasks
 			.map((task) => task.content.sprintId)
@@ -241,7 +261,7 @@ export function buildTrackerGanttTasks(input: {
 		const children = tasksBySprint.get(sprint.id) ?? [];
 		result.push(buildSprintSummaryTask(sprint, children, true));
 		for (const task of children) {
-			result.push(buildTaskRow(task));
+			result.push(buildTaskRow(task, colorByTaskId[task.id]));
 		}
 	}
 
@@ -252,7 +272,7 @@ export function buildTrackerGanttTasks(input: {
 	if (showUnassigned) {
 		result.push(buildUnassignedSummaryTask(unassigned, true));
 		for (const task of unassigned) {
-			result.push(buildTaskRow(task));
+			result.push(buildTaskRow(task, colorByTaskId[task.id]));
 		}
 	}
 

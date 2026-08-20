@@ -27,8 +27,11 @@ import {
 	kanbanBoardTaskTypeTitle,
 	kanbanBoardWorkTypeColor,
 	kanbanBoardWorkTypeTitle,
+	kanbanBoardTaskReleaseLabel,
+	KANBAN_BOARD_RELEASE_CHIP_COLOR,
 	type KanbanBoardPriorityId,
 	type KanbanBoardTaskContent,
+	type KanbanBoardTaskReleaseRefDto,
 } from "@smart-anketa/api-contract";
 import { format, isValid, parseISO } from "date-fns";
 import { ru } from "date-fns/locale";
@@ -140,6 +143,7 @@ export function KanbanTaskBoardCard({
 	columnColor,
 	isBoardBusy,
 	highlightQuery,
+	releases,
 	onContentUpdated,
 	onEditBlocked,
 }: {
@@ -157,6 +161,7 @@ export function KanbanTaskBoardCard({
 	columnColor: string;
 	isBoardBusy?: boolean;
 	highlightQuery?: string;
+	releases?: KanbanBoardTaskReleaseRefDto[];
 	onContentUpdated: (taskId: string, content: KanbanBoardTaskContent) => void;
 	onEditBlocked?: (error: unknown) => void;
 }) {
@@ -190,6 +195,12 @@ export function KanbanTaskBoardCard({
 		tags.push({
 			label: kanbanBoardStandTitle(content.stand),
 			color: kanbanBoardStandColor(content.stand),
+		});
+	}
+	for (const release of releases ?? []) {
+		tags.push({
+			label: kanbanBoardTaskReleaseLabel(release),
+			color: KANBAN_BOARD_RELEASE_CHIP_COLOR,
 		});
 	}
 

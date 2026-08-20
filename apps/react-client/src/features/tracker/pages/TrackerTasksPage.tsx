@@ -18,6 +18,7 @@ import {
 	TrackerTaskStandChip,
 	TrackerTaskPriorityChip,
 	TrackerTaskSprintChip,
+	TrackerTaskReleaseChips,
 	TrackerTaskStatusChip,
 	TrackerTaskStreamChip,
 	TrackerTaskTypeChip,
@@ -229,6 +230,20 @@ export function TrackerTasksPage() {
 				cellRenderer: (params: ICellRendererParams<KanbanBoardTaskRegistryDto>) =>
 					params.data ? (
 						<TrackerTaskSprintChip sprintTitle={params.data.sprintTitle} />
+					) : null,
+			},
+			{
+				colId: "release",
+				headerName: "Релиз",
+				minWidth: 160,
+				flex: 0.9,
+				valueGetter: (params) => params.data?.releaseTitle ?? "",
+				cellRenderer: (params: ICellRendererParams<KanbanBoardTaskRegistryDto>) =>
+					params.data ? (
+						<TrackerTaskReleaseChips
+							releases={params.data.releases}
+							releaseTitle={params.data.releaseTitle}
+						/>
 					) : null,
 			},
 			{

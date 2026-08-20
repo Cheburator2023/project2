@@ -18,6 +18,8 @@ import {
 	TrackerMyTasksPage,
 	TrackerTasksPage,
 	TrackerTrashPage,
+	TrackerPlanningsPage,
+	TrackerPlanningPage,
 } from "@react-client/routing/lazyPages";
 import {
 	TrackerLegacyBoardRedirect,
@@ -52,6 +54,8 @@ export function trackerRoutes({
 			{ path: "boards", element: <TrackerBoardsPage /> },
 			{ path: "my-tasks", element: <TrackerMyTasksPage /> },
 			{ path: "tasks", element: <TrackerTasksPage /> },
+			{ path: "plannings", element: <TrackerPlanningsPage /> },
+			{ path: "plannings/:planningId", element: <TrackerPlanningPage /> },
 			{ path: "gantt", element: <TrackerGanttPage /> },
 			{ path: "assignees", element: <TrackerAssigneesPage /> },
 			{ path: "customers", element: <TrackerCustomersPage /> },

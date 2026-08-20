@@ -242,6 +242,20 @@ export const TrackerTasksPage = lazyPage(
 		),
 	"TrackerTasksPage",
 );
+export const TrackerPlanningsPage = lazyPage(
+	() =>
+		import(
+			/* webpackChunkName: "page-tracker-plannings" */ "@react-client/features/tracker/pages/TrackerPlanningsPage"
+		),
+	"TrackerPlanningsPage",
+);
+export const TrackerPlanningPage = lazyPage(
+	() =>
+		import(
+			/* webpackChunkName: "page-tracker-planning" */ "@react-client/features/tracker/pages/TrackerPlanningPage"
+		),
+	"TrackerPlanningPage",
+);
 export const TrackerMyTasksPage = lazyPage(
 	() =>
 		import(

@@ -9,6 +9,7 @@ import {
 	kanbanBoardStandTitle,
 	kanbanBoardTaskAssigneeRoles,
 	kanbanBoardTaskAssignees,
+	kanbanBoardTaskReleaseLabel,
 	kanbanBoardTaskTypeColor,
 	kanbanBoardTaskTypeTitle,
 	kanbanBoardWorkTypeColor,
@@ -17,6 +18,7 @@ import {
 	type KanbanBoardStandId,
 	type KanbanBoardStatusId,
 	type KanbanBoardTaskContent,
+	type KanbanBoardTaskReleaseRefDto,
 } from "@smart-anketa/api-contract";
 import {
 	KanbanTaskFieldChip,
@@ -27,6 +29,7 @@ import { TrackerRegistryChipCell } from "@react-client/features/tracker/componen
 const LIST_FIELD_COLORS = {
 	assignee: "#2563eb",
 	sprint: "#0891b2",
+	release: "#d97706",
 	stream: "#7c3aed",
 	origin: "#0284c7",
 	board: "#6366f1",
@@ -196,6 +199,32 @@ export function TrackerTaskSprintChip({ sprintTitle }: { sprintTitle?: string })
 	return (
 		<TrackerRegistryChipCell>
 			<KanbanTaskFieldChip label={sprintTitle} color={LIST_FIELD_COLORS.sprint} />
+		</TrackerRegistryChipCell>
+	);
+}
+
+export function TrackerTaskReleaseChips({
+	releases,
+	releaseTitle,
+}: {
+	releases?: KanbanBoardTaskReleaseRefDto[];
+	releaseTitle?: string;
+}) {
+	const labels = releases?.length
+		? releases.map(kanbanBoardTaskReleaseLabel)
+		: releaseTitle
+			? [releaseTitle]
+			: [];
+	if (!labels.length) return null;
+	return (
+		<TrackerRegistryChipCell>
+			{labels.map((label) => (
+				<KanbanTaskFieldChip
+					key={label}
+					label={label}
+					color={LIST_FIELD_COLORS.release}
+				/>
+			))}
 		</TrackerRegistryChipCell>
 	);
 }

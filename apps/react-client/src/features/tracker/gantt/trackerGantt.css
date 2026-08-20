@@ -18,6 +18,7 @@
 	max-height: 100%;
 	min-width: 0;
 	min-height: 0;
+	flex: 1;
 	overflow: hidden;
 	border: 1px solid var(--wx-gantt-border, rgba(0, 0, 0, 0.12));
 	border-radius: 8px;
@@ -28,7 +29,8 @@
 
 .tracker-gantt-shell .tracker-gantt-body {
 	position: relative;
-	flex: 1;
+	flex: 1 1 0;
+	height: 0;
 	min-width: 0;
 	min-height: 0;
 	overflow: hidden;
@@ -45,19 +47,13 @@
 }
 
 .tracker-gantt-shell .tracker-gantt-body-inner > [class*="wx-"] {
-	flex: 1;
+	flex: 1 1 0;
 	min-width: 0;
 	min-height: 0;
-	height: 100%;
-	max-height: 100%;
+	height: 0;
 	display: flex;
 	flex-direction: column;
 	overflow: hidden;
-}
-
-.tracker-gantt-shell .tracker-gantt-body-inner > [class*="wx-"] > .tracker-gantt-toolbar,
-.tracker-gantt-shell .tracker-gantt-body-inner > [class*="wx-"] > .tracker-gantt-viewport {
-	min-height: 0;
 }
 
 .tracker-gantt-shell .tracker-gantt-toolbar {
@@ -68,32 +64,23 @@
 
 .tracker-gantt-shell .tracker-gantt-viewport {
 	position: relative;
-	flex: 1;
+	flex: 1 1 0;
+	height: 0;
 	min-width: 0;
 	min-height: 0;
 	width: 100%;
 	max-width: 100%;
-	max-height: 100%;
 	overflow: hidden;
 	border-radius: 8px;
 }
 
-.tracker-gantt-shell .tracker-gantt-viewport > [class*="wx-"] {
+.tracker-gantt-shell .tracker-gantt-chart-frame {
+	overflow: hidden;
+}
+
+.tracker-gantt-shell .tracker-gantt-chart-frame > .wx-gantt {
+	height: 100%;
 	width: 100%;
-	max-width: 100%;
-	height: 100%;
-	max-height: 100%;
-	min-width: 0;
-	min-height: 0;
-	overflow: hidden;
-	border-radius: 8px;
-}
-
-.tracker-gantt-shell .tracker-gantt-viewport [class*="wx-gantt"] {
-	height: 100%;
-	max-height: 100%;
-	min-height: 0;
-	overflow: auto;
 }
 
 .tracker-gantt-shell .tracker-gantt-footer {

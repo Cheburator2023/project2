@@ -13,9 +13,14 @@ import { KanbanBoardSprintEntity } from "./entities/kanban-board-sprint.entity";
 import { KanbanBoardCustomerEntity } from "./entities/kanban-board-customer.entity";
 import { KanbanBoardStreamEntity } from "./entities/kanban-board-stream.entity";
 import { KanbanBoardSettingsEntity } from "./entities/kanban-board-settings.entity";
+import { KanbanBoardReleaseEntity } from "./entities/kanban-board-release.entity";
+import { KanbanBoardReleaseThemeEntity } from "./entities/kanban-board-release-theme.entity";
+import { KanbanBoardReleaseTaskEntity } from "./entities/kanban-board-release-task.entity";
+import { KanbanBoardPlanningEntity } from "./entities/kanban-board-planning.entity";
 import { KanbanBoardController } from "./controllers/kanban-board.controller";
 import { KanbanBoardService } from "./services/kanban-board.service";
 import { KanbanBoardRegistryService } from "./services/kanban-board-registry.service";
+import { KanbanBoardPlanningService } from "./services/kanban-board-planning.service";
 import { KanbanBoardTaskImageService } from "./services/kanban-board-task-image.service";
 import { KanbanBoardTaskFileService } from "./services/kanban-board-task-file.service";
 import { KanbanBoardTaskCommentService } from "./services/kanban-board-task-comment.service";
@@ -46,12 +51,17 @@ import { KanbanGateway } from "./gateways/kanban.gateway";
 			KanbanBoardTaskLockEntity,
 			KanbanBoardSettingsEntity,
 			KanbanBoardTaskHistoryEntity,
+			KanbanBoardReleaseEntity,
+			KanbanBoardReleaseThemeEntity,
+			KanbanBoardReleaseTaskEntity,
+			KanbanBoardPlanningEntity,
 		]),
 	],
 	controllers: [KanbanBoardController],
 	providers: [
 		KanbanBoardService,
 		KanbanBoardRegistryService,
+		KanbanBoardPlanningService,
 		KanbanBoardTaskImageService,
 		KanbanBoardTaskFileService,
 		KanbanBoardTaskCommentService,
@@ -65,6 +75,7 @@ import { KanbanGateway } from "./gateways/kanban.gateway";
 	exports: [
 		KanbanBoardService,
 		KanbanBoardRegistryService,
+		KanbanBoardPlanningService,
 		KanbanBoardTaskImageService,
 		KanbanBoardTaskFileService,
 		KanbanBoardTaskCommentService,

@@ -10,6 +10,7 @@ import {
 	FiltersToolPanelModule,
 	RowGroupingModule,
 	SideBarModule,
+	TreeDataModule,
 } from "ag-grid-enterprise";
 
 let registered = false;
@@ -24,6 +25,7 @@ export function registerAgGridTableModules(): void {
 		ColumnsToolPanelModule,
 		FiltersToolPanelModule,
 		RowGroupingModule,
+		TreeDataModule,
 		ColumnMenuModule,
 		ContextMenuModule,
 	]);

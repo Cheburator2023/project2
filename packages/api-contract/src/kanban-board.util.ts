@@ -90,6 +90,7 @@ export function toBoardData(
 				createdBy: task.createdBy,
 				updatedAt: task.updatedAt,
 				commentCount: task.commentCount,
+				releases: task.releases,
 			};
 		}
 	}

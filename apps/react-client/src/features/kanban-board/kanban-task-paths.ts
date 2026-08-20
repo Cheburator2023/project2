@@ -84,3 +84,7 @@ export function trackerSupersprintPath(code: string) {
 export function trackerStreamPath(code: string) {
 	return `/tracker/stream/${encodeURIComponent(normalizeTrackerCode(code))}`;
 }
+
+export function trackerPlanningPath(planningId: string) {
+	return `/tracker/plannings/${encodeURIComponent(planningId)}`;
+}

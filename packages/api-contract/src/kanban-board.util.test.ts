@@ -12,6 +12,8 @@ import {
 	normalizeKanbanBoardSubtasks,
 	kanbanBoardSubtasksProgress,
 	toBoardData,
+	kanbanBoardTaskReleaseLabel,
+	kanbanBoardTaskReleasesTitle,
 	type KanbanBoardData,
 } from "@smart-anketa/api-contract";
 
@@ -214,5 +216,17 @@ describe("kanban board subtasks", () => {
 		expect(normalized).toEqual([
 			{ id: "a", text: "Check regression", status: "qa" },
 		]);
+	});
+});
+
+describe("kanbanBoardTaskReleaseLabel", () => {
+	it("joins release code and name for cards and registry", () => {
+		expect(kanbanBoardTaskReleaseLabel({ code: "REL-1", name: "Апрель" })).toBe(
+			"REL-1 — Апрель",
+		);
+		expect(kanbanBoardTaskReleasesTitle([
+			{ id: "1", code: "REL-1", name: "Апрель" },
+			{ id: "2", code: "REL-2", name: "Май" },
+		])).toBe("REL-1 — Апрель, REL-2 — Май");
 	});
 });

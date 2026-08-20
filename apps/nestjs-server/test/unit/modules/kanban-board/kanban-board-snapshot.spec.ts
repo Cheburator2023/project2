@@ -206,6 +206,7 @@ describe("KanbanBoardService importSnapshot", () => {
 		const service = new KanbanBoardService(
 			repo,
 			boardRepo,
+			{ find: jest.fn(async () => []) } as any,
 			dataSource,
 			{ get: () => "local-dev" } as any,
 			{ logTaskChanges: jest.fn(), logTaskDiff: jest.fn() } as any,

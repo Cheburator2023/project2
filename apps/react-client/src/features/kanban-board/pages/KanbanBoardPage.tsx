@@ -823,6 +823,7 @@ export function KanbanBoardPage() {
 												createdBy={(data as KanbanBoardItem).createdBy}
 												commentCount={(data as KanbanBoardItem).commentCount}
 												taskUpdatedAt={(data as KanbanBoardItem).updatedAt}
+												releases={(data as KanbanBoardItem).releases}
 												editLabel={editLabel}
 												columnColor={getKanbanColumnColor(column)}
 												isBoardBusy={isBoardBusy}

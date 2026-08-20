@@ -385,6 +385,8 @@ export interface KanbanBoardTaskRecord {
 	deletedAt?: string | null;
 	/** Количество комментариев (заполняется при чтении доски). */
 	commentCount?: number;
+	/** Релизы, к которым прикреплена задача (не часть content). */
+	releases?: KanbanBoardTaskReleaseRefDto[];
 }
 
 export interface TrashKanbanBoardColumnTasksResultDto {
@@ -456,6 +458,8 @@ export interface KanbanBoardTaskRegistryDto extends KanbanBoardTaskRecord {
 	streamCustomer?: string;
 	stand?: KanbanBoardStandId;
 	standTitle?: string;
+	/** Сводка релизов для фильтра/экспорта. */
+	releaseTitle?: string;
 }
 
 export interface CreateKanbanBoardProjectRequestDto {
@@ -495,6 +499,8 @@ export interface CreateKanbanBoardTaskRequestDto {
 	position?: number;
 	/** Имя из настроек трекера («Я — исполнитель»), как authorName у комментариев. */
 	createdBy?: string | null;
+	/** Привязка к релизам (kanban_board_release_tasks). */
+	releaseIds?: string[];
 }
 
 export interface UpdateKanbanBoardTaskRequestDto {
@@ -509,6 +515,8 @@ export interface UpdateKanbanBoardTaskRequestDto {
 	forceOverwrite?: boolean;
 	/** Подпись редактора для проверки soft-lock (имя исполнителя из настроек) */
 	lockHolderLabel?: string;
+	/** Привязка к релизам; если не передано — членства не меняются. */
+	releaseIds?: string[];
 }
 
 export interface SaveKanbanBoardTasksRequestDto {
@@ -901,6 +909,7 @@ export interface KanbanBoardItem {
 	/** Версия задачи для optimistic locking на доске */
 	updatedAt?: string;
 	commentCount?: number;
+	releases?: KanbanBoardTaskReleaseRefDto[];
 }
 
 export type KanbanBoardData = {
@@ -957,6 +966,193 @@ export interface KanbanBoardHistoryPreviewDto {
 export interface KanbanBoardHistoryOverviewDto {
 	previewLimit: number;
 	boards: KanbanBoardHistoryPreviewDto[];
+}
+
+export const KANBAN_BOARD_RELEASE_STATUSES = [
+	{ id: "draft", title: "Черновик" },
+	{ id: "planned", title: "Запланирован" },
+	{ id: "in_progress", title: "В работе" },
+	{ id: "done", title: "Готов" },
+] as const;
+
+export type KanbanBoardReleaseStatusId =
+	(typeof KANBAN_BOARD_RELEASE_STATUSES)[number]["id"];
+
+export const KANBAN_BOARD_RELEASE_THEME_COLORS = [
+	"#2563eb",
+	"#7c3aed",
+	"#ca8a04",
+	"#16a34a",
+	"#dc2626",
+	"#0891b2",
+	"#db2777",
+	"#64748b",
+] as const;
+
+export function isKanbanBoardReleaseStatusId(
+	value: unknown,
+): value is KanbanBoardReleaseStatusId {
+	return KANBAN_BOARD_RELEASE_STATUSES.some((item) => item.id === value);
+}
+
+export function kanbanBoardReleaseStatusTitle(
+	id?: KanbanBoardReleaseStatusId | string,
+): string {
+	return (
+		KANBAN_BOARD_RELEASE_STATUSES.find((item) => item.id === id)?.title ??
+		id ??
+		""
+	);
+}
+
+export interface KanbanBoardReleaseThemeDto {
+	id: string;
+	releaseId: string;
+	name: string;
+	color: string;
+	position: number;
+}
+
+export interface KanbanBoardReleaseTaskDto {
+	taskId: string;
+	themeId: string | null;
+	position: number;
+	task: KanbanBoardTaskRegistryDto;
+}
+
+export interface KanbanBoardTaskReleaseRefDto {
+	id: string;
+	code: string;
+	name: string;
+}
+
+export const KANBAN_BOARD_RELEASE_CHIP_COLOR = "#d97706";
+
+export function kanbanBoardTaskReleaseLabel(
+	release: Pick<KanbanBoardTaskReleaseRefDto, "code" | "name">,
+): string {
+	const code = release.code.trim();
+	const name = release.name.trim();
+	if (code && name) return `${code} — ${name}`;
+	return code || name;
+}
+
+export function kanbanBoardTaskReleasesTitle(
+	releases?: KanbanBoardTaskReleaseRefDto[] | null,
+): string {
+	return (releases ?? []).map(kanbanBoardTaskReleaseLabel).join(", ");
+}
+
+export interface KanbanBoardReleaseDto {
+	id: string;
+	code: string;
+	name: string;
+	description: string | null;
+	status: KanbanBoardReleaseStatusId;
+	supersprintId: string | null;
+	supersprintCode: string;
+	supersprintName: string;
+	sprintId: string | null;
+	sprintCode: string;
+	sprintName: string;
+	startDate: string | null;
+	endDate: string | null;
+	themeCount: number;
+	taskCount: number;
+	hasPlanning: boolean;
+	planningId: string | null;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface KanbanBoardPlanningDto {
+	id: string;
+	code: string;
+	name: string;
+	description: string | null;
+	releaseId: string;
+	releaseCode: string;
+	releaseName: string;
+	releaseStatus: KanbanBoardReleaseStatusId;
+	sprintTitle: string;
+	taskCount: number;
+	hasLayout: boolean;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface KanbanBoardPlanningDetailDto extends KanbanBoardPlanningDto {
+	layoutJson: unknown | null;
+	release: KanbanBoardReleaseDto;
+	themes: KanbanBoardReleaseThemeDto[];
+	tasks: KanbanBoardReleaseTaskDto[];
+}
+
+export interface CreateKanbanBoardPlanningRequestDto {
+	code: string;
+	name: string;
+	description?: string | null;
+	/** Существующий релиз без планирования */
+	releaseId?: string | null;
+	releaseCode?: string;
+	releaseName?: string;
+	releaseDescription?: string | null;
+	releaseStatus?: KanbanBoardReleaseStatusId;
+	supersprintId?: string | null;
+	sprintId?: string | null;
+	startDate?: string | null;
+	endDate?: string | null;
+}
+
+export interface UpdateKanbanBoardPlanningRequestDto {
+	code?: string;
+	name?: string;
+	description?: string | null;
+}
+
+export interface UpdateKanbanBoardPlanningLayoutRequestDto {
+	layoutJson: unknown;
+}
+
+export interface UpdateKanbanBoardReleaseRequestDto {
+	code?: string;
+	name?: string;
+	description?: string | null;
+	status?: KanbanBoardReleaseStatusId;
+	supersprintId?: string | null;
+	sprintId?: string | null;
+	startDate?: string | null;
+	endDate?: string | null;
+}
+
+export interface CreateKanbanBoardReleaseThemeRequestDto {
+	name: string;
+	color?: string;
+	position?: number;
+}
+
+export interface UpdateKanbanBoardReleaseThemeRequestDto {
+	name?: string;
+	color?: string;
+	position?: number;
+}
+
+export interface AttachKanbanBoardReleaseTasksRequestDto {
+	taskIds: string[];
+	themeId?: string | null;
+}
+
+export interface ReorderKanbanBoardReleaseTasksRequestDto {
+	items: Array<{
+		taskId: string;
+		themeId: string | null;
+		position: number;
+	}>;
+}
+
+export interface MoveKanbanBoardReleaseTaskStatusRequestDto {
+	statusTitle: string;
+	lockHolderLabel?: string;
 }
 
 /** @deprecated use KanbanBoardTaskContent */
