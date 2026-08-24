@@ -44,6 +44,7 @@ export const V2_TEMPLATE_EDIT_TEST_IDS = {
 	canvasCollapseAll: "canvasCollapseAll",
 	canvasDropZone: "canvasDropZone",
 	canvasFieldRow: "canvasFieldRow",
+	canvasParamGroup: "canvasParamGroup",
 	canvasSystemDivider: "canvasSystemDivider",
 	canvasDuplicateField: "canvasDuplicateField",
 	canvasDeleteConfirm: "canvasDeleteConfirm",
@@ -126,6 +127,7 @@ export const V2_TEMPLATE_READ_TEST_IDS = {
 	form: "form",
 	formSections: "formSections",
 	formSection: "formSection",
+	archParamGroup: "archParamGroup",
 	loading: "loading",
 	noDraft: "noDraft",
 } as const;

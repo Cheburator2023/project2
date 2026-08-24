@@ -8,6 +8,7 @@ import {
 	listCanvasEditableChildKeys,
 	listCanvasOrderedChildKeys,
 	PALETTE_DRAG_TYPE,
+	resolveCanvasArchParamGroupLabel,
 	SCHEMA_CANVAS_ROOT_ID,
 	SCHEMA_CANVAS_SYSTEM_DIVIDER_ID,
 	resolveCanvasDropTarget,
@@ -23,11 +24,13 @@ describe("palette drag helpers", () => {
 		expect(node.parent).toBe(SCHEMA_CANVAS_ROOT_ID);
 		expect(node.text).toBe("Строка");
 		expect(getPresetIdFromPaletteDragSource(node)).toBe("string");
-		expect(getPresetIdFromPaletteDragSource({
-			type: PALETTE_DRAG_TYPE,
-			presetId: "number",
-			text: "Число",
-		})).toBe("number");
+		expect(
+			getPresetIdFromPaletteDragSource({
+				type: PALETTE_DRAG_TYPE,
+				presetId: "number",
+				text: "Число",
+			}),
+		).toBe("number");
 	});
 });
 
@@ -169,7 +172,11 @@ describe("buildSchemaCanvasTree", () => {
 			},
 			uncertaintyCalculation: {
 				"ui:options": { hidden: true, system: true },
-				"ui:order": ["initiativeTimeline", "uncertaintyAdjustment", "riskGroup"],
+				"ui:order": [
+					"initiativeTimeline",
+					"uncertaintyAdjustment",
+					"riskGroup",
+				],
 				riskGroup: {
 					"ui:order": ["sanctions"],
 				},
@@ -338,12 +345,12 @@ describe("resolveCanvasDropTarget", () => {
 			relativeIndex: 0,
 		} as DropOptions<SchemaCanvasNodeData>;
 
-		expect(resolveCanvasDropTarget(options, SCHEMA_CANVAS_ROOT_ID, schema)).toEqual(
-			{
-				parentPointer: "/tasks/items",
-				index: 0,
-			},
-		);
+		expect(
+			resolveCanvasDropTarget(options, SCHEMA_CANVAS_ROOT_ID, schema),
+		).toEqual({
+			parentPointer: "/tasks/items",
+			index: 0,
+		});
 	});
 });
 
@@ -400,7 +407,10 @@ describe("buildSchemaCanvasTree system divider", () => {
 			type: "object",
 			properties: {
 				generalInfo: { type: "object", properties: {} },
-				workflow: { type: "object", properties: { globalStatus: { type: "string" } } },
+				workflow: {
+					type: "object",
+					properties: { globalStatus: { type: "string" } },
+				},
 				meta: { type: "object", properties: { name: { type: "string" } } },
 				summary: { type: "object", properties: {} },
 			},
@@ -540,7 +550,9 @@ describe("treeToGroupOrders", () => {
 		};
 
 		const tree = buildSchemaCanvasTree(schema, ui);
-		expect(tree.find((n) => n.id === "/field_stream")?.text).toBe("Стрим «ДАДМ»");
+		expect(tree.find((n) => n.id === "/field_stream")?.text).toBe(
+			"Стрим «ДАДМ»",
+		);
 		expect(tree.find((n) => n.id === "/generalInfo")?.text).toBe(
 			"Общие сведения",
 		);
@@ -570,5 +582,49 @@ describe("treeToGroupOrders", () => {
 		const orders = treeToGroupOrders(tree, schema);
 
 		expect(orders["schema-group:/tasks/items"]).toEqual(["b", "a"]);
+	});
+});
+
+describe("resolveCanvasArchParamGroupLabel", () => {
+	it("ставит «Общие» на первое поле модельного сервиса и «ПиРМ» на первое уникальное", () => {
+		const preset = ARCH_COMPONENT_PRESET_DEFS.modelService;
+		const schema: RJSFSchema = {
+			type: "object",
+			properties: { modelService: preset.make() },
+		};
+		const ui: UiSchema = {
+			modelService: {
+				"ui:options": { archComponent: "modelService" },
+				...(preset.uiBranch as Record<string, unknown>),
+			},
+		};
+
+		expect(
+			resolveCanvasArchParamGroupLabel(
+				schema,
+				ui,
+				"/modelService",
+				"field_dEVFQVQn",
+			),
+		).toBe("Общие");
+		expect(
+			resolveCanvasArchParamGroupLabel(schema, ui, "/modelService", "workType"),
+		).toBeNull();
+		expect(
+			resolveCanvasArchParamGroupLabel(
+				schema,
+				ui,
+				"/modelService",
+				"modelClass",
+			),
+		).toBe("Контроль моделей");
+		expect(
+			resolveCanvasArchParamGroupLabel(
+				schema,
+				ui,
+				"/modelService",
+				"field_imxB4YEd",
+			),
+		).toBe("ПиРМ");
 	});
 });

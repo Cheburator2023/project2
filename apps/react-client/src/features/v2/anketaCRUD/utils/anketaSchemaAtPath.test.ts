@@ -2,6 +2,10 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { setUiHiddenAtPointer } from "@react-client/features/v2/admin_constructor/utils/schemaMutators";
+import {
+	resolveArchParamFieldGroupsForObject,
+	resolveV2AnketaArchComponent,
+} from "@smart-anketa/api-contract";
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import {
 	getArrayItemSchemaSliceForModal,
@@ -147,5 +151,48 @@ describe("anketaSchemaAtPath modal slices", () => {
 
 		expect(order).not.toContain("workType");
 		expect(Object.keys(slice!.schema.properties!)).toEqual(order);
+	});
+
+	it("держит archComponent в слайсе модалки модельного сервиса для группировки полей", () => {
+		const slice = getObjectSchemaSliceForModal(
+			snapshot.jsonSchema,
+			snapshot.uiSchema,
+			"generalInfo.modelService",
+		);
+		expect(resolveV2AnketaArchComponent(slice?.uiSchema)).toBe("modelService");
+		expect(
+			resolveArchParamFieldGroupsForObject({
+				archComponent: resolveV2AnketaArchComponent(slice?.uiSchema),
+				propertyKeys: Object.keys(slice?.schema.properties ?? {}),
+			})?.map((group) => group.id),
+		).toEqual(["common", "mdlctl", "pirm"]);
+	});
+
+	it("переносит archComponent с массива систем-источников в слайс элемента", () => {
+		const slice = getArrayItemSchemaSliceForModal(
+			snapshot.jsonSchema,
+			snapshot.uiSchema,
+			"detailInfo.sourceSystems",
+		);
+		expect(resolveV2AnketaArchComponent(slice?.uiSchema)).toBe("sourceSystem");
+		expect(
+			resolveArchParamFieldGroupsForObject({
+				archComponent: resolveV2AnketaArchComponent(slice?.uiSchema),
+				propertyKeys: Object.keys(slice?.schema.properties ?? {}),
+			})?.map((group) => group.id),
+		).toEqual(["common", "idsrc_ext", "idsrc_int", "pirm"]);
+	});
+
+	it("группирует поля модели в модалке даже без archComponent на массиве", () => {
+		const slice = getArrayItemSchemaSliceForModal(
+			snapshot.jsonSchema,
+			snapshot.uiSchema,
+			"detailInfo.modelsList",
+		);
+		expect(
+			resolveArchParamFieldGroupsForObject({
+				propertyKeys: Object.keys(slice?.schema.properties ?? {}),
+			})?.map((group) => group.id),
+		).toEqual(["common", "pirm"]);
 	});
 });

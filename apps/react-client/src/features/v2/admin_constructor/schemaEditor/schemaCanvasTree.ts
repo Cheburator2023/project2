@@ -1,7 +1,10 @@
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import type { DropOptions, NodeModel } from "@minoru/react-dnd-treeview";
 import {
+	inferV2ArchParamGroupingKind,
 	isV2AnketaSystemRootPointer,
+	resolveArchParamGroupLabelAtIndex,
+	resolveV2AnketaArchComponent,
 	resolveV2AnketaCanvasUiKind,
 	resolveV2AnketaSectionDisplayTitle,
 	schemaHasUncertaintyModalWidget,
@@ -76,6 +79,38 @@ export function listCanvasOrderedChildKeys(
 
 	if (options?.hideSystemFields) return primary;
 	return [...primary, ...system];
+}
+
+/** Заголовок группы «Общие» / стрим — только у первого поля группы на холсте конструктора. */
+export function resolveCanvasArchParamGroupLabel(
+	jsonSchema: RJSFSchema,
+	uiSchema: UiSchema | Record<string, unknown> | undefined,
+	parentPointer: string,
+	fieldKey: string,
+): string | null {
+	if (!parentPointer || !fieldKey) return null;
+	const siblingKeys = listOrderedChildKeys(
+		jsonSchema,
+		parentPointer,
+		uiSchema as UiSchema | undefined,
+	);
+	const index = siblingKeys.indexOf(fieldKey);
+	if (index < 0) return null;
+
+	const parentUi = readUiSchemaBranchAtPointer(uiSchema, parentPointer);
+	let arch = resolveV2AnketaArchComponent(parentUi);
+	if (!arch && parentPointer.endsWith("/items")) {
+		const arrayPointer = parentPointer.slice(0, -"/items".length);
+		arch = resolveV2AnketaArchComponent(
+			readUiSchemaBranchAtPointer(uiSchema, arrayPointer),
+		);
+	}
+	const kind = inferV2ArchParamGroupingKind({
+		archComponent: arch,
+		propertyKeys: siblingKeys,
+	});
+	if (!kind) return null;
+	return resolveArchParamGroupLabelAtIndex(kind, siblingKeys, index);
 }
 
 export function isCanvasSystemField(
@@ -275,9 +310,7 @@ function appendUncertaintyCalculationFieldNodes(
 
 	for (const key of keys) {
 		const fieldPointer =
-			schemaParentPointer === "/"
-				? `/${key}`
-				: `${schemaParentPointer}/${key}`;
+			schemaParentPointer === "/" ? `/${key}` : `${schemaParentPointer}/${key}`;
 		const node = resolveSchemaNode(jsonSchema, pointerSegments(fieldPointer));
 		const isGroup = isObjectFieldGroup(node);
 

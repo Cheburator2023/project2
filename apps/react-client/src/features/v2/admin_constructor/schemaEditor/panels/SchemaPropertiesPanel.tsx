@@ -42,6 +42,8 @@ import {
 import {
 	isExecutorStreamPresentInSchema,
 	isV2AnketaHiddenUiNode,
+	inferV2ArchParamGroupingKind,
+	mapArchParamFieldGroups,
 	collectExecutorStreamBlocks,
 	readV2AnketaSectionUiOptions,
 	resolveStreamExecutorForTypicalWorkOutputPath,
@@ -154,10 +156,12 @@ function GroupChildFieldsList({
 	fields,
 	emptyHint,
 	onSelectField,
+	archComponent,
 }: {
 	fields: Array<{ key: string; title: string; typeLabel: string }>;
 	emptyHint: string;
 	onSelectField?: (key: string) => void;
+	archComponent?: string | null;
 }) {
 	if (fields.length === 0) {
 		return (
@@ -166,39 +170,67 @@ function GroupChildFieldsList({
 			</Typography>
 		);
 	}
-	return (
-		<Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
-			{fields.map((child) => (
-				<Box
-					key={child.key}
-					onClick={
-						onSelectField
-							? () => {
-									onSelectField(child.key);
-								}
-							: undefined
-					}
-					sx={
-						onSelectField
-							? {
-									cursor: "pointer",
-									borderRadius: 0.5,
-									px: 0.5,
-									mx: -0.5,
-									"&:hover": { bgcolor: "action.hover" },
-								}
-							: undefined
-					}
-				>
-					<Typography variant="body2" component="span">
-						{child.title}
-					</Typography>
-					<Typography variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
-						({child.key} · {ruSchemaTypeLabel(child.typeLabel)})
-					</Typography>
-				</Box>
-			))}
+
+	const groupingKind = inferV2ArchParamGroupingKind({
+		archComponent,
+		propertyKeys: fields.map((field) => field.key),
+	});
+	const grouped = groupingKind
+		? mapArchParamFieldGroups(groupingKind, fields, (field) => field.key)
+		: [{ id: "all", label: null as string | null, items: fields }];
+
+	const renderField = (child: {
+		key: string;
+		title: string;
+		typeLabel: string;
+	}) => (
+		<Box
+			key={child.key}
+			onClick={
+				onSelectField
+					? () => {
+							onSelectField(child.key);
+						}
+					: undefined
+			}
+			sx={
+				onSelectField
+					? {
+							cursor: "pointer",
+							borderRadius: 0.5,
+							px: 0.5,
+							mx: -0.5,
+							"&:hover": { bgcolor: "action.hover" },
+						}
+					: undefined
+			}
+		>
+			<Typography variant="body2" component="span">
+				{child.title}
+			</Typography>
+			<Typography variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
+				({child.key} · {ruSchemaTypeLabel(child.typeLabel)})
+			</Typography>
 		</Box>
+	);
+
+	return (
+		<Flex flexDirection="column" gap={8} width="100%">
+			{grouped.map((group) => (
+				<Flex key={group.id} flexDirection="column" gap={4} width="100%">
+					{group.label ? (
+						<Typography
+							variant="caption"
+							fontWeight={700}
+							color="text.secondary"
+						>
+							{group.label}
+						</Typography>
+					) : null}
+					{group.items.map(renderField)}
+				</Flex>
+			))}
+		</Flex>
 	);
 }
 
@@ -468,9 +500,9 @@ export function SchemaPropertiesPanel() {
 				? resolveTypicalWorkDisplayBoundIds(
 						uiSchema,
 						selectedPointer,
-					typicalWorkCatalog,
-					typicalWorkStreamExecutors,
-				)
+						typicalWorkCatalog,
+						typicalWorkStreamExecutors,
+					)
 				: [],
 		[
 			selectedPointer,
@@ -494,9 +526,9 @@ export function SchemaPropertiesPanel() {
 	const streamScopedTypicalWorks = useMemo(
 		() =>
 			filterTypicalWorksForStreamExecutor(
-					typicalWorkCatalog,
-					typicalWorkStreamExecutors,
-				)
+				typicalWorkCatalog,
+				typicalWorkStreamExecutors,
+			)
 				.map((item) => typicalWorks.find((work) => work.id === item.id))
 				.filter((work): work is (typeof typicalWorks)[number] => Boolean(work)),
 		[typicalWorkCatalog, typicalWorkStreamExecutors, typicalWorks],
@@ -659,9 +691,7 @@ export function SchemaPropertiesPanel() {
 	);
 	const fieldFullWidth = leafUiOptions?.fullWidth === true;
 	const schemaMaxLength =
-		typeof resolvedField?.maxLength === "number"
-			? resolvedField.maxLength
-			: "";
+		typeof resolvedField?.maxLength === "number" ? resolvedField.maxLength : "";
 	const textareaRows =
 		typeof leafUiOptions?.rows === "number" ? leafUiOptions.rows : 4;
 	const showStringMaxLength =
@@ -971,34 +1001,24 @@ export function SchemaPropertiesPanel() {
 		const free = catalogStreamCodes.find(
 			(code) => !streamsAssignedToOtherBlocks.includes(code),
 		);
-		return (free ?? V2_IMPLEMENTATION_STREAM.IDSRC) as V2ImplementationStreamCode;
-	}, [
-		streamBlockExecutors,
-		streamsAssignedToOtherBlocks,
-		catalogStreamCodes,
-	]);
+		return (free ??
+			V2_IMPLEMENTATION_STREAM.IDSRC) as V2ImplementationStreamCode;
+	}, [streamBlockExecutors, streamsAssignedToOtherBlocks, catalogStreamCodes]);
 	const streamBlockRoleCodes = useMemo(() => {
 		const explicit = normalizeStreamBlockRoles(
 			sectionUiOptions.streamBlockRoles,
 		);
 		if (explicit.length > 0) return explicit;
 		return streamBlockOptions.streamBlockRoles;
-	}, [
-		sectionUiOptions.streamBlockRoles,
-		streamBlockOptions.streamBlockRoles,
-	]);
+	}, [sectionUiOptions.streamBlockRoles, streamBlockOptions.streamBlockRoles]);
 	/** Стрим-блок: корневые object-секции, включая detailInfo (зонтик модельного). */
 	const showStreamBlockOptions =
 		showObjectLayout &&
 		isRootLevelBlock &&
 		!sectionUiOptions.system &&
-		![
-			"generalInfo",
-			"summary",
-			"meta",
-			"groupActivation",
-			"workflow",
-		].includes(rootBlockKey);
+		!["generalInfo", "summary", "meta", "groupActivation", "workflow"].includes(
+			rootBlockKey,
+		);
 	const showLayoutOptions = fieldKind === "layout";
 	const showArrayOptions = fieldKind === "array" || fieldKind === "arch-array";
 	const showPlaceholderField =
@@ -1342,6 +1362,7 @@ export function SchemaPropertiesPanel() {
 								<GroupChildFieldsList
 									fields={groupChildFields}
 									emptyHint="Перетащите поля внутрь блока разметки на холсте."
+									archComponent={sectionUiOptions.archComponent}
 								/>
 							</Box>
 						</PropertiesSection>
@@ -1569,11 +1590,7 @@ export function SchemaPropertiesPanel() {
 														.join(".");
 													if (!pathKey) return;
 													setFormData((prev) =>
-														setGroupActivationAtPath(
-															prev,
-															pathKey,
-															nextActive,
-														),
+														setGroupActivationAtPath(prev, pathKey, nextActive),
 													);
 												}}
 											/>
@@ -1604,6 +1621,7 @@ export function SchemaPropertiesPanel() {
 								<GroupChildFieldsList
 									fields={groupChildFields}
 									emptyHint="Перетащите поле внутрь группы на холсте."
+									archComponent={sectionUiOptions.archComponent}
 								/>
 								{isCustomUiGroup ? (
 									<Typography
@@ -1692,6 +1710,7 @@ export function SchemaPropertiesPanel() {
 									<GroupChildFieldsList
 										fields={arrayItemChildFields}
 										emptyHint="Перетащите поле из палитры на блок списка на холсте. Стоковые поля пресета удалить нельзя."
+										archComponent={sectionUiOptions.archComponent}
 										onSelectField={(key) => {
 											if (!selectedPointer) return;
 											setSelectedPointer(`${selectedPointer}/items/${key}`);
@@ -1804,8 +1823,7 @@ export function SchemaPropertiesPanel() {
 													prev as Record<string, unknown>,
 													selectedPointer,
 													{
-														streamBlockRoles:
-															streamBlockRolesToUiValue(roles),
+														streamBlockRoles: streamBlockRolesToUiValue(roles),
 													},
 												) as UiSchema,
 											{ recordHistory: false },
@@ -1846,9 +1864,9 @@ export function SchemaPropertiesPanel() {
 																prev as Record<string, unknown>,
 																selectedPointer,
 																w.id,
-					typicalWorkCatalog,
-					typicalWorkStreamExecutors,
-				) as UiSchema,
+																typicalWorkCatalog,
+																typicalWorkStreamExecutors,
+															) as UiSchema,
 														{ recordHistory: false },
 													);
 												}}
@@ -1952,8 +1970,7 @@ export function SchemaPropertiesPanel() {
 													prev as Record<string, unknown>,
 													selectedPointer,
 													{
-														streamBlockRoles:
-															streamBlockRolesToUiValue(roles),
+														streamBlockRoles: streamBlockRolesToUiValue(roles),
 													},
 												) as UiSchema,
 											{ recordHistory: false },

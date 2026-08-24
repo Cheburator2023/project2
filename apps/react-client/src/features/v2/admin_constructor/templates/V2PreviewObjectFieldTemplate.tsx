@@ -38,6 +38,8 @@ import {
 	readArchObjectListAtPath,
 	isAnketaArchObjectListPath,
 } from "@react-client/features/v2/anketaCRUD/utils/anketaArchObjectListPaths";
+import { Flex } from "@react-client/common/primitives/Flex";
+import { Spacer } from "@react-client/common/primitives/Spacer";
 import {
 	V2_ANKETA_SECTION_COMPLETE_LABELS,
 	canViewerCompleteAnketaSection,
@@ -45,6 +47,7 @@ import {
 	isV2AnketaModalObjectArch,
 	readPanelSectionStatus,
 	resolveAnketaSectionWorkflowBinding,
+	resolveArchParamFieldGroupsForObject,
 	resolveV2AnketaArchComponent,
 	resolveV2AnketaDefaultExpanded,
 	resolveV2AnketaSectionRole,
@@ -561,14 +564,26 @@ function ObjectFieldsGrid({
 	parentPathKey?: string;
 	formContext?: unknown;
 }) {
+	void parentPathKey;
+	void formContext;
 	const layoutColumns = readLayoutGridColumns(uiSchema);
 	const visibleProperties = properties.filter(
 		(element) => !isV2AnketaHiddenUiNode(uiSchema?.[element.name]),
 	);
+	const paramGroups = resolveArchParamFieldGroupsForObject({
+		archComponent: resolveV2AnketaArchComponent(uiSchema),
+		propertyKeys: visibleProperties.map((element) => element.name),
+	});
+	const propertyByName = new Map(
+		visibleProperties.map((element) => [element.name, element]),
+	);
 
-	return (
+	const renderPropertyGrid = (
+		elements: typeof visibleProperties,
+		keyPrefix: string,
+	) => (
 		<Grid container spacing={2} sx={{ width: "100%", minWidth: 0 }}>
-			{visibleProperties.map((element, index) => {
+			{elements.map((element, index) => {
 				const propertySchema = propertySchemaFor(schema, element.name);
 				const propertyUiSchema = uiSchema?.[element.name] as
 					| UiSchema
@@ -582,20 +597,48 @@ function ObjectFieldsGrid({
 							propertyUiSchema,
 							layoutColumns,
 						)}
-						key={element.name ?? index}
+						key={`${keyPrefix}${element.name ?? index}`}
 						sx={{ minWidth: 0 }}
 					>
 						{element.content}
-						{/* {parentPathKey ? (
-							<AnketaCalculationDevHint
-								pathKey={`${parentPathKey}.${element.name}`}
-								formContext={formContext}
-							/>
-						) : null} */}
 					</Grid>
 				);
 			})}
 		</Grid>
+	);
+
+	if (!paramGroups) {
+		return renderPropertyGrid(visibleProperties, "");
+	}
+
+	return (
+		<Flex flexDirection="column" width="100%" minWidth={0}>
+			{paramGroups.map((group, groupIndex) => {
+				const groupElements = group.keys
+					.map((name) => propertyByName.get(name))
+					.filter(
+						(element): element is (typeof visibleProperties)[number] =>
+							element !== undefined,
+					);
+				if (groupElements.length === 0) return null;
+				return (
+					<Flex
+						key={group.id}
+						flexDirection="column"
+						width="100%"
+						minWidth={0}
+						data-test-id={V2_TEMPLATE_READ_TEST_IDS.archParamGroup}
+					>
+						{groupIndex > 0 ? <Spacer space={12} /> : null}
+						<Typography variant="subtitle2" fontWeight={700}>
+							{group.label}
+						</Typography>
+						<Spacer space={8} />
+						{renderPropertyGrid(groupElements, `${group.id}-`)}
+					</Flex>
+				);
+			})}
+		</Flex>
 	);
 }
 
@@ -848,6 +891,28 @@ export function V2PreviewObjectFieldTemplate({
 			}
 			return true;
 		});
+
+		const usesArchParamGroups = Boolean(
+			resolveArchParamFieldGroupsForObject({
+				archComponent: resolveV2AnketaArchComponent(uiSchema),
+				propertyKeys: visibleProperties.map((element) => element.name),
+			}),
+		);
+		if (usesArchParamGroups) {
+			return (
+				<Box
+					sx={{ width: "100%", minWidth: 0 }}
+					data-test-id={V2_TEMPLATE_READ_TEST_IDS.formSections}
+				>
+					<ObjectFieldsGrid
+						properties={visibleProperties}
+						schema={schemaNode}
+						uiSchema={uiSchema as UiSchema | undefined}
+						formContext={registry.formContext}
+					/>
+				</Box>
+			);
+		}
 
 		return (
 			<Stack

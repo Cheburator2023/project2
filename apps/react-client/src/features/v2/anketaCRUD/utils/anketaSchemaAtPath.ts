@@ -2,17 +2,17 @@ import {
 	listOrderedChildKeys,
 	resolveSchemaNode,
 } from "@react-client/features/v2/admin_constructor/utils/schemaMutators";
-import { isV2AnketaHiddenUiNode } from "@smart-anketa/api-contract";
+import {
+	isV2AnketaHiddenUiNode,
+	resolveV2AnketaArchComponent,
+} from "@smart-anketa/api-contract";
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 
 function dotPathToSegments(path: string): string[] {
 	return path.split(".").filter(Boolean);
 }
 
-function readUiAtPath(
-	uiSchema: UiSchema,
-	path: string,
-): UiSchema | undefined {
+function readUiAtPath(uiSchema: UiSchema, path: string): UiSchema | undefined {
 	const parts = dotPathToSegments(path);
 	let current: unknown = uiSchema;
 	for (const part of parts) {
@@ -86,6 +86,26 @@ function buildFilteredUiSlice(
 	return filtered as UiSchema;
 }
 
+/** archComponent часто висит на массиве, а не на items — переносим в слайс модалки. */
+function withInheritedArchComponent(
+	uiSlice: UiSchema,
+	parentUi: UiSchema | undefined,
+): UiSchema {
+	if (!parentUi || resolveV2AnketaArchComponent(uiSlice)) return uiSlice;
+	const arch = resolveV2AnketaArchComponent(parentUi);
+	if (!arch) return uiSlice;
+	const options =
+		uiSlice["ui:options"] &&
+		typeof uiSlice["ui:options"] === "object" &&
+		!Array.isArray(uiSlice["ui:options"])
+			? { ...(uiSlice["ui:options"] as Record<string, unknown>) }
+			: {};
+	return {
+		...uiSlice,
+		"ui:options": { ...options, archComponent: arch },
+	};
+}
+
 export function getObjectSchemaSlice(
 	rootSchema: RJSFSchema,
 	path: string,
@@ -101,10 +121,7 @@ export function getObjectSchemaSlice(
 	};
 }
 
-export function getObjectUiSlice(
-	rootUi: UiSchema,
-	path: string,
-): UiSchema {
+export function getObjectUiSlice(rootUi: UiSchema, path: string): UiSchema {
 	return readUiAtPath(rootUi, path) ?? {};
 }
 
@@ -179,6 +196,9 @@ export function getArrayItemSchemaSliceForModal(
 	if (!schema?.properties) return null;
 	return {
 		schema,
-		uiSchema: buildFilteredUiSlice(uiSlice, visibleKeys),
+		uiSchema: withInheritedArchComponent(
+			buildFilteredUiSlice(uiSlice, visibleKeys),
+			getObjectUiSlice(rootUi, arrayPath),
+		),
 	};
 }

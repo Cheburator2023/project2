@@ -96,6 +96,7 @@ import { isCanvasStockField } from "../canvasStockFields";
 import {
 	buildPaletteDragNode,
 	buildSchemaCanvasTree,
+	resolveCanvasArchParamGroupLabel,
 	clampCanvasInsertIndex,
 	getPresetIdFromPaletteDragSource,
 	isCanvasSystemField,
@@ -453,8 +454,10 @@ function SchemaCanvasFieldRow({
 	const typicalWorkTitleSuffix = useMemo(() => {
 		if (sectionUiOptions.archComponent !== "typicalWork") return "";
 		const outputPath = pointerToOutputPath(fieldPointer);
-		const streamExecutors =
-			resolveStreamExecutorForTypicalWorkOutputPath(uiSchema, outputPath);
+		const streamExecutors = resolveStreamExecutorForTypicalWorkOutputPath(
+			uiSchema,
+			outputPath,
+		);
 		const ids = resolveTypicalWorkDisplayBoundIds(
 			uiSchema,
 			fieldPointer,
@@ -481,270 +484,297 @@ function SchemaCanvasFieldRow({
 	]);
 
 	const rowTitle = typicalWorkTitleSuffix
-			? `${node.text} · ${typicalWorkTitleSuffix}`
-			: node.text;
+		? `${node.text} · ${typicalWorkTitleSuffix}`
+		: node.text;
+
+	const paramGroupLabel = resolveCanvasArchParamGroupLabel(
+		jsonSchema,
+		uiSchema,
+		node.data?.parentPointer ?? "",
+		fieldKey,
+	);
 
 	return (
-		<Box
-			data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.canvasFieldRow}
-			{...{ [CANVAS_FIELD_POINTER_ATTR]: fieldPointer }}
-			onClick={() => setSelectedPointer(fieldPointer)}
-			sx={{
-				display: "flex",
-				alignItems: "flex-start",
-				gap: 0.5,
-				ml: `${depth * DEPTH_INDENT_PX}px`,
-				mr: 1,
-				my: 0.5,
-				p: 1,
-				borderRadius: 1,
-				border: 2,
-				borderStyle: "solid",
-				borderColor: isInvalidTypicalWorkDropTarget
-					? theme.palette.error.main
-					: isDropTarget
-					? theme.palette.primary.main
-					: selected
-						? "primary.main"
-						: isChanged
-							? theme.palette.warning.main
-							: "divider",
-				bgcolor: isInvalidTypicalWorkDropTarget
-					? alpha(theme.palette.error.main, 0.14)
-					: isDropTarget
-					? alpha(theme.palette.primary.main, 0.14)
-					: selected
-						? alpha(theme.palette.primary.main, 0.08)
-						: isChanged
-							? alpha(theme.palette.warning.main, 0.12)
-							: canvasUiColor
-								? alpha(canvasUiColor, 0.08)
-								: isGroup
-									? alpha(theme.palette.info.main, 0.03)
-									: "background.paper",
-				boxShadow: isDragging ? 3 : 0,
-				opacity: isDragging ? 0.55 : groupInactive ? 0.55 : 1,
-				cursor: isSystemField ? "default" : "grab",
-			}}
-		>
-			{showExpand ? (
-				<IconButton
-					size="small"
-					sx={{ mt: -0.25, flexShrink: 0 }}
-					onClick={(e) => {
-						e.stopPropagation();
-						onToggle();
-					}}
-					aria-label={isOpen ? "Свернуть" : "Развернуть"}
-					title={isOpen ? "Свернуть" : "Развернуть"}
-				>
-					<ChevronRightIcon
-						fontSize="small"
-						sx={{
-							transform: isOpen ? "rotate(90deg)" : "none",
-							transition: "transform 0.15s ease",
-						}}
-					/>
-				</IconButton>
-			) : (
-				<Box sx={{ width: 28, flexShrink: 0 }} />
-			)}
-			<Box sx={{ flex: 1, minWidth: 0 }}>
-				<Box
-					sx={{
-						display: "flex",
-						alignItems: "center",
-						flexWrap: "wrap",
-						gap: 0.75,
-					}}
-				>
-					{isLayoutGroup ? (
-						<GridViewIcon sx={{ fontSize: 16, color: "secondary.main" }} />
-					) : isGroup || arrayItemsObj ? (
-						<FolderOutlinedIcon sx={{ fontSize: 16, color: "info.main" }} />
-					) : null}
-					<Typography variant="body2" fontWeight={selected ? 600 : 500}>
-						{rowTitle}
-					</Typography>
-					<Chip
-						size="small"
-						label={typeChipLabel}
-						variant="filled"
-						sx={{
-							height: 20,
-							...(typeChipColor
-								? {
-										bgcolor: alpha(typeChipColor, 0.12),
-										color: typeChipColor,
-										border: `1px solid ${alpha(typeChipColor, 0.35)}`,
-									}
-								: {
-										bgcolor: alpha(theme.palette.text.secondary, 0.08),
-										color: "text.secondary",
-										border: `1px solid ${alpha(theme.palette.divider, 0.8)}`,
-									}),
-							"& .MuiChip-label": {
-								px: 0.75,
-								fontSize: "0.65rem",
-								fontWeight: 600,
-							},
-						}}
-					/>
-					{categoryChips.map((chip) => (
-						<CanvasCategoryChipView key={chip.label} chip={chip} />
-					))}
-					{canvasUiKind ? <CanvasUiKindChip kind={canvasUiKind} /> : null}
-					{isStockField ? (
-						<Chip
-							size="small"
-							label="стоковое"
-							variant="outlined"
-							sx={{
-								height: 20,
-								"& .MuiChip-label": { px: 0.75, fontSize: "0.65rem" },
-							}}
-						/>
-					) : null}
-					{isChanged ? (
-						<Chip
-							size="small"
-							label="изменено"
-							variant="outlined"
-							color="warning"
-							sx={{
-								height: 20,
-								"& .MuiChip-label": { px: 0.75, fontSize: "0.65rem" },
-							}}
-						/>
-					) : null}
-					{isGroup ? (
-						<Chip
-							size="small"
-							label={`${childKeys.length} полей`}
-							variant="filled"
-							sx={{
-								height: 20,
-								bgcolor: alpha(theme.palette.info.main, 0.1),
-								color: "info.main",
-								border: `1px solid ${alpha(theme.palette.info.main, 0.3)}`,
-								"& .MuiChip-label": { px: 0.75, fontSize: "0.65rem" },
-							}}
-						/>
-					) : null}
-					{groupInactive ? (
-						<Chip
-							size="small"
-							label="неактивна"
-							variant="outlined"
-							color="warning"
-							sx={{ height: 20 }}
-						/>
-					) : null}
-					{arrayItemsObj ? (
-						<Chip
-							size="small"
-							label={`${itemFieldKeys.length} полей элемента`}
-							variant="filled"
-							sx={{
-								height: 20,
-								bgcolor: alpha(theme.palette.warning.main, 0.1),
-								color: "warning.dark",
-								border: `1px solid ${alpha(theme.palette.warning.main, 0.35)}`,
-								"& .MuiChip-label": { px: 0.75, fontSize: "0.65rem" },
-							}}
-						/>
-					) : null}
-				</Box>
+		<Box>
+			{paramGroupLabel ? (
 				<Typography
+					data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.canvasParamGroup}
 					variant="caption"
 					color="text.secondary"
-					fontFamily="monospace"
-				>
-					{fieldKey}
-				</Typography>
-			</Box>
-			{sectionUiOptions.groupActivatable ? (
-				<IconButton
-					size="small"
-					color={groupInactive ? "primary" : "default"}
-					title={
-						groupInactive
-							? "Активировать группу по умолчанию"
-							: "Деактивировать группу по умолчанию"
-					}
-					aria-label={
-						groupInactive
-							? "Активировать группу по умолчанию"
-							: "Деактивировать группу по умолчанию"
-					}
-					tabIndex={selected ? 0 : -1}
-					onClick={(e) => {
-						e.stopPropagation();
-						const nextActive = groupInactive;
-						setUiSchema(
-							(prev) =>
-								patchUiOptionsAtPointer(
-									prev as Record<string, unknown>,
-									fieldPointer,
-									{ groupActive: nextActive },
-								) as typeof prev,
-						);
-						const pathKey = fieldPointer
-							.replace(/^\//, "")
-							.split("/")
-							.filter(Boolean)
-							.join(".");
-						if (pathKey) {
-							setFormData((prev) =>
-								setGroupActivationAtPath(prev, pathKey, nextActive),
-							);
-						}
+					sx={{
+						display: "block",
+						ml: `${depth * DEPTH_INDENT_PX}px`,
+						mt: 1,
+						mb: 0.25,
+						px: 1,
+						fontWeight: 700,
+						letterSpacing: 0.2,
 					}}
-					sx={{ flexShrink: 0 }}
 				>
-					<PowerSettingsNewIcon fontSize="small" />
-				</IconButton>
+					{paramGroupLabel}
+				</Typography>
 			) : null}
-			{!isSystemField && !isStockField ? (
-				<>
+			<Box
+				data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.canvasFieldRow}
+				{...{ [CANVAS_FIELD_POINTER_ATTR]: fieldPointer }}
+				onClick={() => setSelectedPointer(fieldPointer)}
+				sx={{
+					display: "flex",
+					alignItems: "flex-start",
+					gap: 0.5,
+					ml: `${depth * DEPTH_INDENT_PX}px`,
+					mr: 1,
+					my: 0.5,
+					p: 1,
+					borderRadius: 1,
+					border: 2,
+					borderStyle: "solid",
+					borderColor: isInvalidTypicalWorkDropTarget
+						? theme.palette.error.main
+						: isDropTarget
+							? theme.palette.primary.main
+							: selected
+								? "primary.main"
+								: isChanged
+									? theme.palette.warning.main
+									: "divider",
+					bgcolor: isInvalidTypicalWorkDropTarget
+						? alpha(theme.palette.error.main, 0.14)
+						: isDropTarget
+							? alpha(theme.palette.primary.main, 0.14)
+							: selected
+								? alpha(theme.palette.primary.main, 0.08)
+								: isChanged
+									? alpha(theme.palette.warning.main, 0.12)
+									: canvasUiColor
+										? alpha(canvasUiColor, 0.08)
+										: isGroup
+											? alpha(theme.palette.info.main, 0.03)
+											: "background.paper",
+					boxShadow: isDragging ? 3 : 0,
+					opacity: isDragging ? 0.55 : groupInactive ? 0.55 : 1,
+					cursor: isSystemField ? "default" : "grab",
+				}}
+			>
+				{showExpand ? (
 					<IconButton
 						size="small"
-						title="Дублировать поле"
-						aria-label="Дублировать поле"
-						data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.canvasDuplicateField}
+						sx={{ mt: -0.25, flexShrink: 0 }}
+						onClick={(e) => {
+							e.stopPropagation();
+							onToggle();
+						}}
+						aria-label={isOpen ? "Свернуть" : "Развернуть"}
+						title={isOpen ? "Свернуть" : "Развернуть"}
+					>
+						<ChevronRightIcon
+							fontSize="small"
+							sx={{
+								transform: isOpen ? "rotate(90deg)" : "none",
+								transition: "transform 0.15s ease",
+							}}
+						/>
+					</IconButton>
+				) : (
+					<Box sx={{ width: 28, flexShrink: 0 }} />
+				)}
+				<Box sx={{ flex: 1, minWidth: 0 }}>
+					<Box
+						sx={{
+							display: "flex",
+							alignItems: "center",
+							flexWrap: "wrap",
+							gap: 0.75,
+						}}
+					>
+						{isLayoutGroup ? (
+							<GridViewIcon sx={{ fontSize: 16, color: "secondary.main" }} />
+						) : isGroup || arrayItemsObj ? (
+							<FolderOutlinedIcon sx={{ fontSize: 16, color: "info.main" }} />
+						) : null}
+						<Typography variant="body2" fontWeight={selected ? 600 : 500}>
+							{rowTitle}
+						</Typography>
+						<Chip
+							size="small"
+							label={typeChipLabel}
+							variant="filled"
+							sx={{
+								height: 20,
+								...(typeChipColor
+									? {
+											bgcolor: alpha(typeChipColor, 0.12),
+											color: typeChipColor,
+											border: `1px solid ${alpha(typeChipColor, 0.35)}`,
+										}
+									: {
+											bgcolor: alpha(theme.palette.text.secondary, 0.08),
+											color: "text.secondary",
+											border: `1px solid ${alpha(theme.palette.divider, 0.8)}`,
+										}),
+								"& .MuiChip-label": {
+									px: 0.75,
+									fontSize: "0.65rem",
+									fontWeight: 600,
+								},
+							}}
+						/>
+						{categoryChips.map((chip) => (
+							<CanvasCategoryChipView key={chip.label} chip={chip} />
+						))}
+						{canvasUiKind ? <CanvasUiKindChip kind={canvasUiKind} /> : null}
+						{isStockField ? (
+							<Chip
+								size="small"
+								label="стоковое"
+								variant="outlined"
+								sx={{
+									height: 20,
+									"& .MuiChip-label": { px: 0.75, fontSize: "0.65rem" },
+								}}
+							/>
+						) : null}
+						{isChanged ? (
+							<Chip
+								size="small"
+								label="изменено"
+								variant="outlined"
+								color="warning"
+								sx={{
+									height: 20,
+									"& .MuiChip-label": { px: 0.75, fontSize: "0.65rem" },
+								}}
+							/>
+						) : null}
+						{isGroup ? (
+							<Chip
+								size="small"
+								label={`${childKeys.length} полей`}
+								variant="filled"
+								sx={{
+									height: 20,
+									bgcolor: alpha(theme.palette.info.main, 0.1),
+									color: "info.main",
+									border: `1px solid ${alpha(theme.palette.info.main, 0.3)}`,
+									"& .MuiChip-label": { px: 0.75, fontSize: "0.65rem" },
+								}}
+							/>
+						) : null}
+						{groupInactive ? (
+							<Chip
+								size="small"
+								label="неактивна"
+								variant="outlined"
+								color="warning"
+								sx={{ height: 20 }}
+							/>
+						) : null}
+						{arrayItemsObj ? (
+							<Chip
+								size="small"
+								label={`${itemFieldKeys.length} полей элемента`}
+								variant="filled"
+								sx={{
+									height: 20,
+									bgcolor: alpha(theme.palette.warning.main, 0.1),
+									color: "warning.dark",
+									border: `1px solid ${alpha(theme.palette.warning.main, 0.35)}`,
+									"& .MuiChip-label": { px: 0.75, fontSize: "0.65rem" },
+								}}
+							/>
+						) : null}
+					</Box>
+					<Typography
+						variant="caption"
+						color="text.secondary"
+						fontFamily="monospace"
+					>
+						{fieldKey}
+					</Typography>
+				</Box>
+				{sectionUiOptions.groupActivatable ? (
+					<IconButton
+						size="small"
+						color={groupInactive ? "primary" : "default"}
+						title={
+							groupInactive
+								? "Активировать группу по умолчанию"
+								: "Деактивировать группу по умолчанию"
+						}
+						aria-label={
+							groupInactive
+								? "Активировать группу по умолчанию"
+								: "Деактивировать группу по умолчанию"
+						}
 						tabIndex={selected ? 0 : -1}
 						onClick={(e) => {
 							e.stopPropagation();
-							if (sectionUiOptions.archComponent === "typicalWork") {
-								toast.error(TYPICAL_WORK_ALREADY_IN_SUBTREE_MESSAGE);
-								return;
+							const nextActive = groupInactive;
+							setUiSchema(
+								(prev) =>
+									patchUiOptionsAtPointer(
+										prev as Record<string, unknown>,
+										fieldPointer,
+										{ groupActive: nextActive },
+									) as typeof prev,
+							);
+							const pathKey = fieldPointer
+								.replace(/^\//, "")
+								.split("/")
+								.filter(Boolean)
+								.join(".");
+							if (pathKey) {
+								setFormData((prev) =>
+									setGroupActivationAtPath(prev, pathKey, nextActive),
+								);
 							}
-							duplicateCanvasField(fieldPointer);
 						}}
 						sx={{ flexShrink: 0 }}
 					>
-						<ContentCopyIcon fontSize="small" />
+						<PowerSettingsNewIcon fontSize="small" />
 					</IconButton>
-					<IconButton
-						size="small"
-						color="error"
-						title="Удалить поле"
-						aria-label="Удалить поле"
-						tabIndex={selected ? 0 : -1}
-						onClick={(e) => {
-							e.stopPropagation();
-							onRequestDelete({
-								pointer: fieldPointer,
-								label: node.text,
-								hasChildren: hasChild,
-							});
-						}}
-						sx={{ flexShrink: 0 }}
-					>
-						<DeleteOutlineIcon fontSize="small" />
-					</IconButton>
-				</>
-			) : null}
+				) : null}
+				{!isSystemField && !isStockField ? (
+					<>
+						<IconButton
+							size="small"
+							title="Дублировать поле"
+							aria-label="Дублировать поле"
+							data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.canvasDuplicateField}
+							tabIndex={selected ? 0 : -1}
+							onClick={(e) => {
+								e.stopPropagation();
+								if (sectionUiOptions.archComponent === "typicalWork") {
+									toast.error(TYPICAL_WORK_ALREADY_IN_SUBTREE_MESSAGE);
+									return;
+								}
+								duplicateCanvasField(fieldPointer);
+							}}
+							sx={{ flexShrink: 0 }}
+						>
+							<ContentCopyIcon fontSize="small" />
+						</IconButton>
+						<IconButton
+							size="small"
+							color="error"
+							title="Удалить поле"
+							aria-label="Удалить поле"
+							tabIndex={selected ? 0 : -1}
+							onClick={(e) => {
+								e.stopPropagation();
+								onRequestDelete({
+									pointer: fieldPointer,
+									label: node.text,
+									hasChildren: hasChild,
+								});
+							}}
+							sx={{ flexShrink: 0 }}
+						>
+							<DeleteOutlineIcon fontSize="small" />
+						</IconButton>
+					</>
+				) : null}
+			</Box>
 		</Box>
 	);
 }
@@ -1206,120 +1236,120 @@ export function SchemaCanvasPanel({
 							m: 0,
 							p: 0,
 						},
-					[`& .${CANVAS_TREE_ROOT_CLASS}`]: {
-						p: 1,
-						minHeight: 72,
-						boxSizing: "border-box",
-						height: "100%",
-					},
-					[`& .${CANVAS_TREE_ROOT_CLASS} li, & [role="listitem"]`]: {
-						listStyle: "none",
-						"&::marker": { display: "none" },
-					},
-					[`& [role="listitem"].${CANVAS_TREE_DROP_TARGET_CLASS}`]: {
-						borderRadius: 1,
-						bgcolor: alpha(theme.palette.primary.main, 0.1),
-						outline: `2px solid ${alpha(theme.palette.primary.main, 0.4)}`,
-					},
-					[`& [role="listitem"].${CANVAS_TREE_DRAGGING_CLASS}`]: {
-						opacity: 0.45,
-					},
-					[`& .${CANVAS_TREE_PLACEHOLDER_CLASS}`]: {
-						listStyle: "none",
-						"&::marker": { display: "none" },
-					},
-				}}
-			>
-				<Tree<SchemaCanvasNodeData>
-					ref={treeRef}
-					tree={treeData}
-					rootId={SCHEMA_CANVAS_ROOT_ID}
-					listComponent="div"
-					listItemComponent="div"
-					placeholderComponent="div"
-					extraAcceptTypes={[PALETTE_DRAG_TYPE]}
-					sort={false}
-					insertDroppableFirst={false}
-					initialOpen
-					dropTargetOffset={5}
-					rootProps={{
-						style: {
+						[`& .${CANVAS_TREE_ROOT_CLASS}`]: {
+							p: 1,
 							minHeight: 72,
-							width: "100%",
+							boxSizing: "border-box",
+							height: "100%",
+						},
+						[`& .${CANVAS_TREE_ROOT_CLASS} li, & [role="listitem"]`]: {
+							listStyle: "none",
+							"&::marker": { display: "none" },
+						},
+						[`& [role="listitem"].${CANVAS_TREE_DROP_TARGET_CLASS}`]: {
+							borderRadius: 1,
+							bgcolor: alpha(theme.palette.primary.main, 0.1),
+							outline: `2px solid ${alpha(theme.palette.primary.main, 0.4)}`,
+						},
+						[`& [role="listitem"].${CANVAS_TREE_DRAGGING_CLASS}`]: {
+							opacity: 0.45,
+						},
+						[`& .${CANVAS_TREE_PLACEHOLDER_CLASS}`]: {
+							listStyle: "none",
+							"&::marker": { display: "none" },
 						},
 					}}
-					onDrop={handleDrop}
-					canDrop={canDrop}
-					canDrag={canDrag}
-					placeholderRender={(node, { depth }) => (
-						<SchemaCanvasPlaceholder node={node} depth={depth} />
-					)}
-					dragPreviewRender={(monitorProps) => (
+				>
+					<Tree<SchemaCanvasNodeData>
+						ref={treeRef}
+						tree={treeData}
+						rootId={SCHEMA_CANVAS_ROOT_ID}
+						listComponent="div"
+						listItemComponent="div"
+						placeholderComponent="div"
+						extraAcceptTypes={[PALETTE_DRAG_TYPE]}
+						sort={false}
+						insertDroppableFirst={false}
+						initialOpen
+						dropTargetOffset={5}
+						rootProps={{
+							style: {
+								minHeight: 72,
+								width: "100%",
+							},
+						}}
+						onDrop={handleDrop}
+						canDrop={canDrop}
+						canDrag={canDrag}
+						placeholderRender={(node, { depth }) => (
+							<SchemaCanvasPlaceholder node={node} depth={depth} />
+						)}
+						dragPreviewRender={(monitorProps) => (
+							<Box
+								sx={{
+									display: "inline-flex",
+									px: 1.25,
+									py: 0.75,
+									borderRadius: 1,
+									border: 1,
+									borderColor: "primary.main",
+									bgcolor: "background.paper",
+									boxShadow: 3,
+									fontSize: "0.875rem",
+									fontWeight: 600,
+									maxWidth: 240,
+								}}
+							>
+								{monitorProps.item.text}
+							</Box>
+						)}
+						classes={{
+							root: CANVAS_TREE_ROOT_CLASS,
+							dropTarget: CANVAS_TREE_DROP_TARGET_CLASS,
+							draggingSource: CANVAS_TREE_DRAGGING_CLASS,
+							placeholder: CANVAS_TREE_PLACEHOLDER_CLASS,
+						}}
+						render={(
+							node,
+							{ depth, isDragging, isOpen, isDropTarget, hasChild, onToggle },
+						) => (
+							<SchemaCanvasFieldRow
+								node={node}
+								depth={depth}
+								isDragging={isDragging}
+								isOpen={isOpen}
+								isDropTarget={isDropTarget}
+								hasChild={hasChild}
+								onToggle={onToggle}
+								onRequestDelete={handleRequestDelete}
+								typicalWorkNameById={typicalWorkNameById}
+								typicalWorkCatalog={typicalWorkCatalog}
+							/>
+						)}
+					/>
+					{treeData.length === 0 ? (
 						<Box
+							data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.canvasDropZone}
 							sx={{
-								display: "inline-flex",
-								px: 1.25,
-								py: 0.75,
+								py: 2,
+								px: 1,
+								textAlign: "center",
 								borderRadius: 1,
 								border: 1,
-								borderColor: "primary.main",
-								bgcolor: "background.paper",
-								boxShadow: 3,
-								fontSize: "0.875rem",
-								fontWeight: 600,
-								maxWidth: 240,
+								borderStyle: "dashed",
+								borderColor: "divider",
+								color: "text.secondary",
+								position: "absolute",
+								inset: 0,
+								display: "flex",
+								justifyContent: "center",
+								alignItems: "center",
+								pointerEvents: "none",
 							}}
 						>
-							{monitorProps.item.text}
+							<Typography variant="caption">Перетащите поле сюда</Typography>
 						</Box>
-					)}
-					classes={{
-						root: CANVAS_TREE_ROOT_CLASS,
-						dropTarget: CANVAS_TREE_DROP_TARGET_CLASS,
-						draggingSource: CANVAS_TREE_DRAGGING_CLASS,
-						placeholder: CANVAS_TREE_PLACEHOLDER_CLASS,
-					}}
-					render={(
-						node,
-						{ depth, isDragging, isOpen, isDropTarget, hasChild, onToggle },
-					) => (
-						<SchemaCanvasFieldRow
-							node={node}
-							depth={depth}
-							isDragging={isDragging}
-							isOpen={isOpen}
-							isDropTarget={isDropTarget}
-							hasChild={hasChild}
-							onToggle={onToggle}
-							onRequestDelete={handleRequestDelete}
-							typicalWorkNameById={typicalWorkNameById}
-							typicalWorkCatalog={typicalWorkCatalog}
-						/>
-					)}
-				/>
-				{treeData.length === 0 ? (
-					<Box
-						data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.canvasDropZone}
-						sx={{
-							py: 2,
-							px: 1,
-							textAlign: "center",
-							borderRadius: 1,
-							border: 1,
-							borderStyle: "dashed",
-							borderColor: "divider",
-							color: "text.secondary",
-							position: "absolute",
-							inset: 0,
-							display: "flex",
-							justifyContent: "center",
-							alignItems: "center",
-							pointerEvents: "none",
-						}}
-					>
-						<Typography variant="caption">Перетащите поле сюда</Typography>
-					</Box>
-				) : null}
+					) : null}
 				</Box>
 			</Box>
 			<Dialog
