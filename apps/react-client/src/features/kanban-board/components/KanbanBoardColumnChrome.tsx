@@ -9,13 +9,40 @@ import InputBase from "@mui/material/InputBase";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { alpha } from "@mui/material/styles";
-import { kanbanBoardIsDoneColumn } from "@smart-anketa/api-contract";
+import {
+	kanbanBoardIsDoneColumn,
+	KANBAN_BOARD_BLOCKER_COLOR,
+} from "@smart-anketa/api-contract";
 import type { BoardItem } from "react-kanban-kit";
 import { useEffect, useState } from "react";
 
 export function getKanbanColumnColor(column: BoardItem): string {
 	const color = column.content?.color;
 	return typeof color === "string" && color ? color : "#94a3b8";
+}
+
+export function KanbanBlockerCountChip({
+	count,
+	label,
+}: {
+	count: number;
+	label?: string;
+}) {
+	if (count <= 0) return null;
+	return (
+		<Chip
+			size="small"
+			label={label ?? String(count)}
+			title={`Блокеры: ${count}`}
+			sx={{
+				height: 22,
+				fontWeight: 700,
+				bgcolor: alpha(KANBAN_BOARD_BLOCKER_COLOR, 0.14),
+				color: KANBAN_BOARD_BLOCKER_COLOR,
+				border: `1px solid ${alpha(KANBAN_BOARD_BLOCKER_COLOR, 0.4)}`,
+			}}
+		/>
+	);
 }
 
 export function KanbanColumnHeader({
@@ -26,6 +53,7 @@ export function KanbanColumnHeader({
 	onAddTask,
 	onTrashAll,
 	isTrashing,
+	blockerCount = 0,
 }: {
 	column: BoardItem;
 	disabled: boolean;
@@ -34,6 +62,7 @@ export function KanbanColumnHeader({
 	onAddTask?: (columnId: string) => void;
 	onTrashAll?: (columnId: string) => void;
 	isTrashing?: boolean;
+	blockerCount?: number;
 }) {
 	const color = getKanbanColumnColor(column);
 	const [editing, setEditing] = useState(false);
@@ -142,6 +171,7 @@ export function KanbanColumnHeader({
 				>
 					<DeleteOutlineIcon fontSize="small" />
 				</IconButton>
+				<KanbanBlockerCountChip count={blockerCount} />
 				<Chip
 					size="small"
 					label={column.totalChildrenCount}

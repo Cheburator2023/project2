@@ -355,7 +355,7 @@ export function PlanningTasksPanel() {
 			<Flex gap={8} alignItems="center">
 				<TextField
 					size="small"
-					label="Новая группа"
+					placeholder="Новая группа"
 					value={groupName}
 					onChange={(event) => setGroupName(event.target.value)}
 					fullWidth

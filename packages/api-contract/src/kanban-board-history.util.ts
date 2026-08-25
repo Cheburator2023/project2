@@ -185,6 +185,11 @@ const CONTENT_FIELDS: ReadonlyArray<{
 		label: "Стенд",
 		format: (value) => kanbanBoardStandTitle(String(value ?? "")),
 	},
+	{
+		key: "hasBlocker",
+		label: "Блокер",
+		format: (value) => (value === true ? "есть" : null),
+	},
 ];
 
 export function kanbanBoardTaskHistorySnapshot(input: {

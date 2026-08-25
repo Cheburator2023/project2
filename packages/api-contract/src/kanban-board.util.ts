@@ -18,6 +18,7 @@ import {
 	KANBAN_BOARD_SUBTASK_STATUSES,
 	kanbanBoardAssigneeRoleTitle,
 	kanbanBoardSubtaskIsDone,
+	kanbanBoardTaskHasBlocker,
 } from "./kanban-board.types";
 
 export function kanbanBoardIsDoneColumn(column: {
@@ -327,6 +328,28 @@ export function kanbanBoardSubtasksProgress(
 	return { done, total: items.length };
 }
 
+export function countKanbanBoardColumnBlockers(
+	board: KanbanBoardData,
+	columnId: string,
+): number {
+	const column = board[columnId];
+	if (!column) return 0;
+	let count = 0;
+	for (const cardId of column.children ?? []) {
+		const card = board[cardId];
+		const content = card?.content as KanbanBoardTaskContent | undefined;
+		if (kanbanBoardTaskHasBlocker(content)) count += 1;
+	}
+	return count;
+}
+
+export function countKanbanBoardBlockers(board: KanbanBoardData): number {
+	return (board.root?.children ?? []).reduce(
+		(sum, columnId) => sum + countKanbanBoardColumnBlockers(board, columnId),
+		0,
+	);
+}
+
 /** Нормализует content: проставляет estimatePd из roleEstimates, убирает пустые роли. */
 export function normalizeKanbanBoardTaskContent(
 	content: KanbanBoardTaskContent,
@@ -388,6 +411,7 @@ export function normalizeKanbanBoardTaskContent(
 			? (standId as KanbanBoardTaskContent["stand"])
 			: undefined;
 	}
+	next.hasBlocker = next.hasBlocker === true ? true : undefined;
 	if (typeof next.currentAssignee === "string") {
 		const trimmed = next.currentAssignee.trim();
 		next.currentAssignee = trimmed || undefined;

@@ -234,6 +234,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	const [taskType, setTaskType] = useState("");
 	const [workType, setWorkType] = useState("");
 	const [stand, setStand] = useState("");
+	const [hasBlocker, setHasBlocker] = useState(false);
 	const [estimatePd, setEstimatePd] = useState("");
 	const [roleEstimates, setRoleEstimates] = useState<KanbanBoardRoleEstimates>(
 		{},
@@ -541,6 +542,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 		setTaskType(task.content.taskType ?? "");
 		setWorkType(task.content.workType ?? "");
 		setStand(task.content.stand ?? "");
+		setHasBlocker(task.content.hasBlocker === true);
 		setEstimatePd(
 			task.content.estimatePd !== undefined
 				? String(task.content.estimatePd)
@@ -614,6 +616,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 			stand: stand
 				? (stand as KanbanBoardTaskContent["stand"])
 				: undefined,
+			hasBlocker: hasBlocker || undefined,
 			roleEstimates: Object.keys(roleEstimates).length
 				? roleEstimates
 				: undefined,
@@ -647,6 +650,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 				taskType,
 				workType,
 				stand,
+				hasBlocker,
 				estimatePd,
 				roleEstimates,
 				dueDate,
@@ -670,6 +674,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 			taskType,
 			workType,
 			stand,
+			hasBlocker,
 			estimatePd,
 			roleEstimates,
 			dueDate,
@@ -869,6 +874,20 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 							border: `1px solid ${alpha(columnColor, 0.35)}`,
 						}}
 					/>
+					<Button
+						size="small"
+						variant={hasBlocker ? "contained" : "outlined"}
+						color="error"
+						disabled={formLocked}
+						onClick={() => setHasBlocker((value) => !value)}
+						title={
+							hasBlocker
+								? "На задаче есть блокер. Нажмите, чтобы снять."
+								: "Отметить, что на задаче есть блокер"
+						}
+					>
+						{hasBlocker ? "Блокер" : "Есть блокер"}
+					</Button>
 					<Spacer />
 					{!isCreate && isLockedByOther && foreignLock ? (
 						<Chip

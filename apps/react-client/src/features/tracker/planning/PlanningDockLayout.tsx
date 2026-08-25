@@ -105,7 +105,10 @@ export const PlanningDockLayout = forwardRef<PlanningDockLayoutHandle, Props>(
 			}, LAYOUT_SAVE_DEBOUNCE_MS);
 		}, []);
 
-		const applyPresetToApi = (api: DockviewApi, preset: PlanningLayoutPresetId) => {
+		const applyPresetToApi = (
+			api: DockviewApi,
+			preset: PlanningLayoutPresetId,
+		) => {
 			layoutPersistenceReadyRef.current = false;
 			setIsDockReady(false);
 			applyPlanningDockPreset(api, preset);
@@ -193,15 +196,24 @@ export const PlanningDockLayout = forwardRef<PlanningDockLayoutHandle, Props>(
 						overflow: "hidden",
 					},
 					"& .dv-groupview > .dv-content-container": {
+						position: "relative",
 						flex: "1 1 0",
 						minHeight: 0,
 						overflow: "hidden",
 					},
 					"& .dv-react-part": {
+						position: "absolute",
+						inset: 0,
 						display: "flex",
 						flexDirection: "column",
-						height: "100%",
+						overflow: "hidden",
+					},
+					"& .dv-react-part > *": {
+						flex: 1,
 						minHeight: 0,
+						height: "100%",
+						display: "flex",
+						flexDirection: "column",
 						overflow: "hidden",
 					},
 				}}

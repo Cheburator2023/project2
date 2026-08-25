@@ -14,6 +14,8 @@ import {
 	formatKanbanTaskKey,
 	normalizeTrackerCode,
 	toBoardData,
+	countKanbanBoardBlockers,
+	countKanbanBoardColumnBlockers,
 	type KanbanBoardItem,
 	type KanbanBoardTaskContent,
 } from "@smart-anketa/api-contract";
@@ -37,7 +39,10 @@ import {
 	useKanbanBoardBoards,
 	useKanbanBoardColumns,
 } from "@react-client/common/api/queries/kanban-board";
-import { getKanbanColumnColor } from "@react-client/features/kanban-board/components/KanbanBoardColumnChrome";
+import {
+	getKanbanColumnColor,
+	KanbanBlockerCountChip,
+} from "@react-client/features/kanban-board/components/KanbanBoardColumnChrome";
 import { KanbanTaskBoardCard } from "@react-client/features/kanban-board/components/KanbanTaskBoardCard";
 import { trackerTaskPath } from "@react-client/features/kanban-board/kanban-task-paths";
 import { usePlanningWorkspace } from "@react-client/features/tracker/planning/PlanningWorkspaceContext";
@@ -105,6 +110,9 @@ export function PlanningSourceBoardView() {
 		if (!columnsQuery.data || !tasksQuery.data) return null;
 		return toBoardData(tasksQuery.data, columnsQuery.data);
 	}, [columnsQuery.data, tasksQuery.data]);
+	const sourceBoardBlockerCount = boardData
+		? countKanbanBoardBlockers(boardData)
+		: 0;
 
 	const attachedIds = useMemo(
 		() =>
@@ -203,7 +211,7 @@ export function PlanningSourceBoardView() {
 				<TextField
 					select
 					size="small"
-					label="Доска"
+					placeholder="Доска"
 					value={selectValue}
 					disabled={boardsQuery.isLoading}
 					onChange={(event) => setBoardKey(event.target.value)}
@@ -215,6 +223,7 @@ export function PlanningSourceBoardView() {
 					{boards.map((board) => (
 						<MenuItem key={board.id} value={board.boardKey}>
 							{board.projectCode} · {board.name}
+							{board.blockerCount > 0 ? ` · блокер ${board.blockerCount}` : ""}
 						</MenuItem>
 					))}
 				</TextField>
@@ -235,6 +244,10 @@ export function PlanningSourceBoardView() {
 				>
 					Добавить все с доски ({unattachedOnBoard.length})
 				</Button>
+				<KanbanBlockerCountChip
+					count={sourceBoardBlockerCount}
+					label={`Блокер: ${sourceBoardBlockerCount}`}
+				/>
 			</Flex>
 			{!activeReleaseId ? (
 				<Alert severity="info">
@@ -279,20 +292,27 @@ export function PlanningSourceBoardView() {
 						"& .rkk-column-outer .rkk-column": {
 							height: "auto",
 							minHeight: "100%",
-							overflow: "visible",
+							overflow: "visible !important",
 							borderRadius: "4px",
 							width: "100%",
 						},
 						"& .rkk-column-outer .rkk-column-wrapper": {
 							maxHeight: "none",
+							overflow: "visible",
 						},
 						"& .rkk-column-content": {
 							height: "auto",
 							flex: "none",
 							minHeight: "unset",
+							overflow: "visible",
 						},
 						"& .rkk-column-content-list": {
 							height: "auto",
+							overflow: "visible !important",
+							overflowX: "visible !important",
+							overflowY: "visible !important",
+						},
+						"& .rkk-card-shadow-container": {
 							overflow: "visible",
 						},
 					}}
@@ -316,6 +336,11 @@ export function PlanningSourceBoardView() {
 								column={column}
 								busy={attachTasks.isPending}
 								attachedIds={attachedIds}
+								blockerCount={
+									boardData
+										? countKanbanBoardColumnBlockers(boardData, column.id)
+										: 0
+								}
 								onAttachColumn={() =>
 									void attach(
 										(column.children ?? []).filter(
@@ -358,11 +383,13 @@ function SourceColumnHeader({
 	column,
 	busy,
 	attachedIds,
+	blockerCount,
 	onAttachColumn,
 }: {
 	column: BoardItem;
 	busy: boolean;
 	attachedIds: Set<string>;
+	blockerCount: number;
 	onAttachColumn: () => void;
 }) {
 	const color = getKanbanColumnColor(column);
@@ -388,6 +415,7 @@ function SourceColumnHeader({
 			>
 				{column.title}
 			</Typography>
+			<KanbanBlockerCountChip count={blockerCount} />
 			<Typography variant="caption" color="text.secondary">
 				{column.totalChildrenCount}
 			</Typography>

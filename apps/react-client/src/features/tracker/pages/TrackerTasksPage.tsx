@@ -17,6 +17,7 @@ import {
 	TrackerTaskOriginChip,
 	TrackerTaskStandChip,
 	TrackerTaskPriorityChip,
+	TrackerTaskBlockerChip,
 	TrackerTaskSprintChip,
 	TrackerTaskReleaseChips,
 	TrackerTaskStatusChip,
@@ -78,6 +79,26 @@ export function TrackerTasksPage() {
 				type: "numericColumn",
 			},
 			{ field: "title", headerName: "Заголовок", flex: 1.2, minWidth: 180 },
+			{
+				colId: "blocker",
+				headerName: "Блокер",
+				width: 100,
+				valueGetter: (params) =>
+					params.data?.hasBlocker || params.data?.content.hasBlocker
+						? "есть"
+						: "",
+				cellRenderer: (
+					params: ICellRendererParams<KanbanBoardTaskRegistryDto>,
+				) =>
+					params.data ? (
+						<TrackerTaskBlockerChip
+							hasBlocker={
+								params.data.hasBlocker === true ||
+								params.data.content.hasBlocker === true
+							}
+						/>
+					) : null,
+			},
 			{
 				colId: "priority",
 				headerName: "Приоритет",

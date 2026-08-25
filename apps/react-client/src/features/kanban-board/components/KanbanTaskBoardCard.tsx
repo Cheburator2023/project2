@@ -29,6 +29,8 @@ import {
 	kanbanBoardWorkTypeTitle,
 	kanbanBoardTaskReleaseLabel,
 	KANBAN_BOARD_RELEASE_CHIP_COLOR,
+	KANBAN_BOARD_BLOCKER_COLOR,
+	kanbanBoardTaskHasBlocker,
 	type KanbanBoardPriorityId,
 	type KanbanBoardTaskContent,
 	type KanbanBoardTaskReleaseRefDto,
@@ -178,7 +180,14 @@ export function KanbanTaskBoardCard({
 	const estimatePd = content
 		? kanbanBoardEffectiveEstimatePd(content)
 		: undefined;
+	const hasBlocker = kanbanBoardTaskHasBlocker(content);
 	const tags: Array<{ label: string; color: string }> = [];
+	if (hasBlocker) {
+		tags.push({
+			label: "Блокер",
+			color: KANBAN_BOARD_BLOCKER_COLOR,
+		});
+	}
 	if (content?.taskType) {
 		tags.push({
 			label: kanbanBoardTaskTypeTitle(content.taskType),
@@ -207,24 +216,57 @@ export function KanbanTaskBoardCard({
 	return (
 		<Box
 			sx={{
-				position: "relative",
 				minWidth: 0,
 				borderRadius: 1.5,
-				bgcolor: "background.paper",
-				boxShadow: (theme) =>
-					`0 1px 2px ${alpha(theme.palette.common.black, 0.06)}, 0 1px 3px ${alpha(theme.palette.common.black, 0.04)}`,
-				border: "1px solid",
-				borderColor: "divider",
-				overflow: "hidden",
-				cursor: "pointer",
-				transition: "box-shadow 120ms ease, border-color 120ms ease",
-				"&:hover": {
-					borderColor: alpha(columnColor, 0.45),
-					boxShadow: (theme) =>
-						`0 2px 8px ${alpha(theme.palette.common.black, 0.08)}`,
-				},
+				zIndex: hasBlocker ? 1 : 0,
+				boxShadow: hasBlocker
+					? `0 0 0 1px ${KANBAN_BOARD_BLOCKER_COLOR}, 0 0 10px ${alpha(KANBAN_BOARD_BLOCKER_COLOR, 0.45)}`
+					: (theme) =>
+							`0 1px 2px ${alpha(theme.palette.common.black, 0.06)}, 0 1px 3px ${alpha(theme.palette.common.black, 0.04)}`,
+				...(hasBlocker
+					? {
+							animation: "kanbanTaskBlockerPulse 1.4s ease-in-out infinite",
+							"@keyframes kanbanTaskBlockerPulse": {
+								"0%, 100%": {
+									boxShadow: `0 0 0 1px ${KANBAN_BOARD_BLOCKER_COLOR}, 0 0 8px ${alpha(KANBAN_BOARD_BLOCKER_COLOR, 0.45)}`,
+								},
+								"50%": {
+									boxShadow: `0 0 0 2px ${alpha(KANBAN_BOARD_BLOCKER_COLOR, 0.95)}, 0 0 12px ${alpha(KANBAN_BOARD_BLOCKER_COLOR, 0.55)}`,
+								},
+							},
+							"@media (prefers-reduced-motion: reduce)": {
+								animation: "none",
+							},
+						}
+					: {
+							transition: "box-shadow 120ms ease",
+							"&:hover": {
+								boxShadow: (theme) =>
+									`0 2px 8px ${alpha(theme.palette.common.black, 0.08)}`,
+							},
+						}),
 			}}
 		>
+			<Box
+				sx={{
+					position: "relative",
+					minWidth: 0,
+					borderRadius: 1.5,
+					bgcolor: "background.paper",
+					border: "1px solid",
+					borderColor: hasBlocker ? KANBAN_BOARD_BLOCKER_COLOR : "divider",
+					overflow: "hidden",
+					cursor: "pointer",
+					transition: "border-color 120ms ease",
+					"&:hover": hasBlocker
+						? {
+								borderColor: KANBAN_BOARD_BLOCKER_COLOR,
+							}
+						: {
+								borderColor: alpha(columnColor, 0.45),
+							},
+				}}
+			>
 			<Box
 				sx={{
 					position: "absolute",
@@ -232,7 +274,7 @@ export function KanbanTaskBoardCard({
 					top: 0,
 					bottom: 0,
 					width: 3,
-					bgcolor: columnColor,
+					bgcolor: hasBlocker ? KANBAN_BOARD_BLOCKER_COLOR : columnColor,
 				}}
 			/>
 			<Flex flexDirection="column" gap={8} sx={{ p: 1.25, pl: 1.5 }}>
@@ -437,6 +479,7 @@ export function KanbanTaskBoardCard({
 					)}
 				</Box>
 			</Flex>
+			</Box>
 		</Box>
 	);
 }

@@ -118,6 +118,8 @@ export interface KanbanBoardTaskContent {
 	 * Не путать с `origin` записи (изоляция данных между стендами БД).
 	 */
 	stand?: KanbanBoardStandId;
+	/** На задаче есть блокер — выделяется на доске. */
+	hasBlocker?: boolean;
 }
 
 /** Целевой стенд задачи (куда выкатываем / где проверяем). */
@@ -418,6 +420,8 @@ export interface KanbanBoardBoardDto {
 	description: string | null;
 	sortOrder: number;
 	taskCount: number;
+	/** Сколько незакрытых задач с флагом «есть блокер». */
+	blockerCount: number;
 	createdAt: string;
 	/** Имя из настроек трекера («Я — исполнитель»). */
 	createdBy: string | null;
@@ -460,6 +464,7 @@ export interface KanbanBoardTaskRegistryDto extends KanbanBoardTaskRecord {
 	standTitle?: string;
 	/** Сводка релизов для фильтра/экспорта. */
 	releaseTitle?: string;
+	hasBlocker?: boolean;
 }
 
 export interface CreateKanbanBoardProjectRequestDto {
@@ -1026,6 +1031,14 @@ export interface KanbanBoardTaskReleaseRefDto {
 }
 
 export const KANBAN_BOARD_RELEASE_CHIP_COLOR = "#d97706";
+
+export const KANBAN_BOARD_BLOCKER_COLOR = "#dc2626";
+
+export function kanbanBoardTaskHasBlocker(
+	content?: Pick<KanbanBoardTaskContent, "hasBlocker"> | null,
+): boolean {
+	return content?.hasBlocker === true;
+}
 
 export const KANBAN_BOARD_RELEASE_IMAGE_TARGETS = [
 	{ id: "sum", label: "SUM" },

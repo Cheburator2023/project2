@@ -37,6 +37,8 @@ import {
 	normalizeTrackerCode,
 	collectKanbanBoardExpectedVersions,
 	parseKanbanBoardTaskEditBlockedError,
+	countKanbanBoardBlockers,
+	countKanbanBoardColumnBlockers,
 	type KanbanBoardTaskEditBlockedErrorDto,
 	type KanbanBoardItem,
 } from "@smart-anketa/api-contract";
@@ -75,6 +77,7 @@ import {
 import {
 	KanbanColumnAdder,
 	KanbanColumnHeader,
+	KanbanBlockerCountChip,
 	getKanbanColumnColor,
 } from "@react-client/features/kanban-board/components/KanbanBoardColumnChrome";
 import { KanbanBoardFilterPanel } from "@react-client/features/kanban-board/components/KanbanBoardFilterPanel";
@@ -423,6 +426,10 @@ export function KanbanBoardPage() {
 		() => (viewBoard ? countKanbanBoardCards(viewBoard) : 0),
 		[viewBoard],
 	);
+	const boardBlockerCount = useMemo(
+		() => (board ? countKanbanBoardBlockers(board) : 0),
+		[board],
+	);
 
 	const assigneeFilterOptions = useMemo(
 		() =>
@@ -457,6 +464,9 @@ export function KanbanBoardPage() {
 				onAddTask={openCreateTask}
 				onTrashAll={setTrashColumnConfirmId}
 				isTrashing={trashColumnTasks.isPending}
+				blockerCount={
+					viewBoard ? countKanbanBoardColumnBlockers(viewBoard, column.id) : 0
+				}
 			/>
 		),
 		[
@@ -465,6 +475,7 @@ export function KanbanBoardPage() {
 			isBoardBusy,
 			openCreateTask,
 			trashColumnTasks.isPending,
+			viewBoard,
 		],
 	);
 
@@ -589,6 +600,10 @@ export function KanbanBoardPage() {
 							{matchCardCount} / {totalCardCount}
 						</Typography>
 					) : null}
+					<KanbanBlockerCountChip
+						count={boardBlockerCount}
+						label={`Блокер: ${boardBlockerCount}`}
+					/>
 					<Spacer />
 					<Button
 						startIcon={<HistoryIcon />}
@@ -760,20 +775,27 @@ export function KanbanBoardPage() {
 							"& .rkk-column-outer .rkk-column": {
 								height: "auto",
 								minHeight: "100%",
-								overflow: "visible",
+								overflow: "visible !important",
 								borderRadius: "4px",
 								width: "100%",
 							},
 							"& .rkk-column-outer .rkk-column-wrapper": {
 								maxHeight: "none",
+								overflow: "visible",
 							},
 							"& .rkk-column-content": {
 								height: "auto",
 								flex: "none",
 								minHeight: "unset",
+								overflow: "visible",
 							},
 							"& .rkk-column-content-list": {
 								height: "auto",
+								overflow: "visible !important",
+								overflowX: "visible !important",
+								overflowY: "visible !important",
+							},
+							"& .rkk-card-shadow-container": {
 								overflow: "visible",
 							},
 						}}

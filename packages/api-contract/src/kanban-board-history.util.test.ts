@@ -74,4 +74,27 @@ describe("kanban-board-history.util", () => {
 			},
 		]);
 	});
+
+	it("diffs hasBlocker as Блокер", () => {
+		const before = kanbanBoardTaskHistorySnapshot({
+			parentId: "backlog",
+			position: 0,
+			boardId: "board-1",
+			content: { title: "Задача" },
+		});
+		const after = kanbanBoardTaskHistorySnapshot({
+			parentId: "backlog",
+			position: 0,
+			boardId: "board-1",
+			content: { title: "Задача", hasBlocker: true },
+		});
+		expect(diffKanbanTaskChanges(before, after)).toEqual([
+			{
+				field: "content.hasBlocker",
+				label: "Блокер",
+				from: null,
+				to: "есть",
+			},
+		]);
+	});
 });

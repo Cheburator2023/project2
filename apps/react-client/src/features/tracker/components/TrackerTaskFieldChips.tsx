@@ -14,6 +14,8 @@ import {
 	kanbanBoardTaskTypeTitle,
 	kanbanBoardWorkTypeColor,
 	kanbanBoardWorkTypeTitle,
+	KANBAN_BOARD_BLOCKER_COLOR,
+	kanbanBoardTaskHasBlocker,
 	type KanbanBoardAssigneeRoleId,
 	type KanbanBoardStandId,
 	type KanbanBoardStatusId,
@@ -266,6 +268,19 @@ export function TrackerTaskStandChip({
 	);
 }
 
+export function TrackerTaskBlockerChip({
+	hasBlocker,
+}: {
+	hasBlocker?: boolean;
+}) {
+	if (!hasBlocker) return null;
+	return (
+		<TrackerRegistryChipCell>
+			<KanbanTaskFieldChip label="Блокер" color={KANBAN_BOARD_BLOCKER_COLOR} />
+		</TrackerRegistryChipCell>
+	);
+}
+
 export function KanbanTaskContentChips({
 	content,
 	origin,
@@ -278,6 +293,13 @@ export function KanbanTaskContentChips({
 	if (!content) return null;
 
 	const chips: KanbanTaskChipOption[] = [];
+	if (kanbanBoardTaskHasBlocker(content)) {
+		chips.push({
+			value: "blocker",
+			label: "Блокер",
+			color: KANBAN_BOARD_BLOCKER_COLOR,
+		});
+	}
 	if (content.taskType) {
 		chips.push({
 			value: "taskType",

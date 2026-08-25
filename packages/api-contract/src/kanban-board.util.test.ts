@@ -10,6 +10,7 @@ import {
 	normalizeKanbanBoardTaskContent,
 	normalizeKanbanBoardSubtasks,
 	kanbanBoardSubtasksProgress,
+	countKanbanBoardBlockers,
 	toBoardData,
 	kanbanBoardTaskReleaseLabel,
 	kanbanBoardTaskReleasesTitle,
@@ -70,6 +71,16 @@ describe("kanban board mapping", () => {
 		const restored = toBoardData(rows, boardColumns);
 		expect(boardsEquivalent(board, restored)).toBe(true);
 	});
+
+	it("counts tasks with hasBlocker", () => {
+		const board = sampleBoard();
+		expect(countKanbanBoardBlockers(board)).toBe(0);
+		board["task-1"] = {
+			...board["task-1"],
+			content: { title: "Demo", hasBlocker: true },
+		};
+		expect(countKanbanBoardBlockers(board)).toBe(1);
+	});
 });
 
 describe("kanban board role estimates", () => {
@@ -114,6 +125,17 @@ describe("kanban board role estimates", () => {
 			title: "Task updated again",
 		});
 		expect(titleOnly.images).toBeUndefined();
+	});
+
+	it("keeps hasBlocker only when true", () => {
+		expect(
+			normalizeKanbanBoardTaskContent({ title: "Task", hasBlocker: true })
+				.hasBlocker,
+		).toBe(true);
+		expect(
+			normalizeKanbanBoardTaskContent({ title: "Task", hasBlocker: false })
+				.hasBlocker,
+		).toBeUndefined();
 	});
 });
 

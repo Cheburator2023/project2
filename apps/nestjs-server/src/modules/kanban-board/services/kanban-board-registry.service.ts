@@ -685,8 +685,11 @@ export class KanbanBoardRegistryService {
 		const countMap = new Map(
 			taskCounts.map((row) => [row.boardId, Number(row.count)]),
 		);
+		const blockerCountMap = await this.countBlockersByBoardIds();
 
-		return boards.map((board) => this.toBoardDto(board, countMap));
+		return boards.map((board) =>
+			this.toBoardDto(board, countMap, blockerCountMap),
+		);
 	}
 
 	async resolveBoardId(ref: string): Promise<string> {
@@ -699,7 +702,12 @@ export class KanbanBoardRegistryService {
 		const taskCount = await this.taskRepository.count({
 			where: { boardId: board.id, deletedAt: IsNull() },
 		});
-		return this.toBoardDto(board, new Map([[board.id, taskCount]]));
+		const blockerCount = await this.countBlockersOnBoard(board.id);
+		return this.toBoardDto(
+			board,
+			new Map([[board.id, taskCount]]),
+			new Map([[board.id, blockerCount]]),
+		);
 	}
 
 	async findTaskByRef(ref: string): Promise<KanbanBoardTaskRegistryDto> {
@@ -930,7 +938,12 @@ export class KanbanBoardRegistryService {
 		const taskCount = await this.taskRepository.count({
 			where: { boardId: id, deletedAt: IsNull() },
 		});
-		return this.toBoardDto(board, new Map([[id, taskCount]]));
+		const blockerCount = await this.countBlockersOnBoard(id);
+		return this.toBoardDto(
+			board,
+			new Map([[id, taskCount]]),
+			new Map([[id, blockerCount]]),
+		);
 	}
 
 	async deleteBoard(id: string): Promise<void> {
@@ -1914,9 +1927,31 @@ export class KanbanBoardRegistryService {
 		};
 	}
 
+	private async countBlockersByBoardIds(): Promise<Map<string, number>> {
+		const rows = await this.taskRepository
+			.createQueryBuilder("task")
+			.select("task.board_id", "boardId")
+			.addSelect("COUNT(*)", "count")
+			.where("task.deleted_at IS NULL")
+			.andWhere(`task.content @> '{"hasBlocker": true}'::jsonb`)
+			.groupBy("task.board_id")
+			.getRawMany<{ boardId: string; count: string }>();
+		return new Map(rows.map((row) => [row.boardId, Number(row.count)]));
+	}
+
+	private async countBlockersOnBoard(boardId: string): Promise<number> {
+		return this.taskRepository
+			.createQueryBuilder("task")
+			.where("task.board_id = :boardId", { boardId })
+			.andWhere("task.deleted_at IS NULL")
+			.andWhere(`task.content @> '{"hasBlocker": true}'::jsonb`)
+			.getCount();
+	}
+
 	private toBoardDto(
 		board: KanbanBoardEntity,
 		countMap: Map<string, number>,
+		blockerCountMap: Map<string, number> = new Map(),
 	): KanbanBoardBoardDto {
 		const projectCode = board.project?.code ?? "";
 		return {
@@ -1930,6 +1965,7 @@ export class KanbanBoardRegistryService {
 			description: board.description,
 			sortOrder: board.sortOrder,
 			taskCount: countMap.get(board.id) ?? 0,
+			blockerCount: blockerCountMap.get(board.id) ?? 0,
 			createdAt: board.createdAt.toISOString(),
 			createdBy: board.createdBy ?? null,
 			updatedAt: board.updatedAt.toISOString(),
@@ -2000,6 +2036,7 @@ export class KanbanBoardRegistryService {
 				: undefined,
 			releases,
 			releaseTitle: kanbanBoardTaskReleasesTitle(releases) || undefined,
+			hasBlocker: content.hasBlocker === true ? true : undefined,
 		};
 	}
 

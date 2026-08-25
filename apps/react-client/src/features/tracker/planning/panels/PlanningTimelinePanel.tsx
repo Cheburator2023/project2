@@ -27,6 +27,7 @@ export function PlanningTimelinePanel() {
 			height="100%"
 			minHeight="0"
 			width="100%"
+			fillChild
 		>
 			<TrackerGanttChart
 				filters={filters}

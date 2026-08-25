@@ -8,6 +8,8 @@ import {
 } from "@react-client/common/api/queries/kanban-board";
 import {
 	TrackerProjectChips,
+	TrackerRegistryChip,
+	TrackerRegistryChipCell,
 	trackerProjectFilterText,
 } from "@react-client/features/tracker/components/TrackerRegistryChipCell";
 import { TrackerRegistryPage } from "@react-client/features/tracker/components/TrackerRegistryPage";
@@ -64,6 +66,25 @@ export function TrackerBoardsPage() {
 				headerName: "Задач",
 				width: 100,
 				type: "numericColumn",
+			},
+			{
+				field: "blockerCount",
+				headerName: "Блокеры",
+				width: 110,
+				type: "numericColumn",
+				cellRenderer: (params: ICellRendererParams<KanbanBoardBoardDto>) => {
+					const count = params.data?.blockerCount ?? 0;
+					if (!count) return null;
+					return (
+						<TrackerRegistryChipCell>
+							<TrackerRegistryChip
+								label={String(count)}
+								color="error"
+								title={`Задач с блокером: ${count}`}
+							/>
+						</TrackerRegistryChipCell>
+					);
+				},
 			},
 			{
 				field: "description",
