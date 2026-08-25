@@ -3,11 +3,12 @@ import type { KanbanBoardPlanningDetailDto } from "@smart-anketa/api-contract";
 
 type PlanningWorkspaceContextValue = {
 	planning: KanbanBoardPlanningDetailDto;
+	activeReleaseId: string | null;
+	setActiveReleaseId: (id: string) => void;
 };
 
-const PlanningWorkspaceContext = createContext<PlanningWorkspaceContextValue | null>(
-	null,
-);
+const PlanningWorkspaceContext =
+	createContext<PlanningWorkspaceContextValue | null>(null);
 
 export const PlanningWorkspaceProvider = PlanningWorkspaceContext.Provider;
 

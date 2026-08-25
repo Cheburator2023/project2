@@ -46,13 +46,16 @@ import type {
 	KanbanBoardReleaseDto,
 	KanbanBoardReleaseThemeDto,
 	CreateKanbanBoardPlanningRequestDto,
+	CreateKanbanBoardReleaseRequestDto,
 	CreateKanbanBoardReleaseThemeRequestDto,
+	AttachKanbanBoardPlanningReleaseRequestDto,
 	UpdateKanbanBoardPlanningRequestDto,
 	UpdateKanbanBoardPlanningLayoutRequestDto,
 	UpdateKanbanBoardReleaseRequestDto,
 	UpdateKanbanBoardReleaseThemeRequestDto,
 	AttachKanbanBoardReleaseTasksRequestDto,
 	ReorderKanbanBoardReleaseTasksRequestDto,
+	MoveKanbanBoardReleaseTaskRequestDto,
 	MoveKanbanBoardReleaseTaskStatusRequestDto,
 	ResetKanbanBoardColumnsResultDto,
 	KanbanBoardSprintDto,
@@ -297,6 +300,55 @@ export class KanbanBoardController {
 		return this.planningService.deletePlanning(id);
 	}
 
+	@Post("plannings/:id/releases")
+	async addPlanningRelease(
+		@Param("id") id: string,
+		@Body() dto: AttachKanbanBoardPlanningReleaseRequestDto,
+	): Promise<KanbanBoardPlanningDetailDto> {
+		return this.planningService.addReleaseToPlanning(id, dto);
+	}
+
+	@Delete("plannings/:id/releases/:releaseId")
+	async removePlanningRelease(
+		@Param("id") id: string,
+		@Param("releaseId") releaseId: string,
+	): Promise<KanbanBoardPlanningDetailDto> {
+		return this.planningService.removeReleaseFromPlanning(id, releaseId);
+	}
+
+	@Post("plannings/:id/themes")
+	async createPlanningTheme(
+		@Param("id") id: string,
+		@Body() dto: CreateKanbanBoardReleaseThemeRequestDto,
+	): Promise<KanbanBoardReleaseThemeDto> {
+		return this.planningService.createTheme(id, dto);
+	}
+
+	@Put("plannings/:id/themes/:themeId")
+	async updatePlanningTheme(
+		@Param("id") id: string,
+		@Param("themeId") themeId: string,
+		@Body() dto: UpdateKanbanBoardReleaseThemeRequestDto,
+	): Promise<KanbanBoardReleaseThemeDto> {
+		return this.planningService.updateTheme(id, themeId, dto);
+	}
+
+	@Delete("plannings/:id/themes/:themeId")
+	async deletePlanningTheme(
+		@Param("id") id: string,
+		@Param("themeId") themeId: string,
+	): Promise<void> {
+		return this.planningService.deleteTheme(id, themeId);
+	}
+
+	@Put("plannings/:id/tasks/reorder")
+	async reorderPlanningTasks(
+		@Param("id") id: string,
+		@Body() dto: ReorderKanbanBoardReleaseTasksRequestDto,
+	): Promise<KanbanBoardPlanningDetailDto> {
+		return this.planningService.reorderPlanningTasks(id, dto);
+	}
+
 	@Get("releases")
 	async findAllReleases(
 		@Query("available") available?: string,
@@ -306,12 +358,24 @@ export class KanbanBoardController {
 		);
 	}
 
+	@Post("releases")
+	async createRelease(
+		@Body() dto: CreateKanbanBoardReleaseRequestDto,
+	): Promise<KanbanBoardReleaseDto> {
+		return this.planningService.createRelease(dto);
+	}
+
 	@Put("releases/:id")
 	async updateRelease(
 		@Param("id") id: string,
 		@Body() dto: UpdateKanbanBoardReleaseRequestDto,
-	): Promise<KanbanBoardPlanningDetailDto> {
+	): Promise<KanbanBoardReleaseDto> {
 		return this.planningService.updateRelease(id, dto);
+	}
+
+	@Delete("releases/:id")
+	async deleteRelease(@Param("id") id: string): Promise<void> {
+		return this.planningService.deleteRelease(id);
 	}
 
 	@Post("releases/:id/themes")
@@ -319,7 +383,7 @@ export class KanbanBoardController {
 		@Param("id") id: string,
 		@Body() dto: CreateKanbanBoardReleaseThemeRequestDto,
 	): Promise<KanbanBoardReleaseThemeDto> {
-		return this.planningService.createTheme(id, dto);
+		return this.planningService.createThemeFromRelease(id, dto);
 	}
 
 	@Put("releases/:id/themes/:themeId")
@@ -328,7 +392,7 @@ export class KanbanBoardController {
 		@Param("themeId") themeId: string,
 		@Body() dto: UpdateKanbanBoardReleaseThemeRequestDto,
 	): Promise<KanbanBoardReleaseThemeDto> {
-		return this.planningService.updateTheme(id, themeId, dto);
+		return this.planningService.updateThemeFromRelease(id, themeId, dto);
 	}
 
 	@Delete("releases/:id/themes/:themeId")
@@ -336,7 +400,7 @@ export class KanbanBoardController {
 		@Param("id") id: string,
 		@Param("themeId") themeId: string,
 	): Promise<void> {
-		return this.planningService.deleteTheme(id, themeId);
+		return this.planningService.deleteThemeFromRelease(id, themeId);
 	}
 
 	@Post("releases/:id/tasks")
@@ -353,6 +417,15 @@ export class KanbanBoardController {
 		@Body() dto: ReorderKanbanBoardReleaseTasksRequestDto,
 	): Promise<KanbanBoardPlanningDetailDto> {
 		return this.planningService.reorderTasks(id, dto);
+	}
+
+	@Put("releases/:id/tasks/:taskId/move")
+	async moveReleaseTask(
+		@Param("id") id: string,
+		@Param("taskId") taskId: string,
+		@Body() dto: MoveKanbanBoardReleaseTaskRequestDto,
+	): Promise<KanbanBoardPlanningDetailDto> {
+		return this.planningService.moveTask(id, taskId, dto);
 	}
 
 	@Put("releases/:id/tasks/:taskId/status")

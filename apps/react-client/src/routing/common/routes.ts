@@ -165,7 +165,7 @@ export const commonRoutes = {
 	},
 	trackerPlannings: {
 		rootPath: "/tracker/plannings",
-		name: "Планирования",
+		name: "План/Релиз",
 		disabled: false,
 		showInNavbar: true,
 		navbar: { group: "tracker", order: 4 },

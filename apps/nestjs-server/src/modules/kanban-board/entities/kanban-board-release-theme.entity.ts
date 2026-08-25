@@ -7,7 +7,7 @@ import {
 	OneToMany,
 	PrimaryColumn,
 } from "typeorm";
-import { KanbanBoardReleaseEntity } from "./kanban-board-release.entity";
+import { KanbanBoardPlanningEntity } from "./kanban-board-planning.entity";
 import { KanbanBoardReleaseTaskEntity } from "./kanban-board-release-task.entity";
 
 @Entity("kanban_board_release_themes")
@@ -16,14 +16,14 @@ export class KanbanBoardReleaseThemeEntity {
 	id!: string;
 
 	@Index()
-	@Column({ name: "release_id", type: "varchar", length: 26 })
-	releaseId!: string;
+	@Column({ name: "planning_id", type: "varchar", length: 26 })
+	planningId!: string;
 
-	@ManyToOne(() => KanbanBoardReleaseEntity, (release) => release.themes, {
+	@ManyToOne(() => KanbanBoardPlanningEntity, (planning) => planning.themes, {
 		onDelete: "CASCADE",
 	})
-	@JoinColumn({ name: "release_id" })
-	release?: KanbanBoardReleaseEntity;
+	@JoinColumn({ name: "planning_id" })
+	planning?: KanbanBoardPlanningEntity;
 
 	@Column({ type: "varchar", length: 255 })
 	name!: string;

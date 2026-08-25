@@ -13,7 +13,7 @@ export const PLANNING_DOCK_PANEL_TITLES: Record<PlanningDockPanelId, string> = {
 	tasks: "Задачи",
 	board: "Доска",
 	timeline: "Таймлайн",
-	release: "Релиз",
+	release: "Релизы",
 };
 
 export type PlanningLayoutPresetId = "roadmap" | "empty";
@@ -24,11 +24,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 	return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
-export function isPlanningDockPanelId(value: string): value is PlanningDockPanelId {
+export function isPlanningDockPanelId(
+	value: string,
+): value is PlanningDockPanelId {
 	return (PLANNING_DOCK_PANEL_IDS as readonly string[]).includes(value);
 }
 
-export function isPlanningDockLayout(value: unknown): value is SerializedDockLayout {
+export function isPlanningDockLayout(
+	value: unknown,
+): value is SerializedDockLayout {
 	if (!isRecord(value)) return false;
 	if (!isRecord(value.panels) || !isRecord(value.grid)) return false;
 	const panelIds = Object.keys(value.panels);
@@ -36,12 +40,17 @@ export function isPlanningDockLayout(value: unknown): value is SerializedDockLay
 	return panelIds.every((id) => isPlanningDockPanelId(id));
 }
 
-export function getMissingPlanningDockPanelIds(api: DockviewApi): PlanningDockPanelId[] {
+export function getMissingPlanningDockPanelIds(
+	api: DockviewApi,
+): PlanningDockPanelId[] {
 	const openIds = new Set(api.panels.map((panel) => panel.id));
 	return PLANNING_DOCK_PANEL_IDS.filter((id) => !openIds.has(id));
 }
 
-export function addPlanningDockPanel(api: DockviewApi, panelId: PlanningDockPanelId) {
+export function addPlanningDockPanel(
+	api: DockviewApi,
+	panelId: PlanningDockPanelId,
+) {
 	if (api.getPanel(panelId)) return;
 	const referencePanel = api.panels[0]?.id;
 	api.addPanel({

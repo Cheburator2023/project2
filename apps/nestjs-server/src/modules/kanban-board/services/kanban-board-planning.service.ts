@@ -11,8 +11,10 @@ import {
 	isKanbanBoardReleaseStatusId,
 	nextKanbanBoardReleaseThemeColor,
 	normalizeTrackerCode,
+	type AttachKanbanBoardPlanningReleaseRequestDto,
 	type AttachKanbanBoardReleaseTasksRequestDto,
 	type CreateKanbanBoardPlanningRequestDto,
+	type CreateKanbanBoardReleaseRequestDto,
 	type CreateKanbanBoardReleaseThemeRequestDto,
 	type KanbanBoardPlanningDetailDto,
 	type KanbanBoardPlanningDto,
@@ -20,6 +22,7 @@ import {
 	type KanbanBoardReleaseStatusId,
 	type KanbanBoardReleaseTaskDto,
 	type KanbanBoardReleaseThemeDto,
+	type MoveKanbanBoardReleaseTaskRequestDto,
 	type MoveKanbanBoardReleaseTaskStatusRequestDto,
 	type ReorderKanbanBoardReleaseTasksRequestDto,
 	type UpdateKanbanBoardPlanningLayoutRequestDto,
@@ -27,6 +30,8 @@ import {
 	type UpdateKanbanBoardReleaseRequestDto,
 	type UpdateKanbanBoardReleaseThemeRequestDto,
 	type UpdateKanbanBoardTaskRequestDto,
+	normalizeKanbanBoardReleaseImageVersions,
+	kanbanBoardTaskReleasesTitle,
 } from "@smart-anketa/api-contract";
 import { KanbanBoardPlanningEntity } from "../entities/kanban-board-planning.entity";
 import { KanbanBoardReleaseEntity } from "../entities/kanban-board-release.entity";
@@ -62,12 +67,13 @@ export class KanbanBoardPlanningService {
 
 	async findAllPlannings(): Promise<KanbanBoardPlanningDto[]> {
 		const plannings = await this.planningRepository.find({
-			relations: { release: { sprint: true } },
+			relations: { releases: true },
 			order: { updatedAt: "DESC" },
 		});
-		const taskCounts = await this.countTasksByReleaseIds(
-			plannings.map((item) => item.releaseId),
+		const releaseIds = plannings.flatMap((item) =>
+			(item.releases ?? []).map((release) => release.id),
 		);
+		const taskCounts = await this.countTasksByReleaseIds(releaseIds);
 		return plannings.map((item) => this.toPlanningDto(item, taskCounts));
 	}
 
@@ -79,27 +85,23 @@ export class KanbanBoardPlanningService {
 	async createPlanning(
 		dto: CreateKanbanBoardPlanningRequestDto,
 	): Promise<KanbanBoardPlanningDetailDto> {
-		const code = await this.ensureUniquePlanningCode(normalizeTrackerCode(dto.code));
+		const code = await this.ensureUniquePlanningCode(
+			normalizeTrackerCode(dto.code),
+		);
 		const name = dto.name.trim();
 		if (!code || !name) {
 			throw new BadRequestException("Код и название планирования обязательны");
 		}
-
-		const release = dto.releaseId?.trim()
-			? await this.requireReleaseWithoutPlanning(dto.releaseId.trim())
-			: await this.createReleaseFromPlanningDto(dto);
 
 		const entity = this.planningRepository.create({
 			id: ulid(),
 			code,
 			name,
 			description: dto.description?.trim() || null,
-			releaseId: release.id,
 			layoutJson: null,
 		});
-		entity.release = release;
 		await this.planningRepository.save(entity);
-		return this.toPlanningDetail(entity);
+		return this.findPlanningById(entity.id);
 	}
 
 	async updatePlanning(
@@ -143,29 +145,97 @@ export class KanbanBoardPlanningService {
 		await this.planningRepository.remove(planning);
 	}
 
-	async findAllReleases(availableOnly = false): Promise<KanbanBoardReleaseDto[]> {
+	async findAllReleases(
+		availableOnly = false,
+	): Promise<KanbanBoardReleaseDto[]> {
 		const releases = await this.releaseRepository.find({
 			relations: { supersprint: true, sprint: true, planning: true },
 			order: { updatedAt: "DESC" },
 		});
 		const filtered = availableOnly
-			? releases.filter((item) => !item.planning)
+			? releases.filter((item) => !item.planningId)
 			: releases;
 		const taskCounts = await this.countTasksByReleaseIds(
 			filtered.map((item) => item.id),
 		);
-		const themeCounts = await this.countThemesByReleaseIds(
-			filtered.map((item) => item.id),
-		);
 		return filtered.map((item) =>
-			this.toReleaseDto(item, taskCounts, themeCounts),
+			this.toReleaseDto(item, taskCounts, new Map()),
 		);
+	}
+
+	async createRelease(
+		dto: CreateKanbanBoardReleaseRequestDto,
+	): Promise<KanbanBoardReleaseDto> {
+		const release = await this.buildRelease(dto);
+		if (dto.planningId !== undefined) {
+			release.planningId = await this.resolvePlanningId(dto.planningId);
+			release.planning = undefined;
+		}
+		await this.releaseRepository.save(release);
+		return this.toReleaseDtoWithCounts(release);
+	}
+
+	async addReleaseToPlanning(
+		planningId: string,
+		dto: AttachKanbanBoardPlanningReleaseRequestDto,
+	): Promise<KanbanBoardPlanningDetailDto> {
+		const planning = await this.requirePlanning(planningId);
+		if (dto.releaseId?.trim()) {
+			const release = await this.requireReleaseWithoutPlanning(
+				dto.releaseId.trim(),
+			);
+			release.planningId = planning.id;
+			release.planning = planning;
+			await this.releaseRepository.save(release);
+			return this.findPlanningById(planning.id);
+		}
+		if (!dto.code?.trim() || !dto.name?.trim()) {
+			throw new BadRequestException(
+				"Укажите существующий релиз или код и название нового",
+			);
+		}
+		const created = await this.buildRelease({
+			code: dto.code ?? `REL-${ulid().slice(-8)}`,
+			name: dto.name ?? "",
+			description: dto.description,
+			status: dto.status,
+			supersprintId: dto.supersprintId,
+			sprintId: dto.sprintId,
+			startDate: dto.startDate,
+			endDate: dto.endDate,
+			imageVersions: dto.imageVersions,
+		});
+		created.planningId = planning.id;
+		created.planning = planning;
+		await this.releaseRepository.save(created);
+		return this.findPlanningById(planning.id);
+	}
+
+	async removeReleaseFromPlanning(
+		planningId: string,
+		releaseId: string,
+	): Promise<KanbanBoardPlanningDetailDto> {
+		const planning = await this.requirePlanning(planningId);
+		const release = await this.requireRelease(releaseId);
+		if (release.planningId !== planning.id) {
+			throw new BadRequestException("Релиз не входит в это планирование");
+		}
+		release.planningId = null;
+		release.planning = null;
+		await this.releaseRepository.save(release);
+		return this.findPlanningById(planning.id);
+	}
+
+	async deleteRelease(id: string): Promise<void> {
+		const release = await this.releaseRepository.findOne({ where: { id } });
+		if (!release) throw new NotFoundException("Релиз не найден");
+		await this.releaseRepository.remove(release);
 	}
 
 	async updateRelease(
 		id: string,
 		dto: UpdateKanbanBoardReleaseRequestDto,
-	): Promise<KanbanBoardPlanningDetailDto> {
+	): Promise<KanbanBoardReleaseDto> {
 		const release = await this.requireRelease(id);
 		if (dto.code !== undefined) {
 			release.code = await this.ensureUniqueReleaseCode(
@@ -183,8 +253,14 @@ export class KanbanBoardPlanningService {
 			}
 			release.status = dto.status;
 		}
+		if (dto.planningId !== undefined) {
+			release.planningId = await this.resolvePlanningId(dto.planningId);
+			release.planning = undefined;
+		}
 		if (dto.supersprintId !== undefined) {
-			release.supersprintId = await this.resolveSupersprintId(dto.supersprintId);
+			release.supersprintId = await this.resolveSupersprintId(
+				dto.supersprintId,
+			);
 			release.supersprint = undefined;
 		}
 		if (dto.sprintId !== undefined) {
@@ -205,24 +281,29 @@ export class KanbanBoardPlanningService {
 		if (dto.endDate !== undefined) {
 			release.endDate = dto.endDate?.trim() || null;
 		}
+		if (dto.imageVersions !== undefined) {
+			release.imageVersions = normalizeKanbanBoardReleaseImageVersions(
+				dto.imageVersions,
+			);
+		}
 		if (!release.code || !release.name) {
 			throw new BadRequestException("Код и название релиза обязательны");
 		}
 		await this.releaseRepository.save(release);
-		return this.detailByReleaseId(release.id);
+		return this.toReleaseDtoWithCounts(release);
 	}
 
 	async createTheme(
-		releaseId: string,
+		planningId: string,
 		dto: CreateKanbanBoardReleaseThemeRequestDto,
 	): Promise<KanbanBoardReleaseThemeDto> {
-		await this.requireRelease(releaseId);
+		await this.requirePlanning(planningId);
 		const name = dto.name.trim();
 		if (!name) throw new BadRequestException("Название темы обязательно");
-		const count = await this.themeRepository.count({ where: { releaseId } });
+		const count = await this.themeRepository.count({ where: { planningId } });
 		const entity = this.themeRepository.create({
 			id: ulid(),
-			releaseId,
+			planningId,
 			name,
 			color: dto.color?.trim() || nextKanbanBoardReleaseThemeColor(count),
 			position: dto.position ?? count,
@@ -232,11 +313,11 @@ export class KanbanBoardPlanningService {
 	}
 
 	async updateTheme(
-		releaseId: string,
+		planningId: string,
 		themeId: string,
 		dto: UpdateKanbanBoardReleaseThemeRequestDto,
 	): Promise<KanbanBoardReleaseThemeDto> {
-		const theme = await this.requireTheme(releaseId, themeId);
+		const theme = await this.requireTheme(planningId, themeId);
 		if (dto.name !== undefined) {
 			const name = dto.name.trim();
 			if (!name) throw new BadRequestException("Название темы обязательно");
@@ -248,22 +329,63 @@ export class KanbanBoardPlanningService {
 		return this.toThemeDto(theme);
 	}
 
-	async deleteTheme(releaseId: string, themeId: string): Promise<void> {
-		const theme = await this.requireTheme(releaseId, themeId);
+	async deleteTheme(planningId: string, themeId: string): Promise<void> {
+		const theme = await this.requireTheme(planningId, themeId);
 		await this.themeRepository.remove(theme);
+	}
+
+	async createThemeFromRelease(
+		releaseId: string,
+		dto: CreateKanbanBoardReleaseThemeRequestDto,
+	): Promise<KanbanBoardReleaseThemeDto> {
+		return this.createTheme(await this.planningIdOfRelease(releaseId), dto);
+	}
+
+	async updateThemeFromRelease(
+		releaseId: string,
+		themeId: string,
+		dto: UpdateKanbanBoardReleaseThemeRequestDto,
+	): Promise<KanbanBoardReleaseThemeDto> {
+		return this.updateTheme(
+			await this.planningIdOfRelease(releaseId),
+			themeId,
+			dto,
+		);
+	}
+
+	async deleteThemeFromRelease(
+		releaseId: string,
+		themeId: string,
+	): Promise<void> {
+		return this.deleteTheme(await this.planningIdOfRelease(releaseId), themeId);
 	}
 
 	async attachTasks(
 		releaseId: string,
 		dto: AttachKanbanBoardReleaseTasksRequestDto,
 	): Promise<KanbanBoardPlanningDetailDto> {
-		await this.requireRelease(releaseId);
-		const taskIds = [...new Set((dto.taskIds ?? []).map((id) => id.trim()).filter(Boolean))];
+		const release = await this.requireRelease(releaseId);
+		const taskIds = [
+			...new Set((dto.taskIds ?? []).map((id) => id.trim()).filter(Boolean)),
+		];
 		if (!taskIds.length) {
 			throw new BadRequestException("Нужно указать задачи");
 		}
 		const themeId = dto.themeId?.trim() || null;
-		if (themeId) await this.requireTheme(releaseId, themeId);
+		if (themeId) {
+			if (!release.planningId) {
+				throw new BadRequestException("Тема задаётся в планировании");
+			}
+			await this.requireTheme(release.planningId, themeId);
+		}
+
+		if (release.planningId) {
+			await this.detachFromSiblingReleases(
+				release.planningId,
+				releaseId,
+				taskIds,
+			);
+		}
 
 		const existing = await this.membershipRepository.find({
 			where: { releaseId, taskId: In(taskIds) },
@@ -281,7 +403,9 @@ export class KanbanBoardPlanningService {
 			throw new BadRequestException("Некоторые задачи не найдены");
 		}
 
-		const maxPosition = await this.nextMembershipPosition(releaseId, themeId);
+		const maxPosition = release.planningId
+			? await this.nextPlanningThemePosition(release.planningId, themeId)
+			: await this.nextMembershipPosition(releaseId, themeId);
 		const rows = incoming.map((taskId, index) =>
 			this.membershipRepository.create({
 				releaseId,
@@ -301,7 +425,8 @@ export class KanbanBoardPlanningService {
 		const membership = await this.membershipRepository.findOne({
 			where: { releaseId, taskId },
 		});
-		if (!membership) throw new NotFoundException("Задача не прикреплена к релизу");
+		if (!membership)
+			throw new NotFoundException("Задача не прикреплена к релизу");
 		await this.membershipRepository.remove(membership);
 		return this.detailByReleaseId(releaseId);
 	}
@@ -310,7 +435,10 @@ export class KanbanBoardPlanningService {
 		releaseId: string,
 		dto: ReorderKanbanBoardReleaseTasksRequestDto,
 	): Promise<KanbanBoardPlanningDetailDto> {
-		await this.requireRelease(releaseId);
+		const release = await this.requireRelease(releaseId);
+		if (release.planningId) {
+			return this.reorderPlanningTasks(release.planningId, dto);
+		}
 		const items = dto.items ?? [];
 		if (!items.length) {
 			throw new BadRequestException("Нужно передать порядок задач");
@@ -319,10 +447,46 @@ export class KanbanBoardPlanningService {
 			where: { releaseId },
 		});
 		const byTaskId = new Map(memberships.map((item) => [item.taskId, item]));
+		for (const item of items) {
+			const membership = byTaskId.get(item.taskId);
+			if (!membership) {
+				throw new BadRequestException("Задача не входит в релиз");
+			}
+			if (item.themeId?.trim()) {
+				throw new BadRequestException("Тема задаётся в планировании");
+			}
+			membership.themeId = null;
+			membership.position = item.position;
+		}
+		await this.membershipRepository.save([...byTaskId.values()]);
+		return this.detailByReleaseId(releaseId);
+	}
+
+	async reorderPlanningTasks(
+		planningId: string,
+		dto: ReorderKanbanBoardReleaseTasksRequestDto,
+	): Promise<KanbanBoardPlanningDetailDto> {
+		await this.requirePlanning(planningId);
+		const items = dto.items ?? [];
+		if (!items.length) {
+			throw new BadRequestException("Нужно передать порядок задач");
+		}
+		const releaseIds = (
+			await this.releaseRepository.find({
+				where: { planningId },
+				select: { id: true },
+			})
+		).map((item) => item.id);
+		const memberships = releaseIds.length
+			? await this.membershipRepository.find({
+					where: { releaseId: In(releaseIds) },
+				})
+			: [];
+		const byTaskId = new Map(memberships.map((item) => [item.taskId, item]));
 		const themeIds = new Set(
 			(
 				await this.themeRepository.find({
-					where: { releaseId },
+					where: { planningId },
 					select: { id: true },
 				})
 			).map((theme) => theme.id),
@@ -331,7 +495,7 @@ export class KanbanBoardPlanningService {
 		for (const item of items) {
 			const membership = byTaskId.get(item.taskId);
 			if (!membership) {
-				throw new BadRequestException("Задача не входит в релиз");
+				throw new BadRequestException("Задача не входит в планирование");
 			}
 			const themeId = item.themeId?.trim() || null;
 			if (themeId && !themeIds.has(themeId)) {
@@ -341,7 +505,7 @@ export class KanbanBoardPlanningService {
 			membership.position = item.position;
 		}
 		await this.membershipRepository.save([...byTaskId.values()]);
-		return this.detailByReleaseId(releaseId);
+		return this.findPlanningById(planningId);
 	}
 
 	async moveTaskStatus(
@@ -353,7 +517,8 @@ export class KanbanBoardPlanningService {
 		const membership = await this.membershipRepository.findOne({
 			where: { releaseId, taskId },
 		});
-		if (!membership) throw new NotFoundException("Задача не прикреплена к релизу");
+		if (!membership)
+			throw new NotFoundException("Задача не прикреплена к релизу");
 
 		const statusTitle = dto.statusTitle?.trim() ?? "";
 		if (!statusTitle) {
@@ -383,20 +548,79 @@ export class KanbanBoardPlanningService {
 		return this.detailByReleaseId(releaseId);
 	}
 
-	private async createReleaseFromPlanningDto(
-		dto: CreateKanbanBoardPlanningRequestDto,
+	async moveTask(
+		releaseId: string,
+		taskId: string,
+		dto: MoveKanbanBoardReleaseTaskRequestDto,
+	): Promise<KanbanBoardPlanningDetailDto> {
+		const source = await this.requireRelease(releaseId);
+		const targetReleaseId = dto.targetReleaseId?.trim() || "";
+		if (!targetReleaseId) {
+			throw new BadRequestException("Нужно указать целевой релиз");
+		}
+		const target = await this.requireRelease(targetReleaseId);
+		if (!source.planningId || source.planningId !== target.planningId) {
+			throw new BadRequestException(
+				"Перенос возможен только между релизами одного планирования",
+			);
+		}
+
+		const membership = await this.membershipRepository.findOne({
+			where: { releaseId, taskId },
+		});
+		if (!membership)
+			throw new NotFoundException("Задача не прикреплена к релизу");
+
+		const themeId =
+			dto.themeId !== undefined
+				? dto.themeId?.trim() || null
+				: membership.themeId;
+		if (themeId) await this.requireTheme(source.planningId, themeId);
+
+		if (source.id === target.id) {
+			membership.themeId = themeId;
+			await this.membershipRepository.save(membership);
+			return this.findPlanningById(source.planningId);
+		}
+
+		await this.membershipRepository.remove(membership);
+		const existing = await this.membershipRepository.findOne({
+			where: { releaseId: target.id, taskId },
+		});
+		if (existing) {
+			existing.themeId = themeId;
+			await this.membershipRepository.save(existing);
+		} else {
+			const position = await this.nextPlanningThemePosition(
+				source.planningId,
+				themeId,
+			);
+			await this.membershipRepository.save(
+				this.membershipRepository.create({
+					releaseId: target.id,
+					taskId,
+					themeId,
+					position,
+				}),
+			);
+		}
+		return this.findPlanningById(source.planningId);
+	}
+
+	private async buildRelease(
+		dto: CreateKanbanBoardReleaseRequestDto,
 	): Promise<KanbanBoardReleaseEntity> {
-		const name = (dto.releaseName ?? "").trim() || dto.name.trim();
+		const name = dto.name.trim();
 		const code = await this.ensureUniqueReleaseCode(
-			normalizeTrackerCode(dto.releaseCode || `REL-${ulid().slice(-8)}`),
+			normalizeTrackerCode(dto.code),
 		);
 		if (!name || !code) {
-			throw new BadRequestException("Для нового релиза нужны код и название");
+			throw new BadRequestException("Код и название релиза обязательны");
 		}
 		const status: KanbanBoardReleaseStatusId = isKanbanBoardReleaseStatusId(
-			dto.releaseStatus,
+			dto.status,
 		)
-			? dto.releaseStatus
+			? dto.status
 			: "draft";
 		const sprint = await this.resolveSprint(dto.sprintId);
 		const supersprintId =
@@ -408,23 +632,25 @@ export class KanbanBoardPlanningService {
 			id: ulid(),
 			code,
 			name,
-			description: dto.releaseDescription?.trim() || null,
+			description: dto.description?.trim() || null,
 			status,
 			supersprintId,
 			sprintId: sprint?.id ?? null,
 			startDate: dto.startDate?.trim() || null,
 			endDate: dto.endDate?.trim() || null,
+			planningId: null,
+			imageVersions: normalizeKanbanBoardReleaseImageVersions(
+				dto.imageVersions,
+			),
 		});
 		entity.sprint = sprint;
-		await this.releaseRepository.save(entity);
 		return entity;
 	}
 
-	private async requirePlanning(id: string): Promise<KanbanBoardPlanningEntity> {
-		const planning = await this.planningRepository.findOne({
-			where: { id },
-			relations: { release: { supersprint: true, sprint: true } },
-		});
+	private async requirePlanning(
+		id: string,
+	): Promise<KanbanBoardPlanningEntity> {
+		const planning = await this.planningRepository.findOne({ where: { id } });
 		if (!planning) throw new NotFoundException("Планирование не найдено");
 		return planning;
 	}
@@ -442,18 +668,26 @@ export class KanbanBoardPlanningService {
 		id: string,
 	): Promise<KanbanBoardReleaseEntity> {
 		const release = await this.requireRelease(id);
-		if (release.planning) {
+		if (release.planningId) {
 			throw new BadRequestException("У релиза уже есть планирование");
 		}
 		return release;
 	}
 
+	private async planningIdOfRelease(releaseId: string): Promise<string> {
+		const release = await this.requireRelease(releaseId);
+		if (!release.planningId) {
+			throw new BadRequestException("Группа принадлежит планированию");
+		}
+		return release.planningId;
+	}
+
 	private async requireTheme(
-		releaseId: string,
+		planningId: string,
 		themeId: string,
 	): Promise<KanbanBoardReleaseThemeEntity> {
 		const theme = await this.themeRepository.findOne({
-			where: { id: themeId, releaseId },
+			where: { id: themeId, planningId },
 		});
 		if (!theme) throw new NotFoundException("Тема не найдена");
 		return theme;
@@ -462,28 +696,32 @@ export class KanbanBoardPlanningService {
 	private async detailByReleaseId(
 		releaseId: string,
 	): Promise<KanbanBoardPlanningDetailDto> {
-		const planning = await this.planningRepository.findOne({
-			where: { releaseId },
-			relations: { release: { supersprint: true, sprint: true } },
-		});
-		if (!planning) throw new NotFoundException("Планирование не найдено");
-		return this.toPlanningDetail(planning);
+		const release = await this.requireRelease(releaseId);
+		if (!release.planningId) {
+			throw new NotFoundException("Планирование не найдено");
+		}
+		return this.findPlanningById(release.planningId);
 	}
 
 	private async toPlanningDetail(
 		planning: KanbanBoardPlanningEntity,
 	): Promise<KanbanBoardPlanningDetailDto> {
-		const release = planning.release
-			? planning.release
-			: await this.requireRelease(planning.releaseId);
+		const releases = await this.releaseRepository.find({
+			where: { planningId: planning.id },
+			relations: { supersprint: true, sprint: true, planning: true },
+			order: { code: "ASC" },
+		});
+		const releaseIds = releases.map((item) => item.id);
 		const themes = await this.themeRepository.find({
-			where: { releaseId: release.id },
+			where: { planningId: planning.id },
 			order: { position: "ASC", name: "ASC" },
 		});
-		const memberships = await this.membershipRepository.find({
-			where: { releaseId: release.id },
-			order: { position: "ASC" },
-		});
+		const memberships = releaseIds.length
+			? await this.membershipRepository.find({
+					where: { releaseId: In(releaseIds) },
+					order: { position: "ASC" },
+				})
+			: [];
 		const taskDtos = await this.registryService.findRegistryTasksByIds(
 			memberships.map((item) => item.taskId),
 		);
@@ -494,20 +732,29 @@ export class KanbanBoardPlanningService {
 			if (!task) continue;
 			tasks.push({
 				taskId: membership.taskId,
+				releaseId: membership.releaseId,
 				themeId: membership.themeId,
 				position: membership.position,
 				task,
 			});
 		}
 
-		const taskCounts = new Map([[release.id, tasks.length]]);
-		const themeCounts = new Map([[release.id, themes.length]]);
-		release.planning = planning;
+		const taskCounts = new Map<string, number>();
+		const themeCounts = new Map<string, number>();
+		for (const release of releases) {
+			taskCounts.set(
+				release.id,
+				tasks.filter((item) => item.releaseId === release.id).length,
+			);
+			release.planning = planning;
+		}
 
 		return {
-			...this.toPlanningDto(planning, taskCounts),
+			...this.toPlanningDto(planning, taskCounts, releases),
 			layoutJson: planning.layoutJson ?? null,
-			release: this.toReleaseDto(release, taskCounts, themeCounts),
+			releases: releases.map((release) =>
+				this.toReleaseDto(release, taskCounts, themeCounts),
+			),
 			themes: themes.map((theme) => this.toThemeDto(theme)),
 			tasks,
 		};
@@ -516,20 +763,20 @@ export class KanbanBoardPlanningService {
 	private toPlanningDto(
 		planning: KanbanBoardPlanningEntity,
 		taskCounts: Map<string, number>,
+		releases = planning.releases ?? [],
 	): KanbanBoardPlanningDto {
-		const release = planning.release;
-		const sprint = release?.sprint;
+		const taskCount = releases.reduce(
+			(sum, release) => sum + (taskCounts.get(release.id) ?? 0),
+			0,
+		);
 		return {
 			id: planning.id,
 			code: planning.code,
 			name: planning.name,
 			description: planning.description,
-			releaseId: planning.releaseId,
-			releaseCode: release?.code ?? "",
-			releaseName: release?.name ?? "",
-			releaseStatus: release?.status ?? "draft",
-			sprintTitle: sprint ? `${sprint.code} — ${sprint.name}` : "",
-			taskCount: taskCounts.get(planning.releaseId) ?? 0,
+			releaseTitle: kanbanBoardTaskReleasesTitle(releases),
+			releaseCount: releases.length,
+			taskCount,
 			hasLayout: planning.layoutJson != null,
 			createdAt: planning.createdAt.toISOString(),
 			updatedAt: planning.updatedAt.toISOString(),
@@ -541,6 +788,7 @@ export class KanbanBoardPlanningService {
 		taskCounts: Map<string, number>,
 		themeCounts: Map<string, number>,
 	): KanbanBoardReleaseDto {
+		const planningId = release.planningId ?? release.planning?.id ?? null;
 		return {
 			id: release.id,
 			code: release.code,
@@ -555,19 +803,59 @@ export class KanbanBoardPlanningService {
 			sprintName: release.sprint?.name ?? "",
 			startDate: release.startDate,
 			endDate: release.endDate,
+			imageVersions: normalizeKanbanBoardReleaseImageVersions(
+				release.imageVersions,
+			),
 			themeCount: themeCounts.get(release.id) ?? 0,
 			taskCount: taskCounts.get(release.id) ?? 0,
-			hasPlanning: Boolean(release.planning),
-			planningId: release.planning?.id ?? null,
+			hasPlanning: Boolean(planningId),
+			planningId,
+			planningCode: release.planning?.code ?? "",
+			planningName: release.planning?.name ?? "",
 			createdAt: release.createdAt.toISOString(),
 			updatedAt: release.updatedAt.toISOString(),
 		};
 	}
 
-	private toThemeDto(theme: KanbanBoardReleaseThemeEntity): KanbanBoardReleaseThemeDto {
+	private async toReleaseDtoWithCounts(
+		release: KanbanBoardReleaseEntity,
+	): Promise<KanbanBoardReleaseDto> {
+		if (!release.planning && release.planningId) {
+			release.planning =
+				(await this.planningRepository.findOne({
+					where: { id: release.planningId },
+				})) ?? undefined;
+		}
+		const taskCounts = await this.countTasksByReleaseIds([release.id]);
+		return this.toReleaseDto(release, taskCounts, new Map());
+	}
+
+	private async detachFromSiblingReleases(
+		planningId: string,
+		keepReleaseId: string,
+		taskIds: string[],
+	): Promise<void> {
+		if (!taskIds.length) return;
+		const siblings = await this.releaseRepository.find({
+			where: { planningId },
+			select: { id: true },
+		});
+		const siblingIds = siblings
+			.map((item) => item.id)
+			.filter((id) => id !== keepReleaseId);
+		if (!siblingIds.length) return;
+		await this.membershipRepository.delete({
+			releaseId: In(siblingIds),
+			taskId: In(taskIds),
+		});
+	}
+
+	private toThemeDto(
+		theme: KanbanBoardReleaseThemeEntity,
+	): KanbanBoardReleaseThemeDto {
 		return {
 			id: theme.id,
-			releaseId: theme.releaseId,
+			planningId: theme.planningId,
 			name: theme.name,
 			color: theme.color,
 			position: theme.position,
@@ -588,20 +876,6 @@ export class KanbanBoardPlanningService {
 		return new Map(rows.map((row) => [row.releaseId, Number(row.count)]));
 	}
 
-	private async countThemesByReleaseIds(
-		releaseIds: string[],
-	): Promise<Map<string, number>> {
-		if (!releaseIds.length) return new Map();
-		const rows = await this.themeRepository
-			.createQueryBuilder("theme")
-			.select("theme.release_id", "releaseId")
-			.addSelect("COUNT(*)", "count")
-			.where("theme.release_id IN (:...ids)", { ids: releaseIds })
-			.groupBy("theme.release_id")
-			.getRawMany<{ releaseId: string; count: string }>();
-		return new Map(rows.map((row) => [row.releaseId, Number(row.count)]));
-	}
-
 	private async nextMembershipPosition(
 		releaseId: string,
 		themeId: string | null,
@@ -618,17 +892,39 @@ export class KanbanBoardPlanningService {
 		return Number(max?.max ?? -1) + 1;
 	}
 
+	private async nextPlanningThemePosition(
+		planningId: string,
+		themeId: string | null,
+	): Promise<number> {
+		const releaseIds = (
+			await this.releaseRepository.find({
+				where: { planningId },
+				select: { id: true },
+			})
+		).map((item) => item.id);
+		if (!releaseIds.length) return 0;
+		const max = await this.membershipRepository
+			.createQueryBuilder("item")
+			.select("COALESCE(MAX(item.position), -1)", "max")
+			.where("item.release_id IN (:...ids)", { ids: releaseIds })
+			.andWhere(
+				themeId ? "item.theme_id = :themeId" : "item.theme_id IS NULL",
+				themeId ? { themeId } : {},
+			)
+			.getRawOne<{ max: string }>();
+		return Number(max?.max ?? -1) + 1;
+	}
+
 	private async ensureUniquePlanningCode(
 		code: string,
 		exceptId?: string,
 	): Promise<string> {
 		if (!code) throw new BadRequestException("Код планирования обязателен");
 		const existing = await this.planningRepository.findOne({
-			where: exceptId
-				? { code, id: Not(exceptId) }
-				: { code },
+			where: exceptId ? { code, id: Not(exceptId) } : { code },
 		});
-		if (existing) throw new BadRequestException("Код планирования уже используется");
+		if (existing)
+			throw new BadRequestException("Код планирования уже используется");
 		return code;
 	}
 
@@ -667,5 +963,15 @@ export class KanbanBoardPlanningService {
 		});
 		if (!supersprint) throw new NotFoundException("Суперспринт не найден");
 		return supersprint.id;
+	}
+
+	private async resolvePlanningId(
+		planningId?: string | null,
+	): Promise<string | null> {
+		const id = planningId?.trim() || "";
+		if (!id) return null;
+		const planning = await this.planningRepository.findOne({ where: { id } });
+		if (!planning) throw new NotFoundException("Планирование не найдено");
+		return planning.id;
 	}
 }

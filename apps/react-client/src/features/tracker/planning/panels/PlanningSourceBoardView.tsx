@@ -19,7 +19,13 @@ import {
 } from "@smart-anketa/api-contract";
 import { Kanban } from "react-kanban-kit";
 import type { BoardData, BoardItem } from "react-kanban-kit";
-import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
+import {
+	useCallback,
+	useEffect,
+	useMemo,
+	useState,
+	type MouseEvent,
+} from "react";
 import { useNavigate } from "react-router";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { toast } from "@react-client/common/toasts";
@@ -44,7 +50,7 @@ function sourceBoardStorageKey(planningId: string) {
 
 export function PlanningSourceBoardView() {
 	const navigate = useNavigate();
-	const { planning } = usePlanningWorkspace();
+	const { planning, activeReleaseId } = usePlanningWorkspace();
 	const boardsQuery = useKanbanBoardBoards();
 	const attachTasks = useAttachKanbanBoardReleaseTasks();
 	const detachTask = useDetachKanbanBoardReleaseTask();
@@ -82,7 +88,8 @@ export function PlanningSourceBoardView() {
 		if (!boardsQuery.isSuccess || !boardKey || !list) return;
 		const exists = list.some(
 			(item) =>
-				item.boardKey === normalizeTrackerCode(boardKey) || item.id === boardKey,
+				item.boardKey === normalizeTrackerCode(boardKey) ||
+				item.id === boardKey,
 		);
 		if (!exists) setBoardKey("");
 	}, [boardKey, boardsQuery.data, boardsQuery.isSuccess]);
@@ -100,26 +107,39 @@ export function PlanningSourceBoardView() {
 	}, [columnsQuery.data, tasksQuery.data]);
 
 	const attachedIds = useMemo(
-		() => new Set(planning.tasks.map((item) => item.taskId)),
+		() =>
+			new Set(
+				planning.tasks
+					.filter((item) => item.releaseId === activeReleaseId)
+					.map((item) => item.taskId),
+			),
+		[activeReleaseId, planning.tasks],
+	);
+	const releaseByTaskId = useMemo(
+		() => new Map(planning.tasks.map((item) => [item.taskId, item.releaseId])),
 		[planning.tasks],
 	);
 
 	const resolvedBoardId = boardMeta?.id ?? tasksQuery.data?.[0]?.boardId ?? "";
 
 	const attach = async (taskIds: string[]) => {
+		if (!activeReleaseId) {
+			toast.error("Сначала создайте релиз");
+			return;
+		}
 		const incoming = taskIds.filter((id) => !attachedIds.has(id));
 		if (!incoming.length) {
-			toast.success("Выбранные задачи уже в планировании");
+			toast.success("Выбранные задачи уже в этом релизе");
 			return;
 		}
 		try {
 			await attachTasks.mutateAsync({
-				releaseId: planning.releaseId,
+				releaseId: activeReleaseId,
 				data: { taskIds: incoming },
 			});
 			toast.success(
 				incoming.length === 1
-					? "Задача добавлена в планирование"
+					? "Задача добавлена в релиз"
 					: `Добавлено задач: ${incoming.length}`,
 			);
 		} catch (error) {
@@ -131,7 +151,7 @@ export function PlanningSourceBoardView() {
 		if (attachedIds.has(taskId)) {
 			try {
 				await detachTask.mutateAsync({
-					releaseId: planning.releaseId,
+					releaseId: activeReleaseId ?? releaseByTaskId.get(taskId) ?? "",
 					taskId,
 				});
 			} catch (error) {
@@ -201,19 +221,32 @@ export function PlanningSourceBoardView() {
 				<Button
 					size="small"
 					variant="outlined"
-					disabled={!unattachedOnBoard.length || attachTasks.isPending}
+					disabled={
+						!activeReleaseId ||
+						!unattachedOnBoard.length ||
+						attachTasks.isPending
+					}
 					onClick={() => void attach(unattachedOnBoard.map((task) => task.id))}
+					title={
+						activeReleaseId
+							? "Добавить задачи доски в выбранный релиз"
+							: "Сначала создайте релиз"
+					}
 				>
 					Добавить все с доски ({unattachedOnBoard.length})
 				</Button>
 			</Flex>
-			{boardsQuery.isError ? (
+			{!activeReleaseId ? (
+				<Alert severity="info">
+					Создайте релиз на панели «Релизы», чтобы прикреплять задачи
+				</Alert>
+			) : boardsQuery.isError ? (
 				<Alert severity="error">Не удалось загрузить список досок</Alert>
 			) : boardsQuery.isSuccess && !boards.length ? (
 				<Alert severity="info">Нет доступных досок</Alert>
 			) : !boardApiRef ? (
 				<Alert severity="info">
-					Выберите доску, чтобы прикреплять задачи к релизу
+					Выберите доску, чтобы прикреплять задачи к выбранному релизу
 				</Alert>
 			) : tasksQuery.isLoading || columnsQuery.isLoading ? (
 				<Flex flexGrow={1} alignItems="center" justifyContent="center">
@@ -362,7 +395,7 @@ function SourceColumnHeader({
 				size="small"
 				disabled={busy || unattached === 0}
 				onClick={onAttachColumn}
-				title="Добавить задачи колонки в планирование"
+				title="Добавить задачи колонки в выбранный релиз"
 			>
 				+{unattached}
 			</Button>
@@ -417,9 +450,9 @@ function SourceBoardCard({
 					event.stopPropagation();
 					onToggle();
 				}}
-				title={attached ? "Убрать из планирования" : "Добавить в планирование"}
+				title={attached ? "Убрать из релиза" : "Добавить в выбранный релиз"}
 				aria-label={
-					attached ? "Убрать из планирования" : "Добавить в планирование"
+					attached ? "Убрать из релиза" : "Добавить в выбранный релиз"
 				}
 				sx={{
 					position: "absolute",

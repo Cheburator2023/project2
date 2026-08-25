@@ -20,7 +20,6 @@ import {
 	type PlanningDockPanelId,
 } from "@react-client/features/tracker/planning/planningDockLayout.util";
 import { commonRoutes } from "@react-client/routing/common/routes";
-import { kanbanBoardReleaseStatusTitle } from "@smart-anketa/api-contract";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
 
@@ -34,6 +33,9 @@ export function TrackerPlanningPage() {
 	const [panelsAnchor, setPanelsAnchor] = useState<null | HTMLElement>(null);
 
 	const [layoutChosen, setLayoutChosen] = useState(false);
+	const [selectedReleaseId, setSelectedReleaseId] = useState<string | null>(
+		null,
+	);
 
 	const needsPreset = Boolean(
 		data && !isPlanningDockLayout(data.layoutJson) && !layoutChosen,
@@ -80,15 +82,35 @@ export function TrackerPlanningPage() {
 	}
 
 	return (
-		<PlanningWorkspaceProvider value={{ planning: data }}>
+		<PlanningWorkspaceProvider
+			value={{
+				planning: data,
+				activeReleaseId:
+					selectedReleaseId &&
+					data.releases.some((release) => release.id === selectedReleaseId)
+						? selectedReleaseId
+						: (data.releases[0]?.id ?? null),
+				setActiveReleaseId: setSelectedReleaseId,
+			}}
+		>
 			<Flex flexDirection="column" height="100%" minHeight="0">
 				<Header
 					title={`${data.code} · ${data.name}`}
 					backTo={commonRoutes.trackerPlannings.rootPath}
 				>
 					<Flex gap={8} alignItems="center">
-						<span title="Статус релиза">
-							{kanbanBoardReleaseStatusTitle(data.releaseStatus)}
+						<span
+							title={data.releaseTitle || "Нет релизов"}
+							style={{
+								maxWidth: 360,
+								overflow: "hidden",
+								textOverflow: "ellipsis",
+								whiteSpace: "nowrap",
+							}}
+						>
+							{data.releaseCount
+								? `Релизы (${data.releaseCount})`
+								: "Нет релизов"}
 						</span>
 						<Button
 							size="small"

@@ -37,27 +37,29 @@ describe("groupPlanningTasksByTheme", () => {
 });
 
 describe("buildPlanningTaskGridRows", () => {
-	it("nests tasks under theme groups so empty groups still appear", () => {
-		const rows = buildPlanningTaskGridRows(
-			[
-				{ taskId: "t1", themeId: "theme-a", position: 0 },
-				{ taskId: "t2", themeId: null, position: 0 },
-			],
-			[
-				{ id: "theme-a", name: "Онбординг", color: "#111111", position: 0 },
-				{ id: "theme-b", name: "Пустая", color: "#222222", position: 1 },
-			],
-		);
+	it("nests tasks under planning-wide theme groups, mixing releases", () => {
+		const tasks: Array<{
+			taskId: string;
+			releaseId: string;
+			themeId: string | null;
+			position: number;
+		}> = [
+			{ taskId: "t1", releaseId: "r1", themeId: "theme-a", position: 0 },
+			{ taskId: "t2", releaseId: "r2", themeId: null, position: 0 },
+			{ taskId: "t3", releaseId: "r2", themeId: "theme-a", position: 1 },
+		];
+		const rows = buildPlanningTaskGridRows(tasks, [
+			{ id: "theme-a", name: "Онбординг", color: "#111111", position: 0 },
+			{ id: "theme-b", name: "Пустая", color: "#222222", position: 1 },
+		]);
 
 		expect(rows.map((row) => [row.rowKind, row.title, row.children.length])).toEqual([
-			["theme", "Онбординг", 1],
+			["theme", "Онбординг", 2],
 			["theme", "Пустая", 0],
 			["theme", "Без группы", 1],
 		]);
-		expect(rows[0]?.children[0]).toMatchObject({
-			rowKind: "task",
-			taskId: "t1",
-		});
+		expect(rows[0]?.children.map((item) => item.releaseId)).toEqual(["r1", "r2"]);
+		expect(rows[2]?.id).toBe(KANBAN_BOARD_PLANNING_UNTHEMED_ID);
 		expect(planningTaskGridRowId(rows[0]!)).toBe("theme:theme-a");
 		expect(planningTaskGridRowId(rows[0]!.children[0]!)).toBe("task:t1");
 	});

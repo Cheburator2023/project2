@@ -7,13 +7,14 @@ import {
 	kanbanBoardEffectiveEstimatePd,
 	kanbanBoardEffectiveSprintCapacityPd,
 	kanbanBoardRoleEstimatesTotal,
-	kanbanBoardTaskAssigneeRoles,
 	normalizeKanbanBoardTaskContent,
 	normalizeKanbanBoardSubtasks,
 	kanbanBoardSubtasksProgress,
 	toBoardData,
 	kanbanBoardTaskReleaseLabel,
 	kanbanBoardTaskReleasesTitle,
+	kanbanBoardReleaseImageVersionsTitle,
+	normalizeKanbanBoardReleaseImageVersions,
 	type KanbanBoardData,
 } from "@smart-anketa/api-contract";
 
@@ -60,7 +61,12 @@ function sampleBoard(): KanbanBoardData {
 describe("kanban board mapping", () => {
 	it("preserves board structure in fromBoardData → toBoardData cycle", () => {
 		const board = sampleBoard();
-		const rows = fromBoardData(board, "local-dev", "2026-06-16T12:00:00.000Z", "board-1");
+		const rows = fromBoardData(
+			board,
+			"local-dev",
+			"2026-06-16T12:00:00.000Z",
+			"board-1",
+		);
 		const restored = toBoardData(rows, boardColumns);
 		expect(boardsEquivalent(board, restored)).toBe(true);
 	});
@@ -153,12 +159,15 @@ describe("clearKanbanBoardCurrentAssigneeOnColumnChange", () => {
 		expect(
 			JSON.parse(
 				JSON.stringify(
-					(cleared["task-1"].content as { currentAssignee?: string }),
+					cleared["task-1"].content as { currentAssignee?: string },
 				),
 			).currentAssignee,
 		).toBe("");
 
-		const sameColumn = clearKanbanBoardCurrentAssigneeOnColumnChange(prev, prev);
+		const sameColumn = clearKanbanBoardCurrentAssigneeOnColumnChange(
+			prev,
+			prev,
+		);
 		expect(
 			(sameColumn["task-1"].content as { currentAssignee?: string })
 				.currentAssignee,
@@ -220,13 +229,42 @@ describe("kanban board subtasks", () => {
 });
 
 describe("kanbanBoardTaskReleaseLabel", () => {
-	it("joins release code and name for cards and registry", () => {
+	it("shows the release name and keeps code as fallback", () => {
 		expect(kanbanBoardTaskReleaseLabel({ code: "REL-1", name: "Апрель" })).toBe(
-			"REL-1 — Апрель",
+			"Апрель",
 		);
-		expect(kanbanBoardTaskReleasesTitle([
-			{ id: "1", code: "REL-1", name: "Апрель" },
-			{ id: "2", code: "REL-2", name: "Май" },
-		])).toBe("REL-1 — Апрель, REL-2 — Май");
+		expect(kanbanBoardTaskReleaseLabel({ code: "REL-1", name: "  " })).toBe(
+			"REL-1",
+		);
+		expect(
+			kanbanBoardTaskReleasesTitle([
+				{ id: "1", code: "REL-1", name: "Апрель" },
+				{ id: "2", code: "REL-2", name: "Май" },
+			]),
+		).toBe("Апрель, Май");
+	});
+});
+
+describe("normalizeKanbanBoardReleaseImageVersions", () => {
+	it("keeps only known image targets", () => {
+		expect(
+			normalizeKanbanBoardReleaseImageVersions({
+				sum: " 1.2.3 ",
+				"sum-rm": "4.0",
+				unknown: "x",
+				"smart-anketa-ui": "",
+				"smart-anketa-api": "0.9",
+			}),
+		).toEqual({
+			sum: "1.2.3",
+			"sum-rm": "4.0",
+			"smart-anketa-api": "0.9",
+		});
+		expect(
+			kanbanBoardReleaseImageVersionsTitle({
+				sum: "1.2.3",
+				"smart-anketa-ui": "0.9",
+			}),
+		).toBe("SUM 1.2.3, Smart Anketa UI 0.9");
 	});
 });

@@ -6,14 +6,15 @@ import {
 	JoinColumn,
 	ManyToOne,
 	OneToMany,
-	OneToOne,
 	PrimaryColumn,
 	UpdateDateColumn,
 } from "typeorm";
-import type { KanbanBoardReleaseStatusId } from "@smart-anketa/api-contract";
+import type {
+	KanbanBoardReleaseImageVersions,
+	KanbanBoardReleaseStatusId,
+} from "@smart-anketa/api-contract";
 import { KanbanBoardSprintEntity } from "./kanban-board-sprint.entity";
 import { KanbanBoardSupersprintEntity } from "./kanban-board-supersprint.entity";
-import { KanbanBoardReleaseThemeEntity } from "./kanban-board-release-theme.entity";
 import { KanbanBoardReleaseTaskEntity } from "./kanban-board-release-task.entity";
 import { KanbanBoardPlanningEntity } from "./kanban-board-planning.entity";
 
@@ -61,14 +62,25 @@ export class KanbanBoardReleaseEntity {
 	@Column({ name: "end_date", type: "date", nullable: true })
 	endDate!: string | null;
 
-	@OneToMany(() => KanbanBoardReleaseThemeEntity, (theme) => theme.release)
-	themes?: KanbanBoardReleaseThemeEntity[];
+	@Index()
+	@Column({ name: "planning_id", type: "varchar", length: 26, nullable: true })
+	planningId!: string | null;
+
+	@ManyToOne(() => KanbanBoardPlanningEntity, (planning) => planning.releases, {
+		onDelete: "SET NULL",
+	})
+	@JoinColumn({ name: "planning_id" })
+	planning?: KanbanBoardPlanningEntity | null;
+
+	@Column({
+		name: "image_versions",
+		type: "jsonb",
+		default: () => "'{}'::jsonb",
+	})
+	imageVersions!: KanbanBoardReleaseImageVersions;
 
 	@OneToMany(() => KanbanBoardReleaseTaskEntity, (item) => item.release)
 	tasks?: KanbanBoardReleaseTaskEntity[];
-
-	@OneToOne(() => KanbanBoardPlanningEntity, (planning) => planning.release)
-	planning?: KanbanBoardPlanningEntity | null;
 
 	@CreateDateColumn({ name: "created_at", type: "timestamptz" })
 	createdAt!: Date;

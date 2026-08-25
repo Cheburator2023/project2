@@ -13,17 +13,23 @@ import {
 	useCreateKanbanBoardReleaseTheme,
 	useDeleteKanbanBoardReleaseTheme,
 	useDetachKanbanBoardReleaseTask,
-	useReorderKanbanBoardReleaseTasks,
+	useMoveKanbanBoardReleaseTask,
+	useReorderKanbanBoardPlanningTasks,
 	useUpdateKanbanBoardReleaseTheme,
 } from "@react-client/common/api/queries/kanban-board";
-import { TrackerRegistryGrid } from "@react-client/features/tracker/components/TrackerRegistryGrid";
+import { KanbanTaskFieldChip } from "@react-client/features/kanban-board/components/KanbanTaskSelectField";
 import { trackerTaskPath } from "@react-client/features/kanban-board/kanban-task-paths";
+import { TrackerRegistryChipCell } from "@react-client/features/tracker/components/TrackerRegistryChipCell";
+import { TrackerRegistryGrid } from "@react-client/features/tracker/components/TrackerRegistryGrid";
 import { usePlanningWorkspace } from "@react-client/features/tracker/planning/PlanningWorkspaceContext";
 import {
 	buildPlanningTaskGridRows,
 	groupPlanningTasksByTheme,
 	kanbanBoardSubtasksProgress,
+	kanbanBoardTaskReleaseLabel,
 	KANBAN_BOARD_PLANNING_UNTHEMED_ID,
+	KANBAN_BOARD_RELEASE_CHIP_COLOR,
+	KANBAN_BOARD_RELEASE_THEME_COLORS,
 	nextKanbanBoardReleaseThemeColor,
 	planningTaskGridRowId,
 	type KanbanBoardReleaseTaskDto,
@@ -31,7 +37,7 @@ import {
 	type PlanningTaskGridTaskRow,
 	type PlanningTaskGridThemeRow,
 } from "@smart-anketa/api-contract";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 
 type GridRow = PlanningTaskGridRow<KanbanBoardReleaseTaskDto>;
@@ -46,11 +52,25 @@ function isThemeRow(row: GridRow): row is ThemeRow {
 	return row.rowKind === "theme";
 }
 
+const PLANNING_RELEASE_CHIP_COLORS = [
+	KANBAN_BOARD_RELEASE_CHIP_COLOR,
+	...KANBAN_BOARD_RELEASE_THEME_COLORS,
+] as const;
+
+function planningReleaseChipColor(index: number): string {
+	return (
+		PLANNING_RELEASE_CHIP_COLORS[index % PLANNING_RELEASE_CHIP_COLORS.length] ??
+		KANBAN_BOARD_RELEASE_CHIP_COLOR
+	);
+}
+
 function collectTaskRows(rows: GridRow[]): TaskRow[] {
 	return rows.filter(isTaskRow);
 }
 
-function themeIdFromOverNode(node: IRowNode<GridRow> | undefined | null) {
+function themeIdFromOverNode(
+	node: IRowNode<GridRow> | undefined | null,
+): string | null | undefined {
 	const data = node?.data;
 	if (!data) return undefined;
 	return data.themeId;
@@ -89,10 +109,42 @@ export function PlanningTasksPanel() {
 	const updateTheme = useUpdateKanbanBoardReleaseTheme();
 	const deleteTheme = useDeleteKanbanBoardReleaseTheme();
 	const detachTask = useDetachKanbanBoardReleaseTask();
-	const reorder = useReorderKanbanBoardReleaseTasks();
+	const reorder = useReorderKanbanBoardPlanningTasks();
+	const moveTask = useMoveKanbanBoardReleaseTask();
 	const [groupName, setGroupName] = useState("");
 	const [selectedRows, setSelectedRows] = useState<GridRow[]>([]);
 	const selectedTasks = collectTaskRows(selectedRows);
+
+	const releaseById = useMemo(
+		() => new Map(planning.releases.map((item) => [item.id, item])),
+		[planning.releases],
+	);
+	const releaseLabels = useMemo(
+		() => planning.releases.map((item) => kanbanBoardTaskReleaseLabel(item)),
+		[planning.releases],
+	);
+	const releaseColorById = useMemo(
+		() =>
+			new Map(
+				planning.releases.map((item, index) => [
+					item.id,
+					planningReleaseChipColor(index),
+				]),
+			),
+		[planning.releases],
+	);
+	const resolveReleaseId = useCallback(
+		(value: unknown) => {
+			const raw = String(value ?? "").trim();
+			if (!raw) return "";
+			if (releaseById.has(raw)) return raw;
+			const match = planning.releases.find(
+				(item) => kanbanBoardTaskReleaseLabel(item) === raw,
+			);
+			return match?.id ?? "";
+		},
+		[planning.releases, releaseById],
+	);
 
 	const rowData = useMemo(
 		() => buildPlanningTaskGridRows(planning.tasks, planning.themes),
@@ -113,7 +165,7 @@ export function PlanningTasksPanel() {
 			})),
 		);
 		await reorder.mutateAsync({
-			releaseId: planning.releaseId,
+			planningId: planning.id,
 			data: { items },
 		});
 	};
@@ -124,7 +176,7 @@ export function PlanningTasksPanel() {
 		try {
 			for (const item of tasks) {
 				await detachTask.mutateAsync({
-					releaseId: planning.releaseId,
+					releaseId: item.releaseId,
 					taskId: item.taskId,
 				});
 			}
@@ -170,6 +222,52 @@ export function PlanningTasksPanel() {
 				minWidth: 180,
 				valueGetter: (params) =>
 					params.data && isTaskRow(params.data) ? params.data.task.title : "",
+			},
+			{
+				colId: "releaseId",
+				headerName: "Релиз",
+				flex: 1.1,
+				minWidth: 160,
+				editable: (params) =>
+					Boolean(
+						params.data && isTaskRow(params.data) && releaseLabels.length,
+					),
+				cellEditor: "agSelectCellEditor",
+				cellEditorParams: { values: releaseLabels },
+				valueGetter: (params) =>
+					params.data && isTaskRow(params.data) ? params.data.releaseId : "",
+				valueSetter: (params) => {
+					const row = params.data;
+					if (!row || !isTaskRow(row)) return false;
+					const nextId = resolveReleaseId(params.newValue);
+					if (!nextId) return false;
+					row.releaseId = nextId;
+					return true;
+				},
+				valueFormatter: (params) => {
+					if (!params.data || !isTaskRow(params.data)) return "";
+					const release = releaseById.get(params.data.releaseId);
+					return release ? kanbanBoardTaskReleaseLabel(release) : "";
+				},
+				cellRenderer: (params: ICellRendererParams<GridRow>) => {
+					if (!params.data || !isTaskRow(params.data)) return null;
+					const release = releaseById.get(params.data.releaseId);
+					if (!release) return null;
+					const label = kanbanBoardTaskReleaseLabel(release);
+					return (
+						<TrackerRegistryChipCell>
+							<span title={label}>
+								<KanbanTaskFieldChip
+									label={label}
+									color={
+										releaseColorById.get(release.id) ??
+										KANBAN_BOARD_RELEASE_CHIP_COLOR
+									}
+								/>
+							</span>
+						</TrackerRegistryChipCell>
+					);
+				},
 			},
 			{
 				colId: "assignee",
@@ -232,13 +330,18 @@ export function PlanningTasksPanel() {
 				valueGetter: (params) => {
 					if (!params.data || !isTaskRow(params.data)) return "";
 					return (
-						params.data.task.effectiveEstimatePd ??
-						params.data.task.estimatePd
+						params.data.task.effectiveEstimatePd ?? params.data.task.estimatePd
 					);
 				},
 			},
 		],
-		[],
+		[
+			planning.releases,
+			releaseById,
+			releaseColorById,
+			releaseLabels,
+			resolveReleaseId,
+		],
 	);
 
 	return (
@@ -265,7 +368,7 @@ export function PlanningTasksPanel() {
 							groupName.trim() || `Группа ${planning.themes.length + 1}`;
 						try {
 							await createTheme.mutateAsync({
-								releaseId: planning.releaseId,
+								planningId: planning.id,
 								data: {
 									name,
 									color: nextKanbanBoardReleaseThemeColor(
@@ -278,6 +381,7 @@ export function PlanningTasksPanel() {
 							toast.error(apiErrorMessage(error));
 						}
 					}}
+					title="Добавить группу в планирование"
 				>
 					Добавить
 				</Button>
@@ -309,7 +413,28 @@ export function PlanningTasksPanel() {
 					onRowDoubleClick={(row) => {
 						if (isTaskRow(row)) navigate(trackerTaskPath(row.task.taskKey));
 					}}
-					onCellValueChanged={(row, field, value) => {
+					onCellValueChanged={(row, field, value, oldValue) => {
+						if (isTaskRow(row) && field === "releaseId") {
+							const nextReleaseId = row.releaseId || resolveReleaseId(value);
+							const fromReleaseId = resolveReleaseId(oldValue);
+							if (
+								!nextReleaseId ||
+								!fromReleaseId ||
+								nextReleaseId === fromReleaseId
+							)
+								return;
+							void moveTask
+								.mutateAsync({
+									releaseId: fromReleaseId,
+									taskId: row.taskId,
+									data: {
+										targetReleaseId: nextReleaseId,
+										themeId: row.themeId,
+									},
+								})
+								.catch((error) => toast.error(apiErrorMessage(error)));
+							return;
+						}
 						if (!isThemeRow(row) || !row.themeId || field !== "groupTitle")
 							return;
 						const next = String(value ?? "").trim();
@@ -319,7 +444,7 @@ export function PlanningTasksPanel() {
 						if (!next || next === current) return;
 						void updateTheme
 							.mutateAsync({
-								releaseId: planning.releaseId,
+								planningId: planning.id,
 								themeId: row.themeId,
 								data: { name: next },
 							})
@@ -343,7 +468,7 @@ export function PlanningTasksPanel() {
 								if (!isThemeRow(row) || !row.themeId) return;
 								void deleteTheme
 									.mutateAsync({
-										releaseId: planning.releaseId,
+										planningId: planning.id,
 										themeId: row.themeId,
 									})
 									.catch((error) => toast.error(apiErrorMessage(error)));

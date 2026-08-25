@@ -2,12 +2,12 @@ import {
 	Column,
 	CreateDateColumn,
 	Entity,
-	JoinColumn,
-	OneToOne,
+	OneToMany,
 	PrimaryColumn,
 	UpdateDateColumn,
 } from "typeorm";
 import { KanbanBoardReleaseEntity } from "./kanban-board-release.entity";
+import { KanbanBoardReleaseThemeEntity } from "./kanban-board-release-theme.entity";
 
 @Entity("kanban_board_plannings")
 export class KanbanBoardPlanningEntity {
@@ -23,14 +23,11 @@ export class KanbanBoardPlanningEntity {
 	@Column({ type: "text", nullable: true })
 	description!: string | null;
 
-	@Column({ name: "release_id", type: "varchar", length: 26, unique: true })
-	releaseId!: string;
+	@OneToMany(() => KanbanBoardReleaseEntity, (release) => release.planning)
+	releases?: KanbanBoardReleaseEntity[];
 
-	@OneToOne(() => KanbanBoardReleaseEntity, (release) => release.planning, {
-		onDelete: "CASCADE",
-	})
-	@JoinColumn({ name: "release_id" })
-	release?: KanbanBoardReleaseEntity;
+	@OneToMany(() => KanbanBoardReleaseThemeEntity, (theme) => theme.planning)
+	themes?: KanbanBoardReleaseThemeEntity[];
 
 	@Column({ name: "layout_json", type: "jsonb", nullable: true })
 	layoutJson!: unknown | null;

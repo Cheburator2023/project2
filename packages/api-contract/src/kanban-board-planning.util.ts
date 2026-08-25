@@ -35,6 +35,7 @@ export function groupPlanningTasksByTheme<
 >(
 	tasks: T[],
 	themes: Pick<KanbanBoardReleaseThemeDto, "id" | "name" | "color" | "position">[],
+	unthemedId = KANBAN_BOARD_PLANNING_UNTHEMED_ID,
 ): Array<KanbanBoardPlanningBoardColumn<T>> {
 	const sortedThemes = [...themes].sort((a, b) => a.position - b.position);
 	const byTheme = new Map<string, T[]>();
@@ -59,7 +60,7 @@ export function groupPlanningTasksByTheme<
 		}),
 	);
 	columns.push({
-		id: KANBAN_BOARD_PLANNING_UNTHEMED_ID,
+		id: unthemedId,
 		title: "Без группы",
 		color: "#64748b",
 		items: unthemed,
@@ -95,7 +96,8 @@ export function buildPlanningTaskGridRows<
 	return groupPlanningTasksByTheme(tasks, themes).map((column) => ({
 		rowKind: "theme",
 		id: column.id,
-		themeId: column.id === KANBAN_BOARD_PLANNING_UNTHEMED_ID ? null : column.id,
+		themeId:
+			column.id === KANBAN_BOARD_PLANNING_UNTHEMED_ID ? null : column.id,
 		title: column.title,
 		color: column.color,
 		children: column.items.map((item) => ({ ...item, rowKind: "task" as const })),
@@ -105,7 +107,8 @@ export function buildPlanningTaskGridRows<
 export function planningTaskGridRowId<
 	T extends { themeId: string | null; position: number; taskId: string },
 >(row: PlanningTaskGridRow<T>): string {
-	return row.rowKind === "theme" ? `theme:${row.id}` : `task:${row.taskId}`;
+	if (row.rowKind === "theme") return `theme:${row.id}`;
+	return `task:${row.taskId}`;
 }
 
 export function groupPlanningTasksByStatus<

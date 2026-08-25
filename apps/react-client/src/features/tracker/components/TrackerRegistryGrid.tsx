@@ -62,7 +62,12 @@ type Props<TRow extends object> = {
 	quickFilter?: string;
 	onSelectionChange?: (rows: TRow[]) => void;
 	onRowDoubleClick?: (row: TRow) => void;
-	onCellValueChanged?: (row: TRow, field: string, value: unknown) => void;
+	onCellValueChanged?: (
+		row: TRow,
+		field: string,
+		value: unknown,
+		oldValue?: unknown,
+	) => void;
 	contextActions?: TrackerRegistryContextAction<TRow>[];
 	bulkContextActions?: TrackerRegistryBulkContextAction<TRow>[];
 	treeData?: boolean;
@@ -203,7 +208,12 @@ export function TrackerRegistryGrid<TRow extends object>({
 					if (!event.data) return;
 					const field = event.colDef.field ?? event.colDef.colId;
 					if (!field) return;
-					onCellValueChanged?.(event.data, field, event.newValue);
+					onCellValueChanged?.(
+						event.data,
+						field,
+						event.newValue,
+						event.oldValue,
+					);
 				}}
 				singleClickEdit
 				suppressCsvExport

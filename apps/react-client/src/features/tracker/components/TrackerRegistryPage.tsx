@@ -42,6 +42,9 @@ type Props<TRow extends object> = {
 	deleteDialogTitle?: string;
 	deleteDialogText?: (count: number) => ReactNode;
 	extraActions?: ReactNode;
+	/** Только тулбар без шапки приложения (меню/хлебные крошки). */
+	embedded?: boolean;
+	toolbarLabel?: string;
 };
 
 export function TrackerRegistryPage<TRow extends object>({
@@ -67,6 +70,8 @@ export function TrackerRegistryPage<TRow extends object>({
 	deleteDialogTitle = "Удаление",
 	deleteDialogText = (count) => `Удалить выбранные записи (${count})?`,
 	extraActions,
+	embedded = false,
+	toolbarLabel,
 }: Props<TRow>) {
 	const [quickFilter, setQuickFilter] = useState("");
 	const [selected, setSelected] = useState<TRow[]>([]);
@@ -167,46 +172,63 @@ export function TrackerRegistryPage<TRow extends object>({
 		}
 	};
 
+	const toolbar = (
+		<Flex
+			gap={6}
+			wrap="wrap"
+			alignItems="center"
+			padding={embedded ? "8px" : undefined}
+		>
+			{toolbarLabel ? (
+				<span title={toolbarLabel} style={{ fontWeight: 600, flexShrink: 0 }}>
+					{toolbarLabel}
+				</span>
+			) : null}
+			<TextField
+				size="small"
+				placeholder={searchPlaceholder}
+				value={quickFilter}
+				onChange={(event) => setQuickFilter(event.target.value)}
+				sx={{
+					width: { xs: "100%", sm: 320 },
+					maxWidth: 420,
+					flexShrink: 0,
+				}}
+			/>
+			<Spacer />
+			{selectionActions?.(selected)}
+			{extraActions}
+			<V2AdminButton
+				onClick={() => {
+					if (onCreateClick) {
+						onCreateClick();
+						return;
+					}
+					openCreateForm();
+				}}
+			>
+				{createLabel}
+			</V2AdminButton>
+			<V2AdminButton
+				color="error"
+				variant="outlined"
+				disabled={!deletableSelected.length || isDeleting}
+				onClick={() => setPendingDelete(selected)}
+			>
+				Удалить выбранные
+				{deletableSelected.length ? ` (${deletableSelected.length})` : ""}
+			</V2AdminButton>
+		</Flex>
+	);
+
 	return (
-		<Flex flexDirection="column" flexGrow={1} minHeight="0">
-			<Header>
-				<Flex gap={6} wrap="wrap" alignItems="center">
-					<TextField
-						size="small"
-						placeholder={searchPlaceholder}
-						value={quickFilter}
-						onChange={(event) => setQuickFilter(event.target.value)}
-						sx={{
-							width: { xs: "100%", sm: 320 },
-							maxWidth: 420,
-							flexShrink: 0,
-						}}
-					/>
-					<Spacer />
-					{selectionActions?.(selected)}
-					{extraActions}
-					<V2AdminButton
-						onClick={() => {
-							if (onCreateClick) {
-								onCreateClick();
-								return;
-							}
-							openCreateForm();
-						}}
-					>
-						{createLabel}
-					</V2AdminButton>
-					<V2AdminButton
-						color="error"
-						variant="outlined"
-						disabled={!deletableSelected.length || isDeleting}
-						onClick={() => setPendingDelete(selected)}
-					>
-						Удалить выбранные
-						{deletableSelected.length ? ` (${deletableSelected.length})` : ""}
-					</V2AdminButton>
-				</Flex>
-			</Header>
+		<Flex
+			flexDirection="column"
+			flexGrow={1}
+			minHeight="0"
+			height={embedded ? "100%" : undefined}
+		>
+			{embedded ? toolbar : <Header>{toolbar}</Header>}
 
 			<TrackerRegistryGrid
 				gridStateKey={gridStateKey}
