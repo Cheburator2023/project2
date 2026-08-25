@@ -1,11 +1,10 @@
 import Button from "@mui/material/Button";
-import MenuItem from "@mui/material/MenuItem";
-import TextField from "@mui/material/TextField";
-import Typography from "@mui/material/Typography";
-import type { ColDef, RowClassParams } from "ag-grid-community";
-import { Card } from "@react-client/common/muiCustom/Card";
+import type {
+	ColDef,
+	ICellRendererParams,
+	RowClassParams,
+} from "ag-grid-community";
 import { Flex } from "@react-client/common/primitives/Flex";
-import { Spacer } from "@react-client/common/primitives/Spacer";
 import { toast } from "@react-client/common/toasts";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import {
@@ -17,26 +16,58 @@ import {
 	useRemoveKanbanBoardPlanningRelease,
 	useUpdateKanbanBoardRelease,
 } from "@react-client/common/api/queries/kanban-board";
+import { trackerTaskPath } from "@react-client/features/kanban-board/kanban-task-paths";
 import { TrackerRegistryGrid } from "@react-client/features/tracker/components/TrackerRegistryGrid";
 import { trackerTaskRowTintStyle } from "@react-client/features/tracker/components/TrackerTaskFieldChips";
-import { trackerTaskPath } from "@react-client/features/kanban-board/kanban-task-paths";
-import { generateTrackerAutoCode } from "@react-client/features/tracker/trackerAutoCode";
 import { isPlanningTaskPersistColId } from "@react-client/features/tracker/planning/planningTaskCellEdit";
 import { createPlanningTaskFieldColDefs } from "@react-client/features/tracker/planning/planningTaskFieldColumns";
 import { usePlanningWorkspace } from "@react-client/features/tracker/planning/PlanningWorkspaceContext";
 import { usePlanningTaskGridEdits } from "@react-client/features/tracker/planning/usePlanningTaskGridEdits";
 import {
-	KANBAN_BOARD_RELEASE_IMAGE_TARGETS,
-	KANBAN_BOARD_RELEASE_STATUSES,
-	kanbanBoardTaskReleaseLabel,
+	PlanningReleaseAttachDialog,
+	PlanningReleaseCreateDialog,
+	PlanningReleaseSettingsDialog,
+} from "@react-client/features/tracker/planning/panels/PlanningReleaseModals";
+import {
+	buildPlanningReleaseTaskGridRows,
 	kanbanBoardTaskHasBlocker,
-	normalizeKanbanBoardReleaseImageVersions,
-	type KanbanBoardReleaseImageVersions,
-	type KanbanBoardReleaseStatusId,
+	kanbanBoardTaskReleaseLabel,
+	planningReleaseGridRowId,
 	type KanbanBoardReleaseTaskDto,
+	type PlanningReleaseGridRow,
+	type PlanningReleaseGridReleaseRow,
+	type PlanningReleaseGridTaskRow,
 } from "@smart-anketa/api-contract";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
+
+type GridRow = PlanningReleaseGridRow<KanbanBoardReleaseTaskDto>;
+type ReleaseRow = PlanningReleaseGridReleaseRow<KanbanBoardReleaseTaskDto>;
+type TaskRow = PlanningReleaseGridTaskRow<KanbanBoardReleaseTaskDto>;
+
+function isTaskRow(row: GridRow): row is TaskRow {
+	return row.rowKind === "task";
+}
+
+function isReleaseRow(row: GridRow): row is ReleaseRow {
+	return row.rowKind === "release";
+}
+
+function releaseIdFromRow(row: GridRow | undefined): string | null {
+	if (!row) return null;
+	return row.releaseId || null;
+}
+
+function GroupTitleRenderer(params: ICellRendererParams<GridRow>) {
+	const row = params.data;
+	if (row && isReleaseRow(row)) {
+		const count = row.children.length;
+		const label = `${row.title}${count ? ` (${count})` : ""}`;
+		return <span title={label}>{label}</span>;
+	}
+	if (row && isTaskRow(row)) return row.task.taskKey;
+	return typeof params.value === "string" ? params.value : "";
+}
 
 export function PlanningReleasePanel() {
 	const navigate = useNavigate();
@@ -51,132 +82,64 @@ export function PlanningReleasePanel() {
 	const removeRelease = useRemoveKanbanBoardPlanningRelease();
 	const detachTask = useDetachKanbanBoardReleaseTask();
 	const { lookups, persistTask, conflictDialog } = usePlanningTaskGridEdits();
+	const [createOpen, setCreateOpen] = useState(false);
+	const [attachOpen, setAttachOpen] = useState(false);
+	const [settingsOpen, setSettingsOpen] = useState(false);
 
-	const [newCode, setNewCode] = useState(() => generateTrackerAutoCode("rel"));
-	const [newName, setNewName] = useState("");
-	const [attachReleaseId, setAttachReleaseId] = useState("");
-
-	const [name, setName] = useState(release?.name ?? "");
-	const [status, setStatus] = useState<KanbanBoardReleaseStatusId>(
-		release?.status ?? "draft",
+	const attachOptions = useMemo(
+		() =>
+			availableReleases.filter(
+				(item) =>
+					!planning.releases.some((attached) => attached.id === item.id),
+			),
+		[availableReleases, planning.releases],
 	);
-	const [startDate, setStartDate] = useState(release?.startDate ?? "");
-	const [endDate, setEndDate] = useState(release?.endDate ?? "");
-	const [supersprintId, setSupersprintId] = useState(
-		release?.supersprintId ?? "",
+
+	const rowData = useMemo(
+		() => buildPlanningReleaseTaskGridRows(planning.tasks, planning.releases),
+		[planning.releases, planning.tasks],
 	);
-	const [sprintId, setSprintId] = useState(release?.sprintId ?? "");
-	const [imageVersions, setImageVersions] =
-		useState<KanbanBoardReleaseImageVersions>(release?.imageVersions ?? {});
 
-	useEffect(() => {
-		setName(release?.name ?? "");
-		setStatus(release?.status ?? "draft");
-		setStartDate(release?.startDate ?? "");
-		setEndDate(release?.endDate ?? "");
-		setSupersprintId(release?.supersprintId ?? "");
-		setSprintId(release?.sprintId ?? "");
-		setImageVersions(release?.imageVersions ?? {});
-	}, [release]);
-
-	const saveRelease = async () => {
-		if (!release) return;
-		try {
-			await updateRelease.mutateAsync({
-				id: release.id,
-				data: {
-					name,
-					status,
-					startDate: startDate || null,
-					endDate: endDate || null,
-					supersprintId: supersprintId || null,
-					sprintId: sprintId || null,
-					imageVersions:
-						normalizeKanbanBoardReleaseImageVersions(imageVersions),
-				},
-			});
-			toast.success("Релиз сохранён");
-		} catch (error) {
-			toast.error(apiErrorMessage(error));
-		}
-	};
-
-	const createRelease = async () => {
-		const code = newCode.trim();
-		const nextName = newName.trim();
-		if (!code || !nextName) {
-			toast.error("Укажите код и название релиза");
-			return;
-		}
-		try {
-			const detail = await addRelease.mutateAsync({
-				planningId: planning.id,
-				data: { code, name: nextName },
-			});
-			const previous = new Set(planning.releases.map((item) => item.id));
-			const created = detail.releases.find((item) => !previous.has(item.id));
-			if (created) setActiveReleaseId(created.id);
-			setNewCode(generateTrackerAutoCode("rel"));
-			setNewName("");
-			toast.success("Релиз создан");
-		} catch (error) {
-			toast.error(apiErrorMessage(error));
-		}
-	};
-
-	const attachExisting = async () => {
-		if (!attachReleaseId) return;
-		try {
-			await addRelease.mutateAsync({
-				planningId: planning.id,
-				data: { releaseId: attachReleaseId },
-			});
-			setActiveReleaseId(attachReleaseId);
-			setAttachReleaseId("");
-			toast.success("Релиз прикреплён");
-		} catch (error) {
-			toast.error(apiErrorMessage(error));
-		}
-	};
-
-	const unlinkRelease = async () => {
-		if (!release) return;
-		try {
-			await removeRelease.mutateAsync({
-				planningId: planning.id,
-				releaseId: release.id,
-			});
-			toast.success("Релиз откреплён от планирования");
-		} catch (error) {
-			toast.error(apiErrorMessage(error));
-		}
-	};
-
-	const imageFields = useMemo(() => KANBAN_BOARD_RELEASE_IMAGE_TARGETS, []);
-	const releaseTasks = useMemo(
-		() => planning.tasks.filter((item) => item.releaseId === activeReleaseId),
-		[activeReleaseId, planning.tasks],
-	);
 	const themeById = useMemo(
 		() => new Map(planning.themes.map((theme) => [theme.id, theme])),
 		[planning.themes],
 	);
-	const releaseTaskColumns = useMemo<
-		ColDef<KanbanBoardReleaseTaskDto>[]
-	>(() => {
-		const themeCol: ColDef<KanbanBoardReleaseTaskDto> = {
+
+	const autoGroupColumnDef = useMemo<ColDef<GridRow>>(
+		() => ({
+			colId: "groupTitle",
+			headerName: "Релиз",
+			minWidth: 220,
+			flex: 1.2,
+			sortable: false,
+			editable: false,
+			valueGetter: (params) => {
+				const row = params.data;
+				if (!row) return "";
+				return isReleaseRow(row) ? row.title : row.task.taskKey;
+			},
+			cellRendererParams: {
+				innerRenderer: GroupTitleRenderer,
+			},
+		}),
+		[],
+	);
+
+	const columnDefs = useMemo<ColDef<GridRow>[]>(() => {
+		const themeCol: ColDef<GridRow> = {
 			colId: "theme",
 			headerName: "Группа",
 			flex: 1,
 			minWidth: 120,
 			valueGetter: (params) => {
-				const themeId = params.data?.themeId;
+				if (!params.data || !isTaskRow(params.data)) return "";
+				const themeId = params.data.themeId;
 				if (!themeId) return "Без группы";
 				return themeById.get(themeId)?.name ?? "Без группы";
 			},
 		};
-		const taskCols = createPlanningTaskFieldColDefs<KanbanBoardReleaseTaskDto>({
-			getTask: (row) => row?.task,
+		const taskCols = createPlanningTaskFieldColDefs<GridRow>({
+			getTask: (row) => (row && isTaskRow(row) ? row.task : undefined),
 			lookups,
 		});
 		const titleIndex = taskCols.findIndex((col) => col.colId === "title");
@@ -188,243 +151,223 @@ export function PlanningReleasePanel() {
 		];
 	}, [lookups, themeById]);
 
+	const openSettings = (releaseId: string) => {
+		if (!releaseId) return;
+		setActiveReleaseId(releaseId);
+		setSettingsOpen(true);
+	};
+
 	return (
 		<Flex
 			flexDirection="column"
 			height="100%"
 			minHeight="0"
-			padding="12px"
-			style={{ overflow: "auto" }}
+			padding="8px"
+			gap={8}
 		>
-			<Typography variant="subtitle2">Релизы планирования</Typography>
-			<Spacer space={8} />
-			<Flex gap={8} wrap="wrap">
-				{planning.releases.map((item) => (
-					<Button
-						key={item.id}
-						size="small"
-						variant={item.id === activeReleaseId ? "contained" : "outlined"}
-						onClick={() => setActiveReleaseId(item.id)}
-						title={kanbanBoardTaskReleaseLabel(item)}
-					>
-						{kanbanBoardTaskReleaseLabel(item)}
-					</Button>
-				))}
+			<Flex gap={8} alignItems="center">
+				<Button
+					variant="outlined"
+					onClick={() => setCreateOpen(true)}
+					title="Создать новый релиз и прикрепить к планированию"
+				>
+					Создать
+				</Button>
+				<Button
+					variant="outlined"
+					onClick={() => setAttachOpen(true)}
+					title="Прикрепить существующий релиз к планированию"
+				>
+					Прикрепить
+				</Button>
+				<Button
+					variant="outlined"
+					disabled={!release}
+					onClick={() => {
+						if (release) setSettingsOpen(true);
+					}}
+					title={
+						release
+							? `Настройки: ${kanbanBoardTaskReleaseLabel(release)}`
+							: "Сначала создайте или прикрепите релиз"
+					}
+				>
+					Настройки
+				</Button>
 			</Flex>
-			<Spacer space={12} />
-			<TextField
-				size="small"
-				label="Код нового релиза"
-				value={newCode}
-				onChange={(event) => setNewCode(event.target.value)}
-			/>
-			<Spacer space={8} />
-			<TextField
-				size="small"
-				label="Название нового релиза"
-				value={newName}
-				onChange={(event) => setNewName(event.target.value)}
-			/>
-			<Spacer space={8} />
-			<Button
-				variant="outlined"
-				disabled={addRelease.isPending}
-				onClick={() => void createRelease()}
-			>
-				Создать релиз
-			</Button>
-			<Spacer space={12} />
-			<TextField
-				size="small"
-				select
-				label="Существующий релиз"
-				value={attachReleaseId}
-				onChange={(event) => setAttachReleaseId(event.target.value)}
-			>
-				<MenuItem value="">—</MenuItem>
-				{availableReleases.map((item) => (
-					<MenuItem key={item.id} value={item.id}>
-						{kanbanBoardTaskReleaseLabel(item)}
-					</MenuItem>
-				))}
-			</TextField>
-			<Spacer space={8} />
-			<Button
-				variant="outlined"
-				disabled={!attachReleaseId || addRelease.isPending}
-				onClick={() => void attachExisting()}
-			>
-				Прикрепить к планированию
-			</Button>
-			{!release ? (
-				<>
-					<Spacer space={12} />
-					<Typography variant="body2" color="text.secondary">
-						Создайте или прикрепите релиз, чтобы распределять задачи и задавать
-						версии образов.
-					</Typography>
-				</>
-			) : (
-				<>
-					<Spacer space={16} />
-					<Typography variant="subtitle2">
-						{kanbanBoardTaskReleaseLabel(release)}
-					</Typography>
-					<Spacer space={8} />
-					<TextField
-						size="small"
-						label="Название"
-						value={name}
-						onChange={(event) => setName(event.target.value)}
-					/>
-					<Spacer space={8} />
-					<TextField
-						size="small"
-						select
-						label="Статус"
-						value={status}
-						onChange={(event) =>
-							setStatus(event.target.value as KanbanBoardReleaseStatusId)
+			<Flex flexGrow={1} minHeight="0">
+				<TrackerRegistryGrid<GridRow>
+					gridStateKey="tracker.planning.release-tasks"
+					rowData={rowData}
+					columnDefs={columnDefs}
+					autoGroupColumnDef={autoGroupColumnDef}
+					treeData
+					treeDataChildrenField="children"
+					pagination={false}
+					showRowTintToggle
+					getRowId={(params) =>
+						params.data
+							? planningReleaseGridRowId(params.data)
+							: "planning-release-row"
+					}
+					isRowSelectable={(node) => {
+						const row = node.data;
+						if (!row) return false;
+						if (isReleaseRow(row)) return Boolean(row.releaseId);
+						return isTaskRow(row);
+					}}
+					getRowStyle={(params: RowClassParams<GridRow>) => {
+						const row = params.data;
+						if (!row || !isTaskRow(row)) return undefined;
+						return trackerTaskRowTintStyle({
+							statusId: row.task.parentId,
+							hasBlocker:
+								kanbanBoardTaskHasBlocker(row.task.content) ||
+								row.task.hasBlocker,
+						});
+					}}
+					onSelectionChange={(rows) => {
+						const nextId = releaseIdFromRow(rows[0]);
+						if (nextId) setActiveReleaseId(nextId);
+					}}
+					onRowDoubleClick={(row) => {
+						if (isTaskRow(row)) {
+							navigate(trackerTaskPath(row.task.taskKey));
+							return;
 						}
-					>
-						{KANBAN_BOARD_RELEASE_STATUSES.map((item) => (
-							<MenuItem key={item.id} value={item.id}>
-								{item.title}
-							</MenuItem>
-						))}
-					</TextField>
-					<Spacer space={8} />
-					<Flex gap={8}>
-						<TextField
-							size="small"
-							type="date"
-							label="Начало"
-							InputLabelProps={{ shrink: true }}
-							value={startDate}
-							onChange={(event) => setStartDate(event.target.value)}
-						/>
-						<TextField
-							size="small"
-							type="date"
-							label="Окончание"
-							InputLabelProps={{ shrink: true }}
-							value={endDate}
-							onChange={(event) => setEndDate(event.target.value)}
-						/>
-					</Flex>
-					<Spacer space={8} />
-					<TextField
-						size="small"
-						select
-						label="Суперспринт"
-						value={supersprintId}
-						onChange={(event) => setSupersprintId(event.target.value)}
-					>
-						<MenuItem value="">—</MenuItem>
-						{supersprints.map((item) => (
-							<MenuItem key={item.id} value={item.id}>
-								{item.code} — {item.name}
-							</MenuItem>
-						))}
-					</TextField>
-					<Spacer space={8} />
-					<TextField
-						size="small"
-						select
-						label="Спринт"
-						value={sprintId}
-						onChange={(event) => setSprintId(event.target.value)}
-					>
-						<MenuItem value="">—</MenuItem>
-						{sprints.map((item) => (
-							<MenuItem key={item.id} value={item.id}>
-								{item.code} — {item.name}
-							</MenuItem>
-						))}
-					</TextField>
-					<Spacer space={12} />
-					<Typography variant="subtitle2">Версии образов</Typography>
-					<Spacer space={8} />
-					{imageFields.map((target) => (
-						<Flex key={target.id} flexDirection="column">
-							<TextField
-								size="small"
-								label={target.label}
-								value={imageVersions[target.id] ?? ""}
-								onChange={(event) =>
-									setImageVersions((prev) => ({
-										...prev,
-										[target.id]: event.target.value,
-									}))
-								}
-							/>
-							<Spacer space={8} />
-						</Flex>
-					))}
-					<Button variant="contained" onClick={() => void saveRelease()}>
-						Сохранить релиз
-					</Button>
-					<Spacer space={8} />
-					<Button
-						color="warning"
-						variant="outlined"
-						disabled={removeRelease.isPending}
-						onClick={() => void unlinkRelease()}
-						title="Релиз останется в реестре, но выйдет из этого планирования"
-					>
-						Открепить от планирования
-					</Button>
-					<Spacer space={16} />
-					<Typography variant="subtitle2">
-						Задачи релиза ({releaseTasks.length})
-					</Typography>
-					<Spacer space={8} />
-					<Card padding="0" height="420px" overflow="hidden">
-						<TrackerRegistryGrid<KanbanBoardReleaseTaskDto>
-							gridStateKey="tracker.planning.release-tasks"
-							rowData={releaseTasks}
-							columnDefs={releaseTaskColumns}
-							pagination={false}
-							showRowTintToggle
-							getRowId={(params) =>
-								params.data ? `task:${params.data.taskId}` : "release-task"
-							}
-							getRowStyle={(
-								params: RowClassParams<KanbanBoardReleaseTaskDto>,
-							) => {
-								const task = params.data?.task;
-								if (!task) return undefined;
-								return trackerTaskRowTintStyle({
-									statusId: task.parentId,
-									hasBlocker:
-										kanbanBoardTaskHasBlocker(task.content) || task.hasBlocker,
-								});
-							}}
-							onRowDoubleClick={(row) =>
-								navigate(trackerTaskPath(row.task.taskKey))
-							}
-							onCellValueChanged={(row, field) => {
-								if (field && isPlanningTaskPersistColId(field)) {
-									void persistTask(row.task);
-								}
-							}}
-							contextActions={[
-								{
-									label: "Убрать из релиза",
-									onClick: (row) => {
-										void detachTask
-											.mutateAsync({
-												releaseId: row.releaseId,
-												taskId: row.taskId,
-											})
-											.catch((error) => toast.error(apiErrorMessage(error)));
-									},
-								},
-							]}
-						/>
-					</Card>
-				</>
-			)}
+						if (isReleaseRow(row) && row.releaseId) {
+							openSettings(row.releaseId);
+						}
+					}}
+					onCellValueChanged={(row, field) => {
+						if (isTaskRow(row) && field && isPlanningTaskPersistColId(field)) {
+							void persistTask(row.task);
+						}
+					}}
+					contextActions={[
+						{
+							label: "Настройки релиза",
+							disabled: (row) => !releaseIdFromRow(row),
+							onClick: (row) => {
+								const releaseId = releaseIdFromRow(row);
+								if (releaseId) openSettings(releaseId);
+							},
+						},
+						{
+							label: "Открепить релиз",
+							disabled: (row) =>
+								!isReleaseRow(row) || !row.releaseId || removeRelease.isPending,
+							onClick: (row) => {
+								if (!isReleaseRow(row) || !row.releaseId) return;
+								void removeRelease
+									.mutateAsync({
+										planningId: planning.id,
+										releaseId: row.releaseId,
+									})
+									.then(() => toast.success("Релиз откреплён от планирования"))
+									.catch((error) => toast.error(apiErrorMessage(error)));
+							},
+						},
+						{
+							label: "Убрать из релиза",
+							disabled: (row) => !isTaskRow(row) || detachTask.isPending,
+							onClick: (row) => {
+								if (!isTaskRow(row)) return;
+								void detachTask
+									.mutateAsync({
+										releaseId: row.releaseId,
+										taskId: row.taskId,
+									})
+									.catch((error) => toast.error(apiErrorMessage(error)));
+							},
+						},
+					]}
+				/>
+			</Flex>
+			<PlanningReleaseCreateDialog
+				open={createOpen}
+				isSubmitting={addRelease.isPending}
+				onClose={() => setCreateOpen(false)}
+				onCreate={async ({ code, name }) => {
+					try {
+						const detail = await addRelease.mutateAsync({
+							planningId: planning.id,
+							data: { code, name },
+						});
+						const previous = new Set(planning.releases.map((item) => item.id));
+						const created = detail.releases.find(
+							(item) => !previous.has(item.id),
+						);
+						if (created) setActiveReleaseId(created.id);
+						setCreateOpen(false);
+						toast.success("Релиз создан");
+					} catch (error) {
+						toast.error(apiErrorMessage(error));
+					}
+				}}
+			/>
+			<PlanningReleaseAttachDialog
+				open={attachOpen}
+				options={attachOptions}
+				isSubmitting={addRelease.isPending}
+				onClose={() => setAttachOpen(false)}
+				onAttach={async (releaseId) => {
+					try {
+						await addRelease.mutateAsync({
+							planningId: planning.id,
+							data: { releaseId },
+						});
+						setActiveReleaseId(releaseId);
+						setAttachOpen(false);
+						toast.success("Релиз прикреплён");
+					} catch (error) {
+						toast.error(apiErrorMessage(error));
+					}
+				}}
+			/>
+			<PlanningReleaseSettingsDialog
+				open={settingsOpen}
+				release={release ?? null}
+				sprints={sprints}
+				supersprints={supersprints}
+				isSaving={updateRelease.isPending}
+				isUnlinking={removeRelease.isPending}
+				onClose={() => setSettingsOpen(false)}
+				onSave={async (input) => {
+					if (!release) return;
+					try {
+						await updateRelease.mutateAsync({
+							id: release.id,
+							data: {
+								name: input.name,
+								status: input.status,
+								startDate: input.startDate || null,
+								endDate: input.endDate || null,
+								supersprintId: input.supersprintId || null,
+								sprintId: input.sprintId || null,
+								imageVersions: input.imageVersions,
+							},
+						});
+						setSettingsOpen(false);
+						toast.success("Релиз сохранён");
+					} catch (error) {
+						toast.error(apiErrorMessage(error));
+					}
+				}}
+				onUnlink={async () => {
+					if (!release) return;
+					try {
+						await removeRelease.mutateAsync({
+							planningId: planning.id,
+							releaseId: release.id,
+						});
+						setSettingsOpen(false);
+						toast.success("Релиз откреплён от планирования");
+					} catch (error) {
+						toast.error(apiErrorMessage(error));
+					}
+				}}
+			/>
 			{conflictDialog}
 		</Flex>
 	);

@@ -3,9 +3,11 @@ import {
 	findKanbanBoardColumnByStatusTitle,
 	groupPlanningTasksByStatus,
 	buildPlanningTaskGridRows,
+	buildPlanningReleaseTaskGridRows,
 	groupPlanningTasksByTheme,
 	KANBAN_BOARD_PLANNING_UNTHEMED_ID,
 	nextKanbanBoardReleaseThemeColor,
+	planningReleaseGridRowId,
 	planningTaskGridRowId,
 } from "./kanban-board-planning.util";
 
@@ -53,12 +55,17 @@ describe("buildPlanningTaskGridRows", () => {
 			{ id: "theme-b", name: "Пустая", color: "#222222", position: 1 },
 		]);
 
-		expect(rows.map((row) => [row.rowKind, row.title, row.children.length])).toEqual([
+		expect(
+			rows.map((row) => [row.rowKind, row.title, row.children.length]),
+		).toEqual([
 			["theme", "Онбординг", 2],
 			["theme", "Пустая", 0],
 			["theme", "Без группы", 1],
 		]);
-		expect(rows[0]?.children.map((item) => item.releaseId)).toEqual(["r1", "r2"]);
+		expect(rows[0]?.children.map((item) => item.releaseId)).toEqual([
+			"r1",
+			"r2",
+		]);
 		expect(rows[2]?.id).toBe(KANBAN_BOARD_PLANNING_UNTHEMED_ID);
 		expect(planningTaskGridRowId(rows[0]!)).toBe("theme:theme-a");
 		expect(planningTaskGridRowId(rows[0]!.children[0]!)).toBe("task:t1");
@@ -96,6 +103,30 @@ describe("findKanbanBoardColumnByStatusTitle", () => {
 				"Нет такой",
 			),
 		).toBeUndefined();
+	});
+});
+
+describe("buildPlanningReleaseTaskGridRows", () => {
+	it("nests every planning release even when it has no tasks", () => {
+		const rows = buildPlanningReleaseTaskGridRows(
+			[
+				{ taskId: "t1", releaseId: "r2", position: 1 },
+				{ taskId: "t2", releaseId: "r1", position: 0 },
+				{ taskId: "t3", releaseId: "missing", position: 0 },
+			],
+			[
+				{ id: "r1", code: "REL-1", name: "Апрель" },
+				{ id: "r2", code: "REL-2", name: "Май" },
+			],
+		);
+		expect(rows.map((row) => [row.title, row.children.length])).toEqual([
+			["Апрель", 1],
+			["Май", 1],
+			["Без релиза", 1],
+		]);
+		expect(planningReleaseGridRowId(rows[0]!)).toBe("release:r1");
+		expect(planningReleaseGridRowId(rows[0]!.children[0]!)).toBe("task:t2");
+		expect(rows[2]?.id).toBe("__none__");
 	});
 });
 

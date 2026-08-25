@@ -1,6 +1,7 @@
 import {
 	KANBAN_BOARD_RELEASE_THEME_COLORS,
 	KANBAN_BOARD_STATUSES,
+	kanbanBoardTaskReleaseLabel,
 	type KanbanBoardReleaseThemeDto,
 } from "./kanban-board.types";
 
@@ -13,7 +14,9 @@ export type KanbanBoardPlanningBoardColumn<T> = {
 	items: T[];
 };
 
-export function nextKanbanBoardReleaseThemeColor(existingCount: number): string {
+export function nextKanbanBoardReleaseThemeColor(
+	existingCount: number,
+): string {
 	const colors = KANBAN_BOARD_RELEASE_THEME_COLORS;
 	return colors[existingCount % colors.length] ?? colors[0];
 }
@@ -34,7 +37,10 @@ export function groupPlanningTasksByTheme<
 	T extends { themeId: string | null; position: number },
 >(
 	tasks: T[],
-	themes: Pick<KanbanBoardReleaseThemeDto, "id" | "name" | "color" | "position">[],
+	themes: Pick<
+		KanbanBoardReleaseThemeDto,
+		"id" | "name" | "color" | "position"
+	>[],
 	unthemedId = KANBAN_BOARD_PLANNING_UNTHEMED_ID,
 ): Array<KanbanBoardPlanningBoardColumn<T>> {
 	const sortedThemes = [...themes].sort((a, b) => a.position - b.position);
@@ -91,16 +97,21 @@ export function buildPlanningTaskGridRows<
 	T extends { themeId: string | null; position: number },
 >(
 	tasks: T[],
-	themes: Pick<KanbanBoardReleaseThemeDto, "id" | "name" | "color" | "position">[],
+	themes: Pick<
+		KanbanBoardReleaseThemeDto,
+		"id" | "name" | "color" | "position"
+	>[],
 ): Array<PlanningTaskGridThemeRow<T>> {
 	return groupPlanningTasksByTheme(tasks, themes).map((column) => ({
 		rowKind: "theme",
 		id: column.id,
-		themeId:
-			column.id === KANBAN_BOARD_PLANNING_UNTHEMED_ID ? null : column.id,
+		themeId: column.id === KANBAN_BOARD_PLANNING_UNTHEMED_ID ? null : column.id,
 		title: column.title,
 		color: column.color,
-		children: column.items.map((item) => ({ ...item, rowKind: "task" as const })),
+		children: column.items.map((item) => ({
+			...item,
+			rowKind: "task" as const,
+		})),
 	}));
 }
 
@@ -111,11 +122,79 @@ export function planningTaskGridRowId<
 	return `task:${row.taskId}`;
 }
 
+export type PlanningReleaseGridTaskRow<
+	T extends { releaseId: string; position: number },
+> = T & { rowKind: "task" };
+
+export type PlanningReleaseGridReleaseRow<
+	T extends { releaseId: string; position: number },
+> = {
+	rowKind: "release";
+	id: string;
+	releaseId: string;
+	title: string;
+	children: Array<PlanningReleaseGridTaskRow<T>>;
+};
+
+export type PlanningReleaseGridRow<
+	T extends { releaseId: string; position: number },
+> = PlanningReleaseGridReleaseRow<T> | PlanningReleaseGridTaskRow<T>;
+
+export function buildPlanningReleaseTaskGridRows<
+	T extends { releaseId: string; position: number },
+>(
+	tasks: T[],
+	releases: Array<{ id: string; code: string; name: string }>,
+): Array<PlanningReleaseGridReleaseRow<T>> {
+	const byRelease = new Map<string, T[]>();
+	for (const release of releases) {
+		byRelease.set(release.id, []);
+	}
+	const orphan: T[] = [];
+	for (const task of [...tasks].sort(sortByPosition)) {
+		if (byRelease.has(task.releaseId)) {
+			byRelease.get(task.releaseId)?.push(task);
+		} else {
+			orphan.push(task);
+		}
+	}
+	const rows = releases.map((release) => ({
+		rowKind: "release" as const,
+		id: release.id,
+		releaseId: release.id,
+		title: kanbanBoardTaskReleaseLabel(release),
+		children: (byRelease.get(release.id) ?? []).map((item) => ({
+			...item,
+			rowKind: "task" as const,
+		})),
+	}));
+	if (orphan.length) {
+		rows.push({
+			rowKind: "release",
+			id: "__none__",
+			releaseId: "",
+			title: "Без релиза",
+			children: orphan.map((item) => ({ ...item, rowKind: "task" as const })),
+		});
+	}
+	return rows;
+}
+
+export function planningReleaseGridRowId<
+	T extends { releaseId: string; position: number; taskId: string },
+>(row: PlanningReleaseGridRow<T>): string {
+	if (row.rowKind === "release") return `release:${row.id}`;
+	return `task:${row.taskId}`;
+}
+
 export function groupPlanningTasksByStatus<
 	T extends { statusTitle: string; position: number },
 >(tasks: T[]): Array<KanbanBoardPlanningBoardColumn<T>> {
 	const knownOrder = new Map(
-		KANBAN_BOARD_STATUSES.map((item, index) => [item.title.toLowerCase(), index]),
+		KANBAN_BOARD_STATUSES.map((item, index) => [
+			item.title.toLowerCase(),
+			index,
+		]),
 	);
 	const buckets = new Map<string, T[]>();
 	for (const task of [...tasks].sort(sortByPosition)) {
