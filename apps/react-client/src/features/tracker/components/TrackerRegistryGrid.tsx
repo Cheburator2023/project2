@@ -18,7 +18,9 @@ import {
 	type GetRowIdParams,
 	type GridApi,
 	type IRowNode,
+	type RowClassParams,
 	type RowDragEndEvent,
+	type RowStyle,
 	type SelectionChangedEvent,
 } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
@@ -76,6 +78,7 @@ type Props<TRow extends object> = {
 	getRowId?: (params: GetRowIdParams<TRow>) => string;
 	isRowSelectable?: (node: IRowNode<TRow>) => boolean;
 	onRowDragEnd?: (event: RowDragEndEvent<TRow>) => void;
+	getRowStyle?: (params: RowClassParams<TRow>) => RowStyle | undefined;
 	pagination?: boolean;
 };
 
@@ -96,6 +99,7 @@ export function TrackerRegistryGrid<TRow extends object>({
 	getRowId,
 	isRowSelectable,
 	onRowDragEnd,
+	getRowStyle,
 	pagination = true,
 }: Props<TRow>) {
 	const { mode } = useColorScheme();
@@ -169,6 +173,7 @@ export function TrackerRegistryGrid<TRow extends object>({
 				treeDataChildrenField={treeData ? treeDataChildrenField : undefined}
 				getRowId={getRowId}
 				isRowSelectable={isRowSelectable}
+				getRowStyle={getRowStyle}
 				groupDefaultExpanded={treeData ? -1 : undefined}
 				onRowDragEnd={onRowDragEnd}
 				defaultColDef={{

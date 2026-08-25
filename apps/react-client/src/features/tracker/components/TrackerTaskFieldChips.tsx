@@ -44,6 +44,19 @@ export function kanbanBoardStatusColor(statusId?: string): string {
 	);
 }
 
+export function trackerTaskRowTintStyle(input: {
+	statusId?: string;
+	hasBlocker?: boolean;
+}): { background: string } {
+	const statusBg = `color-mix(in srgb, ${kanbanBoardStatusColor(input.statusId)} 18%, transparent)`;
+	if (input.hasBlocker) {
+		return {
+			background: `color-mix(in srgb, ${KANBAN_BOARD_BLOCKER_COLOR} 16%, ${statusBg})`,
+		};
+	}
+	return { background: statusBg };
+}
+
 export function TrackerTaskStatusChip({
 	statusId,
 	statusTitle,

@@ -4,6 +4,7 @@ import type {
 	ColDef,
 	ICellRendererParams,
 	IRowNode,
+	RowClassParams,
 	RowDragEndEvent,
 } from "ag-grid-community";
 import { Flex } from "@react-client/common/primitives/Flex";
@@ -21,6 +22,11 @@ import { KanbanTaskFieldChip } from "@react-client/features/kanban-board/compone
 import { trackerTaskPath } from "@react-client/features/kanban-board/kanban-task-paths";
 import { TrackerRegistryChipCell } from "@react-client/features/tracker/components/TrackerRegistryChipCell";
 import { TrackerRegistryGrid } from "@react-client/features/tracker/components/TrackerRegistryGrid";
+import {
+	TrackerTaskBlockerChip,
+	TrackerTaskStatusChip,
+	trackerTaskRowTintStyle,
+} from "@react-client/features/tracker/components/TrackerTaskFieldChips";
 import { usePlanningWorkspace } from "@react-client/features/tracker/planning/PlanningWorkspaceContext";
 import {
 	buildPlanningTaskGridRows,
@@ -32,6 +38,7 @@ import {
 	KANBAN_BOARD_RELEASE_THEME_COLORS,
 	nextKanbanBoardReleaseThemeColor,
 	planningTaskGridRowId,
+	kanbanBoardTaskHasBlocker,
 	type KanbanBoardReleaseTaskDto,
 	type PlanningTaskGridRow,
 	type PlanningTaskGridTaskRow,
@@ -299,6 +306,38 @@ export function PlanningTasksPanel() {
 					params.data && isTaskRow(params.data)
 						? (params.data.task.statusTitle ?? "")
 						: "",
+				cellRenderer: (params: ICellRendererParams<GridRow>) => {
+					if (!params.data || !isTaskRow(params.data)) return null;
+					return (
+						<TrackerTaskStatusChip
+							statusId={params.data.task.parentId}
+							statusTitle={params.data.task.statusTitle}
+						/>
+					);
+				},
+			},
+			{
+				colId: "blocker",
+				headerName: "Блокер",
+				width: 110,
+				valueGetter: (params) =>
+					params.data &&
+					isTaskRow(params.data) &&
+					(kanbanBoardTaskHasBlocker(params.data.task.content) ||
+						params.data.task.hasBlocker)
+						? "есть"
+						: "",
+				cellRenderer: (params: ICellRendererParams<GridRow>) => {
+					if (!params.data || !isTaskRow(params.data)) return null;
+					return (
+						<TrackerTaskBlockerChip
+							hasBlocker={
+								kanbanBoardTaskHasBlocker(params.data.task.content) ||
+								params.data.task.hasBlocker
+							}
+						/>
+					);
+				},
 			},
 			{
 				colId: "progress",
@@ -410,6 +449,16 @@ export function PlanningTasksPanel() {
 						params.data ? planningTaskGridRowId(params.data) : "planning-row"
 					}
 					isRowSelectable={(node) => Boolean(node.data && isTaskRow(node.data))}
+					getRowStyle={(params: RowClassParams<GridRow>) => {
+						const row = params.data;
+						if (!row || !isTaskRow(row)) return undefined;
+						return trackerTaskRowTintStyle({
+							statusId: row.task.parentId,
+							hasBlocker:
+								kanbanBoardTaskHasBlocker(row.task.content) ||
+								row.task.hasBlocker,
+						});
+					}}
 					onRowDoubleClick={(row) => {
 						if (isTaskRow(row)) navigate(trackerTaskPath(row.task.taskKey));
 					}}

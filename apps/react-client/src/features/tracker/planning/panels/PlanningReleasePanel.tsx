@@ -2,7 +2,11 @@ import Button from "@mui/material/Button";
 import MenuItem from "@mui/material/MenuItem";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
-import type { ColDef } from "ag-grid-community";
+import type {
+	ColDef,
+	ICellRendererParams,
+	RowClassParams,
+} from "ag-grid-community";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
@@ -18,6 +22,11 @@ import {
 	useUpdateKanbanBoardRelease,
 } from "@react-client/common/api/queries/kanban-board";
 import { TrackerRegistryGrid } from "@react-client/features/tracker/components/TrackerRegistryGrid";
+import {
+	TrackerTaskBlockerChip,
+	TrackerTaskStatusChip,
+	trackerTaskRowTintStyle,
+} from "@react-client/features/tracker/components/TrackerTaskFieldChips";
 import { trackerTaskPath } from "@react-client/features/kanban-board/kanban-task-paths";
 import { generateTrackerAutoCode } from "@react-client/features/tracker/trackerAutoCode";
 import { usePlanningWorkspace } from "@react-client/features/tracker/planning/PlanningWorkspaceContext";
@@ -25,6 +34,7 @@ import {
 	KANBAN_BOARD_RELEASE_IMAGE_TARGETS,
 	KANBAN_BOARD_RELEASE_STATUSES,
 	kanbanBoardTaskReleaseLabel,
+	kanbanBoardTaskHasBlocker,
 	normalizeKanbanBoardReleaseImageVersions,
 	type KanbanBoardReleaseImageVersions,
 	type KanbanBoardReleaseStatusId,
@@ -186,6 +196,37 @@ export function PlanningReleasePanel() {
 				headerName: "Статус",
 				width: 140,
 				valueGetter: (params) => params.data?.task.statusTitle ?? "",
+				cellRenderer: (
+					params: ICellRendererParams<KanbanBoardReleaseTaskDto>,
+				) =>
+					params.data ? (
+						<TrackerTaskStatusChip
+							statusId={params.data.task.parentId}
+							statusTitle={params.data.task.statusTitle}
+						/>
+					) : null,
+			},
+			{
+				colId: "blocker",
+				headerName: "Блокер",
+				width: 110,
+				valueGetter: (params) =>
+					params.data &&
+					(kanbanBoardTaskHasBlocker(params.data.task.content) ||
+						params.data.task.hasBlocker)
+						? "есть"
+						: "",
+				cellRenderer: (
+					params: ICellRendererParams<KanbanBoardReleaseTaskDto>,
+				) =>
+					params.data ? (
+						<TrackerTaskBlockerChip
+							hasBlocker={
+								kanbanBoardTaskHasBlocker(params.data.task.content) ||
+								params.data.task.hasBlocker
+							}
+						/>
+					) : null,
 			},
 			{
 				colId: "assignee",
@@ -400,6 +441,16 @@ export function PlanningReleasePanel() {
 							getRowId={(params) =>
 								params.data ? `task:${params.data.taskId}` : "release-task"
 							}
+							getRowStyle={(params: RowClassParams<KanbanBoardReleaseTaskDto>) => {
+								const task = params.data?.task;
+								if (!task) return undefined;
+								return trackerTaskRowTintStyle({
+									statusId: task.parentId,
+									hasBlocker:
+										kanbanBoardTaskHasBlocker(task.content) ||
+										task.hasBlocker,
+								});
+							}}
 							onRowDoubleClick={(row) =>
 								navigate(trackerTaskPath(row.task.taskKey))
 							}
