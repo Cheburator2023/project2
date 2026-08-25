@@ -2,11 +2,7 @@ import Button from "@mui/material/Button";
 import MenuItem from "@mui/material/MenuItem";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
-import type {
-	ColDef,
-	ICellRendererParams,
-	RowClassParams,
-} from "ag-grid-community";
+import type { ColDef, RowClassParams } from "ag-grid-community";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
@@ -22,14 +18,13 @@ import {
 	useUpdateKanbanBoardRelease,
 } from "@react-client/common/api/queries/kanban-board";
 import { TrackerRegistryGrid } from "@react-client/features/tracker/components/TrackerRegistryGrid";
-import {
-	TrackerTaskBlockerChip,
-	TrackerTaskStatusChip,
-	trackerTaskRowTintStyle,
-} from "@react-client/features/tracker/components/TrackerTaskFieldChips";
+import { trackerTaskRowTintStyle } from "@react-client/features/tracker/components/TrackerTaskFieldChips";
 import { trackerTaskPath } from "@react-client/features/kanban-board/kanban-task-paths";
 import { generateTrackerAutoCode } from "@react-client/features/tracker/trackerAutoCode";
+import { isPlanningTaskPersistColId } from "@react-client/features/tracker/planning/planningTaskCellEdit";
+import { createPlanningTaskFieldColDefs } from "@react-client/features/tracker/planning/planningTaskFieldColumns";
 import { usePlanningWorkspace } from "@react-client/features/tracker/planning/PlanningWorkspaceContext";
+import { usePlanningTaskGridEdits } from "@react-client/features/tracker/planning/usePlanningTaskGridEdits";
 import {
 	KANBAN_BOARD_RELEASE_IMAGE_TARGETS,
 	KANBAN_BOARD_RELEASE_STATUSES,
@@ -55,6 +50,7 @@ export function PlanningReleasePanel() {
 	const addRelease = useAddKanbanBoardPlanningRelease();
 	const removeRelease = useRemoveKanbanBoardPlanningRelease();
 	const detachTask = useDetachKanbanBoardReleaseTask();
+	const { lookups, persistTask, conflictDialog } = usePlanningTaskGridEdits();
 
 	const [newCode, setNewCode] = useState(() => generateTrackerAutoCode("rel"));
 	const [newName, setNewName] = useState("");
@@ -165,81 +161,32 @@ export function PlanningReleasePanel() {
 		() => new Map(planning.themes.map((theme) => [theme.id, theme])),
 		[planning.themes],
 	);
-	const releaseTaskColumns = useMemo<ColDef<KanbanBoardReleaseTaskDto>[]>(
-		() => [
-			{
-				colId: "taskKey",
-				headerName: "Код",
-				width: 130,
-				valueGetter: (params) => params.data?.task.taskKey ?? "",
+	const releaseTaskColumns = useMemo<
+		ColDef<KanbanBoardReleaseTaskDto>[]
+	>(() => {
+		const themeCol: ColDef<KanbanBoardReleaseTaskDto> = {
+			colId: "theme",
+			headerName: "Группа",
+			flex: 1,
+			minWidth: 120,
+			valueGetter: (params) => {
+				const themeId = params.data?.themeId;
+				if (!themeId) return "Без группы";
+				return themeById.get(themeId)?.name ?? "Без группы";
 			},
-			{
-				colId: "title",
-				headerName: "Название",
-				flex: 1.4,
-				minWidth: 160,
-				valueGetter: (params) => params.data?.task.title ?? "",
-			},
-			{
-				colId: "theme",
-				headerName: "Группа",
-				flex: 1,
-				minWidth: 120,
-				valueGetter: (params) => {
-					const themeId = params.data?.themeId;
-					if (!themeId) return "Без группы";
-					return themeById.get(themeId)?.name ?? "Без группы";
-				},
-			},
-			{
-				colId: "status",
-				headerName: "Статус",
-				width: 140,
-				valueGetter: (params) => params.data?.task.statusTitle ?? "",
-				cellRenderer: (
-					params: ICellRendererParams<KanbanBoardReleaseTaskDto>,
-				) =>
-					params.data ? (
-						<TrackerTaskStatusChip
-							statusId={params.data.task.parentId}
-							statusTitle={params.data.task.statusTitle}
-						/>
-					) : null,
-			},
-			{
-				colId: "blocker",
-				headerName: "Блокер",
-				width: 110,
-				valueGetter: (params) =>
-					params.data &&
-					(kanbanBoardTaskHasBlocker(params.data.task.content) ||
-						params.data.task.hasBlocker)
-						? "есть"
-						: "",
-				cellRenderer: (
-					params: ICellRendererParams<KanbanBoardReleaseTaskDto>,
-				) =>
-					params.data ? (
-						<TrackerTaskBlockerChip
-							hasBlocker={
-								kanbanBoardTaskHasBlocker(params.data.task.content) ||
-								params.data.task.hasBlocker
-							}
-						/>
-					) : null,
-			},
-			{
-				colId: "assignee",
-				headerName: "Исполнитель",
-				width: 140,
-				valueGetter: (params) =>
-					params.data?.task.currentAssigneeTitle ||
-					params.data?.task.assigneeTitle ||
-					"",
-			},
-		],
-		[themeById],
-	);
+		};
+		const taskCols = createPlanningTaskFieldColDefs<KanbanBoardReleaseTaskDto>({
+			getTask: (row) => row?.task,
+			lookups,
+		});
+		const titleIndex = taskCols.findIndex((col) => col.colId === "title");
+		if (titleIndex < 0) return [themeCol, ...taskCols];
+		return [
+			...taskCols.slice(0, titleIndex + 1),
+			themeCol,
+			...taskCols.slice(titleIndex + 1),
+		];
+	}, [lookups, themeById]);
 
 	return (
 		<Flex
@@ -438,22 +385,29 @@ export function PlanningReleasePanel() {
 							rowData={releaseTasks}
 							columnDefs={releaseTaskColumns}
 							pagination={false}
+							showRowTintToggle
 							getRowId={(params) =>
 								params.data ? `task:${params.data.taskId}` : "release-task"
 							}
-							getRowStyle={(params: RowClassParams<KanbanBoardReleaseTaskDto>) => {
+							getRowStyle={(
+								params: RowClassParams<KanbanBoardReleaseTaskDto>,
+							) => {
 								const task = params.data?.task;
 								if (!task) return undefined;
 								return trackerTaskRowTintStyle({
 									statusId: task.parentId,
 									hasBlocker:
-										kanbanBoardTaskHasBlocker(task.content) ||
-										task.hasBlocker,
+										kanbanBoardTaskHasBlocker(task.content) || task.hasBlocker,
 								});
 							}}
 							onRowDoubleClick={(row) =>
 								navigate(trackerTaskPath(row.task.taskKey))
 							}
+							onCellValueChanged={(row, field) => {
+								if (field && isPlanningTaskPersistColId(field)) {
+									void persistTask(row.task);
+								}
+							}}
 							contextActions={[
 								{
 									label: "Убрать из релиза",
@@ -471,6 +425,7 @@ export function PlanningReleasePanel() {
 					</Card>
 				</>
 			)}
+			{conflictDialog}
 		</Flex>
 	);
 }

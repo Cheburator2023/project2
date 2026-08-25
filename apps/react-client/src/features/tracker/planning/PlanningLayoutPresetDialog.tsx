@@ -43,7 +43,8 @@ export function PlanningLayoutPresetDialog({
 						<Typography fontWeight={700}>Дорожная карта</Typography>
 						<Spacer space={8} />
 						<Typography variant="body2" color="text.secondary">
-							Таблица и доска сверху, таймлайн снизу, релиз вкладкой.
+							Таблица и доска сверху, таймлайн снизу; релизы и исполнители
+							вкладками.
 						</Typography>
 					</Card>
 					<Card

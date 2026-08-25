@@ -22,16 +22,14 @@ import { KanbanTaskFieldChip } from "@react-client/features/kanban-board/compone
 import { trackerTaskPath } from "@react-client/features/kanban-board/kanban-task-paths";
 import { TrackerRegistryChipCell } from "@react-client/features/tracker/components/TrackerRegistryChipCell";
 import { TrackerRegistryGrid } from "@react-client/features/tracker/components/TrackerRegistryGrid";
-import {
-	TrackerTaskBlockerChip,
-	TrackerTaskStatusChip,
-	trackerTaskRowTintStyle,
-} from "@react-client/features/tracker/components/TrackerTaskFieldChips";
+import { trackerTaskRowTintStyle } from "@react-client/features/tracker/components/TrackerTaskFieldChips";
+import { isPlanningTaskPersistColId } from "@react-client/features/tracker/planning/planningTaskCellEdit";
+import { createPlanningTaskFieldColDefs } from "@react-client/features/tracker/planning/planningTaskFieldColumns";
 import { usePlanningWorkspace } from "@react-client/features/tracker/planning/PlanningWorkspaceContext";
+import { usePlanningTaskGridEdits } from "@react-client/features/tracker/planning/usePlanningTaskGridEdits";
 import {
 	buildPlanningTaskGridRows,
 	groupPlanningTasksByTheme,
-	kanbanBoardSubtasksProgress,
 	kanbanBoardTaskReleaseLabel,
 	KANBAN_BOARD_PLANNING_UNTHEMED_ID,
 	KANBAN_BOARD_RELEASE_CHIP_COLOR,
@@ -118,6 +116,7 @@ export function PlanningTasksPanel() {
 	const detachTask = useDetachKanbanBoardReleaseTask();
 	const reorder = useReorderKanbanBoardPlanningTasks();
 	const moveTask = useMoveKanbanBoardReleaseTask();
+	const { lookups, persistTask, conflictDialog } = usePlanningTaskGridEdits();
 	const [groupName, setGroupName] = useState("");
 	const [selectedRows, setSelectedRows] = useState<GridRow[]>([]);
 	const selectedTasks = collectTaskRows(selectedRows);
@@ -220,168 +219,70 @@ export function PlanningTasksPanel() {
 		[],
 	);
 
-	const columnDefs = useMemo<ColDef<GridRow>[]>(
-		() => [
-			{
-				colId: "title",
-				headerName: "Название",
-				flex: 1.4,
-				minWidth: 180,
-				valueGetter: (params) =>
-					params.data && isTaskRow(params.data) ? params.data.task.title : "",
+	const columnDefs = useMemo<ColDef<GridRow>[]>(() => {
+		const releaseCol: ColDef<GridRow> = {
+			colId: "releaseId",
+			headerName: "Релиз",
+			flex: 1.1,
+			minWidth: 160,
+			editable: (params) =>
+				Boolean(params.data && isTaskRow(params.data) && releaseLabels.length),
+			cellEditor: "agSelectCellEditor",
+			cellEditorParams: { values: releaseLabels },
+			valueGetter: (params) =>
+				params.data && isTaskRow(params.data) ? params.data.releaseId : "",
+			valueSetter: (params) => {
+				const row = params.data;
+				if (!row || !isTaskRow(row)) return false;
+				const nextId = resolveReleaseId(params.newValue);
+				if (!nextId) return false;
+				row.releaseId = nextId;
+				return true;
 			},
-			{
-				colId: "releaseId",
-				headerName: "Релиз",
-				flex: 1.1,
-				minWidth: 160,
-				editable: (params) =>
-					Boolean(
-						params.data && isTaskRow(params.data) && releaseLabels.length,
-					),
-				cellEditor: "agSelectCellEditor",
-				cellEditorParams: { values: releaseLabels },
-				valueGetter: (params) =>
-					params.data && isTaskRow(params.data) ? params.data.releaseId : "",
-				valueSetter: (params) => {
-					const row = params.data;
-					if (!row || !isTaskRow(row)) return false;
-					const nextId = resolveReleaseId(params.newValue);
-					if (!nextId) return false;
-					row.releaseId = nextId;
-					return true;
-				},
-				valueFormatter: (params) => {
-					if (!params.data || !isTaskRow(params.data)) return "";
-					const release = releaseById.get(params.data.releaseId);
-					return release ? kanbanBoardTaskReleaseLabel(release) : "";
-				},
-				cellRenderer: (params: ICellRendererParams<GridRow>) => {
-					if (!params.data || !isTaskRow(params.data)) return null;
-					const release = releaseById.get(params.data.releaseId);
-					if (!release) return null;
-					const label = kanbanBoardTaskReleaseLabel(release);
-					return (
-						<TrackerRegistryChipCell>
-							<span title={label}>
-								<KanbanTaskFieldChip
-									label={label}
-									color={
-										releaseColorById.get(release.id) ??
-										KANBAN_BOARD_RELEASE_CHIP_COLOR
-									}
-								/>
-							</span>
-						</TrackerRegistryChipCell>
-					);
-				},
+			valueFormatter: (params) => {
+				if (!params.data || !isTaskRow(params.data)) return "";
+				const release = releaseById.get(params.data.releaseId);
+				return release ? kanbanBoardTaskReleaseLabel(release) : "";
 			},
-			{
-				colId: "assignee",
-				headerName: "Исполнитель",
-				width: 150,
-				valueGetter: (params) => {
-					if (!params.data || !isTaskRow(params.data)) return "";
-					return (
-						params.data.task.currentAssigneeTitle ||
-						params.data.task.assigneeTitle ||
-						""
-					);
-				},
+			cellRenderer: (params: ICellRendererParams<GridRow>) => {
+				if (!params.data || !isTaskRow(params.data)) return null;
+				const release = releaseById.get(params.data.releaseId);
+				if (!release) return null;
+				const label = kanbanBoardTaskReleaseLabel(release);
+				return (
+					<TrackerRegistryChipCell>
+						<span title={label}>
+							<KanbanTaskFieldChip
+								label={label}
+								color={
+									releaseColorById.get(release.id) ??
+									KANBAN_BOARD_RELEASE_CHIP_COLOR
+								}
+							/>
+						</span>
+					</TrackerRegistryChipCell>
+				);
 			},
-			{
-				colId: "priority",
-				headerName: "Приоритет",
-				width: 120,
-				valueGetter: (params) =>
-					params.data && isTaskRow(params.data)
-						? (params.data.task.priorityTitle ?? "")
-						: "",
-			},
-			{
-				colId: "status",
-				headerName: "Статус",
-				width: 160,
-				valueGetter: (params) =>
-					params.data && isTaskRow(params.data)
-						? (params.data.task.statusTitle ?? "")
-						: "",
-				cellRenderer: (params: ICellRendererParams<GridRow>) => {
-					if (!params.data || !isTaskRow(params.data)) return null;
-					return (
-						<TrackerTaskStatusChip
-							statusId={params.data.task.parentId}
-							statusTitle={params.data.task.statusTitle}
-						/>
-					);
-				},
-			},
-			{
-				colId: "blocker",
-				headerName: "Блокер",
-				width: 110,
-				valueGetter: (params) =>
-					params.data &&
-					isTaskRow(params.data) &&
-					(kanbanBoardTaskHasBlocker(params.data.task.content) ||
-						params.data.task.hasBlocker)
-						? "есть"
-						: "",
-				cellRenderer: (params: ICellRendererParams<GridRow>) => {
-					if (!params.data || !isTaskRow(params.data)) return null;
-					return (
-						<TrackerTaskBlockerChip
-							hasBlocker={
-								kanbanBoardTaskHasBlocker(params.data.task.content) ||
-								params.data.task.hasBlocker
-							}
-						/>
-					);
-				},
-			},
-			{
-				colId: "progress",
-				headerName: "Прогресс",
-				width: 110,
-				valueGetter: (params) => {
-					if (!params.data || !isTaskRow(params.data)) return "";
-					const progress = kanbanBoardSubtasksProgress(
-						params.data.task.content,
-					);
-					if (!progress) return "";
-					return `${progress.done}/${progress.total}`;
-				},
-			},
-			{
-				colId: "dueDate",
-				headerName: "Срок",
-				width: 110,
-				valueGetter: (params) =>
-					params.data && isTaskRow(params.data)
-						? (params.data.task.dueDate ?? "")
-						: "",
-			},
-			{
-				colId: "estimate",
-				headerName: "Оценка, чд",
-				width: 110,
-				type: "numericColumn",
-				valueGetter: (params) => {
-					if (!params.data || !isTaskRow(params.data)) return "";
-					return (
-						params.data.task.effectiveEstimatePd ?? params.data.task.estimatePd
-					);
-				},
-			},
-		],
-		[
-			planning.releases,
-			releaseById,
-			releaseColorById,
-			releaseLabels,
-			resolveReleaseId,
-		],
-	);
+		};
+		const taskCols = createPlanningTaskFieldColDefs<GridRow>({
+			getTask: (row) => (row && isTaskRow(row) ? row.task : undefined),
+			lookups,
+		});
+		const titleIndex = taskCols.findIndex((col) => col.colId === "title");
+		if (titleIndex < 0) return [releaseCol, ...taskCols];
+		return [
+			...taskCols.slice(0, titleIndex + 1),
+			releaseCol,
+			...taskCols.slice(titleIndex + 1),
+		];
+	}, [
+		lookups,
+		planning.releases,
+		releaseById,
+		releaseColorById,
+		releaseLabels,
+		resolveReleaseId,
+	]);
 
 	return (
 		<Flex
@@ -444,6 +345,7 @@ export function PlanningTasksPanel() {
 					treeData
 					treeDataChildrenField="children"
 					pagination={false}
+					showRowTintToggle
 					onSelectionChange={setSelectedRows}
 					getRowId={(params) =>
 						params.data ? planningTaskGridRowId(params.data) : "planning-row"
@@ -482,6 +384,10 @@ export function PlanningTasksPanel() {
 									},
 								})
 								.catch((error) => toast.error(apiErrorMessage(error)));
+							return;
+						}
+						if (isTaskRow(row) && field && isPlanningTaskPersistColId(field)) {
+							void persistTask(row.task);
 							return;
 						}
 						if (!isThemeRow(row) || !row.themeId || field !== "groupTitle")
@@ -535,6 +441,7 @@ export function PlanningTasksPanel() {
 					]}
 				/>
 			</Flex>
+			{conflictDialog}
 		</Flex>
 	);
 }

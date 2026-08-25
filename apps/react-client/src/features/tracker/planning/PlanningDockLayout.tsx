@@ -19,6 +19,7 @@ import {
 	useRef,
 	useState,
 } from "react";
+import { PlanningAssigneesPanel } from "./panels/PlanningAssigneesPanel";
 import { PlanningBoardPanel } from "./panels/PlanningBoardPanel";
 import { PlanningReleasePanel } from "./panels/PlanningReleasePanel";
 import { PlanningTasksPanel } from "./panels/PlanningTasksPanel";
@@ -42,6 +43,7 @@ const panelComponents = {
 	board: (_props: IDockviewPanelProps) => <PlanningBoardPanel />,
 	timeline: (_props: IDockviewPanelProps) => <PlanningTimelinePanel />,
 	release: (_props: IDockviewPanelProps) => <PlanningReleasePanel />,
+	assignees: (_props: IDockviewPanelProps) => <PlanningAssigneesPanel />,
 };
 
 export type PlanningDockLayoutHandle = {

@@ -1,6 +1,7 @@
 import type { ColumnState } from "ag-grid-community";
 
 const STORAGE_PREFIX = "smart_anketa:ag-grid-column-state:";
+const ROW_TINT_STORAGE_PREFIX = "smart_anketa:ag-grid-row-tint:";
 
 export const TRACKER_AG_GRID_STATE_KEYS = [
 	"tracker.tasks",
@@ -99,4 +100,32 @@ export function applyAgGridColumnState(
 	if (!saved?.length) return false;
 	apply(saved);
 	return true;
+}
+
+function rowTintStorageKey(gridId: string): string {
+	return `${ROW_TINT_STORAGE_PREFIX}${gridId}`;
+}
+
+/** Подсветка строк включена по умолчанию. */
+export function loadAgGridRowTintEnabled(gridId: string): boolean {
+	if (typeof window === "undefined") return true;
+	try {
+		const raw = window.localStorage.getItem(rowTintStorageKey(gridId));
+		if (raw === null) return true;
+		return raw === "true";
+	} catch {
+		return true;
+	}
+}
+
+export function saveAgGridRowTintEnabled(
+	gridId: string,
+	enabled: boolean,
+): void {
+	if (typeof window === "undefined") return;
+	try {
+		window.localStorage.setItem(rowTintStorageKey(gridId), String(enabled));
+	} catch {
+		// ignore quota errors
+	}
 }

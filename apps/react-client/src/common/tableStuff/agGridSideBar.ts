@@ -1,7 +1,10 @@
 import type { SideBarDef } from "ag-grid-community";
 import { AgGridColumnStateToolPanel } from "@react-client/common/tableStuff/AgGridColumnStateToolPanel";
 
-export function createAgGridSideBar(gridStateKey: string): SideBarDef {
+export function createAgGridSideBar(
+	gridStateKey: string,
+	options?: { showRowTintToggle?: boolean },
+): SideBarDef {
 	return {
 		toolPanels: [
 			{
@@ -29,7 +32,10 @@ export function createAgGridSideBar(gridStateKey: string): SideBarDef {
 				labelKey: "settings",
 				iconKey: "menu",
 				toolPanel: AgGridColumnStateToolPanel,
-				toolPanelParams: { gridStateKey },
+				toolPanelParams: {
+					gridStateKey,
+					showRowTintToggle: options?.showRowTintToggle === true,
+				},
 			},
 		],
 		position: "right",

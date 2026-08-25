@@ -5,6 +5,7 @@ import { Flex } from "@react-client/common/primitives/Flex";
 import { AG_GRID_LOCALE_RU } from "@react-client/common/tableStuff/agGridLocale.ru";
 import { getAgGridMainMenuItems } from "@react-client/common/tableStuff/agGridMainMenuItems";
 import { registerAgGridTableModules } from "@react-client/common/tableStuff/agGridTableModules";
+import { loadAgGridRowTintEnabled } from "@react-client/common/tableStuff/agGridColumnState";
 import { useAgGridColumnPersistence } from "@react-client/common/tableStuff/useAgGridColumnPersistence";
 import {
 	agGridCustomMUITheme,
@@ -79,7 +80,9 @@ type Props<TRow extends object> = {
 	isRowSelectable?: (node: IRowNode<TRow>) => boolean;
 	onRowDragEnd?: (event: RowDragEndEvent<TRow>) => void;
 	getRowStyle?: (params: RowClassParams<TRow>) => RowStyle | undefined;
+	showRowTintToggle?: boolean;
 	pagination?: boolean;
+	pinnedBottomRowData?: TRow[];
 };
 
 export function TrackerRegistryGrid<TRow extends object>({
@@ -100,7 +103,9 @@ export function TrackerRegistryGrid<TRow extends object>({
 	isRowSelectable,
 	onRowDragEnd,
 	getRowStyle,
+	showRowTintToggle = false,
 	pagination = true,
+	pinnedBottomRowData,
 }: Props<TRow>) {
 	const { mode } = useColorScheme();
 	const gridRef = useRef<AgGridReact<TRow>>(null);
@@ -112,7 +117,7 @@ export function TrackerRegistryGrid<TRow extends object>({
 		onColumnPinned,
 		onSortChanged,
 		onColumnResized,
-	} = useAgGridColumnPersistence(gridStateKey);
+	} = useAgGridColumnPersistence(gridStateKey, { showRowTintToggle });
 	const [menuState, setMenuState] = useState<{
 		mouseX: number;
 		mouseY: number;
@@ -136,6 +141,16 @@ export function TrackerRegistryGrid<TRow extends object>({
 			onColumnMoved(api);
 		},
 		[onColumnMoved],
+	);
+
+	const resolveRowStyle = useCallback(
+		(params: RowClassParams<TRow>) => {
+			if (showRowTintToggle && !loadAgGridRowTintEnabled(gridStateKey)) {
+				return undefined;
+			}
+			return getRowStyle?.(params);
+		},
+		[getRowStyle, gridStateKey, showRowTintToggle],
 	);
 
 	const handleCellContextMenu = useCallback(
@@ -173,7 +188,8 @@ export function TrackerRegistryGrid<TRow extends object>({
 				treeDataChildrenField={treeData ? treeDataChildrenField : undefined}
 				getRowId={getRowId}
 				isRowSelectable={isRowSelectable}
-				getRowStyle={getRowStyle}
+				getRowStyle={getRowStyle ? resolveRowStyle : undefined}
+				pinnedBottomRowData={pinnedBottomRowData}
 				groupDefaultExpanded={treeData ? -1 : undefined}
 				onRowDragEnd={onRowDragEnd}
 				defaultColDef={{
@@ -242,9 +258,7 @@ export function TrackerRegistryGrid<TRow extends object>({
 						<MenuItem
 							key={`bulk:${action.label}`}
 							disabled={
-								menuState
-									? Boolean(action.disabled?.(menuState.rows))
-									: true
+								menuState ? Boolean(action.disabled?.(menuState.rows)) : true
 							}
 							onClick={() => {
 								if (menuState && !action.disabled?.(menuState.rows)) {

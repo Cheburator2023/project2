@@ -9,6 +9,7 @@ describe("planning dock layout", () => {
 	it("accepts known panel ids", () => {
 		expect(PLANNING_DOCK_PANEL_IDS).toContain("tasks");
 		expect(isPlanningDockPanelId("board")).toBe(true);
+		expect(isPlanningDockPanelId("assignees")).toBe(true);
 		expect(isPlanningDockPanelId("unknown")).toBe(false);
 	});
 

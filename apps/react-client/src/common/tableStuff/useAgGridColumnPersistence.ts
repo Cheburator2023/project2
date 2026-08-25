@@ -8,7 +8,10 @@ import { createAgGridSideBar } from "@react-client/common/tableStuff/agGridSideB
 
 const SAVE_DEBOUNCE_MS = 250;
 
-export function useAgGridColumnPersistence(gridStateKey: string) {
+export function useAgGridColumnPersistence(
+	gridStateKey: string,
+	options?: { showRowTintToggle?: boolean },
+) {
 	const saveTimerRef = useRef<number | null>(null);
 
 	const persistColumnState = useCallback(
@@ -41,8 +44,11 @@ export function useAgGridColumnPersistence(gridStateKey: string) {
 	);
 
 	const sideBar = useMemo(
-		() => createAgGridSideBar(gridStateKey),
-		[gridStateKey],
+		() =>
+			createAgGridSideBar(gridStateKey, {
+				showRowTintToggle: options?.showRowTintToggle,
+			}),
+		[gridStateKey, options?.showRowTintToggle],
 	);
 
 	return {

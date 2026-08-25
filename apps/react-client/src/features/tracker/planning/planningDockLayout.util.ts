@@ -5,6 +5,7 @@ export const PLANNING_DOCK_PANEL_IDS = [
 	"board",
 	"timeline",
 	"release",
+	"assignees",
 ] as const;
 
 export type PlanningDockPanelId = (typeof PLANNING_DOCK_PANEL_IDS)[number];
@@ -14,6 +15,7 @@ export const PLANNING_DOCK_PANEL_TITLES: Record<PlanningDockPanelId, string> = {
 	board: "Доска",
 	timeline: "Таймлайн",
 	release: "Релизы",
+	assignees: "Исполнители",
 };
 
 export type PlanningLayoutPresetId = "roadmap" | "empty";
@@ -97,6 +99,12 @@ export function applyPlanningDockPreset(
 		id: "release",
 		component: "release",
 		title: PLANNING_DOCK_PANEL_TITLES.release,
+		position: { referencePanel: "tasks", direction: "within" },
+	});
+	api.addPanel({
+		id: "assignees",
+		component: "assignees",
+		title: PLANNING_DOCK_PANEL_TITLES.assignees,
 		position: { referencePanel: "tasks", direction: "within" },
 	});
 }
