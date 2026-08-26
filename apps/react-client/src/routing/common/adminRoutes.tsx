@@ -14,6 +14,7 @@ import {
 	AdminV2RegistryImportPage,
 	AdminV2SettingsPage,
 	AdminV2StreamsPage,
+	AdminV2SwaggerPage,
 	AdminV2TemplateHistoryPage,
 	AdminV2TypicalWorkDetailPage,
 	AdminV2TypicalWorksPage,
@@ -80,6 +81,7 @@ function adminChildRoutes(): RouteObject[] {
 					path: "keycloak-matrix",
 					element: <AdminV2KeycloakMatrixPage />,
 				},
+				{ path: "swagger", element: <AdminV2SwaggerPage /> },
 				{
 					path: "templates/:templateId/read",
 					element: <V2TemplatePreviewPage />,

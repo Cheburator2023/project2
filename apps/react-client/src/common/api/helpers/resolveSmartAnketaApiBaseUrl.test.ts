@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	resolveSmartAnketaApiBaseUrl,
 	SMART_ANKETA_SHELL_API_PROXY_PATH,
+	swaggerUiUrlFromApiBase,
 } from "./resolveSmartAnketaApiBaseUrl";
 
 describe("resolveSmartAnketaApiBaseUrl", () => {
@@ -36,5 +37,19 @@ describe("resolveSmartAnketaApiBaseUrl", () => {
 				bakedUrl: "http://localhost:3000",
 			}),
 		).toBe("http://localhost:3000");
+	});
+});
+
+describe("swaggerUiUrlFromApiBase", () => {
+	it("appends /api to the nest base", () => {
+		expect(swaggerUiUrlFromApiBase("http://localhost:3000")).toBe(
+			"http://localhost:3000/api",
+		);
+	});
+
+	it("keeps shell proxy path", () => {
+		expect(swaggerUiUrlFromApiBase("/proxy/smart-anketa-api")).toBe(
+			"/proxy/smart-anketa-api/api",
+		);
 	});
 });

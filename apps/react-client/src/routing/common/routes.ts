@@ -81,6 +81,13 @@ export const commonRoutes = {
 		showInNavbar: true,
 		navbar: { group: "adminV2", order: 10 },
 	},
+	adminV2Swagger: {
+		rootPath: "/admin/swagger",
+		name: "Swagger",
+		disabled: false,
+		showInNavbar: true,
+		navbar: { group: "adminV2", order: 11 },
+	},
 	adminV2TypicalWorkDetail: {
 		rootPath: "/admin/typical-works/:workId",
 		name: "Типовая работа",

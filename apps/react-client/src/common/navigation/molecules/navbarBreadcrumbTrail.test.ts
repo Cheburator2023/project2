@@ -29,4 +29,12 @@ describe("buildNavbarBreadcrumbTrail", () => {
 			to: "/admin/typical-works",
 		});
 	});
+
+	it("shows swagger as the current admin crumb", () => {
+		const trail = buildNavbarBreadcrumbTrail("/admin/swagger");
+		expect(trail).toEqual([
+			{ label: "Администрирование", to: "/admin/schemas" },
+			{ label: "Swagger" },
+		]);
+	});
 });

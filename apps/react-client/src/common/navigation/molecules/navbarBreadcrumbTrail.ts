@@ -107,6 +107,10 @@ function adminTrail(pathname: string): NavbarBreadcrumbItem[] | null {
 		return [adminCrumb(), { label: commonRoutes.adminV2KeycloakMatrix.name }];
 	}
 
+	if (pathname.startsWith(commonRoutes.adminV2Swagger.rootPath)) {
+		return [adminCrumb(), { label: commonRoutes.adminV2Swagger.name }];
+	}
+
 	const templateModeMatch = pathname.match(
 		/^\/admin\/templates\/[^/]+\/(edit|read|logic)$/,
 	);

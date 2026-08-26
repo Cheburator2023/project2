@@ -189,6 +189,13 @@ export const AdminV2KeycloakMatrixPage = lazyPage(
 		),
 	"AdminV2KeycloakMatrixPage",
 );
+export const AdminV2SwaggerPage = lazyPage(
+	() =>
+		import(
+			/* webpackChunkName: "page-admin-swagger" */ "@react-client/features/v2/admin/pages/AdminV2SwaggerPage"
+		),
+	"AdminV2SwaggerPage",
+);
 export const AdminV2TemplateHistoryPage = lazyPage(
 	() =>
 		import(

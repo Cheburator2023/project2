@@ -48,3 +48,8 @@ export function resolveSmartAnketaApiBaseUrl(args: {
 	if (args.isDev) return LOCAL_DEV_API_FALLBACK;
 	return LOCAL_DEV_API_FALLBACK;
 }
+
+/** Swagger UI Nest: `SwaggerModule.setup("api", ...)`. */
+export function swaggerUiUrlFromApiBase(apiBase: string): string {
+	return `${trimSlash(apiBase)}/api`;
+}
