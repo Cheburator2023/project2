@@ -9,6 +9,7 @@ import type {
 	CreateV2QuestionnaireVersionRequestDto,
 	CreateV2QuestionnaireCommentRequestDto,
 	BulkDeleteV2QuestionnairesResultDto,
+	DeleteAllV2QuestionnairesResultDto,
 	PaginatedV2QuestionnaireResponseDto,
 	SeedV2TestQuestionnairesResultDto,
 	UpdateV2QuestionnaireRequestDto,
@@ -20,11 +21,14 @@ import type {
 	V2QuestionnaireFormPackageDto,
 	V2QuestionnaireListQuery,
 	V2QuestionnaireRegistryConfigDto,
+	V2QuestionnaireRegistryFilterValuesDto,
+	V2QuestionnaireRegistryIdsResponseDto,
 	V2QuestionnaireExportJobCreateDto,
 	V2QuestionnaireExportJobStatusDto,
 } from "@smart-anketa/api-contract";
 import {
 	V2_QUESTIONNAIRE_REGISTRY_PAGE_SIZE,
+	isV2AgGridFilterModelEmpty,
 } from "@smart-anketa/api-contract";
 import {
 	apiClient,
@@ -46,23 +50,49 @@ const ROOT_KEY = V2_QUESTIONNAIRES_ROOT_KEY;
 const LIST_KEY = V2_QUESTIONNAIRES_LIST_KEY;
 const REGISTRY_CONFIG_KEY = V2_QUESTIONNAIRES_REGISTRY_CONFIG_KEY;
 
-export const useV2Questionnaires = (query: V2QuestionnaireListQuery = {}) => {
+function serializeRegistryGridQuery(query: V2QuestionnaireListQuery): {
+	page: number;
+	limit: number;
+	search?: string;
+	versionMode?: V2QuestionnaireListQuery["versionMode"];
+	filterModel?: string;
+	sortModel?: string;
+} {
 	const page = query.page ?? 1;
 	const limit = query.limit ?? V2_QUESTIONNAIRE_REGISTRY_PAGE_SIZE;
 	const search = query.search?.trim() || undefined;
 	const versionMode = query.versionMode;
+	const filterModel =
+		typeof query.filterModel === "string"
+			? query.filterModel
+			: query.filterModel && !isV2AgGridFilterModelEmpty(query.filterModel)
+				? JSON.stringify(query.filterModel)
+				: undefined;
+	const sortModel =
+		typeof query.sortModel === "string"
+			? query.sortModel
+			: Array.isArray(query.sortModel) && query.sortModel.length > 0
+				? JSON.stringify(query.sortModel)
+				: undefined;
+	return { page, limit, search, versionMode, filterModel, sortModel };
+}
+
+export const useV2Questionnaires = (query: V2QuestionnaireListQuery = {}) => {
+	const params = serializeRegistryGridQuery(query);
 
 	return useQuery<PaginatedV2QuestionnaireResponseDto>({
-		queryKey: [...LIST_KEY, { page, limit, search, versionMode }],
+		queryKey: [...LIST_KEY, params],
 		queryFn: () =>
 			apiClient<PaginatedV2QuestionnaireResponseDto>({
 				url: "/v2/questionnaires",
 				method: "GET",
 				params: {
-					page,
-					limit,
-					...(search ? { search } : {}),
-					...(versionMode ? { versionMode } : {}),
+					page: params.page,
+					limit: params.limit,
+					...(params.search ? { search: params.search } : {}),
+					...(params.versionMode ? { versionMode: params.versionMode } : {}),
+					...(params.filterModel ? { filterModel: params.filterModel } : {}),
+					...(params.sortModel ? { sortModel: params.sortModel } : {}),
 				},
 			}),
 		placeholderData: keepPreviousData,
@@ -70,6 +100,46 @@ export const useV2Questionnaires = (query: V2QuestionnaireListQuery = {}) => {
 		gcTime: 30 * 60 * 1000,
 	});
 };
+
+export function fetchV2QuestionnaireRegistryIds(
+	query: V2QuestionnaireListQuery,
+	signal?: AbortSignal,
+): Promise<V2QuestionnaireRegistryIdsResponseDto> {
+	const params = serializeRegistryGridQuery(query);
+	return apiClient<V2QuestionnaireRegistryIdsResponseDto>({
+		url: "/v2/questionnaires/ids",
+		method: "GET",
+		signal,
+		params: {
+			...(params.search ? { search: params.search } : {}),
+			...(params.versionMode ? { versionMode: params.versionMode } : {}),
+			...(params.filterModel ? { filterModel: params.filterModel } : {}),
+			...(params.sortModel ? { sortModel: params.sortModel } : {}),
+		},
+	});
+}
+
+export function fetchV2QuestionnaireFilterValues(
+	colId: string,
+	query: Pick<
+		V2QuestionnaireListQuery,
+		"search" | "versionMode" | "filterModel"
+	>,
+	signal?: AbortSignal,
+): Promise<V2QuestionnaireRegistryFilterValuesDto> {
+	const params = serializeRegistryGridQuery({ ...query, page: 1, limit: 1 });
+	return apiClient<V2QuestionnaireRegistryFilterValuesDto>({
+		url: "/v2/questionnaires/filter-values",
+		method: "GET",
+		signal,
+		params: {
+			colId,
+			...(params.search ? { search: params.search } : {}),
+			...(params.versionMode ? { versionMode: params.versionMode } : {}),
+			...(params.filterModel ? { filterModel: params.filterModel } : {}),
+		},
+	});
+}
 
 export const useV2QuestionnaireRegistryConfig = () =>
 	useQuery<V2QuestionnaireRegistryConfigDto>({
@@ -249,6 +319,20 @@ export const useBulkDeleteV2Questionnaires = () => {
 	});
 };
 
+export const useDeleteAllV2Questionnaires = () => {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: (body: { confirm: string }) =>
+			apiClient<DeleteAllV2QuestionnairesResultDto>({
+				url: "/v2/questionnaires/delete-all",
+				method: "POST",
+				data: body,
+				timeout: API_ENTITY_CREATE_TIMEOUT_MS,
+			}),
+		onSuccess: () => invalidateV2QuestionnaireRegistry(qc),
+	});
+};
+
 export const useSeedV2TestQuestionnaires = () => {
 	const qc = useQueryClient();
 	return useMutation({
@@ -268,9 +352,10 @@ export const useV2QuestionnaireExportLock = (enabled = true) => {
 	return { data: { busy: Boolean(enabled && busy) } };
 };
 
-export const v2QuestionnairesStartExportJob = (
-	options?: { ids?: string[]; signal?: AbortSignal },
-) => {
+export const v2QuestionnairesStartExportJob = (options?: {
+	ids?: string[];
+	signal?: AbortSignal;
+}) => {
 	const ids = options?.ids?.filter(Boolean);
 	return apiClient<V2QuestionnaireExportJobCreateDto>({
 		url: "/v2/questionnaires/export/xlsx",
@@ -303,9 +388,10 @@ export const v2QuestionnairesExportJobDownload = (
 	});
 
 /** @deprecated используйте start + status + download; оставлено для одиночных выгрузок */
-export const v2QuestionnairesExportXlsx = async (
-	options?: { ids?: string[]; signal?: AbortSignal },
-) => {
+export const v2QuestionnairesExportXlsx = async (options?: {
+	ids?: string[];
+	signal?: AbortSignal;
+}) => {
 	const started = await v2QuestionnairesStartExportJob(options);
 	const status = await waitForV2ExportJob(started.jobId, {
 		signal: options?.signal,
@@ -320,7 +406,9 @@ export const v2QuestionnairesExportXlsx = async (
 const commentsKey = (questionnaireId: string) =>
 	[...ROOT_KEY, questionnaireId, "comments"] as const;
 
-export const useV2QuestionnaireComments = (questionnaireId: string | undefined) =>
+export const useV2QuestionnaireComments = (
+	questionnaireId: string | undefined,
+) =>
 	useQuery<V2QuestionnaireCommentDto[]>({
 		queryKey: commentsKey(questionnaireId ?? ""),
 		queryFn: () =>

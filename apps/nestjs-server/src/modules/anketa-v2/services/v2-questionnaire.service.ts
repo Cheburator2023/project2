@@ -22,10 +22,12 @@ import {
 	resolveV2QuestionnaireDeleteAction,
 	resolveV2UserAllowedStreamFilterValues,
 	userCanCreateV2Questionnaire,
+	V2_QUESTIONNAIRE_DELETE_ALL_CONFIRM,
 	V2_QUESTIONNAIRE_REGISTRY_PAGE_SIZE,
 	type BulkDeleteV2QuestionnairesResultDto,
 	type CreateV2QuestionnaireRequestDto,
 	type CreateV2QuestionnaireVersionRequestDto,
+	type DeleteAllV2QuestionnairesResultDto,
 	type PaginatedV2QuestionnaireResponseDto,
 	type SeedV2TestQuestionnairesResultDto,
 	type UpdateV2QuestionnaireRequestDto,
@@ -36,6 +38,11 @@ import {
 	type V2QuestionnaireRegistryConfigDto,
 	type V2QuestionnaireStatus,
 	pickV2QuestionnaireRegistryFormData,
+	parseV2AgGridFilterModel,
+	parseV2AgGridSortModel,
+	omitV2AgGridFilterColumn,
+	type V2QuestionnaireRegistryFilterValuesDto,
+	type V2QuestionnaireRegistryIdsResponseDto,
 } from "@smart-anketa/api-contract";
 import { Writable } from "node:stream";
 import { finished } from "node:stream/promises";
@@ -47,6 +54,16 @@ import { V2TemplateService } from "./v2-template.service";
 import { V2CalculationService } from "./v2-calculation.service";
 import { V2RuntimeSettingsService } from "./v2-runtime-settings.service";
 import { V2QuestionnaireRegistryReadCache } from "./v2-questionnaire-registry-read-cache.service";
+import {
+	addV2RegistrySortSelects,
+	applyV2RegistryAgGridFilters,
+	applyV2RegistryAgGridJoins,
+	applyV2RegistryAgGridSort,
+	formatV2RegistryDistinctValue,
+	resolveV2RegistryColumnExpr,
+	sortV2RegistryLeanRows,
+	V2_REGISTRY_FILTER_VALUES_LIMIT,
+} from "../utils/v2-questionnaire-registry-ag-grid-sql";
 import {
 	buildTestQuestionnaireFormData,
 	V2_TEST_QUESTIONNAIRE_SEED_SPECS,
@@ -90,7 +107,11 @@ const DEFAULT_EXPORT_BATCH_SIZE = 40;
 const DEFAULT_EXPORT_CONCURRENCY = 1;
 const DEFAULT_EXPORT_HEAP_MB_MAX = 1200;
 
-function resolvePositiveInt(envName: string, fallback: number, max: number): number {
+function resolvePositiveInt(
+	envName: string,
+	fallback: number,
+	max: number,
+): number {
 	const raw = Number(process.env[envName]);
 	if (Number.isInteger(raw) && raw > 0) return Math.min(raw, max);
 	return fallback;
@@ -162,13 +183,14 @@ export class V2QuestionnaireService {
 		const page = Math.max(1, Number(query.page) || 1);
 		const limit = Math.min(
 			100,
-			Math.max(
-				1,
-				Number(query.limit) || V2_QUESTIONNAIRE_REGISTRY_PAGE_SIZE,
-			),
+			Math.max(1, Number(query.limit) || V2_QUESTIONNAIRE_REGISTRY_PAGE_SIZE),
 		);
 		const search = query.search?.trim() ?? "";
 		const versionMode = query.versionMode;
+		const filterModel = parseV2AgGridFilterModel(query.filterModel);
+		const sortModel = parseV2AgGridSortModel(query.sortModel);
+		const filterKey = JSON.stringify(filterModel);
+		const sortKey = JSON.stringify(sortModel);
 
 		const empty = (): PaginatedV2QuestionnaireResponseDto => ({
 			data: [],
@@ -185,13 +207,19 @@ export class V2QuestionnaireService {
 			limit,
 			search,
 			versionMode,
+			filterKey,
+			sortKey,
 		});
 		const cached = this.registryReadCache.getList(cacheKey);
 		if (cached) return cached;
 
 		if (versionMode) {
-			const leanQb = this.questionnaireRepository
-				.createQueryBuilder("q")
+			const leanQb = this.createRegistryListBaseQb(
+				search,
+				allowedStreams,
+				filterModel,
+				sortModel,
+			)
 				.select("q.id", "id")
 				.addSelect("q.series_id", "seriesId")
 				.addSelect("q.version", "version")
@@ -201,7 +229,7 @@ export class V2QuestionnaireService {
 					"q.form_data->'workflow'->>'globalStatus'",
 					"workflowGlobalStatus",
 				);
-			this.applyRegistryListFilters(leanQb, search, allowedStreams);
+			addV2RegistrySortSelects(leanQb, sortModel);
 			const leanRows = await leanQb.getRawMany<{
 				id: string;
 				seriesId: string;
@@ -209,16 +237,12 @@ export class V2QuestionnaireService {
 				status: string | null;
 				createdAt: Date | string;
 				workflowGlobalStatus: string | null;
+				[sortKey: string]: unknown;
 			}>();
-			const picked = filterV2QuestionnairesByRegistryVersionMode(
-				leanRows,
-				versionMode,
+			const picked = sortV2RegistryLeanRows(
+				filterV2QuestionnairesByRegistryVersionMode(leanRows, versionMode),
+				sortModel,
 			);
-			picked.sort((a, b) => {
-				const ta = new Date(a.createdAt).getTime();
-				const tb = new Date(b.createdAt).getTime();
-				return tb - ta;
-			});
 			const total = picked.length;
 			const lastPage = total === 0 ? 0 : Math.ceil(total / limit);
 			const slice = picked.slice((page - 1) * limit, page * limit);
@@ -235,19 +259,26 @@ export class V2QuestionnaireService {
 			return result;
 		}
 
-		const qb = this.questionnaireRepository
-			.createQueryBuilder("q")
-			.leftJoinAndSelect("q.template", "template")
-			.leftJoinAndSelect("q.boundTemplateVersion", "boundTemplateVersion");
-		this.applyRegistryListFilters(qb, search, allowedStreams);
-		qb.orderBy("q.createdAt", "DESC");
-
-		const [rows, total] = await qb
-			.skip((page - 1) * limit)
-			.take(limit)
-			.getManyAndCount();
+		const total = await this.createRegistryListBaseQb(
+			search,
+			allowedStreams,
+			filterModel,
+		).getCount();
+		const idQb = this.createRegistryListBaseQb(
+			search,
+			allowedStreams,
+			filterModel,
+			sortModel,
+		).select("q.id", "id");
+		applyV2RegistryAgGridSort(idQb, sortModel);
+		const pageIds = (
+			await idQb
+				.offset((page - 1) * limit)
+				.limit(limit)
+				.getRawMany<{ id: string }>()
+		).map((row) => row.id);
 		const lastPage = total === 0 ? 0 : Math.ceil(total / limit);
-		const data = await this.toRegistryListDtos(rows);
+		const data = await this.findAllByIds(pageIds);
 		const result = {
 			data,
 			meta: { total, page, limit, lastPage },
@@ -256,8 +287,175 @@ export class V2QuestionnaireService {
 		return result;
 	}
 
+	async findRegistryIds(
+		query: V2QuestionnaireListQuery,
+		user?: TUserLike | null,
+	): Promise<V2QuestionnaireRegistryIdsResponseDto> {
+		const empty = (): V2QuestionnaireRegistryIdsResponseDto => ({
+			ids: [],
+			rows: [],
+		});
+		const allowedStreams = await this.resolveAllowedStreamsForList(user);
+		if (allowedStreams && allowedStreams.length === 0) return empty();
+
+		const search = query.search?.trim() ?? "";
+		const versionMode = query.versionMode;
+		const filterModel = parseV2AgGridFilterModel(query.filterModel);
+		const sortModel = parseV2AgGridSortModel(query.sortModel);
+
+		const qb = this.createRegistryListBaseQb(
+			search,
+			allowedStreams,
+			filterModel,
+			sortModel,
+		)
+			.select("q.id", "id")
+			.addSelect("q.series_id", "seriesId")
+			.addSelect("q.version", "version")
+			.addSelect("q.status", "status")
+			.addSelect("q.created_at", "createdAt")
+			.addSelect(
+				"q.form_data->'workflow'->>'globalStatus'",
+				"workflowGlobalStatus",
+			)
+			.addSelect(
+				"q.form_data->'generalInfo'->>'implementationStream'",
+				"implementationStream",
+			);
+		addV2RegistrySortSelects(qb, sortModel);
+		const leanRows = await qb.getRawMany<{
+			id: string;
+			seriesId: string;
+			version: string;
+			status: string | null;
+			createdAt: Date | string;
+			workflowGlobalStatus: string | null;
+			implementationStream: string | null;
+			[sortKey: string]: unknown;
+		}>();
+
+		const ordered = versionMode
+			? expandV2QuestionnaireRegistrySeriesMembers(
+					leanRows,
+					sortV2RegistryLeanRows(
+						filterV2QuestionnairesByRegistryVersionMode(leanRows, versionMode),
+						sortModel,
+					),
+				)
+			: sortV2RegistryLeanRows(leanRows, sortModel);
+
+		return {
+			ids: ordered.map((row) => row.id),
+			rows: ordered.map((row) => ({
+				id: row.id,
+				workflowGlobalStatus: row.workflowGlobalStatus,
+				status: (row.status as V2QuestionnaireStatus | null) ?? null,
+				implementationStream: row.implementationStream,
+			})),
+		};
+	}
+
+	async findRegistryFilterValues(
+		colId: string,
+		query: V2QuestionnaireListQuery,
+		user?: TUserLike | null,
+	): Promise<V2QuestionnaireRegistryFilterValuesDto> {
+		const expr = resolveV2RegistryColumnExpr(colId);
+		if (!expr) return { values: [] };
+
+		const allowedStreams = await this.resolveAllowedStreamsForList(user);
+		if (allowedStreams && allowedStreams.length === 0) return { values: [] };
+
+		const search = query.search?.trim() ?? "";
+		const versionMode = query.versionMode;
+		const filterModel = omitV2AgGridFilterColumn(
+			parseV2AgGridFilterModel(query.filterModel),
+			colId,
+		);
+
+		let rawValues: unknown[] = [];
+		if (versionMode) {
+			const qb = this.createRegistryListBaseQb(
+				search,
+				allowedStreams,
+				filterModel,
+				undefined,
+				[colId],
+			)
+				.select("q.id", "id")
+				.addSelect("q.series_id", "seriesId")
+				.addSelect("q.version", "version")
+				.addSelect("q.status", "status")
+				.addSelect(
+					"q.form_data->'workflow'->>'globalStatus'",
+					"workflowGlobalStatus",
+				)
+				.addSelect(expr.textSql, "value");
+			const leanRows = await qb.getRawMany<{
+				id: string;
+				seriesId: string;
+				version: string;
+				status: string | null;
+				workflowGlobalStatus: string | null;
+				value: unknown;
+			}>();
+			rawValues = expandV2QuestionnaireRegistrySeriesMembers(
+				leanRows,
+				filterV2QuestionnairesByRegistryVersionMode(leanRows, versionMode),
+			).map((row) => row.value);
+		} else {
+			const qb = this.createRegistryListBaseQb(
+				search,
+				allowedStreams,
+				filterModel,
+				undefined,
+				[colId],
+			)
+				.select(expr.textSql, "value")
+				.distinct(true);
+			qb.limit(V2_REGISTRY_FILTER_VALUES_LIMIT);
+			rawValues = (await qb.getRawMany<{ value: unknown }>()).map(
+				(row) => row.value,
+			);
+		}
+
+		const formatted: Array<string | null> = [];
+		const seen = new Set<string>();
+		let hasBlank = false;
+		for (const raw of rawValues) {
+			const value = formatV2RegistryDistinctValue(colId, raw);
+			if (value == null) {
+				hasBlank = true;
+				continue;
+			}
+			if (seen.has(value)) continue;
+			seen.add(value);
+			formatted.push(value);
+			if (formatted.length >= V2_REGISTRY_FILTER_VALUES_LIMIT) break;
+		}
+		if (hasBlank) formatted.push(null);
+		formatted.sort((a, b) =>
+			String(a ?? "").localeCompare(String(b ?? ""), "ru"),
+		);
+		return { values: formatted };
+	}
+
 	invalidateRegistryReadCache(): void {
 		this.registryReadCache.invalidateAll();
+	}
+
+	private createRegistryListBaseQb(
+		search: string,
+		allowedStreams: string[] | null,
+		filterModel: ReturnType<typeof parseV2AgGridFilterModel>,
+		sortModel?: ReturnType<typeof parseV2AgGridSortModel>,
+		extraColIds: string[] = [],
+	): SelectQueryBuilder<V2QuestionnaireEntity> {
+		const qb = this.questionnaireRepository.createQueryBuilder("q");
+		this.applyRegistryListFilters(qb, search, allowedStreams);
+		applyV2RegistryAgGridJoins(qb, filterModel, sortModel, extraColIds);
+		applyV2RegistryAgGridFilters(qb, filterModel);
+		return qb;
 	}
 
 	private applyRegistryListFilters(
@@ -629,9 +827,7 @@ export class V2QuestionnaireService {
 		if (await this.runtimeSettingsService.isDadmProgramManagerEnabled()) {
 			return;
 		}
-		throw new ForbiddenException(
-			"Функционал менеджера программ ДАДМ выключен",
-		);
+		throw new ForbiddenException("Функционал менеджера программ ДАДМ выключен");
 	}
 
 	private assertCanCopyQuestionnaire(
@@ -806,7 +1002,9 @@ export class V2QuestionnaireService {
 		this.logger.warn(
 			`Анкета ${id}: пользователь (роли ${viewer.roles.join(", ") || "—"}, ` +
 				`стримы ${viewer.streams.join(", ") || "—"}) изменил статусы вне своего стрима: ` +
-				forbidden.map((change) => `${change.path} (${change.reason})`).join(", "),
+				forbidden
+					.map((change) => `${change.path} (${change.reason})`)
+					.join(", "),
 		);
 	}
 
@@ -834,9 +1032,7 @@ export class V2QuestionnaireService {
 		return this.findOne(id);
 	}
 
-	async bulkHold(
-		ids: string[],
-	): Promise<{
+	async bulkHold(ids: string[]): Promise<{
 		heldIds: string[];
 		failed: Array<{ id: string; reason: string; message: string }>;
 	}> {
@@ -1016,9 +1212,7 @@ export class V2QuestionnaireService {
 					where: { id: parent.templateId },
 				}));
 			if (!template) {
-				throw new NotFoundException(
-					`Шаблон ${parent.templateId} не найден`,
-				);
+				throw new NotFoundException(`Шаблон ${parent.templateId} не найден`);
 			}
 			return this.resolvePublishedVersionForTemplate(template);
 		}
@@ -1160,6 +1354,42 @@ export class V2QuestionnaireService {
 	}
 
 	/**
+	 * Админка: полностью очистить таблицу анкет (не деактивация ДАДМ).
+	 * Комментарии и occupancy-lock снимаются каскадом / явно.
+	 */
+	async deleteAllQuestionnaires(
+		confirm: string,
+	): Promise<DeleteAllV2QuestionnairesResultDto> {
+		if (confirm.trim() !== V2_QUESTIONNAIRE_DELETE_ALL_CONFIRM) {
+			throw new BadRequestException(
+				`Чтобы удалить все анкеты, введите «${V2_QUESTIONNAIRE_DELETE_ALL_CONFIRM}»`,
+			);
+		}
+
+		const deleted = await this.questionnaireRepository.manager.transaction(
+			async (em) => {
+				const countRows = (await em.query(
+					`SELECT COUNT(*)::int AS count FROM v2_questionnaire`,
+				)) as Array<{ count: number }>;
+				const count = Number(countRows[0]?.count ?? 0);
+				if (count === 0) return 0;
+				await em.query(
+					`UPDATE v2_questionnaire_comments SET parent_comment_id = NULL`,
+				);
+				await em.query(`DELETE FROM v2_questionnaire_comments`);
+				await em.query(`DELETE FROM v2_questionnaire_edit_locks`);
+				await em.query(
+					`UPDATE v2_questionnaire SET parent_questionnaire_id = NULL`,
+				);
+				await em.query(`DELETE FROM v2_questionnaire`);
+				return count;
+			},
+		);
+		if (deleted > 0) this.registryReadCache.invalidateAll();
+		return { deleted };
+	}
+
+	/**
 	 * SQL DELETE без TypeORM `remove()`: не грузит jsonb form_data и не упирается
 	 * в FK parent_questionnaire_id у следующих версий серии (ДАДМ).
 	 */
@@ -1196,7 +1426,8 @@ export class V2QuestionnaireService {
 		templateId: string | undefined,
 		user?: TUserLike | null,
 	): Promise<SeedV2TestQuestionnairesResultDto> {
-		const { template, version } = await this.resolveTemplateForCreate(templateId);
+		const { template, version } =
+			await this.resolveTemplateForCreate(templateId);
 		const logic = version.logic as { rules?: unknown[] };
 		const jsonSchema = version.jsonSchema;
 		const created: V2QuestionnaireDto[] = [];
@@ -1205,10 +1436,10 @@ export class V2QuestionnaireService {
 		for (const spec of V2_TEST_QUESTIONNAIRE_SEED_SPECS) {
 			const raw = buildTestQuestionnaireFormData(jsonSchema, spec.variant);
 			const evaluated = await this.calculationService.evaluate(
-				patchV2TypicalWorksLogicRules(
-					{ rules: logic?.rules ?? [] } as never,
-					{ jsonSchema: version.jsonSchema, uiSchema: version.uiSchema },
-				),
+				patchV2TypicalWorksLogicRules({ rules: logic?.rules ?? [] } as never, {
+					jsonSchema: version.jsonSchema,
+					uiSchema: version.uiSchema,
+				}),
 				raw,
 				{
 					templateVersionId: version.id,
@@ -1269,8 +1500,7 @@ export class V2QuestionnaireService {
 				if (boundVersion?.id === template.currentVersionId) {
 					currentVersion = boundVersion;
 				} else {
-					currentVersion =
-						extraById.get(template.currentVersionId) ?? null;
+					currentVersion = extraById.get(template.currentVersionId) ?? null;
 				}
 			}
 			const binding = buildSchemaBinding(

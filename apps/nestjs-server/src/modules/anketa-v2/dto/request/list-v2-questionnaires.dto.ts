@@ -3,6 +3,7 @@ import { Type } from "class-transformer";
 import {
 	IsIn,
 	IsInt,
+	IsNotEmpty,
 	IsOptional,
 	IsString,
 	Max,
@@ -56,4 +57,28 @@ export class ListV2QuestionnairesDto {
 	@IsOptional()
 	@IsIn(["actual", "approved"])
 	versionMode?: V2QuestionnaireRegistryVersionMode;
+
+	@ApiPropertyOptional({
+		description: "JSON ag-Grid filterModel",
+	})
+	@IsOptional()
+	@IsString()
+	@MaxLength(100_000)
+	filterModel?: string;
+
+	@ApiPropertyOptional({
+		description: "JSON ag-Grid sortModel",
+	})
+	@IsOptional()
+	@IsString()
+	@MaxLength(20_000)
+	sortModel?: string;
+}
+
+export class ListV2QuestionnaireFilterValuesDto extends ListV2QuestionnairesDto {
+	@ApiPropertyOptional({ description: "colId колонки ag-Grid" })
+	@IsString()
+	@IsNotEmpty()
+	@MaxLength(400)
+	colId!: string;
 }

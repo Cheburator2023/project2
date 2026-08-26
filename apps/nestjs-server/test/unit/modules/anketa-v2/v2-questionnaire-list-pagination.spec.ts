@@ -63,15 +63,20 @@ describe("v2 questionnaire registry pagination contract", () => {
 		expect(actual.map((r) => r.id)).toEqual(["d1"]);
 	});
 
-	it("list query shape accepts page/search/versionMode", () => {
+	it("list query shape accepts page/search/versionMode and ag-grid models", () => {
 		const query: V2QuestionnaireListQuery = {
 			page: 2,
 			limit: V2_QUESTIONNAIRE_REGISTRY_PAGE_SIZE,
 			search: "иниц",
 			versionMode: "actual",
+			filterModel: { status: { filterType: "set", values: ["Активная"] } },
+			sortModel: [{ colId: "createdAt", sort: "desc" }],
 		};
 		expect(query.limit).toBe(50);
 		expect(query.versionMode).toBe("actual");
+		expect(Array.isArray(query.sortModel) && query.sortModel[0]?.colId).toBe(
+			"createdAt",
+		);
 	});
 
 	it("DADM delete: draft is removed, approved is deactivated", () => {

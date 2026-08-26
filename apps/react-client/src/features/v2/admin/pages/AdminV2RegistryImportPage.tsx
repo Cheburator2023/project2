@@ -1,11 +1,18 @@
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import CloudUploadRoundedIcon from "@mui/icons-material/CloudUploadRounded";
+import DeleteSweepRoundedIcon from "@mui/icons-material/DeleteSweepRounded";
 import FactCheckRoundedIcon from "@mui/icons-material/FactCheckRounded";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogContentText from "@mui/material/DialogContentText";
+import DialogTitle from "@mui/material/DialogTitle";
+import Divider from "@mui/material/Divider";
 import FormControl from "@mui/material/FormControl";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import MenuItem from "@mui/material/MenuItem";
@@ -31,6 +38,8 @@ import { getAgGridMainMenuItems } from "@react-client/common/tableStuff/agGridMa
 import { AG_GRID_SET_FILTER_PARAMS } from "@react-client/common/tableStuff/agGridSetFilterParams";
 import { registerAgGridTableModules } from "@react-client/common/tableStuff/agGridTableModules";
 import { toast } from "@react-client/common/toasts";
+import { useDeleteAllV2Questionnaires } from "@react-client/common/api/queries/v2-questionnaires";
+import { V2_QUESTIONNAIRE_DELETE_ALL_CONFIRM } from "@smart-anketa/api-contract";
 import { commonRoutes } from "@react-client/routing/common/routes";
 import {
 	agGridCustomMUITheme,
@@ -60,10 +69,8 @@ ModuleRegistry.registerModules([SetFilterModule]);
 const ISSUE_LABELS: Record<string, string> = {
 	dept_unmatched: "Департамент не найден в справочнике СА",
 	stream_unmatched: "Стрим не сопоставлен с кодом СА",
-	prod_invalid:
-		"Недопустимое значение «Необходимость продуктивизации»",
-	name_missing:
-		"Пустое «Наименование задачи» — подставлена заглушка",
+	prod_invalid: "Недопустимое значение «Необходимость продуктивизации»",
+	name_missing: "Пустое «Наименование задачи» — подставлена заглушка",
 	create_failed: "Не удалось создать анкету",
 };
 
@@ -293,14 +300,10 @@ function buildCandidateRows(
 		const code = primary?.code ?? "";
 		const value = primary?.value ?? "";
 		const suggestionsList =
-			code === "name_missing" || !primary
-				? []
-				: (primary.suggestions ?? []);
+			code === "name_missing" || !primary ? [] : (primary.suggestions ?? []);
 		const overrideApplied = appliedForIssue(code, value, overrides);
 		const appliedTo =
-			code === "name_missing"
-				? candidate.calcName || ""
-				: overrideApplied;
+			code === "name_missing" ? candidate.calcName || "" : overrideApplied;
 		const selectOptions =
 			code === "dept_unmatched"
 				? mergeSelectOptions(suggestionsList, departmentCatalog)
@@ -362,6 +365,9 @@ export function AdminV2RegistryImportPage() {
 	const [result, setResult] = useState<V2MasterRegistryImportResult | null>(
 		null,
 	);
+	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+	const [deleteConfirmText, setDeleteConfirmText] = useState("");
+	const deleteAll = useDeleteAllV2Questionnaires();
 
 	const showGrid = previewMode && Boolean(result?.dryRun);
 	const candidateRows = useMemo(
@@ -482,8 +488,7 @@ export function AdminV2RegistryImportPage() {
 		let masterRows: number[] | undefined;
 		if (!dryRun && previewMode) {
 			const selected =
-				gridApiRef.current?.getSelectedRows().map((row) => row.masterRow) ??
-				[];
+				gridApiRef.current?.getSelectedRows().map((row) => row.masterRow) ?? [];
 			if (selected.length === 0) {
 				toast.error("Отметьте строки в таблице для загрузки в базу");
 				return;
@@ -509,9 +514,7 @@ export function AdminV2RegistryImportPage() {
 				);
 			}
 		} catch (error) {
-			toast.error(
-				apiErrorMessage(error) || "Не удалось импортировать реестр",
-			);
+			toast.error(apiErrorMessage(error) || "Не удалось импортировать реестр");
 		} finally {
 			setPending(false);
 		}
@@ -567,6 +570,35 @@ export function AdminV2RegistryImportPage() {
 		if (ok) toast.success("JSON ошибок скопирован");
 		else toast.error("Не удалось скопировать");
 	};
+
+	const closeDeleteDialog = () => {
+		if (deleteAll.isPending) return;
+		setDeleteDialogOpen(false);
+		setDeleteConfirmText("");
+	};
+
+	const runDeleteAll = () => {
+		deleteAll.mutate(
+			{ confirm: deleteConfirmText.trim() },
+			{
+				onSuccess: (next) => {
+					setDeleteDialogOpen(false);
+					setDeleteConfirmText("");
+					toast.success(
+						next.deleted === 0
+							? "Реестр уже пуст"
+							: `Удалено анкет: ${next.deleted}`,
+					);
+				},
+				onError: (error) => {
+					toast.error(apiErrorMessage(error) || "Не удалось удалить анкеты");
+				},
+			},
+		);
+	};
+
+	const deleteConfirmOk =
+		deleteConfirmText.trim() === V2_QUESTIONNAIRE_DELETE_ALL_CONFIRM;
 
 	return (
 		<Flex flexDirection="column" flexGrow={1} minHeight="0" height="100%">
@@ -645,8 +677,8 @@ export function AdminV2RegistryImportPage() {
 							<Flex flexDirection="column" gap={8}>
 								<Alert severity="warning">
 									Строгий режим: создаются все анкеты из файла. Поля
-									справочников без точного совпадения останутся пустыми.
-									Таблица проверки скрыта. Дубликаты не отфильтровываются.
+									справочников без точного совпадения останутся пустыми. Таблица
+									проверки скрыта. Дубликаты не отфильтровываются.
 								</Alert>
 								<Button
 									variant="contained"
@@ -660,6 +692,25 @@ export function AdminV2RegistryImportPage() {
 								</Button>
 							</Flex>
 						)}
+
+						<Divider />
+						<Typography variant="subtitle2">Очистка реестра</Typography>
+						<Typography variant="body2" color="text.secondary">
+							Полностью удаляет все анкеты в базе (черновики и утверждённые),
+							чтобы загрузить реестр заново. Действие необратимо.
+						</Typography>
+						<Button
+							variant="outlined"
+							color="error"
+							startIcon={<DeleteSweepRoundedIcon />}
+							disabled={pending || deleteAll.isPending}
+							onClick={() => setDeleteDialogOpen(true)}
+							sx={{ alignSelf: "flex-start" }}
+							data-test-id="admin-registry-delete-all"
+							title="Удалить все анкеты из базы"
+						>
+							Удалить все анкеты
+						</Button>
 					</Flex>
 
 					{result && !result.dryRun ? (
@@ -694,10 +745,7 @@ export function AdminV2RegistryImportPage() {
 									onChange={(e) => {
 										const value = e.target.value;
 										setQuickFilter(value);
-										gridApiRef.current?.setGridOption(
-											"quickFilterText",
-											value,
-										);
+										gridApiRef.current?.setGridOption("quickFilterText", value);
 									}}
 									sx={{ minWidth: 240 }}
 								/>
@@ -719,7 +767,9 @@ export function AdminV2RegistryImportPage() {
 									variant="outlined"
 									startIcon={<ContentCopyRoundedIcon />}
 									onClick={onCopyErrorsJson}
-									disabled={issueCount === 0 && (result?.failed.length ?? 0) === 0}
+									disabled={
+										issueCount === 0 && (result?.failed.length ?? 0) === 0
+									}
 								>
 									JSON ошибок
 								</Button>
@@ -810,6 +860,48 @@ export function AdminV2RegistryImportPage() {
 					) : null}
 				</Flex>
 			</Card>
+			<Dialog
+				open={deleteDialogOpen}
+				onClose={closeDeleteDialog}
+				fullWidth
+				maxWidth="sm"
+			>
+				<DialogTitle>Удалить все анкеты?</DialogTitle>
+				<DialogContent>
+					<DialogContentText>
+						Будут удалены все анкеты реестра, включая утверждённые версии,
+						комментарии и блокировки. Чтобы подтвердить, введите{" "}
+						<strong>{V2_QUESTIONNAIRE_DELETE_ALL_CONFIRM}</strong>.
+					</DialogContentText>
+					<Spacer space={12} />
+					<TextField
+						autoFocus
+						fullWidth
+						size="small"
+						label="Подтверждение"
+						value={deleteConfirmText}
+						onChange={(event) => setDeleteConfirmText(event.target.value)}
+						disabled={deleteAll.isPending}
+						inputProps={{
+							"data-test-id": "admin-registry-delete-all-confirm",
+						}}
+					/>
+				</DialogContent>
+				<DialogActions>
+					<Button onClick={closeDeleteDialog} disabled={deleteAll.isPending}>
+						Отмена
+					</Button>
+					<Button
+						color="error"
+						variant="contained"
+						disabled={!deleteConfirmOk || deleteAll.isPending}
+						onClick={runDeleteAll}
+						data-test-id="admin-registry-delete-all-submit"
+					>
+						{deleteAll.isPending ? "Удаление…" : "Удалить все"}
+					</Button>
+				</DialogActions>
+			</Dialog>
 		</Flex>
 	);
 }

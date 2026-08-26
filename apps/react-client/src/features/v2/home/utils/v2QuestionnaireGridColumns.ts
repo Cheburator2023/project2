@@ -1,4 +1,4 @@
-import type { ColDef, ColGroupDef } from "ag-grid-community";
+import type { ColDef, ColGroupDef, ISetFilterParams } from "ag-grid-community";
 import {
 	buildV2QuestionnaireRegistryColumnTree,
 	estimateRegistryColumnWidth,
@@ -13,6 +13,7 @@ import {
 	AG_GRID_SET_FILTER_PARAMS,
 	formatAgGridSetFilterDateValue,
 } from "@react-client/common/tableStuff/agGridSetFilterParams";
+import { toV2RegistryDateOnly } from "@smart-anketa/api-contract";
 import {
 	V2WorkflowGlobalStatusCell,
 	v2WorkflowPanelStatusCell,
@@ -32,6 +33,10 @@ import { useQuestionnaireEditLocksStore } from "@react-client/features/v2/anketa
 
 const SET_COLUMN_FILTER = "agSetColumnFilter" as const;
 
+type RegistryColumnBuildOptions = {
+	setFilterParams?: ISetFilterParams;
+};
+
 function dateSetFilterExtras(): Pick<
 	ColDef<V2QuestionnaireGridRow>,
 	"cellDataType" | "filterValueGetter" | "valueFormatter"
@@ -39,19 +44,20 @@ function dateSetFilterExtras(): Pick<
 	return {
 		cellDataType: "dateString",
 		filterValueGetter: (params) =>
-			formatAgGridSetFilterDateValue(
-				params.getValue(params.column.getColId()),
-			),
+			toV2RegistryDateOnly(params.getValue(params.column.getColId())),
 		valueFormatter: (params) =>
 			params.value ? formatAgGridSetFilterDateValue(params.value) : "",
 	};
 }
 
-function leafToColDef(leaf: V2RegistryLeafColumn): ColDef<V2QuestionnaireGridRow> {
+function leafToColDef(
+	leaf: V2RegistryLeafColumn,
+	setFilterParams: ISetFilterParams,
+): ColDef<V2QuestionnaireGridRow> {
 	const minWidth = estimateRegistryColumnWidth(leaf.header);
 	const baseFilter = {
 		filter: SET_COLUMN_FILTER,
-		filterParams: AG_GRID_SET_FILTER_PARAMS,
+		filterParams: setFilterParams,
 	};
 
 	if (leaf.kind === "sectionStatus" && leaf.sectionId) {
@@ -64,8 +70,7 @@ function leafToColDef(leaf: V2RegistryLeafColumn): ColDef<V2QuestionnaireGridRow
 			...baseFilter,
 			cellRenderer: v2WorkflowSectionStatusCell(sectionId),
 			valueGetter: (p) =>
-				resolveVersionRow(p.data)?.workflowSectionStatuses?.[sectionId] ??
-				null,
+				resolveVersionRow(p.data)?.workflowSectionStatuses?.[sectionId] ?? null,
 		};
 	}
 
@@ -140,7 +145,8 @@ function leafToColDef(leaf: V2RegistryLeafColumn): ColDef<V2QuestionnaireGridRow
 				resizable: true,
 				...baseFilter,
 				...dateSetFilterExtras(),
-				valueGetter: (p) => resolveVersionRow(p.data)?.[leaf.id as "createdAt"] ?? "",
+				valueGetter: (p) =>
+					resolveVersionRow(p.data)?.[leaf.id as "createdAt"] ?? "",
 			};
 		}
 		if (leaf.id === "schemaCreatedAt" || leaf.id === "schemaUpdatedAt") {
@@ -166,8 +172,7 @@ function leafToColDef(leaf: V2RegistryLeafColumn): ColDef<V2QuestionnaireGridRow
 				minWidth,
 				resizable: true,
 				...baseFilter,
-				valueGetter: (p) =>
-					resolveVersionRow(p.data)?.finalCoefficient ?? null,
+				valueGetter: (p) => resolveVersionRow(p.data)?.finalCoefficient ?? null,
 			};
 		}
 		if (leaf.id === "readableId") {
@@ -248,21 +253,26 @@ function leafToColDef(leaf: V2RegistryLeafColumn): ColDef<V2QuestionnaireGridRow
 
 function nodeToColDef(
 	node: V2RegistryColumnNode,
+	setFilterParams: ISetFilterParams,
 ): ColDef<V2QuestionnaireGridRow> | ColGroupDef<V2QuestionnaireGridRow> {
 	if (node.type === "leaf") {
-		return leafToColDef(node);
+		return leafToColDef(node, setFilterParams);
 	}
 	return {
 		headerName: node.header,
 		openByDefault: node.openByDefault,
-		children: node.children.map(nodeToColDef),
+		children: node.children.map((child) =>
+			nodeToColDef(child, setFilterParams),
+		),
 	};
 }
 
 export function buildV2QuestionnaireColumnDefsFromTree(
 	columnTree: readonly V2RegistryColumnNode[],
+	options?: RegistryColumnBuildOptions,
 ): Array<ColDef<V2QuestionnaireGridRow> | ColGroupDef<V2QuestionnaireGridRow>> {
-	return columnTree.map(nodeToColDef);
+	const setFilterParams = options?.setFilterParams ?? AG_GRID_SET_FILTER_PARAMS;
+	return columnTree.map((node) => nodeToColDef(node, setFilterParams));
 }
 
 export function buildV2QuestionnaireColumnDefs(
@@ -274,5 +284,5 @@ export function buildV2QuestionnaireColumnDefs(
 		jsonSchema,
 		uiSchema,
 		options,
-	).map(nodeToColDef);
+	).map((node) => nodeToColDef(node, AG_GRID_SET_FILTER_PARAMS));
 }

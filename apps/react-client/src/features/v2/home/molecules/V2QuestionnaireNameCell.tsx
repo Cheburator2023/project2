@@ -6,6 +6,10 @@ import { resolveVersionRow } from "../utils/v2QuestionnaireGridValue";
 
 export type V2QuestionnaireGridContext = {
 	editLockHardDisable?: boolean;
+	allMatching?: boolean;
+	selectedCount?: number;
+	selectAllBusy?: boolean;
+	onToggleSelectAll?: () => void;
 };
 
 /** Название / id анкеты — настоящая ссылка для ПКМ браузера. */

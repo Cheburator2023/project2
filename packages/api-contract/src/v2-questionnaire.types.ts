@@ -34,7 +34,8 @@ export function formatV2QuestionnaireStatus(
 ): string {
 	if (!status) return "";
 	return (
-		V2_QUESTIONNAIRE_STATUS_RU[status as V2QuestionnaireStatus] ?? String(status)
+		V2_QUESTIONNAIRE_STATUS_RU[status as V2QuestionnaireStatus] ??
+		String(status)
 	);
 }
 
@@ -47,19 +48,22 @@ export const V2_SCHEMA_BINDING_STATUS_VALUES = [
 export type V2SchemaBindingStatus =
 	(typeof V2_SCHEMA_BINDING_STATUS_VALUES)[number];
 
-export const V2_SCHEMA_BINDING_STATUS_RU: Record<V2SchemaBindingStatus, string> =
-	{
-		aligned: "Актуальная",
-		superseded: "Устарела",
-		unavailable: "Недоступна",
-	};
+export const V2_SCHEMA_BINDING_STATUS_RU: Record<
+	V2SchemaBindingStatus,
+	string
+> = {
+	aligned: "Актуальная",
+	superseded: "Устарела",
+	unavailable: "Недоступна",
+};
 
 export function formatV2SchemaBindingStatus(
 	status: V2SchemaBindingStatus | string | null | undefined,
 ): string {
 	if (!status) return "";
 	return (
-		V2_SCHEMA_BINDING_STATUS_RU[status as V2SchemaBindingStatus] ?? String(status)
+		V2_SCHEMA_BINDING_STATUS_RU[status as V2SchemaBindingStatus] ??
+		String(status)
 	);
 }
 
@@ -105,10 +109,7 @@ export type V2QuestionnaireDto = {
 	/** Дублирует `formData.workflow.globalStatus` для реестра и фильтров. */
 	workflowGlobalStatus: V2AnketaGlobalStatus | null;
 	/** Дублирует `formData.workflow.sections` для чипов в реестре. */
-	workflowSectionStatuses: Record<
-		V2AnketaMainSectionId,
-		V2AnketaSectionStatus
-	>;
+	workflowSectionStatuses: Record<V2AnketaMainSectionId, V2AnketaSectionStatus>;
 	/**
 	 * Только в ответах create version / copy: расхождения параметров
 	 * при проекции formData на целевую схему.
@@ -201,6 +202,17 @@ export type BulkDeleteV2QuestionnairesResultDto = {
 	failed: BulkDeleteV2QuestionnairesFailureDto[];
 };
 
+/** Подтверждение полной очистки реестра (админка). */
+export const V2_QUESTIONNAIRE_DELETE_ALL_CONFIRM = "УДАЛИТЬ ВСЕ АНКЕТЫ";
+
+export type DeleteAllV2QuestionnairesRequestDto = {
+	confirm: typeof V2_QUESTIONNAIRE_DELETE_ALL_CONFIRM | string;
+};
+
+export type DeleteAllV2QuestionnairesResultDto = {
+	deleted: number;
+};
+
 export type SeedV2TestQuestionnairesRequestDto = {
 	templateId?: string;
 };
@@ -263,6 +275,74 @@ export type V2QuestionnaireListQuery = {
 	 * Без параметра — плоский список всех записей постранично.
 	 */
 	versionMode?: V2QuestionnaireRegistryVersionMode;
+	/** JSON ag-Grid filterModel (объект или строка в query). */
+	filterModel?: V2AgGridFilterModel | string;
+	/** JSON ag-Grid sortModel (массив или строка в query). */
+	sortModel?: V2AgGridSortModel[] | string;
+};
+
+/** Set-фильтр ag-Grid. `null` в values — пункт (Blanks). */
+export type V2AgGridSetFilter = {
+	filterType: "set";
+	values: Array<string | number | boolean | null>;
+};
+
+export type V2AgGridTextFilter = {
+	filterType: "text";
+	type?: string;
+	filter?: string;
+};
+
+export type V2AgGridNumberFilter = {
+	filterType: "number";
+	type?: string;
+	filter?: number;
+	filterTo?: number;
+};
+
+export type V2AgGridDateFilter = {
+	filterType: "date";
+	type?: string;
+	dateFrom?: string;
+	dateTo?: string;
+};
+
+export type V2AgGridCombinedFilter = {
+	filterType: "text" | "number" | "date" | "set";
+	operator: "AND" | "OR";
+	condition1?: V2AgGridColumnFilter;
+	condition2?: V2AgGridColumnFilter;
+	conditions?: V2AgGridColumnFilter[];
+};
+
+export type V2AgGridColumnFilter =
+	| V2AgGridSetFilter
+	| V2AgGridTextFilter
+	| V2AgGridNumberFilter
+	| V2AgGridDateFilter
+	| V2AgGridCombinedFilter;
+
+export type V2AgGridFilterModel = Record<string, V2AgGridColumnFilter>;
+
+export type V2AgGridSortModel = {
+	colId: string;
+	sort: "asc" | "desc";
+};
+
+export type V2QuestionnaireRegistryIdRowDto = {
+	id: string;
+	workflowGlobalStatus: string | null;
+	status: V2QuestionnaireStatus | null;
+	implementationStream: string | null;
+};
+
+export type V2QuestionnaireRegistryIdsResponseDto = {
+	ids: string[];
+	rows: V2QuestionnaireRegistryIdRowDto[];
+};
+
+export type V2QuestionnaireRegistryFilterValuesDto = {
+	values: Array<string | null>;
 };
 
 export type V2QuestionnaireListMetaDto = {

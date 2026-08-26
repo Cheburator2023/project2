@@ -15,8 +15,11 @@ import {
 import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import type {
 	BulkDeleteV2QuestionnairesResultDto,
+	DeleteAllV2QuestionnairesResultDto,
 	PaginatedV2QuestionnaireResponseDto,
 	SeedV2TestQuestionnairesResultDto,
+	V2QuestionnaireRegistryFilterValuesDto,
+	V2QuestionnaireRegistryIdsResponseDto,
 	V2QuestionnaireCommentDto,
 	V2QuestionnaireDto,
 	V2QuestionnaireEditLockDto,
@@ -30,7 +33,9 @@ import {
 	CreateV2QuestionnaireCommentDto,
 	CreateV2QuestionnaireDto,
 	CreateV2QuestionnaireVersionDto,
+	DeleteAllV2QuestionnairesDto,
 	ListV2QuestionnairesDto,
+	ListV2QuestionnaireFilterValuesDto,
 	SeedV2TestQuestionnairesDto,
 	UpdateV2QuestionnaireDto,
 } from "../dto";
@@ -39,6 +44,7 @@ import { V2QuestionnaireCommentService } from "../services/v2-questionnaire-comm
 import { V2QuestionnaireEditLockService } from "../services/v2-questionnaire-edit-lock.service";
 import { CurrentUser } from "../../../shared/decorators/user.decorator";
 import { RealmRole } from "../../../shared/decorators/realm-role.decorator";
+import { DomainRoles } from "../../../shared/decorators/domain-roles.decorator";
 import { Permission } from "../../../shared/types/permissions";
 import { AuditService } from "../../../shared/audit/audit.service";
 import {
@@ -88,10 +94,37 @@ export class V2QuestionnaireController {
 		return { locks };
 	}
 
+	@Get("ids")
+	@ApiOperation({
+		summary:
+			"Id анкет реестра по текущему поиску/фильтрам (select-all на всех страницах)",
+	})
+	async findIds(
+		@Query() query: ListV2QuestionnairesDto,
+		@CurrentUser() user: Record<string, unknown> | undefined,
+	): Promise<V2QuestionnaireRegistryIdsResponseDto> {
+		return this.questionnaireService.findRegistryIds(query, user as never);
+	}
+
+	@Get("filter-values")
+	@ApiOperation({
+		summary: "Уникальные значения set-фильтра колонки реестра",
+	})
+	async findFilterValues(
+		@Query() query: ListV2QuestionnaireFilterValuesDto,
+		@CurrentUser() user: Record<string, unknown> | undefined,
+	): Promise<V2QuestionnaireRegistryFilterValuesDto> {
+		return this.questionnaireService.findRegistryFilterValues(
+			query.colId,
+			query,
+			user as never,
+		);
+	}
+
 	@Get()
 	@ApiOperation({
 		summary:
-			"Реестр анкет v2 (пагинация, поиск; фильтр по стриму на сервере)",
+			"Реестр анкет v2 (пагинация, поиск, filterModel/sortModel ag-Grid)",
 	})
 	async findAll(
 		@Query() query: ListV2QuestionnairesDto,
@@ -156,6 +189,49 @@ export class V2QuestionnaireController {
             throw error;
         }
     }
+
+	@Post("delete-all")
+	@HttpCode(200)
+	@DomainRoles("appadmin", "sacfg")
+	@ApiOperation({
+		summary: "Удалить все анкеты v2 (админка, полная очистка реестра)",
+	})
+	async deleteAll(
+		@Body() body: DeleteAllV2QuestionnairesDto,
+		@CurrentUser() user: Record<string, unknown> | undefined,
+	): Promise<DeleteAllV2QuestionnairesResultDto> {
+		const correlationId = uuidv4();
+		const initiator = this.buildInitiator(user);
+		this.auditService.sendEvent(
+			AUDIT_EVENT_SUMD_DELETEANKETA,
+			"START",
+			correlationId,
+			initiator,
+			{ all: true },
+		);
+		try {
+			const result = await this.questionnaireService.deleteAllQuestionnaires(
+				body.confirm,
+			);
+			this.auditService.sendEvent(
+				AUDIT_EVENT_SUMD_DELETEANKETA,
+				"SUCCESS",
+				correlationId,
+				initiator,
+				{ all: true, deleted: result.deleted },
+			);
+			return result;
+		} catch (error) {
+			this.auditService.sendEvent(
+				AUDIT_EVENT_SUMD_DELETEANKETA,
+				"FAILURE",
+				correlationId,
+				initiator,
+				{ all: true, errorMessage: (error as Error).message },
+			);
+			throw error;
+		}
+	}
 
     @Post("seed-test")
     @HttpCode(200)

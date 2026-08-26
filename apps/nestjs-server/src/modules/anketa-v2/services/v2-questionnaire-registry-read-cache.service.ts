@@ -16,6 +16,8 @@ export type V2RegistryListCacheKeyInput = {
 	limit: number;
 	search: string;
 	versionMode?: string;
+	filterKey?: string;
+	sortKey?: string;
 };
 
 const MAX_LIST_ENTRIES = 32;
@@ -50,7 +52,7 @@ export class V2QuestionnaireRegistryReadCache {
 	listKey(input: V2RegistryListCacheKeyInput): string {
 		const streams =
 			input.streams == null ? "*" : [...input.streams].sort().join(",");
-		return `${streams}|${input.page}|${input.limit}|${input.search}|${input.versionMode ?? ""}|seriesAll`;
+		return `${streams}|${input.page}|${input.limit}|${input.search}|${input.versionMode ?? ""}|seriesAll|${input.filterKey ?? ""}|${input.sortKey ?? ""}`;
 	}
 
 	getList(key: string): PaginatedV2QuestionnaireResponseDto | undefined {

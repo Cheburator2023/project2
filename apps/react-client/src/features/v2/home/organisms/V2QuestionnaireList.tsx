@@ -28,6 +28,8 @@ import {
 	useV2QuestionnaireExportLock,
 	useV2QuestionnaireRegistryConfig,
 	useV2Questionnaires,
+	fetchV2QuestionnaireFilterValues,
+	fetchV2QuestionnaireRegistryIds,
 } from "@react-client/common/api/queries/v2-questionnaires";
 import { V2QuestionnaireExportProgressDialog } from "@react-client/features/v2/export/V2QuestionnaireExportProgressDialog";
 import { useQuestionnaireEditLocksStore } from "@react-client/features/v2/anketaCRUD/stores/questionnaireEditLocksStore";
@@ -45,6 +47,7 @@ import { AG_GRID_SET_FILTER_PARAMS } from "@react-client/common/tableStuff/agGri
 import {
 	applyAgGridColumnState,
 	clearAgGridColumnState,
+	loadAgGridColumnState,
 	saveAgGridColumnState,
 } from "@react-client/common/tableStuff/agGridColumnState";
 import {
@@ -65,10 +68,12 @@ import {
 	type MenuItemDef,
 	type RowDoubleClickedEvent,
 	type SelectionChangedEvent,
+	type FilterChangedEvent,
 	ModuleRegistry,
 	type ColumnState,
 	type GridApi,
 	type SideBarDef,
+	type ISetFilterParams,
 	ValidationModule,
 } from "ag-grid-community";
 import {
@@ -103,6 +108,12 @@ import {
 	V2_ANKETA_HOLD_LABEL,
 	V2_QUESTIONNAIRE_REGISTRY_PAGE_SIZE,
 	V2_QUESTIONNAIRE_REGISTRY_VERSION_MODE_LABELS,
+	isV2AgGridFilterModelEmpty,
+	omitV2AgGridFilterColumn,
+	parseV2AgGridFilterModel,
+	type V2AgGridFilterModel,
+	type V2AgGridSortModel,
+	type V2QuestionnaireRegistryIdRowDto,
 	type V2QuestionnaireRegistryVersionMode,
 } from "@smart-anketa/api-contract";
 import { buildV2QuestionnaireColumnDefsFromTree } from "../utils/v2QuestionnaireGridColumns";
@@ -117,7 +128,18 @@ import {
 	type QuestionnaireGridPresetApi,
 } from "../utils/v2QuestionnaireGridFactoryPresets";
 import { buildV2QuestionnaireRegistryTree } from "../utils/buildV2QuestionnaireRegistryTree";
-import { resolveVersionRow, collectSelectedVersionRows } from "../utils/v2QuestionnaireGridValue";
+import {
+	resolveVersionRow,
+	collectSelectedVersionRows,
+} from "../utils/v2QuestionnaireGridValue";
+import {
+	collectVersionIdsFromGridRows,
+	mergeVisibleSelection,
+	selectedVisibleIdsFromGridRows,
+	shouldSelectGridRow,
+} from "../utils/v2RegistrySelection";
+import { V2RegistrySelectAllHeader } from "../molecules/V2RegistrySelectAllHeader";
+import type { V2QuestionnaireGridContext } from "../molecules/V2QuestionnaireNameCell";
 import { V2RegistryPagingPanel } from "./V2RegistryPagingPanel";
 
 export type {
@@ -233,6 +255,51 @@ function newPresetId(): string {
 	return typeof crypto !== "undefined" && "randomUUID" in crypto
 		? crypto.randomUUID()
 		: `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function sortModelFromColumnState(
+	state: ColumnState[] | null,
+): V2AgGridSortModel[] {
+	if (!state?.length) return [];
+	return [...state]
+		.filter(
+			(col): col is ColumnState & { colId: string; sort: "asc" | "desc" } =>
+				Boolean(col.colId) && (col.sort === "asc" || col.sort === "desc"),
+		)
+		.sort((a, b) => (a.sortIndex ?? 0) - (b.sortIndex ?? 0))
+		.map((col) => ({ colId: col.colId, sort: col.sort }));
+}
+
+function slimToVersionRow(
+	row: V2QuestionnaireRegistryIdRowDto,
+): V2QuestionnaireVersionRow {
+	return {
+		id: row.id,
+		rowKind: "version",
+		displayLabel: row.id,
+		status: row.status ?? "active",
+		workflowGlobalStatus: row.workflowGlobalStatus,
+		formData: {
+			generalInfo: { implementationStream: row.implementationStream ?? "" },
+			workflow: { globalStatus: row.workflowGlobalStatus },
+		},
+	} as unknown as V2QuestionnaireVersionRow;
+}
+
+function slimFromVersionRow(
+	row: V2QuestionnaireVersionRow,
+): V2QuestionnaireRegistryIdRowDto {
+	const generalInfo = row.formData?.generalInfo;
+	const stream =
+		generalInfo && typeof generalInfo === "object"
+			? (generalInfo as Record<string, unknown>).implementationStream
+			: null;
+	return {
+		id: row.id,
+		workflowGlobalStatus: row.workflowGlobalStatus,
+		status: row.status,
+		implementationStream: typeof stream === "string" ? stream : null,
+	};
 }
 
 function GridPresetToolPanel({
@@ -425,18 +492,20 @@ export function V2QuestionnaireList() {
 	} = usePermissions();
 	const dadmProgramManagerEnabled = useDadmProgramManagerFeature();
 	const editLockHardDisable = useEditLockHardDisableFeature();
-	const gridContext = useMemo(
-		() => ({ editLockHardDisable }),
-		[editLockHardDisable],
-	);
 	const bulkDelete = useBulkDeleteV2Questionnaires();
 	const bulkHold = useBulkHoldV2Questionnaires();
 	const canShowHoldActions = dadmProgramManagerEnabled && canHoldCalculation;
 	const { data: registryConfig, isLoading: isRegistryConfigLoading } =
 		useV2QuestionnaireRegistryConfig();
-	const [selectedVersions, setSelectedVersions] = useState<
-		V2QuestionnaireVersionRow[]
-	>([]);
+	const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+	const [allMatching, setAllMatching] = useState(false);
+	const [selectAllBusy, setSelectAllBusy] = useState(false);
+	const slimByIdRef = useRef<Map<string, V2QuestionnaireRegistryIdRowDto>>(
+		new Map(),
+	);
+	const ignoreSelectionEventRef = useRef(false);
+	const selectedIdsRef = useRef(selectedIds);
+	selectedIdsRef.current = selectedIds;
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 	const [holdDialogOpen, setHoldDialogOpen] = useState(false);
 	const [registryVersionMode, setRegistryVersionMode] =
@@ -444,6 +513,28 @@ export function V2QuestionnaireList() {
 	const [page, setPage] = useState(1);
 	const [searchInput, setSearchInput] = useState("");
 	const debouncedSearch = useDebouncedValue(searchInput, 300);
+	const [filterModel, setFilterModel] = useState<V2AgGridFilterModel>({});
+	const debouncedFilterJson = useDebouncedValue(
+		JSON.stringify(filterModel),
+		300,
+	);
+	const debouncedFilterModel = useMemo(
+		() => parseV2AgGridFilterModel(debouncedFilterJson),
+		[debouncedFilterJson],
+	);
+	const [sortModel, setSortModel] = useState<V2AgGridSortModel[]>(() =>
+		sortModelFromColumnState(loadAgGridColumnState(GRID_COLUMN_STATE_KEY)),
+	);
+	const filterModelRef = useRef(filterModel);
+	filterModelRef.current = filterModel;
+	const searchRef = useRef(debouncedSearch);
+	searchRef.current = debouncedSearch;
+	const versionModeRef = useRef<V2QuestionnaireRegistryVersionMode | undefined>(
+		dadmProgramManagerEnabled ? registryVersionMode : undefined,
+	);
+	versionModeRef.current = dadmProgramManagerEnabled
+		? registryVersionMode
+		: undefined;
 	const [pagingHostEl, setPagingHostEl] = useState<HTMLElement | null>(null);
 	const [exportDialog, setExportDialog] = useState<{
 		open: boolean;
@@ -467,27 +558,61 @@ export function V2QuestionnaireList() {
 			? agGridCustomMUITheme
 			: agGridCustomMUIThemeDark;
 
-	const { data: listResponse, isLoading } = useV2Questionnaires({
-		page,
-		limit: V2_QUESTIONNAIRE_REGISTRY_PAGE_SIZE,
-		search: debouncedSearch,
-		versionMode: dadmProgramManagerEnabled ? registryVersionMode : undefined,
-	});
+	const listQuery = useMemo(
+		() => ({
+			page,
+			limit: V2_QUESTIONNAIRE_REGISTRY_PAGE_SIZE,
+			search: debouncedSearch,
+			versionMode: dadmProgramManagerEnabled ? registryVersionMode : undefined,
+			filterModel: debouncedFilterModel,
+			sortModel,
+		}),
+		[
+			page,
+			debouncedSearch,
+			dadmProgramManagerEnabled,
+			registryVersionMode,
+			debouncedFilterModel,
+			sortModel,
+		],
+	);
+	const { data: listResponse, isLoading } = useV2Questionnaires(listQuery);
 	const questionnaires = listResponse?.data ?? [];
 	const listMeta = listResponse?.meta;
 	const locksById = useQuestionnaireEditLocksStore((s) => s.locksById);
 
-	const defaultColDef = useMemo(
-		() => ({
+	const defaultColDef = useMemo(() => {
+		const setFilterParams: ISetFilterParams = {
+			...AG_GRID_SET_FILTER_PARAMS,
+			refreshValuesOnOpen: true,
+			values: (params) => {
+				const colId = params.colDef.colId ?? params.column.getColId();
+				const withoutCol = omitV2AgGridFilterColumn(
+					parseV2AgGridFilterModel(filterModelRef.current),
+					colId,
+				);
+				void fetchV2QuestionnaireFilterValues(colId, {
+					search: searchRef.current,
+					versionMode: versionModeRef.current,
+					filterModel: isV2AgGridFilterModelEmpty(withoutCol)
+						? undefined
+						: withoutCol,
+				})
+					.then((result) => params.success(result.values))
+					.catch(() => params.success([]));
+			},
+		};
+		return {
 			sortable: true,
+			/** Данные уже отсортированы на сервере; клиент не должен переставлять страницу. */
+			comparator: () => 0,
 			resizable: true,
 			filter: "agSetColumnFilter" as const,
-			filterParams: AG_GRID_SET_FILTER_PARAMS,
+			filterParams: setFilterParams,
 			minWidth: 90,
 			mainMenuItems: getAgGridMainMenuItems,
-		}),
-		[],
-	);
+		};
+	}, []);
 
 	const defaultColGroupDef = useMemo(
 		() => ({
@@ -500,8 +625,9 @@ export function V2QuestionnaireList() {
 		() => ({
 			mode: "multiRow" as const,
 			checkboxes: true,
-			headerCheckbox: true,
+			headerCheckbox: false,
 			enableClickSelection: false,
+			groupSelects: "descendants" as const,
 			isRowSelectable: (node: { data?: V2QuestionnaireGridRow }) =>
 				node.data?.rowKind === "version" || node.data?.rowKind === "series",
 		}),
@@ -515,6 +641,60 @@ export function V2QuestionnaireList() {
 	 * Не дублируем `userHasV2QuestionnaireDeleteRole` — в god mode groups=[] и кнопка пропадала.
 	 */
 	const canDeleteInRegistry = canDeleteCalculation;
+
+	const versionRows = useMemo<V2QuestionnaireVersionRow[]>(() => {
+		if (!questionnaires.length) return [];
+		return questionnaires.map((q) => {
+			const lock = locksById[q.id];
+			const lockedByOther =
+				Boolean(lock) && !isOwnV2QuestionnaireEditLock(lock, username);
+			return {
+				...q,
+				rowKind: "version" as const,
+				displayLabel: q.calcName,
+				/** Блокируем только чужой lock; свой — можно открыть повторно. */
+				isEditLocked: lockedByOther,
+				editLockKind: lock
+					? lockedByOther
+						? ("other" as const)
+						: ("own" as const)
+					: undefined,
+			};
+		});
+	}, [questionnaires, locksById, username]);
+
+	/** Дерево версий — только при фиче ДАДМ; иначе плоский реестр. */
+	const rowData = useMemo<V2QuestionnaireGridRow[]>(() => {
+		if (!dadmProgramManagerEnabled) return versionRows;
+		return buildV2QuestionnaireRegistryTree(versionRows, registryVersionMode, {
+			includeAllVersions: true,
+		});
+	}, [versionRows, registryVersionMode, dadmProgramManagerEnabled]);
+
+	const selectedVersions = useMemo(() => {
+		const pageById = new Map(versionRows.map((row) => [row.id, row]));
+		const rows: V2QuestionnaireVersionRow[] = [];
+		for (const id of selectedIds) {
+			const fromPage = pageById.get(id);
+			if (fromPage) {
+				rows.push(fromPage);
+				continue;
+			}
+			const slim = slimByIdRef.current.get(id);
+			if (slim) rows.push(slimToVersionRow(slim));
+			else {
+				rows.push(
+					slimToVersionRow({
+						id,
+						workflowGlobalStatus: null,
+						status: "active",
+						implementationStream: null,
+					}),
+				);
+			}
+		}
+		return rows;
+	}, [selectedIds, versionRows]);
 
 	const deletableSelectedVersions = useMemo(
 		() =>
@@ -555,45 +735,37 @@ export function V2QuestionnaireList() {
 				(row) => row.workflowGlobalStatus === "Утверждена",
 			));
 
+	const queryFingerprint = `${debouncedSearch}|${registryVersionMode}|${dadmProgramManagerEnabled}|${debouncedFilterJson}|${JSON.stringify(sortModel)}`;
+
 	useEffect(() => {
 		setPage(1);
-		setSelectedVersions([]);
+		setSelectedIds(new Set());
+		setAllMatching(false);
+		slimByIdRef.current = new Map();
 		gridRef.current?.api?.deselectAll();
-	}, [debouncedSearch, registryVersionMode, dadmProgramManagerEnabled]);
-
-	const versionRows = useMemo<V2QuestionnaireVersionRow[]>(() => {
-		if (!questionnaires.length) return [];
-		return questionnaires.map((q) => {
-			const lock = locksById[q.id];
-			const lockedByOther =
-				Boolean(lock) && !isOwnV2QuestionnaireEditLock(lock, username);
-			return {
-				...q,
-				rowKind: "version" as const,
-				displayLabel: q.calcName,
-				/** Блокируем только чужой lock; свой — можно открыть повторно. */
-				isEditLocked: lockedByOther,
-				editLockKind: lock
-					? lockedByOther
-						? ("other" as const)
-						: ("own" as const)
-					: undefined,
-			};
-		});
-	}, [questionnaires, locksById, username]);
-
-	/** Дерево версий — только при фиче ДАДМ; иначе плоский реестр. */
-	const rowData = useMemo<V2QuestionnaireGridRow[]>(() => {
-		if (!dadmProgramManagerEnabled) return versionRows;
-		return buildV2QuestionnaireRegistryTree(versionRows, registryVersionMode, {
-			includeAllVersions: true,
-		});
-	}, [versionRows, registryVersionMode, dadmProgramManagerEnabled]);
+	}, [queryFingerprint]);
 
 	useEffect(() => {
 		if (!dadmProgramManagerEnabled) return;
 		gridRef.current?.api?.expandAll();
 	}, [rowData, dadmProgramManagerEnabled]);
+
+	useEffect(() => {
+		const api = gridRef.current?.api;
+		if (!api) return;
+		ignoreSelectionEventRef.current = true;
+		api.forEachNode((node) => {
+			if (!node.data) return;
+			const wanted = shouldSelectGridRow(node.data, selectedIdsRef.current);
+			if (node.isSelected() !== wanted) {
+				node.setSelected(wanted, false);
+			}
+		});
+		const frame = requestAnimationFrame(() => {
+			ignoreSelectionEventRef.current = false;
+		});
+		return () => cancelAnimationFrame(frame);
+	}, [rowData, selectedIds]);
 
 	const rowClassRules = useMemo(
 		() => ({
@@ -613,8 +785,11 @@ export function V2QuestionnaireList() {
 	);
 
 	const columnDefs = useMemo(
-		() => buildV2QuestionnaireColumnDefsFromTree(columnTree),
-		[columnTree],
+		() =>
+			buildV2QuestionnaireColumnDefsFromTree(columnTree, {
+				setFilterParams: defaultColDef.filterParams,
+			}),
+		[columnTree, defaultColDef],
 	);
 
 	const GridPresetToolPanelBound = useMemo(
@@ -718,12 +893,116 @@ export function V2QuestionnaireList() {
 		saveAgGridColumnState(GRID_COLUMN_STATE_KEY, api.getColumnState());
 	}, []);
 
-	const handleExportXlsx = useCallback((ids?: string[]) => {
-		setExportDialog({
-			open: true,
-			ids: ids && ids.length > 0 ? ids : undefined,
+	const clearSelection = useCallback(() => {
+		setSelectedIds(new Set());
+		setAllMatching(false);
+		slimByIdRef.current = new Map();
+		ignoreSelectionEventRef.current = true;
+		gridRef.current?.api?.deselectAll();
+		requestAnimationFrame(() => {
+			ignoreSelectionEventRef.current = false;
 		});
 	}, []);
+
+	const handleToggleSelectAll = useCallback(() => {
+		if (allMatching) {
+			clearSelection();
+			return;
+		}
+		setSelectAllBusy(true);
+		void fetchV2QuestionnaireRegistryIds({
+			search: debouncedSearch,
+			versionMode: dadmProgramManagerEnabled ? registryVersionMode : undefined,
+			filterModel: debouncedFilterModel,
+			sortModel,
+		})
+			.then((result) => {
+				const next = new Set(result.ids);
+				const slim = new Map(slimByIdRef.current);
+				for (const row of result.rows) slim.set(row.id, row);
+				slimByIdRef.current = slim;
+				setSelectedIds(next);
+				setAllMatching(true);
+			})
+			.catch((err) => {
+				toast.error("Не удалось выбрать все строки", {
+					description: apiErrorMessage(err),
+				});
+			})
+			.finally(() => setSelectAllBusy(false));
+	}, [
+		allMatching,
+		clearSelection,
+		dadmProgramManagerEnabled,
+		debouncedFilterModel,
+		debouncedSearch,
+		registryVersionMode,
+		sortModel,
+	]);
+
+	const gridContext = useMemo<V2QuestionnaireGridContext>(
+		() => ({
+			editLockHardDisable,
+			allMatching,
+			selectedCount: selectedIds.size,
+			selectAllBusy,
+			onToggleSelectAll: handleToggleSelectAll,
+		}),
+		[
+			allMatching,
+			editLockHardDisable,
+			handleToggleSelectAll,
+			selectAllBusy,
+			selectedIds.size,
+		],
+	);
+
+	useEffect(() => {
+		gridRef.current?.api?.refreshHeader();
+	}, [allMatching, selectAllBusy, selectedIds.size]);
+
+	const handleExportXlsx = useCallback(
+		(ids?: string[]) => {
+			if (ids && ids.length > 0) {
+				setExportDialog({ open: true, ids });
+				return;
+			}
+			const hasServerQuery =
+				Boolean(debouncedSearch.trim()) ||
+				!isV2AgGridFilterModelEmpty(debouncedFilterModel);
+			if (!hasServerQuery) {
+				setExportDialog({ open: true });
+				return;
+			}
+			void fetchV2QuestionnaireRegistryIds({
+				search: debouncedSearch,
+				versionMode: dadmProgramManagerEnabled
+					? registryVersionMode
+					: undefined,
+				filterModel: debouncedFilterModel,
+				sortModel,
+			})
+				.then((result) => {
+					if (result.ids.length === 0) {
+						toast.error("Нет строк для экспорта по текущим фильтрам");
+						return;
+					}
+					setExportDialog({ open: true, ids: result.ids });
+				})
+				.catch((err) => {
+					toast.error("Не удалось подготовить экспорт", {
+						description: apiErrorMessage(err),
+					});
+				});
+		},
+		[
+			dadmProgramManagerEnabled,
+			debouncedFilterModel,
+			debouncedSearch,
+			registryVersionMode,
+			sortModel,
+		],
+	);
 
 	const autoGroupColumnDef = useMemo<ColDef<V2QuestionnaireGridRow>>(
 		() => ({
@@ -732,6 +1011,7 @@ export function V2QuestionnaireList() {
 			flex: 1,
 			minWidth: 220,
 			sortable: false,
+			comparator: () => 0,
 			filter: "agTextColumnFilter",
 			/** Группа и метка версии — текст; ссылка только в колонке «Анкета» (calcName). */
 			valueFormatter: (p) =>
@@ -817,7 +1097,14 @@ export function V2QuestionnaireList() {
 					menu.push({
 						name: copy.menu,
 						action: () => {
-							setSelectedVersions(deletable);
+							const next = new Set(deletable.map((row) => row.id));
+							const slim = new Map(slimByIdRef.current);
+							for (const row of deletable) {
+								slim.set(row.id, slimFromVersionRow(row));
+							}
+							slimByIdRef.current = slim;
+							setSelectedIds(next);
+							setAllMatching(false);
 							setDeleteDialogOpen(true);
 						},
 					});
@@ -860,8 +1147,7 @@ export function V2QuestionnaireList() {
 			{
 				onSuccess: (result) => {
 					setHoldDialogOpen(false);
-					setSelectedVersions([]);
-					gridRef.current?.api?.deselectAll();
+					clearSelection();
 					const held = result.heldIds.length;
 					const failed = result.failed.length;
 					if (held > 0) {
@@ -883,7 +1169,7 @@ export function V2QuestionnaireList() {
 					}),
 			},
 		);
-	}, [bulkHold, holdableSelectedIds]);
+	}, [bulkHold, clearSelection, holdableSelectedIds]);
 
 	const runBulkDelete = useCallback(() => {
 		const ids = deletableSelectedVersions.map((row) => row.id);
@@ -898,8 +1184,7 @@ export function V2QuestionnaireList() {
 			{
 				onSuccess: (result) => {
 					setDeleteDialogOpen(false);
-					setSelectedVersions([]);
-					gridRef.current?.api?.deselectAll();
+					clearSelection();
 					const deleted = result.deletedIds.length;
 					const deactivated = result.deactivatedIds?.length ?? 0;
 					const failed = result.failed.length;
@@ -925,7 +1210,7 @@ export function V2QuestionnaireList() {
 					}),
 			},
 		);
-	}, [bulkDelete, deletableSelectedVersions]);
+	}, [bulkDelete, clearSelection, deletableSelectedVersions]);
 
 	const versionModeToggle = dadmProgramManagerEnabled ? (
 		<SegmentBar<V2QuestionnaireRegistryVersionMode>
@@ -1058,9 +1343,7 @@ export function V2QuestionnaireList() {
 										variant="outlined"
 										size="small"
 										fullWidth
-										color={
-											deleteLooksLikeDeactivate ? "primary" : "error"
-										}
+										color={deleteLooksLikeDeactivate ? "primary" : "error"}
 										startIcon={
 											deleteLooksLikeDeactivate ? (
 												<HideSourceOutlinedIcon />
@@ -1137,7 +1420,9 @@ export function V2QuestionnaireList() {
 										size="small"
 										startIcon={<DownloadIcon />}
 										disabled={
-											exportBlocked || isLoading || selectedVersions.length === 0
+											exportBlocked ||
+											isLoading ||
+											selectedVersions.length === 0
 										}
 										title={exportBlockedTitle}
 										onClick={() =>
@@ -1286,19 +1571,59 @@ export function V2QuestionnaireList() {
 					onColumnMoved={(event) => persistColumnState(event.api)}
 					onColumnVisible={(event) => persistColumnState(event.api)}
 					onColumnPinned={(event) => persistColumnState(event.api)}
-					onSortChanged={(event) => persistColumnState(event.api)}
+					onSortChanged={(event) => {
+						persistColumnState(event.api);
+						const next = sortModelFromColumnState(event.api.getColumnState());
+						setSortModel((prev) =>
+							JSON.stringify(prev) === JSON.stringify(next) ? prev : next,
+						);
+					}}
+					onFilterChanged={(
+						event: FilterChangedEvent<V2QuestionnaireGridRow>,
+					) => {
+						const next = (event.api.getFilterModel() ??
+							{}) as V2AgGridFilterModel;
+						setFilterModel((prev) =>
+							JSON.stringify(prev) === JSON.stringify(next) ? prev : next,
+						);
+					}}
 					onColumnResized={(event) => {
 						if (event.finished) persistColumnState(event.api);
 					}}
 					loading={isLoading || isRegistryConfigLoading}
 					context={gridContext}
+					alwaysPassFilter={() => true}
 					rowSelection={rowSelection}
+					selectionColumnDef={{
+						width: 48,
+						maxWidth: 48,
+						pinned: "left",
+						suppressHeaderMenuButton: true,
+						headerComponent: V2RegistrySelectAllHeader,
+					}}
 					onSelectionChanged={(
 						e: SelectionChangedEvent<V2QuestionnaireGridRow>,
 					) => {
-						setSelectedVersions(
-							collectSelectedVersionRows(e.api.getSelectedRows()),
+						if (ignoreSelectionEventRef.current) return;
+						const visibleIds = collectVersionIdsFromGridRows(rowData);
+						const selectedVisible = selectedVisibleIdsFromGridRows(
+							e.api.getSelectedRows(),
 						);
+						const selectedVisibleSet = new Set(selectedVisible);
+						const slim = new Map(slimByIdRef.current);
+						for (const row of collectSelectedVersionRows(
+							e.api.getSelectedRows(),
+						)) {
+							slim.set(row.id, slimFromVersionRow(row));
+						}
+						slimByIdRef.current = slim;
+						setSelectedIds((prev) =>
+							mergeVisibleSelection(prev, visibleIds, selectedVisible),
+						);
+						setAllMatching((prevAll) => {
+							if (!prevAll) return false;
+							return visibleIds.every((id) => selectedVisibleSet.has(id));
+						});
 					}}
 					domLayout="normal"
 					suppressAggFuncInHeader

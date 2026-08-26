@@ -29,6 +29,12 @@ describe("shouldInvalidateV2QuestionnaireRegistry", () => {
 		).toBe(true);
 		expect(
 			shouldInvalidateV2QuestionnaireRegistry(
+				"/v2/questionnaires/delete-all",
+				"POST",
+			),
+		).toBe(true);
+		expect(
+			shouldInvalidateV2QuestionnaireRegistry(
 				"/v2/questionnaires/abc/copy",
 				"POST",
 			),
