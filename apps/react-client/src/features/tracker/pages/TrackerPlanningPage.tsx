@@ -12,6 +12,7 @@ import {
 } from "@react-client/common/api/queries/kanban-board";
 import { PlanningDockLayout } from "@react-client/features/tracker/planning/PlanningDockLayout";
 import type { PlanningDockLayoutHandle } from "@react-client/features/tracker/planning/PlanningDockLayout";
+import { PlanningKanbanImportButton } from "@react-client/features/tracker/planning/PlanningKanbanImportButton";
 import { PlanningLayoutPresetDialog } from "@react-client/features/tracker/planning/PlanningLayoutPresetDialog";
 import { PlanningWorkspaceProvider } from "@react-client/features/tracker/planning/PlanningWorkspaceContext";
 import {
@@ -40,6 +41,13 @@ export function TrackerPlanningPage() {
 	const needsPreset = Boolean(
 		data && !isPlanningDockLayout(data.layoutJson) && !layoutChosen,
 	);
+
+	const activeReleaseId =
+		data &&
+		selectedReleaseId &&
+		data.releases.some((release) => release.id === selectedReleaseId)
+			? selectedReleaseId
+			: (data?.releases[0]?.id ?? null);
 
 	const persistLayout = useCallback(
 		(layoutJson: unknown) => {
@@ -85,11 +93,7 @@ export function TrackerPlanningPage() {
 		<PlanningWorkspaceProvider
 			value={{
 				planning: data,
-				activeReleaseId:
-					selectedReleaseId &&
-					data.releases.some((release) => release.id === selectedReleaseId)
-						? selectedReleaseId
-						: (data.releases[0]?.id ?? null),
+				activeReleaseId,
 				setActiveReleaseId: setSelectedReleaseId,
 			}}
 		>
@@ -98,20 +102,11 @@ export function TrackerPlanningPage() {
 					title={`${data.code} · ${data.name}`}
 					backTo={commonRoutes.trackerPlannings.rootPath}
 				>
-					<Flex gap={8} alignItems="center">
-						<span
-							title={data.releaseTitle || "Нет релизов"}
-							style={{
-								maxWidth: 360,
-								overflow: "hidden",
-								textOverflow: "ellipsis",
-								whiteSpace: "nowrap",
-							}}
-						>
-							{data.releaseCount
-								? `Релизы (${data.releaseCount})`
-								: "Нет релизов"}
-						</span>
+					<Flex gap={8} alignItems="center" wrap="nowrap" style={{ flexShrink: 0 }}>
+						<PlanningKanbanImportButton
+							planningId={data.id}
+							releaseId={activeReleaseId}
+						/>
 						<Button
 							size="small"
 							onClick={() => {

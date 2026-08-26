@@ -21,6 +21,7 @@ import type {
 	KanbanBoardCustomerDto,
 	KanbanBoardData,
 	KanbanBoardPlanningImportResultDto,
+	KanbanBoardPlanningKanbanImportResultDto,
 	KanbanBoardPlanningDto,
 	KanbanBoardPlanningDetailDto,
 	KanbanBoardReleaseDto,
@@ -715,6 +716,47 @@ export const useKanbanBoardImportPlanningTasks = () => {
 	return useMutation({
 		mutationFn: (file: File) => kanbanBoardImportPlanningTasks(file),
 		onSuccess: () => invalidateTracker(queryClient),
+	});
+};
+
+export const kanbanBoardImportPlanningKanban = (
+	planningId: string,
+	file: File,
+	releaseId?: string | null,
+	signal?: AbortSignal,
+): Promise<KanbanBoardPlanningKanbanImportResultDto> => {
+	const formData = new FormData();
+	formData.append("file", file);
+	const query = releaseId
+		? `?releaseId=${encodeURIComponent(releaseId)}`
+		: "";
+	return apiClient<KanbanBoardPlanningKanbanImportResultDto>({
+		url: `/kanban-board/plannings/${planningId}/import-kanban${query}`,
+		method: "POST",
+		data: formData,
+		signal,
+		timeout: 120_000,
+	});
+};
+
+export const useKanbanBoardImportPlanningKanban = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			planningId,
+			file,
+			releaseId,
+		}: {
+			planningId: string;
+			file: File;
+			releaseId?: string | null;
+		}) => kanbanBoardImportPlanningKanban(planningId, file, releaseId),
+		onSuccess: (_result, { planningId }) => {
+			invalidateTracker(queryClient);
+			queryClient.invalidateQueries({
+				queryKey: ["kanbanBoardPlanning", planningId],
+			});
+		},
 	});
 };
 

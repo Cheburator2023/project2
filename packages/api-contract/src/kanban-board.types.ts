@@ -797,6 +797,7 @@ export interface AssignKanbanBoardTasksToBoardResultDto {
 	boardId: string;
 	updatedCount: number;
 	skippedCount: number;
+	skippedReasons?: string[];
 }
 
 export interface KanbanBoardPlanningImportResultDto {
@@ -804,6 +805,25 @@ export interface KanbanBoardPlanningImportResultDto {
 	importFormat: "planning";
 	warnings: string[];
 	importedCount: number;
+}
+
+export interface KanbanBoardPlanningKanbanImportBoardDto {
+	boardId: string;
+	boardKey: string;
+	name: string;
+	taskCount: number;
+	created?: boolean;
+}
+
+export interface KanbanBoardPlanningKanbanImportResultDto {
+	sheetName: string;
+	releaseId: string;
+	releaseName: string;
+	createdCount: number;
+	updatedCount: number;
+	attachedCount: number;
+	warnings: string[];
+	boards: KanbanBoardPlanningKanbanImportBoardDto[];
 }
 
 export interface KanbanBoardSnapshotMeta {

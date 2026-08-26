@@ -18,6 +18,7 @@ import {
 	type CreateKanbanBoardReleaseThemeRequestDto,
 	type KanbanBoardPlanningDetailDto,
 	type KanbanBoardPlanningDto,
+	type KanbanBoardPlanningKanbanImportResultDto,
 	type KanbanBoardReleaseDto,
 	type KanbanBoardReleaseStatusId,
 	type KanbanBoardReleaseTaskDto,
@@ -42,6 +43,7 @@ import { KanbanBoardSprintEntity } from "../entities/kanban-board-sprint.entity"
 import { KanbanBoardSupersprintEntity } from "../entities/kanban-board-supersprint.entity";
 import { KanbanBoardColumnEntity } from "../entities/kanban-board-column.entity";
 import { KanbanBoardRegistryService } from "./kanban-board-registry.service";
+import { importKanbanPlanningXlsx } from "../utils/kanban-board-planning-import.util";
 
 @Injectable()
 export class KanbanBoardPlanningService {
@@ -416,6 +418,54 @@ export class KanbanBoardPlanningService {
 		);
 		await this.membershipRepository.save(rows);
 		return this.detailByReleaseId(releaseId);
+	}
+
+	async importKanbanXlsx(
+		planningId: string,
+		buf: Buffer,
+		releaseId?: string,
+	): Promise<KanbanBoardPlanningKanbanImportResultDto> {
+		await this.requirePlanning(planningId);
+		const release = await this.resolveImportRelease(planningId, releaseId);
+		const parsed = await importKanbanPlanningXlsx(buf);
+		const upserted =
+			await this.registryService.upsertTasksFromKanbanSheet(parsed);
+		await this.attachTasks(release.id, { taskIds: upserted.taskIds });
+
+		return {
+			sheetName: parsed.sheetName,
+			releaseId: release.id,
+			releaseName: release.name,
+			createdCount: upserted.createdCount,
+			updatedCount: upserted.updatedCount,
+			attachedCount: upserted.taskIds.length,
+			warnings: upserted.warnings,
+			boards: upserted.boards,
+		};
+	}
+
+	private async resolveImportRelease(
+		planningId: string,
+		releaseId?: string,
+	): Promise<KanbanBoardReleaseEntity> {
+		if (releaseId?.trim()) {
+			const release = await this.requireRelease(releaseId.trim());
+			if (release.planningId !== planningId) {
+				throw new BadRequestException("Релиз не принадлежит этому планированию");
+			}
+			return release;
+		}
+
+		const releases = await this.releaseRepository.find({
+			where: { planningId },
+			order: { createdAt: "ASC" },
+		});
+		if (!releases[0]) {
+			throw new BadRequestException(
+				"Сначала создайте релиз в этом планировании",
+			);
+		}
+		return releases[0];
 	}
 
 	async detachTask(

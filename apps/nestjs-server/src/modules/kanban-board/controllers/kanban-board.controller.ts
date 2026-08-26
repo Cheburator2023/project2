@@ -41,6 +41,7 @@ import type {
 	KanbanBoardColumnDto,
 	KanbanBoardProjectDto,
 	KanbanBoardPlanningImportResultDto,
+	KanbanBoardPlanningKanbanImportResultDto,
 	KanbanBoardPlanningDto,
 	KanbanBoardPlanningDetailDto,
 	KanbanBoardReleaseDto,
@@ -298,6 +299,28 @@ export class KanbanBoardController {
 	@Delete("plannings/:id")
 	async deletePlanning(@Param("id") id: string): Promise<void> {
 		return this.planningService.deletePlanning(id);
+	}
+
+	@Post("plannings/:id/import-kanban")
+	@UseInterceptors(FileInterceptor("file"))
+	@ApiConsumes("multipart/form-data")
+	async importPlanningKanban(
+		@Param("id") id: string,
+		@Query("releaseId") releaseId: string | undefined,
+		@UploadedFile() file?: { buffer: Buffer },
+	): Promise<KanbanBoardPlanningKanbanImportResultDto> {
+		if (!file?.buffer?.length) {
+			throw new BadRequestException("Файл не передан");
+		}
+		try {
+			return await this.planningService.importKanbanXlsx(
+				id,
+				file.buffer,
+				releaseId,
+			);
+		} catch (error) {
+			this.rethrowImportError(error);
+		}
 	}
 
 	@Post("plannings/:id/releases")

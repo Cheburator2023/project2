@@ -7,7 +7,7 @@ import DialogTitle from "@mui/material/DialogTitle";
 import MenuItem from "@mui/material/MenuItem";
 import TextField from "@mui/material/TextField";
 import { useKanbanBoardBoards } from "@react-client/common/api/queries/kanban-board";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type Props = {
 	open: boolean;
@@ -35,6 +35,10 @@ export function TrackerAssignTasksToBoardDialog({
 			})),
 		[boardsQuery.data],
 	);
+
+	useEffect(() => {
+		if (open) setBoardId("");
+	}, [open]);
 
 	return (
 		<Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>

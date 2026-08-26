@@ -37,6 +37,20 @@ export interface PlanningImportResult {
 	sheetName?: string;
 }
 
+export interface KanbanPlanningSheetRow {
+	title: string;
+	statusText: string;
+	assignee: string;
+	boardRef: string;
+	rowIndex: number;
+}
+
+export interface KanbanPlanningSheetParseResult {
+	rows: KanbanPlanningSheetRow[];
+	sheetName: string;
+	warnings: string[];
+}
+
 type BacklogFieldKey =
 	| "backlogNumber"
 	| "priority"
@@ -138,6 +152,22 @@ const WORKLOAD_SHEET_NAME_HINTS = [
 	"load",
 	"исполнител",
 ];
+const KANBAN_SHEET_NAME_HINTS = ["канбан", "kanban"];
+
+type KanbanFieldKey = "title" | "status" | "assignee" | "board";
+
+const KANBAN_HEADER_ALIASES: Record<KanbanFieldKey, string[]> = {
+	title: BACKLOG_HEADER_ALIASES.title,
+	status: BACKLOG_HEADER_ALIASES.status,
+	assignee: [
+		"текущий исполнитель",
+		"исполнитель",
+		"assignee",
+		"ответственный",
+		"фио исполнителя",
+	],
+	board: ["доска", "board", "канбан", "kanban"],
+};
 
 function normalizeHeaderToken(text: string): string {
 	return text
@@ -293,8 +323,41 @@ function resolveStatusColumnId(
 	return resolved.columnId;
 }
 
-function normalizeTitleKey(title: string): string {
+export function normalizePlanningTitleKey(title: string): string {
 	return normalizeHeaderToken(title);
+}
+
+function normalizeTitleKey(title: string): string {
+	return normalizePlanningTitleKey(title);
+}
+
+function hasKanbanShape(
+	headers: Partial<Record<KanbanFieldKey, number>>,
+): boolean {
+	return Boolean(headers.title && headers.board);
+}
+
+function findKanbanWorksheet(workbook: ExcelJS.Workbook): {
+	worksheet: ExcelJS.Worksheet;
+	headers: Partial<Record<KanbanFieldKey, number>>;
+} | null {
+	let best: {
+		worksheet: ExcelJS.Worksheet;
+		headers: Partial<Record<KanbanFieldKey, number>>;
+		score: number;
+	} | null = null;
+
+	for (const worksheet of workbook.worksheets) {
+		const headers = mapHeaders(worksheet.getRow(1), KANBAN_HEADER_ALIASES);
+		if (!hasKanbanShape(headers)) continue;
+		const score =
+			sheetNameScore(worksheet.name, KANBAN_SHEET_NAME_HINTS) * 10 +
+			Object.keys(headers).length;
+		if (!best || score > best.score) {
+			best = { worksheet, headers, score };
+		}
+	}
+	return best ? { worksheet: best.worksheet, headers: best.headers } : null;
 }
 
 function isGroupHeaderRow(
@@ -543,6 +606,69 @@ export function parsePlanningWorkbook(
 		hintsByTaskId,
 		sheetName: backlog.worksheet.name,
 	};
+}
+
+export function parseKanbanPlanningWorkbook(
+	workbook: ExcelJS.Workbook,
+): KanbanPlanningSheetParseResult {
+	const match = findKanbanWorksheet(workbook);
+	if (!match) {
+		throw new Error(
+			"Не найден лист канбана: ожидаются колонки «Название», «Статус», «доска» (например «Задачи 4СС.4С_Канбан»)",
+		);
+	}
+
+	const { worksheet, headers } = match;
+	const titleCol = headers.title;
+	const boardCol = headers.board;
+	if (!titleCol || !boardCol) {
+		throw new Error("Не удалось определить колонки «Название» и «доска»");
+	}
+
+	const warnings: string[] = [];
+	const rows: KanbanPlanningSheetRow[] = [];
+
+	worksheet.eachRow((row, rowIndex) => {
+		if (rowIndex === 1) return;
+		if (isGroupHeaderRow(row, titleCol)) return;
+
+		const title = cellText(readMappedCell(row, titleCol));
+		if (!title || /^итого$/i.test(title)) return;
+
+		const boardRef = cellText(readMappedCell(row, boardCol));
+		if (!boardRef) {
+			warnings.push(`Строка ${rowIndex}: не указана доска — пропущена`);
+			return;
+		}
+
+		rows.push({
+			title,
+			statusText: cellText(readMappedCell(row, headers.status)),
+			assignee: cellText(readMappedCell(row, headers.assignee)),
+			boardRef,
+			rowIndex,
+		});
+	});
+
+	if (!rows.length) {
+		throw new Error(
+			`На листе «${worksheet.name}» нет задач с названием и доской`,
+		);
+	}
+
+	return {
+		rows,
+		sheetName: worksheet.name,
+		warnings,
+	};
+}
+
+export async function importKanbanPlanningXlsx(
+	buf: Buffer,
+): Promise<KanbanPlanningSheetParseResult> {
+	const workbook = new ExcelJS.Workbook();
+	await workbook.xlsx.load(buf);
+	return parseKanbanPlanningWorkbook(workbook);
 }
 
 export async function importPlanningXlsx(

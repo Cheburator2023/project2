@@ -34,6 +34,7 @@ import {
 	parseKanbanTaskKey,
 	pickKanbanBoardColumnColor,
 	type KanbanBoardPlanningImportResultDto,
+	type KanbanBoardPlanningKanbanImportBoardDto,
 	type AssignKanbanBoardTasksToBoardRequestDto,
 	type AssignKanbanBoardTasksToBoardResultDto,
 	type TrashKanbanBoardColumnTasksResultDto,
@@ -91,8 +92,14 @@ import {
 	exportTasksRegistryWorkbook,
 	exportTasksRegistryXlsx,
 } from "../utils/kanban-board-registry-export.util";
-import { importPlanningXlsx } from "../utils/kanban-board-planning-import.util";
-import type { PlanningImportResult } from "../utils/kanban-board-planning-import.util";
+import {
+	importPlanningXlsx,
+	normalizePlanningTitleKey,
+} from "../utils/kanban-board-planning-import.util";
+import type {
+	KanbanPlanningSheetParseResult,
+	PlanningImportResult,
+} from "../utils/kanban-board-planning-import.util";
 import {
 	buildAssigneeImportCode,
 	buildCustomerImportCode,
@@ -1038,6 +1045,312 @@ export class KanbanBoardRegistryService {
 		};
 	}
 
+	async upsertTasksFromKanbanSheet(
+		parsed: KanbanPlanningSheetParseResult,
+	): Promise<{
+		taskIds: string[];
+		createdCount: number;
+		updatedCount: number;
+		warnings: string[];
+		boards: KanbanBoardPlanningKanbanImportBoardDto[];
+	}> {
+		const warnings = [...parsed.warnings];
+		const standId = this.kanbanBoardService.getStandId();
+		const now = new Date().toISOString();
+
+		const assigneeRows = await this.assigneeRepository.find({
+			order: { name: "ASC" },
+		});
+		const assigneeCache = assigneeRows.map((item) => ({
+			id: item.id,
+			name: item.name,
+			code: item.code,
+		}));
+		const takenCodes = new Set(
+			assigneeRows.map((item) => item.code.trim().toLowerCase()),
+		);
+
+		const resolveAssignee = async (
+			raw: string,
+		): Promise<string | undefined> => {
+			const trimmed = raw.trim();
+			if (!trimmed) return undefined;
+
+			const matched = matchAssigneeByName(trimmed, assigneeCache);
+			if (matched) return matched.name;
+
+			const code = buildAssigneeImportCode(trimmed, takenCodes);
+			const entity = await this.assigneeRepository.save(
+				this.assigneeRepository.create({
+					id: ulid(),
+					code,
+					name: trimmed,
+					email: null,
+					role: null,
+					sprintCapacityPd: null,
+				}),
+			);
+			assigneeCache.push({
+				id: entity.id,
+				name: entity.name,
+				code: entity.code,
+			});
+			warnings.push(`Добавлен исполнитель в справочник: ${trimmed}`);
+			return entity.name;
+		};
+
+		const existingTasks = await this.taskRepository.find({
+			where: { deletedAt: IsNull() },
+		});
+		const byTitle = new Map<string, KanbanBoardTaskEntity[]>();
+		for (const task of existingTasks) {
+			const key = normalizePlanningTitleKey(task.content.title);
+			const bucket = byTitle.get(key) ?? [];
+			bucket.push(task);
+			byTitle.set(key, bucket);
+		}
+
+		const boardCache = new Map<
+			string,
+			{ board: KanbanBoardEntity; created: boolean }
+		>();
+		const columnsByBoard = new Map<string, KanbanBoardColumnEntity[]>();
+		const positionByColumn = new Map<string, number>();
+		const nextNumberByProject = new Map<string, number>();
+		const sourceColumnTitles = await this.loadColumnTitleMap(
+			existingTasks.map((task) => task.boardId),
+		);
+
+		const taskIds: string[] = [];
+		const claimedIds = new Set<string>();
+		let createdCount = 0;
+		let updatedCount = 0;
+		const boardUsage = new Map<string, KanbanBoardPlanningKanbanImportBoardDto>();
+
+		for (const row of parsed.rows) {
+			const boardEntry = await this.resolveOrCreateBoardFromImportRef(
+				row.boardRef,
+				boardCache,
+				warnings,
+			);
+			const { board } = boardEntry;
+
+			let columns = columnsByBoard.get(board.id);
+			if (!columns) {
+				columns = await this.columnRepository.find({
+					where: { boardId: board.id },
+					order: { sortOrder: "ASC" },
+				});
+				if (!columns.length) {
+					await this.seedDefaultColumns(board.id);
+					columns = await this.columnRepository.find({
+						where: { boardId: board.id },
+						order: { sortOrder: "ASC" },
+					});
+				}
+				columnsByBoard.set(board.id, columns);
+				for (const column of columns) {
+					const count = await this.taskRepository.count({
+						where: {
+							boardId: board.id,
+							parentId: column.id,
+							deletedAt: IsNull(),
+						},
+					});
+					positionByColumn.set(`${board.id}:${column.id}`, count);
+				}
+			}
+
+			const resolvedStatus = resolveBestStatusColumnId(
+				row.statusText,
+				columns.map((column) => ({ id: column.id, title: column.title })),
+			);
+			if (row.statusText && resolvedStatus.score < 45) {
+				warnings.push(
+					`Строка ${row.rowIndex}: статус «${row.statusText}» сопоставлен с «${resolvedStatus.columnTitle}»`,
+				);
+			}
+
+			const assignee = row.assignee
+				? await resolveAssignee(row.assignee)
+				: undefined;
+
+			const titleKey = normalizePlanningTitleKey(row.title);
+			const matches = (byTitle.get(titleKey) ?? []).filter(
+				(task) => !claimedIds.has(task.id),
+			);
+			const existing =
+				matches.find((task) => task.boardId === board.id) ?? matches[0];
+
+			if (existing) {
+				await this.moveTaskEntityToBoard({
+					task: existing,
+					board,
+					targetColumns: columns,
+					sourceColumnTitles,
+					positionByColumn,
+					nextNumberByProject,
+					preferredColumnId: resolvedStatus.columnId,
+				});
+				if (assignee) {
+					const assignees = new Set(existing.content.assignees ?? []);
+					assignees.add(assignee);
+					existing.content = normalizeKanbanBoardTaskContent({
+						...existing.content,
+						assignees: [...assignees],
+						currentAssignee: assignee,
+					});
+				}
+				existing.updatedAt = now;
+				await this.taskRepository.save(existing);
+				updatedCount += 1;
+				taskIds.push(existing.id);
+				claimedIds.add(existing.id);
+			} else {
+				const positionKey = `${board.id}:${resolvedStatus.columnId}`;
+				const position = positionByColumn.get(positionKey) ?? 0;
+				positionByColumn.set(positionKey, position + 1);
+				const taskNumber = await this.takeNextTaskNumber(
+					board.projectId,
+					nextNumberByProject,
+				);
+				const entity = this.taskRepository.create({
+					id: ulid(),
+					boardId: board.id,
+					projectId: board.projectId,
+					taskNumber,
+					parentId: resolvedStatus.columnId,
+					position,
+					content: normalizeKanbanBoardTaskContent({
+						title: row.title,
+						assignees: assignee ? [assignee] : undefined,
+						currentAssignee: assignee,
+					}),
+					origin: standId,
+					createdAt: now,
+					createdBy: null,
+					updatedAt: now,
+					deletedAt: null,
+				});
+				entity.board = board;
+				await this.taskRepository.save(entity);
+				createdCount += 1;
+				taskIds.push(entity.id);
+				claimedIds.add(entity.id);
+				const bucket = byTitle.get(titleKey) ?? [];
+				bucket.push(entity);
+				byTitle.set(titleKey, bucket);
+			}
+
+			const usage = boardUsage.get(board.id) ?? {
+				boardId: board.id,
+				boardKey: formatKanbanBoardKey(board.project?.code ?? "", board.slug),
+				name: board.name,
+				taskCount: 0,
+				created: boardEntry.created,
+			};
+			usage.taskCount += 1;
+			boardUsage.set(board.id, usage);
+		}
+
+		return {
+			taskIds,
+			createdCount,
+			updatedCount,
+			warnings,
+			boards: [...boardUsage.values()],
+		};
+	}
+
+	private async resolveOrCreateBoardFromImportRef(
+		raw: string,
+		cache: Map<string, { board: KanbanBoardEntity; created: boolean }>,
+		warnings: string[],
+	): Promise<{ board: KanbanBoardEntity; created: boolean }> {
+		const cacheKey = normalizeTrackerCode(raw);
+		const cached = cache.get(cacheKey);
+		if (cached) return cached;
+
+		const trimmed = raw.trim();
+		let board: KanbanBoardEntity | null = null;
+		try {
+			board = await this.findBoardEntityByRef(trimmed);
+		} catch (error) {
+			if (!(error instanceof NotFoundException)) throw error;
+		}
+
+		if (!board) {
+			const allBoards = await this.boardRepository.find({
+				relations: { project: true },
+			});
+			const slugMatches = allBoards.filter(
+				(item) => normalizeTrackerCode(item.slug) === cacheKey,
+			);
+			if (slugMatches.length === 1) {
+				board = slugMatches[0] ?? null;
+			} else if (slugMatches.length > 1) {
+				const keys = slugMatches.map((item) =>
+					formatKanbanBoardKey(item.project?.code ?? "", item.slug),
+				);
+				throw new BadRequestException(
+					`Доска «${trimmed}» неоднозначна: ${keys.join(", ")}`,
+				);
+			}
+		}
+
+		if (!board) {
+			const allBoards = await this.boardRepository.find({
+				relations: { project: true },
+			});
+			const nameMatches = allBoards.filter(
+				(item) =>
+					normalizePlanningTitleKey(item.name) ===
+					normalizePlanningTitleKey(trimmed),
+			);
+			if (nameMatches.length === 1) {
+				board = nameMatches[0] ?? null;
+			}
+		}
+
+		let created = false;
+		if (!board) {
+			const project = await this.defaultBoardImportProject();
+			const dto = await this.createBoard({
+				projectId: project.id,
+				name: trimmed,
+				slug: cacheKey.toLowerCase(),
+			});
+			board = await this.boardRepository.findOne({
+				where: { id: dto.id },
+				relations: { project: true },
+			});
+			if (!board) throw new NotFoundException("Доска не найдена");
+			created = true;
+			warnings.push(
+				`Создана доска ${dto.boardKey} (в файле указано «${trimmed}»)`,
+			);
+		}
+
+		const resolved = { board, created };
+		cache.set(cacheKey, resolved);
+		return resolved;
+	}
+
+	private async defaultBoardImportProject(): Promise<KanbanBoardProjectEntity> {
+		const byCode = await this.findProjectByNormalizedCode("SMART_ANKETA");
+		if (byCode) return byCode;
+		const first = await this.projectRepository.find({
+			order: { name: "ASC" },
+			take: 1,
+		});
+		if (!first[0]) {
+			throw new BadRequestException(
+				"Нет проектов — создайте проект перед импортом",
+			);
+		}
+		return first[0];
+	}
+
 	private async loadBoardColumnsForImport(
 		boardId: string,
 	): Promise<{ id: string; title: string }[]> {
@@ -1424,9 +1737,8 @@ export class KanbanBoardRegistryService {
 			});
 			if (!board) throw new NotFoundException("Доска не найдена");
 			if (board.projectId !== task.projectId) {
-				throw new BadRequestException(
-					"Нельзя переносить задачу на доску другого проекта",
-				);
+				task.taskNumber = await this.allocateTaskNumber(board.projectId);
+				task.projectId = board.projectId;
 			}
 			task.boardId = dto.boardId;
 			task.board = board;
@@ -1597,20 +1909,16 @@ export class KanbanBoardRegistryService {
 			throw new BadRequestException("Не указана доска");
 		}
 
-		const board = await this.boardRepository.findOne({
-			where: { id: dto.boardId },
-			relations: { project: true },
-		});
-		if (!board) throw new NotFoundException("Доска не найдена");
+		const board = await this.findBoardEntityByRef(dto.boardId);
 
 		let targetColumns = await this.columnRepository.find({
-			where: { boardId: dto.boardId },
+			where: { boardId: board.id },
 			order: { sortOrder: "ASC" },
 		});
 		if (!targetColumns.length) {
-			await this.seedDefaultColumns(dto.boardId);
+			await this.seedDefaultColumns(board.id);
 			targetColumns = await this.columnRepository.find({
-				where: { boardId: dto.boardId },
+				where: { boardId: board.id },
 				order: { sortOrder: "ASC" },
 			});
 		}
@@ -1622,6 +1930,7 @@ export class KanbanBoardRegistryService {
 			throw new NotFoundException("Задачи не найдены");
 		}
 
+		const foundIds = new Set(tasks.map((task) => task.id));
 		const sourceColumnTitles = await this.loadColumnTitleMap(
 			tasks.map((task) => task.boardId),
 		);
@@ -1629,46 +1938,48 @@ export class KanbanBoardRegistryService {
 		for (const column of targetColumns) {
 			const count = await this.taskRepository.count({
 				where: {
-					boardId: dto.boardId,
+					boardId: board.id,
 					parentId: column.id,
 					deletedAt: IsNull(),
 				},
 			});
-			positionByColumn.set(column.id, count);
+			positionByColumn.set(`${board.id}:${column.id}`, count);
 		}
 
 		let updatedCount = 0;
 		let skippedCount = 0;
+		const skippedReasons: string[] = [];
 		const now = new Date().toISOString();
 		const toSave: KanbanBoardTaskEntity[] = [];
+		const nextNumberByProject = new Map<string, number>();
+
+		for (const id of taskIds) {
+			if (!foundIds.has(id)) {
+				skippedCount += 1;
+				skippedReasons.push("Некоторые задачи не найдены");
+			}
+		}
 
 		for (const task of tasks) {
-			if (task.boardId === dto.boardId) {
+			if (task.deletedAt) {
 				skippedCount += 1;
+				skippedReasons.push("Задача в корзине — пропущена");
 				continue;
 			}
-			if (task.projectId !== board.projectId) {
+			if (task.boardId === board.id) {
 				skippedCount += 1;
+				skippedReasons.push("Задача уже на выбранной доске");
 				continue;
 			}
 
-			const sourceColumnTitle =
-				sourceColumnTitles.get(`${task.boardId}:${task.parentId}`) ??
-				KANBAN_BOARD_STATUSES.find((status) => status.id === task.parentId)
-					?.title ??
-				task.parentId;
-			const targetColumnId = this.resolveTargetColumnId(
+			await this.moveTaskEntityToBoard({
+				task,
+				board,
 				targetColumns,
-				task.parentId,
-				sourceColumnTitle,
-			);
-			const position = positionByColumn.get(targetColumnId) ?? 0;
-			positionByColumn.set(targetColumnId, position + 1);
-
-			task.boardId = dto.boardId;
-			task.projectId = board.projectId;
-			task.parentId = targetColumnId;
-			task.position = position;
+				sourceColumnTitles,
+				positionByColumn,
+				nextNumberByProject,
+			});
 			task.updatedAt = now;
 			toSave.push(task);
 			updatedCount += 1;
@@ -1679,9 +1990,10 @@ export class KanbanBoardRegistryService {
 		}
 
 		return {
-			boardId: dto.boardId,
+			boardId: board.id,
 			updatedCount,
 			skippedCount,
+			skippedReasons: [...new Set(skippedReasons)],
 		};
 	}
 
@@ -1707,6 +2019,72 @@ export class KanbanBoardRegistryService {
 		if (byPartial) return byPartial.id;
 
 		return targetColumns[0]?.id ?? KANBAN_BOARD_STATUSES[0].id;
+	}
+
+	private async takeNextTaskNumber(
+		projectId: string,
+		nextNumberByProject: Map<string, number>,
+	): Promise<number> {
+		let next = nextNumberByProject.get(projectId);
+		if (next == null) {
+			next = await this.allocateTaskNumber(projectId);
+		}
+		nextNumberByProject.set(projectId, next + 1);
+		return next;
+	}
+
+	private async moveTaskEntityToBoard(options: {
+		task: KanbanBoardTaskEntity;
+		board: KanbanBoardEntity;
+		targetColumns: KanbanBoardColumnEntity[];
+		sourceColumnTitles: Map<string, string>;
+		positionByColumn: Map<string, number>;
+		nextNumberByProject: Map<string, number>;
+		preferredColumnId?: string;
+	}): Promise<void> {
+		const {
+			task,
+			board,
+			targetColumns,
+			sourceColumnTitles,
+			positionByColumn,
+			nextNumberByProject,
+			preferredColumnId,
+		} = options;
+
+		const sourceColumnTitle =
+			sourceColumnTitles.get(`${task.boardId}:${task.parentId}`) ??
+			KANBAN_BOARD_STATUSES.find((status) => status.id === task.parentId)
+				?.title ??
+			task.parentId;
+		const targetColumnId =
+			preferredColumnId &&
+			targetColumns.some((column) => column.id === preferredColumnId)
+				? preferredColumnId
+				: this.resolveTargetColumnId(
+						targetColumns,
+						task.parentId,
+						sourceColumnTitle,
+					);
+
+		if (task.projectId !== board.projectId) {
+			task.taskNumber = await this.takeNextTaskNumber(
+				board.projectId,
+				nextNumberByProject,
+			);
+			task.projectId = board.projectId;
+		}
+
+		if (task.boardId !== board.id || task.parentId !== targetColumnId) {
+			const positionKey = `${board.id}:${targetColumnId}`;
+			const position = positionByColumn.get(positionKey) ?? 0;
+			positionByColumn.set(positionKey, position + 1);
+			task.position = position;
+		}
+
+		task.boardId = board.id;
+		task.parentId = targetColumnId;
+		task.board = board;
 	}
 
 	async ensureTaskIdentities(

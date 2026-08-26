@@ -6,7 +6,11 @@ import {
 } from "@smart-anketa/api-contract";
 import { importPlanningXlsx } from "../../../../src/modules/kanban-board/utils/kanban-board-planning-import.util";
 import { exportTasksRegistryXlsx } from "../../../../src/modules/kanban-board/utils/kanban-board-registry-export.util";
-import { parsePlanningWorkbook } from "../../../../src/modules/kanban-board/utils/kanban-board-planning-import.util";
+import {
+	importKanbanPlanningXlsx,
+	parseKanbanPlanningWorkbook,
+	parsePlanningWorkbook,
+} from "../../../../src/modules/kanban-board/utils/kanban-board-planning-import.util";
 import * as ExcelJS from "exceljs";
 
 const BOARD_ID = KANBAN_BOARD_HEAP_BOARD_ID;
@@ -161,5 +165,56 @@ describe("kanban board planning import", () => {
 		expect(parsed.payload[0].parentId).toBe("dev_wip");
 		expect(parsed.payload[0].content.priority).toBe("high");
 		expect(parsed.payload[0].content.roleEstimates?.developer).toBe(3);
+	});
+
+	it("parses kanban sheet with board column even when backlog exists", async () => {
+		const workbook = new ExcelJS.Workbook();
+		const backlog = workbook.addWorksheet("Бэклог 4СС.4С");
+		backlog.addRow(["№ п/п", "Статус работ", "Название задачи"]);
+		backlog.addRow(["1", "В работе", "Другая задача из бэклога"]);
+
+		const kanban = workbook.addWorksheet("Задачи 4СС.4С_Канбан");
+		kanban.addRow(["Название", "Статус", "Текущий исполнитель", "доска"]);
+		kanban.addRow([
+			"Аллокация. Инцидент: не сохраняются значения",
+			"Анализ (Готово)",
+			"Кравченко",
+			"common",
+		]);
+		kanban.addRow([
+			"Анализ некорректной работы отката модели",
+			"Разработка (В работе)",
+			"Полтанов",
+			"common",
+		]);
+
+		const parsed = parseKanbanPlanningWorkbook(workbook);
+		expect(parsed.sheetName).toBe("Задачи 4СС.4С_Канбан");
+		expect(parsed.rows).toHaveLength(2);
+		expect(parsed.rows[0]?.title).toContain("Аллокация");
+		expect(parsed.rows[0]?.statusText).toBe("Анализ (Готово)");
+		expect(parsed.rows[0]?.assignee).toBe("Кравченко");
+		expect(parsed.rows[0]?.boardRef).toBe("common");
+		expect(parsed.rows[1]?.boardRef).toBe("common");
+	});
+
+	it("parses manager kanban sheet from 2026.3СС planning workbook", async () => {
+		const path =
+			"/Users/synikolaev/Downloads/2026.3СС.4С. Планирование.xlsx";
+		let buf: Buffer;
+		try {
+			buf = await readFile(path);
+		} catch {
+			return;
+		}
+		const parsed = await importKanbanPlanningXlsx(buf);
+		expect(parsed.sheetName).toBe("Задачи 4СС.4С_Канбан");
+		expect(parsed.rows.length).toBe(34);
+		expect(parsed.rows.every((row) => row.boardRef.toLowerCase() === "common")).toBe(
+			true,
+		);
+		expect(parsed.rows.some((row) => row.statusText === "Входной буфер")).toBe(
+			true,
+		);
 	});
 });

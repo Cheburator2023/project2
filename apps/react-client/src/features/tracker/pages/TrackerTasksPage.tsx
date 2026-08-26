@@ -1,9 +1,11 @@
 import type { ColDef, ICellRendererParams } from "ag-grid-community";
+import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import {
 	useAssignKanbanBoardTasksToBoard,
 	useDeleteKanbanBoardTask,
 	useKanbanBoardTasksRegistry,
 } from "@react-client/common/api/queries/kanban-board";
+import { toast } from "@react-client/common/toasts";
 import {
 	TrackerBoardChips,
 	TrackerProjectChips,
@@ -57,12 +59,27 @@ export function TrackerTasksPage() {
 	}, []);
 
 	const confirmAssignToBoard = async (boardId: string) => {
-		await assignToBoard.mutateAsync({
-			taskIds: assignTaskIds,
-			boardId,
-		});
-		setAssignDialogOpen(false);
-		setAssignTaskIds([]);
+		try {
+			const result = await assignToBoard.mutateAsync({
+				taskIds: assignTaskIds,
+				boardId,
+			});
+			setAssignDialogOpen(false);
+			setAssignTaskIds([]);
+			if (!result.updatedCount) {
+				toast.error(
+					result.skippedReasons?.join(". ") ||
+						"Задачи не перенесены на выбранную доску",
+				);
+				return;
+			}
+			const extra = result.skippedCount
+				? ` Пропущено: ${result.skippedCount}.`
+				: "";
+			toast.success(`Перенесено задач: ${result.updatedCount}.${extra}`);
+		} catch (error) {
+			toast.error(apiErrorMessage(error));
+		}
 	};
 
 	const columnDefs = useMemo<ColDef<KanbanBoardTaskRegistryDto>[]>(

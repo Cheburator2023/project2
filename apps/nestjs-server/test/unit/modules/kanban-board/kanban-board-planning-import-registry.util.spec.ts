@@ -37,5 +37,17 @@ describe("kanban board planning import registry util", () => {
 		expect(resolveBestStatusColumnId("Тестирование", COLUMNS).columnId).toBe(
 			"review_wip",
 		);
+		expect(resolveBestStatusColumnId("Анализ (Готово)", COLUMNS).columnId).toBe(
+			"analysis_done",
+		);
+		expect(resolveBestStatusColumnId("Анализ (В работе)", COLUMNS).columnId).toBe(
+			"analysis_wip",
+		);
+		expect(
+			resolveBestStatusColumnId("Разработка (В работе)", COLUMNS).columnId,
+		).toBe("dev_wip");
+		expect(resolveBestStatusColumnId("Входной буфер", COLUMNS).columnId).toBe(
+			"input_buffer",
+		);
 	});
 });
