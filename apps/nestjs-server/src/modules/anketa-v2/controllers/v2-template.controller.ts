@@ -9,6 +9,7 @@ import {
 	HttpCode,
 	HttpStatus,
 	ParseUUIDPipe,
+	NotFoundException,
 } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiResponse } from "@nestjs/swagger";
 import { V2TemplateService } from "../services/v2-template.service";
@@ -20,6 +21,7 @@ import {
 	UpdateV2TemplateDto,
 	RestoreV2TemplateDto,
 	V2TemplateDeleteSnapshotResponseDto,
+	V2CurrentIdResponseDto,
 } from "../dto";
 import { CurrentUser } from "../../../shared/decorators/user.decorator";
 
@@ -48,6 +50,28 @@ export class V2TemplateController {
 	@ApiResponse({ status: 200, type: V2TemplateRegistryListResponseDto })
 	async findRegistry(): Promise<V2TemplateRegistryListResponseDto> {
 		return this.templateService.findRegistryList();
+	}
+
+	@Get("current/version")
+	@ApiOperation({ summary: "Id актуальной версии схемы системы" })
+	@ApiResponse({ status: 200, type: V2CurrentIdResponseDto })
+	async getCurrentVersion(): Promise<V2CurrentIdResponseDto> {
+		const ref = await this.templateService.getSystemCurrentRef();
+		if (!ref) {
+			throw new NotFoundException("Актуальная схема системы не назначена");
+		}
+		return { id: ref.versionId };
+	}
+
+	@Get("current/schema")
+	@ApiOperation({ summary: "Id актуальной схемы системы" })
+	@ApiResponse({ status: 200, type: V2CurrentIdResponseDto })
+	async getCurrentSchema(): Promise<V2CurrentIdResponseDto> {
+		const ref = await this.templateService.getSystemCurrentRef();
+		if (!ref) {
+			throw new NotFoundException("Актуальная схема системы не назначена");
+		}
+		return { id: ref.templateId };
 	}
 
 	@Post("restore")

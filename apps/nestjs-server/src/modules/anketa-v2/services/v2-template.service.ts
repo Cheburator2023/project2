@@ -124,28 +124,38 @@ export class V2TemplateService {
 		};
 	}
 
-	/** ID версии, являющейся актуальной схемой системы (если задана). */
-	async getSystemCurrentVersionId(): Promise<string | null> {
+	/**
+	 * Актуальная схема системы: id шаблона (схемы) и id её текущей версии.
+	 */
+	async getSystemCurrentRef(): Promise<{
+		templateId: string;
+		versionId: string;
+	} | null> {
 		const withCurrent = await this.templateRepository
 			.createQueryBuilder("t")
-			.select(["t.currentVersionId"])
+			.select(["t.id", "t.currentVersionId"])
 			.where("t.current_version_id IS NOT NULL")
 			.getMany();
 
-		if (withCurrent.length === 0) return null;
-		if (withCurrent.length === 1) {
-			return withCurrent[0].currentVersionId;
+		let active: V2TemplateEntity | undefined = withCurrent[0];
+		if (withCurrent.length > 1) {
+			await this.repairDuplicateCurrentTemplates();
+			active =
+				(await this.templateRepository
+					.createQueryBuilder("t")
+					.select(["t.id", "t.currentVersionId"])
+					.where("t.current_version_id IS NOT NULL")
+					.getOne()) ?? undefined;
 		}
 
-		await this.repairDuplicateCurrentTemplates();
+		if (!active?.id || !active.currentVersionId) return null;
+		return { templateId: active.id, versionId: active.currentVersionId };
+	}
 
-		const active = await this.templateRepository
-			.createQueryBuilder("t")
-			.select(["t.currentVersionId"])
-			.where("t.current_version_id IS NOT NULL")
-			.getOne();
-
-		return active?.currentVersionId ?? null;
+	/** ID версии, являющейся актуальной схемой системы (если задана). */
+	async getSystemCurrentVersionId(): Promise<string | null> {
+		const ref = await this.getSystemCurrentRef();
+		return ref?.versionId ?? null;
 	}
 
 	async findAll(): Promise<V2TemplateEntity[]> {

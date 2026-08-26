@@ -103,6 +103,7 @@ describe("V2TemplateService", () => {
 			versionRepository as never,
 			questionnaireRepository as never,
 			auditService as never,
+			{ clearTemplateReferenceIfMatches: jest.fn() } as never,
 		);
 	});
 
@@ -114,7 +115,9 @@ describe("V2TemplateService", () => {
 			templateRepository.createQueryBuilder.mockReturnValue({
 				select: jest.fn().mockReturnThis(),
 				where: jest.fn().mockReturnThis(),
-				getMany: jest.fn().mockResolvedValue([{ currentVersionId }]),
+				getMany: jest.fn().mockResolvedValue([
+					{ id: templateId, currentVersionId },
+				]),
 				getOne: jest.fn(),
 			} as never);
 			versionRepository.find.mockResolvedValue([
@@ -193,6 +196,35 @@ describe("V2TemplateService", () => {
 				V2QuestionnaireEntity,
 				{ templateId },
 			);
+		});
+	});
+
+	describe("getSystemCurrentRef", () => {
+		it("returns template id and version id of the current schema", async () => {
+			templateRepository.createQueryBuilder.mockReturnValue({
+				select: jest.fn().mockReturnThis(),
+				where: jest.fn().mockReturnThis(),
+				getMany: jest.fn().mockResolvedValue([
+					{ id: templateId, currentVersionId },
+				]),
+				getOne: jest.fn(),
+			} as never);
+
+			await expect(service.getSystemCurrentRef()).resolves.toEqual({
+				templateId,
+				versionId: currentVersionId,
+			});
+		});
+
+		it("returns null when no current schema is set", async () => {
+			templateRepository.createQueryBuilder.mockReturnValue({
+				select: jest.fn().mockReturnThis(),
+				where: jest.fn().mockReturnThis(),
+				getMany: jest.fn().mockResolvedValue([]),
+				getOne: jest.fn(),
+			} as never);
+
+			await expect(service.getSystemCurrentRef()).resolves.toBeNull();
 		});
 	});
 });

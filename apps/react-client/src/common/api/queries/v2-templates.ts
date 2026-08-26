@@ -35,6 +35,7 @@ import type {
 	V2FactoryPublishTypicalWorksResponseDto,
 	V2FactorySnapshotSettingDto,
 	V2TemplateVersionEditorSnapshotDto,
+	V2CurrentIdDto,
 } from "@smart-anketa/api-contract";
 import { useMemo } from "react";
 
@@ -125,6 +126,30 @@ export const useV2TemplateRegistry = () => {
 		queryFn: () =>
 			apiClient<V2TemplateRegistryListResponseDto>({
 				url: "/v2/templates/registry",
+				method: "GET",
+			}),
+		staleTime: 30_000,
+	});
+};
+
+export const useV2CurrentTemplateSchema = () => {
+	return useQuery<V2CurrentIdDto>({
+		queryKey: ["v2-templates", "current", "schema"],
+		queryFn: () =>
+			apiClient<V2CurrentIdDto>({
+				url: "/v2/templates/current/schema",
+				method: "GET",
+			}),
+		staleTime: 30_000,
+	});
+};
+
+export const useV2CurrentTemplateVersion = () => {
+	return useQuery<V2CurrentIdDto>({
+		queryKey: ["v2-templates", "current", "version"],
+		queryFn: () =>
+			apiClient<V2CurrentIdDto>({
+				url: "/v2/templates/current/version",
 				method: "GET",
 			}),
 		staleTime: 30_000,

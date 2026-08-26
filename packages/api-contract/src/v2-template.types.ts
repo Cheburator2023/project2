@@ -156,6 +156,11 @@ export type V2TemplateRegistryListResponseDto = {
 	items: V2TemplateRegistryItemDto[];
 };
 
+/** Id актуальной схемы или её версии (`GET /v2/templates/current/*`). */
+export type V2CurrentIdDto = {
+	id: string;
+};
+
 export type V2TemplateAuditDto = {
 	id: string;
 	/** null для событий справочников (без привязки к шаблону). */

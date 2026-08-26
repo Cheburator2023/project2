@@ -9,6 +9,7 @@ import type {
 	V2TemplateAuditAction,
 	V2LogicGraphDto,
 	V2DictionariesSnapshotDto,
+	V2CurrentIdDto,
 } from "@smart-anketa/api-contract";
 import { V2_TEMPLATE_AUDIT_ACTION_VALUES } from "@smart-anketa/api-contract";
 
@@ -72,6 +73,11 @@ export class V2TemplateRegistryItemResponseDto extends V2TemplateResponseDto {
 export class V2TemplateRegistryListResponseDto {
 	@ApiProperty({ type: [V2TemplateRegistryItemResponseDto] })
 	items: V2TemplateRegistryItemResponseDto[];
+}
+
+export class V2CurrentIdResponseDto implements V2CurrentIdDto {
+	@ApiProperty({ example: "550e8400-e29b-41d4-a716-446655440000" })
+	id: string;
 }
 
 export class V2TemplateVersionResponseDto implements V2TemplateVersionDto {
