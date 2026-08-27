@@ -6,6 +6,10 @@ import {
 	useKanbanBoardTasksRegistry,
 	useUpdateKanbanBoardTask,
 } from "@react-client/common/api/queries/kanban-board";
+import {
+	AG_GRID_SET_FILTER_PARAMS,
+	formatAgGridSetFilterDateValue,
+} from "@react-client/common/tableStuff/agGridSetFilterParams";
 import { toast } from "@react-client/common/toasts";
 import {
 	TrackerBoardChips,
@@ -41,11 +45,19 @@ import { useCreateAndOpenKanbanTask } from "@react-client/features/kanban-board/
 import {
 	KANBAN_BOARD_CANCELLED_COLUMN_ID,
 	kanbanBoardIsCancelledColumn,
+	kanbanBoardTaskSystems,
+	kanbanBoardTaskSystemsTitle,
 	type KanbanBoardSystemId,
 	type KanbanBoardTaskRegistryDto,
 } from "@smart-anketa/api-contract";
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
+
+const TASK_REGISTRY_DATE_FILTER_PARAMS = {
+	...AG_GRID_SET_FILTER_PARAMS,
+	valueFormatter: (params: { value: unknown }) =>
+		formatAgGridSetFilterDateValue(params.value),
+};
 
 export function TrackerTasksPage() {
 	const navigate = useNavigate();
@@ -69,13 +81,13 @@ export function TrackerTasksPage() {
 
 	const confirmAssignToBoard = async (
 		boardId: string,
-		system: KanbanBoardSystemId,
+		systems: KanbanBoardSystemId[],
 	) => {
 		try {
 			const result = await assignToBoard.mutateAsync({
 				taskIds: assignTaskIds,
 				boardId,
-				system,
+				systems,
 			});
 			setAssignDialogOpen(false);
 			setAssignTaskIds([]);
@@ -325,12 +337,22 @@ export function TrackerTasksPage() {
 			{
 				colId: "system",
 				headerName: "Система",
-				width: 140,
+				width: 160,
 				valueGetter: (params) =>
-					params.data?.systemTitle ?? params.data?.content?.system ?? "",
-				cellRenderer: (params: ICellRendererParams<KanbanBoardTaskRegistryDto>) =>
+					params.data?.systemTitle ||
+					(params.data
+						? kanbanBoardTaskSystemsTitle(params.data.content)
+						: ""),
+				cellRenderer: (
+					params: ICellRendererParams<KanbanBoardTaskRegistryDto>,
+				) =>
 					params.data ? (
 						<TrackerTaskSystemChip
+							systems={
+								params.data.systems?.length
+									? params.data.systems
+									: kanbanBoardTaskSystems(params.data.content)
+							}
 							system={params.data.system ?? params.data.content?.system}
 							systemTitle={params.data.systemTitle}
 						/>
@@ -356,12 +378,14 @@ export function TrackerTasksPage() {
 				headerName: "Создано",
 				minWidth: 170,
 				valueFormatter: (params) => trackerDateFormatter(params.value),
+				filterParams: TASK_REGISTRY_DATE_FILTER_PARAMS,
 			},
 			{
 				field: "updatedAt",
 				headerName: "Обновлено",
 				minWidth: 170,
 				valueFormatter: (params) => trackerDateFormatter(params.value),
+				filterParams: TASK_REGISTRY_DATE_FILTER_PARAMS,
 			},
 		],
 		[],
@@ -419,6 +443,11 @@ export function TrackerTasksPage() {
 				onCreateClick={() => void createAndOpenSafe()}
 				onEditClick={openTask}
 				onRowDoubleClick={openTask}
+				defaultFilter="agSetColumnFilter"
+				defaultFilterParams={AG_GRID_SET_FILTER_PARAMS}
+				deleteActionLabel="В корзину"
+				deleteSelectedLabel="В корзину"
+				deleteConfirmLabel="В корзину"
 				deleteDialogTitle="В корзину"
 				deleteDialogText={(count) =>
 					`Переместить ${count} задач(и) в корзину?`
@@ -470,8 +499,8 @@ export function TrackerTasksPage() {
 					setAssignDialogOpen(false);
 					setAssignTaskIds([]);
 				}}
-				onConfirm={(boardId, system) =>
-					void confirmAssignToBoard(boardId, system)
+				onConfirm={(boardId, systems) =>
+					void confirmAssignToBoard(boardId, systems)
 				}
 			/>
 		</>

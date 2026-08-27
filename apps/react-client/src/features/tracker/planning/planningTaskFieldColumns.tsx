@@ -27,12 +27,13 @@ import {
 	KANBAN_BOARD_ROLE_ESTIMATE_FIELDS,
 	KANBAN_BOARD_STANDS,
 	KANBAN_BOARD_STATUSES,
-	KANBAN_BOARD_SYSTEMS,
 	KANBAN_BOARD_TASK_TYPES,
 	KANBAN_BOARD_WORK_TYPES,
 	kanbanBoardEffectiveEstimatePd,
 	kanbanBoardSubtasksProgress,
 	kanbanBoardTaskAssignees,
+	kanbanBoardTaskSystems,
+	kanbanBoardTaskSystemsTitle,
 	kanbanBoardTaskHasBlocker,
 	type KanbanBoardTaskRegistryDto,
 } from "@smart-anketa/api-contract";
@@ -463,20 +464,24 @@ export function createPlanningTaskFieldColDefs<T>(input: {
 		}),
 		editableCol("system", {
 			headerName: "Система",
-			width: 140,
-			cellEditor: "agSelectCellEditor",
-			cellEditorParams: (params: ICellRendererParams<T>) => ({
-				values: uniqueSelectValues(catalogTitles(KANBAN_BOARD_SYSTEMS), [
-					getTask(params.data)?.systemTitle,
-				]),
-			}),
-			valueGetter: (params) =>
-				getTask(params.data)?.systemTitle ??
-				getTask(params.data)?.content.system ??
-				"",
+			width: 180,
+			cellEditor: "agTextCellEditor",
+			valueGetter: (params) => {
+				const task = getTask(params.data);
+				if (!task) return "";
+				return (
+					task.systemTitle ||
+					kanbanBoardTaskSystemsTitle(task.content)
+				);
+			},
 			cellRenderer: (params: ICellRendererParams<T>) =>
 				taskRenderer(params, (task) => (
 					<TrackerTaskSystemChip
+						systems={
+							task.systems?.length
+								? task.systems
+								: kanbanBoardTaskSystems(task.content)
+						}
 						system={task.system ?? task.content.system}
 						systemTitle={task.systemTitle}
 					/>

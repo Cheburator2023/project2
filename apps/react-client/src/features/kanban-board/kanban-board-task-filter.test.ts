@@ -50,6 +50,15 @@ describe("kanban-board-task-filter", () => {
 		expect(kanbanBoardTaskMatchesSearch(item, "infra")).toBe(false);
 	});
 
+	it("matches quick search by any selected system", () => {
+		const item = card({
+			id: "t1",
+			content: { title: "Миграция", systems: ["shell", "smart-anketa"] },
+		});
+		expect(kanbanBoardTaskMatchesSearch(item, "shell")).toBe(true);
+		expect(kanbanBoardTaskMatchesSearch(item, "smart anketa")).toBe(true);
+	});
+
 	it("filters by priority, assignee and due date", () => {
 		const item = card({
 			id: "t1",

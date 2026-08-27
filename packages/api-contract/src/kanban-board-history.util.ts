@@ -73,6 +73,15 @@ const formatPlainObject = (value: Record<string, unknown>): string | null => {
 		.join("; ");
 };
 
+function formatKanbanBoardSystemsHistoryValue(value: unknown): string | null {
+	if (value === undefined || value === null || value === "") return null;
+	const ids = Array.isArray(value) ? value : [value];
+	const titles = ids
+		.map((item) => kanbanBoardSystemTitle(String(item ?? "")).trim())
+		.filter(Boolean);
+	return titles.length ? titles.join(", ") : null;
+}
+
 /** Человекочитаемое значение поля для истории изменений. */
 export function formatKanbanBoardHistoryValue(value: unknown): string | null {
 	if (value === undefined || value === null) return null;
@@ -187,9 +196,14 @@ const CONTENT_FIELDS: ReadonlyArray<{
 		format: (value) => kanbanBoardStandTitle(String(value ?? "")),
 	},
 	{
+		key: "systems",
+		label: "Система / приложение",
+		format: (value) => formatKanbanBoardSystemsHistoryValue(value),
+	},
+	{
 		key: "system",
 		label: "Система / приложение",
-		format: (value) => kanbanBoardSystemTitle(String(value ?? "")),
+		format: (value) => formatKanbanBoardSystemsHistoryValue(value),
 	},
 	{
 		key: "hasBlocker",

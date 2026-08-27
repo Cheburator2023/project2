@@ -9,6 +9,7 @@ import {
 	ContextMenuModule,
 	FiltersToolPanelModule,
 	RowGroupingModule,
+	SetFilterModule,
 	SideBarModule,
 	TreeDataModule,
 } from "ag-grid-enterprise";
@@ -28,6 +29,7 @@ export function registerAgGridTableModules(): void {
 		TreeDataModule,
 		ColumnMenuModule,
 		ContextMenuModule,
+		SetFilterModule,
 	]);
 	registered = true;
 }

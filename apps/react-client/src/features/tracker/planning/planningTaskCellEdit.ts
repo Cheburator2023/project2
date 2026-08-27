@@ -9,9 +9,10 @@ import {
 	kanbanBoardEffectiveEstimatePd,
 	kanbanBoardPriorityTitle,
 	kanbanBoardStandTitle,
-	kanbanBoardSystemTitle,
 	kanbanBoardTaskAssignees,
 	kanbanBoardTaskAssigneesTitle,
+	kanbanBoardTaskSystems,
+	kanbanBoardTaskSystemsTitle,
 	kanbanBoardTaskTypeTitle,
 	kanbanBoardWorkTypeTitle,
 	normalizeKanbanBoardTaskContent,
@@ -249,10 +250,10 @@ function syncTaskDisplay(
 	task.standTitle = content.stand
 		? kanbanBoardStandTitle(content.stand)
 		: undefined;
-	task.system = content.system;
-	task.systemTitle = content.system
-		? kanbanBoardSystemTitle(content.system)
-		: undefined;
+	const systems = kanbanBoardTaskSystems(content);
+	task.system = systems[0];
+	task.systems = systems;
+	task.systemTitle = kanbanBoardTaskSystemsTitle(content) || undefined;
 	task.backlogNumber = content.backlogNumber;
 	const sprint = lookups.sprintOptions.find(
 		(item) => item.id === content.sprintId,
@@ -374,12 +375,19 @@ export function applyPlanningTaskFieldToTask(
 				{ stand: findCatalogId(KANBAN_BOARD_STANDS, rawValue) },
 				lookups,
 			);
-		case "system":
+		case "system": {
+			const ids = parseAssigneeList(rawValue)
+				.map((item) => findCatalogId(KANBAN_BOARD_SYSTEMS, item))
+				.filter((id): id is NonNullable<typeof id> => Boolean(id));
 			return applyContent(
 				task,
-				{ system: findCatalogId(KANBAN_BOARD_SYSTEMS, rawValue) },
+				{
+					systems: ids,
+					system: undefined,
+				},
 				lookups,
 			);
+		}
 		case "blocker":
 			return applyContent(
 				task,

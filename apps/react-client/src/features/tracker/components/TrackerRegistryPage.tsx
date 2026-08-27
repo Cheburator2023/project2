@@ -41,10 +41,15 @@ type Props<TRow extends object> = {
 	canDelete?: (row: TRow) => boolean;
 	deleteDialogTitle?: string;
 	deleteDialogText?: (count: number) => ReactNode;
+	deleteActionLabel?: string;
+	deleteSelectedLabel?: string;
+	deleteConfirmLabel?: string;
 	extraActions?: ReactNode;
 	/** Только тулбар без шапки приложения (меню/хлебные крошки). */
 	embedded?: boolean;
 	toolbarLabel?: string;
+	defaultFilter?: ColDef["filter"];
+	defaultFilterParams?: ColDef["filterParams"];
 };
 
 export function TrackerRegistryPage<TRow extends object>({
@@ -69,9 +74,14 @@ export function TrackerRegistryPage<TRow extends object>({
 	canDelete = () => true,
 	deleteDialogTitle = "Удаление",
 	deleteDialogText = (count) => `Удалить выбранные записи (${count})?`,
+	deleteActionLabel = "Удалить",
+	deleteSelectedLabel = "Удалить выбранные",
+	deleteConfirmLabel,
 	extraActions,
 	embedded = false,
 	toolbarLabel,
+	defaultFilter,
+	defaultFilterParams,
 }: Props<TRow>) {
 	const [quickFilter, setQuickFilter] = useState("");
 	const [selected, setSelected] = useState<TRow[]>([]);
@@ -122,6 +132,8 @@ export function TrackerRegistryPage<TRow extends object>({
 		[onRowDoubleClick, onEditClick, openEditForm],
 	);
 
+	const confirmLabel = deleteConfirmLabel ?? deleteActionLabel;
+
 	const allContextActions = useMemo<TrackerRegistryContextAction<TRow>[]>(
 		() => [
 			{
@@ -135,13 +147,22 @@ export function TrackerRegistryPage<TRow extends object>({
 				},
 			},
 			...contextActions,
+		],
+		[contextActions, onEditClick, openEditForm],
+	);
+
+	const allBulkContextActions = useMemo<
+		TrackerRegistryBulkContextAction<TRow>[]
+	>(
+		() => [
+			...bulkContextActions,
 			{
-				label: "Удалить",
-				disabled: (row) => !canDelete(row),
-				onClick: (row) => setPendingDelete([row]),
+				label: deleteActionLabel,
+				disabled: (rows) => !rows.some(canDelete),
+				onClick: (rows) => setPendingDelete(rows),
 			},
 		],
-		[contextActions, canDelete, onEditClick, openEditForm],
+		[bulkContextActions, canDelete, deleteActionLabel],
 	);
 
 	const handleSubmit = async (values: Record<string, string>) => {
@@ -215,7 +236,7 @@ export function TrackerRegistryPage<TRow extends object>({
 				disabled={!deletableSelected.length || isDeleting}
 				onClick={() => setPendingDelete(selected)}
 			>
-				Удалить выбранные
+				{deleteSelectedLabel}
 				{deletableSelected.length ? ` (${deletableSelected.length})` : ""}
 			</V2AdminButton>
 		</Flex>
@@ -239,7 +260,9 @@ export function TrackerRegistryPage<TRow extends object>({
 				onSelectionChange={setSelected}
 				onRowDoubleClick={handleRowDoubleClick}
 				contextActions={allContextActions}
-				bulkContextActions={bulkContextActions}
+				bulkContextActions={allBulkContextActions}
+				defaultFilter={defaultFilter}
+				defaultFilterParams={defaultFilterParams}
 			/>
 
 			{useFormDialog ? (
@@ -277,7 +300,7 @@ export function TrackerRegistryPage<TRow extends object>({
 						disabled={isDeleting || !pendingDelete?.some(canDelete)}
 						onClick={() => void confirmDelete()}
 					>
-						Удалить
+						{confirmLabel}
 					</Button>
 				</DialogActions>
 			</Dialog>

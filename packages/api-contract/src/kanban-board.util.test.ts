@@ -20,6 +20,7 @@ import {
 	normalizeKanbanBoardTaskContent,
 	toBoardData,
 	type KanbanBoardData,
+	type KanbanBoardTaskContent,
 } from "@smart-anketa/api-contract";
 
 const boardColumns = defaultKanbanBoardColumns("board-1").map((column) => ({
@@ -188,18 +189,27 @@ describe("kanban board role estimates", () => {
 	});
 
 	it("keeps a known system id", () => {
-		expect(
-			normalizeKanbanBoardTaskContent({
-				title: "Task",
-				system: "smart-anketa",
-			}).system,
-		).toBe("smart-anketa");
+		const fromLegacy = normalizeKanbanBoardTaskContent({
+			title: "Task",
+			system: "smart-anketa",
+		});
+		expect(fromLegacy.systems).toEqual(["smart-anketa"]);
+		expect(fromLegacy.system).toBeUndefined();
 		expect(
 			normalizeKanbanBoardTaskContent({
 				title: "Task",
 				system: "unknown",
-			}).system,
+			} as unknown as KanbanBoardTaskContent).systems,
 		).toBeUndefined();
+	});
+
+	it("keeps multiple known systems and drops unknown ids", () => {
+		const next = normalizeKanbanBoardTaskContent({
+			title: "Task",
+			systems: ["smart-anketa", "shell", "nope", "smart-anketa"],
+		} as unknown as KanbanBoardTaskContent);
+		expect(next.systems).toEqual(["smart-anketa", "shell"]);
+		expect(next.system).toBeUndefined();
 	});
 });
 

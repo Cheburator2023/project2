@@ -12,6 +12,7 @@ import {
 	kanbanBoardTaskAssigneeRoles,
 	kanbanBoardTaskAssignees,
 	kanbanBoardTaskReleaseLabel,
+	kanbanBoardTaskSystems,
 	kanbanBoardTaskTypeColor,
 	kanbanBoardTaskTypeTitle,
 	kanbanBoardWorkTypeColor,
@@ -285,19 +286,36 @@ export function TrackerTaskStandChip({
 }
 
 export function TrackerTaskSystemChip({
+	systems,
 	system,
 	systemTitle,
 }: {
+	systems?: Array<KanbanBoardSystemId | string>;
 	system?: KanbanBoardSystemId | string;
 	systemTitle?: string;
 }) {
-	const label = systemTitle || kanbanBoardSystemTitle(system);
-	if (!label) return null;
+	const ids = (systems?.length ? systems : system ? [system] : [])
+		.map((id) => String(id).trim())
+		.filter(Boolean);
+	if (ids.length) {
+		return (
+			<TrackerRegistryChipCell>
+				{ids.map((id) => (
+					<KanbanTaskFieldChip
+						key={id}
+						label={kanbanBoardSystemTitle(id)}
+						color={kanbanBoardSystemColor(id)}
+					/>
+				))}
+			</TrackerRegistryChipCell>
+		);
+	}
+	if (!systemTitle) return null;
 	return (
 		<TrackerRegistryChipCell>
 			<KanbanTaskFieldChip
-				label={label}
-				color={kanbanBoardSystemColor(system)}
+				label={systemTitle}
+				color={kanbanBoardSystemColor()}
 			/>
 		</TrackerRegistryChipCell>
 	);
@@ -389,11 +407,11 @@ export function KanbanTaskContentChips({
 			color: kanbanBoardStandColor(content.stand),
 		});
 	}
-	if (content.system) {
+	for (const systemId of kanbanBoardTaskSystems(content)) {
 		chips.push({
-			value: "system",
-			label: kanbanBoardSystemTitle(content.system),
-			color: kanbanBoardSystemColor(content.system),
+			value: `system:${systemId}`,
+			label: kanbanBoardSystemTitle(systemId),
+			color: kanbanBoardSystemColor(systemId),
 		});
 	}
 	if (origin) {

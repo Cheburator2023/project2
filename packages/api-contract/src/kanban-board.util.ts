@@ -5,6 +5,7 @@ import {
 	type KanbanBoardRoleEstimates,
 	type KanbanBoardSubtaskItem,
 	type KanbanBoardSubtaskStatusId,
+	type KanbanBoardSystemId,
 	type KanbanBoardTaskContent,
 	type KanbanBoardTaskRecord,
 	defaultKanbanBoardColumns,
@@ -20,6 +21,7 @@ import {
 	KANBAN_BOARD_SYSTEMS,
 	kanbanBoardAssigneeRoleTitle,
 	kanbanBoardSubtaskIsDone,
+	kanbanBoardSystemTitle,
 	kanbanBoardTaskHasBlocker,
 } from "./kanban-board.types";
 
@@ -237,6 +239,37 @@ export function kanbanBoardTaskAssigneesTitle(
 	return kanbanBoardTaskAssignees(content).join(", ");
 }
 
+const KANBAN_BOARD_SYSTEM_IDS = new Set<string>(
+	KANBAN_BOARD_SYSTEMS.map((item) => item.id),
+);
+
+export function kanbanBoardTaskSystems(
+	content: Pick<KanbanBoardTaskContent, "system" | "systems">,
+): KanbanBoardSystemId[] {
+	const seen = new Set<string>();
+	const ids: KanbanBoardSystemId[] = [];
+	const push = (value: unknown) => {
+		const id = String(value ?? "")
+			.trim()
+			.toLowerCase();
+		if (!id || seen.has(id) || !KANBAN_BOARD_SYSTEM_IDS.has(id)) return;
+		seen.add(id);
+		ids.push(id as KanbanBoardSystemId);
+	};
+	if (Array.isArray(content.systems)) {
+		for (const item of content.systems) push(item);
+		return ids;
+	}
+	push(content.system);
+	return ids;
+}
+
+export function kanbanBoardTaskSystemsTitle(
+	content: Pick<KanbanBoardTaskContent, "system" | "systems">,
+): string {
+	return kanbanBoardTaskSystems(content).map(kanbanBoardSystemTitle).join(", ");
+}
+
 const KANBAN_BOARD_ASSIGNEE_ROLE_IDS = new Set<string>(
 	KANBAN_BOARD_ASSIGNEE_ROLES.map((item) => item.id),
 );
@@ -438,11 +471,10 @@ export function normalizeKanbanBoardTaskContent(
 			? (standId as KanbanBoardTaskContent["stand"])
 			: undefined;
 	}
-	if (next.system !== undefined) {
-		const systemId = String(next.system).trim().toLowerCase();
-		next.system = KANBAN_BOARD_SYSTEMS.some((item) => item.id === systemId)
-			? (systemId as KanbanBoardTaskContent["system"])
-			: undefined;
+	if (next.systems !== undefined || next.system !== undefined) {
+		const ids = kanbanBoardTaskSystems(next);
+		next.systems = ids.length ? ids : undefined;
+		next.system = undefined;
 	}
 	if (next.hasBlocker === true) {
 		next.hasBlocker = true;

@@ -1,7 +1,8 @@
 import {
 	formatKanbanTaskKey,
-	kanbanBoardSystemTitle,
 	kanbanBoardTaskAssignees,
+	kanbanBoardTaskSystems,
+	kanbanBoardTaskSystemsTitle,
 	type KanbanBoardData,
 	type KanbanBoardItem,
 	type KanbanBoardPriorityId,
@@ -92,8 +93,8 @@ export function kanbanBoardTaskSearchHaystack(
 		content?.customer,
 		content?.parentTask,
 		content?.tags?.join(" "),
-		content?.system,
-		content?.system ? kanbanBoardSystemTitle(content.system) : "",
+		content ? kanbanBoardTaskSystems(content).join(" ") : "",
+		content ? kanbanBoardTaskSystemsTitle(content) : "",
 	]
 		.filter(Boolean)
 		.join(" ");

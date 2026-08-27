@@ -9,7 +9,6 @@ import { ulid } from "ulid";
 import {
 	KANBAN_BOARD_HEAP_BOARD_ID,
 	KANBAN_BOARD_STATUSES,
-	KANBAN_BOARD_SYSTEMS,
 	KANBAN_BOARD_CANCELLED_COLUMN_ID,
 	ResetKanbanBoardColumnsResultDto,
 	defaultKanbanBoardColumns,
@@ -25,8 +24,9 @@ import {
 	kanbanBoardTaskAssigneeRoleTitles,
 	kanbanBoardTaskAssignees,
 	kanbanBoardTaskAssigneesTitle,
+	kanbanBoardTaskSystems,
+	kanbanBoardTaskSystemsTitle,
 	kanbanBoardStandTitle,
-	kanbanBoardSystemTitle,
 	kanbanBoardTaskReleasesTitle,
 	kanbanBoardTaskTypeTitle,
 	kanbanBoardWorkTypeTitle,
@@ -42,7 +42,6 @@ import {
 	type KanbanBoardPlanningKanbanImportBoardDto,
 	type AssignKanbanBoardTasksToBoardRequestDto,
 	type AssignKanbanBoardTasksToBoardResultDto,
-	type KanbanBoardSystemId,
 	type TrashKanbanBoardColumnTasksResultDto,
 	type CreateKanbanBoardCustomerRequestDto,
 	type CreateKanbanBoardAssigneeRequestDto,
@@ -1919,13 +1918,13 @@ export class KanbanBoardRegistryService {
 		if (!dto.boardId?.trim()) {
 			throw new BadRequestException("Не указана доска");
 		}
-		const systemId = String(dto.system ?? "")
-			.trim()
-			.toLowerCase();
-		if (!KANBAN_BOARD_SYSTEMS.some((item) => item.id === systemId)) {
+		const systems = kanbanBoardTaskSystems({
+			systems: dto.systems,
+			system: dto.system,
+		});
+		if (!systems.length) {
 			throw new BadRequestException("Укажите систему / приложение");
 		}
-		const system = systemId as KanbanBoardSystemId;
 
 		const board = await this.findBoardEntityByRef(dto.boardId);
 
@@ -2000,7 +1999,8 @@ export class KanbanBoardRegistryService {
 			});
 			task.content = normalizeKanbanBoardTaskContent({
 				...task.content,
-				system,
+				systems,
+				system: undefined,
 			});
 			task.updatedAt = now;
 			toSave.push(task);
@@ -2445,6 +2445,7 @@ export class KanbanBoardRegistryService {
 			content,
 			assigneeRoleByName,
 		);
+		const systems = kanbanBoardTaskSystems(content);
 		return {
 			id: task.id,
 			boardId: task.boardId,
@@ -2492,10 +2493,9 @@ export class KanbanBoardRegistryService {
 			standTitle: content.stand
 				? kanbanBoardStandTitle(content.stand)
 				: undefined,
-			system: content.system,
-			systemTitle: content.system
-				? kanbanBoardSystemTitle(content.system)
-				: undefined,
+			system: systems[0],
+			systems,
+			systemTitle: kanbanBoardTaskSystemsTitle(content) || undefined,
 			releases,
 			releaseTitle: kanbanBoardTaskReleasesTitle(releases) || undefined,
 			hasBlocker: content.hasBlocker === true ? true : undefined,

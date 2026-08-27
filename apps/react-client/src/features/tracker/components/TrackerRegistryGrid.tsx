@@ -83,6 +83,8 @@ type Props<TRow extends object> = {
 	showRowTintToggle?: boolean;
 	pagination?: boolean;
 	pinnedBottomRowData?: TRow[];
+	defaultFilter?: ColDef["filter"];
+	defaultFilterParams?: ColDef["filterParams"];
 };
 
 export function TrackerRegistryGrid<TRow extends object>({
@@ -106,6 +108,8 @@ export function TrackerRegistryGrid<TRow extends object>({
 	showRowTintToggle = false,
 	pagination = true,
 	pinnedBottomRowData,
+	defaultFilter,
+	defaultFilterParams,
 }: Props<TRow>) {
 	const { mode } = useColorScheme();
 	const gridRef = useRef<AgGridReact<TRow>>(null);
@@ -194,7 +198,10 @@ export function TrackerRegistryGrid<TRow extends object>({
 				onRowDragEnd={onRowDragEnd}
 				defaultColDef={{
 					sortable: true,
-					filter: true,
+					filter: defaultFilter ?? true,
+					...(defaultFilterParams
+						? { filterParams: defaultFilterParams }
+						: {}),
 					resizable: true,
 					floatingFilter: true,
 					minWidth: 100,

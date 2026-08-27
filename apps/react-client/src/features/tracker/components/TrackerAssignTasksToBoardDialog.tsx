@@ -9,7 +9,7 @@ import TextField from "@mui/material/TextField";
 import { useKanbanBoardBoards } from "@react-client/common/api/queries/kanban-board";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
-import { KanbanTaskSelectField } from "@react-client/features/kanban-board/components/KanbanTaskSelectField";
+import { KanbanTaskMultiSelectField } from "@react-client/features/kanban-board/components/KanbanTaskSelectField";
 import {
 	KANBAN_BOARD_SYSTEMS,
 	kanbanBoardSystemColor,
@@ -28,7 +28,7 @@ type Props = {
 	taskCount: number;
 	isSubmitting?: boolean;
 	onClose: () => void;
-	onConfirm: (boardId: string, system: KanbanBoardSystemId) => void;
+	onConfirm: (boardId: string, systems: KanbanBoardSystemId[]) => void;
 };
 
 export function TrackerAssignTasksToBoardDialog({
@@ -40,7 +40,7 @@ export function TrackerAssignTasksToBoardDialog({
 }: Props) {
 	const boardsQuery = useKanbanBoardBoards();
 	const [boardId, setBoardId] = useState("");
-	const [system, setSystem] = useState("");
+	const [systems, setSystems] = useState<string[]>([]);
 
 	const boardOptions = useMemo(
 		() =>
@@ -54,11 +54,11 @@ export function TrackerAssignTasksToBoardDialog({
 	useEffect(() => {
 		if (open) {
 			setBoardId("");
-			setSystem("");
+			setSystems([]);
 		}
 	}, [open]);
 
-	const canConfirm = Boolean(boardId && system) && !isSubmitting;
+	const canConfirm = Boolean(boardId && systems.length) && !isSubmitting;
 
 	return (
 		<Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -86,11 +86,11 @@ export function TrackerAssignTasksToBoardDialog({
 							</MenuItem>
 						))}
 					</TextField>
-					<KanbanTaskSelectField
+					<KanbanTaskMultiSelectField
 						label="Система / приложение"
-						value={system}
+						value={systems}
 						options={SYSTEM_OPTIONS}
-						onChange={setSystem}
+						onChange={setSystems}
 						fullWidth
 						required
 						disabled={isSubmitting}
@@ -106,8 +106,8 @@ export function TrackerAssignTasksToBoardDialog({
 					variant="contained"
 					disabled={!canConfirm}
 					onClick={() => {
-						if (!boardId || !system) return;
-						onConfirm(boardId, system as KanbanBoardSystemId);
+						if (!boardId || !systems.length) return;
+						onConfirm(boardId, systems as KanbanBoardSystemId[]);
 					}}
 				>
 					{isSubmitting ? "Перенос…" : "Добавить на доску"}

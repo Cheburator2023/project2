@@ -28,6 +28,7 @@ import {
 	kanbanBoardStandColor,
 	kanbanBoardSystemColor,
 	kanbanBoardTaskAssignees,
+	kanbanBoardTaskSystems,
 	kanbanBoardTaskTypeColor,
 	kanbanBoardWorkTypeColor,
 	kanbanBoardTaskReleaseLabel,
@@ -240,7 +241,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	const [taskType, setTaskType] = useState("");
 	const [workType, setWorkType] = useState("");
 	const [stand, setStand] = useState("");
-	const [system, setSystem] = useState("");
+	const [systems, setSystems] = useState<string[]>([]);
 	const [hasBlocker, setHasBlocker] = useState(false);
 	const [estimatePd, setEstimatePd] = useState("");
 	const [roleEstimates, setRoleEstimates] = useState<KanbanBoardRoleEstimates>(
@@ -559,7 +560,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 		setTaskType(task.content.taskType ?? "");
 		setWorkType(task.content.workType ?? "");
 		setStand(task.content.stand ?? "");
-		setSystem(task.content.system ?? "");
+		setSystems(kanbanBoardTaskSystems(task.content));
 		setHasBlocker(task.content.hasBlocker === true);
 		setEstimatePd(
 			task.content.estimatePd !== undefined
@@ -634,9 +635,8 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 			stand: stand
 				? (stand as KanbanBoardTaskContent["stand"])
 				: undefined,
-			system: system
-				? (system as KanbanBoardTaskContent["system"])
-				: undefined,
+			systems: systems as KanbanBoardTaskContent["systems"],
+			system: undefined,
 			hasBlocker,
 			roleEstimates: Object.keys(roleEstimates).length
 				? roleEstimates
@@ -671,7 +671,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 				taskType,
 				workType,
 				stand,
-				system,
+				systems,
 				hasBlocker,
 				estimatePd,
 				roleEstimates,
@@ -696,7 +696,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 			taskType,
 			workType,
 			stand,
-			system,
+			systems,
 			hasBlocker,
 			estimatePd,
 			roleEstimates,
@@ -1256,11 +1256,11 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 								</KanbanTaskDetailRow>
 								<KanbanTaskDetailRow label="Система / приложение">
 									<Box sx={{ textAlign: "left" }}>
-										<KanbanTaskSelectField
+										<KanbanTaskMultiSelectField
 											label=""
-											value={system}
+											value={systems}
 											options={systemOptions}
-											onChange={setSystem}
+											onChange={setSystems}
 											fullWidth
 											disabled={formLocked}
 											emptyLabel="— не выбрана —"

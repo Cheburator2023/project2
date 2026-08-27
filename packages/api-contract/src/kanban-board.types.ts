@@ -118,8 +118,10 @@ export interface KanbanBoardTaskContent {
 	 * Не путать с `origin` записи (изоляция данных между стендами БД).
 	 */
 	stand?: KanbanBoardStandId;
-	/** Система / приложение, к которому относится задача. */
+	/** @deprecated use systems */
 	system?: KanbanBoardSystemId;
+	/** Системы / приложения, к которым относится задача. */
+	systems?: KanbanBoardSystemId[];
 	/** На задаче есть блокер — выделяется на доске. */
 	hasBlocker?: boolean;
 }
@@ -500,6 +502,7 @@ export interface KanbanBoardTaskRegistryDto extends KanbanBoardTaskRecord {
 	stand?: KanbanBoardStandId;
 	standTitle?: string;
 	system?: KanbanBoardSystemId;
+	systems?: KanbanBoardSystemId[];
 	systemTitle?: string;
 	/** Сводка релизов для фильтра/экспорта. */
 	releaseTitle?: string;
@@ -830,8 +833,10 @@ export const KANBAN_BOARD_HEAP_BOARD_SLUG = "heap";
 export interface AssignKanbanBoardTasksToBoardRequestDto {
 	taskIds: string[];
 	boardId: string;
-	/** Система / приложение, которую выставить всем переносимым задачам. */
-	system: KanbanBoardSystemId;
+	/** Системы / приложения, которые выставить всем переносимым задачам. */
+	systems?: KanbanBoardSystemId[];
+	/** @deprecated use systems */
+	system?: KanbanBoardSystemId;
 }
 
 export interface AssignKanbanBoardTasksToBoardResultDto {

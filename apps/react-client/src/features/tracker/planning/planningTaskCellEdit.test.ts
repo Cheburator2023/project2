@@ -75,13 +75,18 @@ describe("applyPlanningTaskFieldToTask", () => {
 		expect(row.content.hasBlocker).toBe(false);
 	});
 
-	it("maps system title to the catalog id", () => {
+	it("maps system titles to catalog ids", () => {
 		const row = task({ id: "1" });
 		expect(applyPlanningTaskFieldToTask(row, "system", "Smart Anketa")).toBe(
 			true,
 		);
-		expect(row.content.system).toBe("smart-anketa");
+		expect(row.content.systems).toEqual(["smart-anketa"]);
 		expect(row.systemTitle).toBe("Smart Anketa");
+		expect(
+			applyPlanningTaskFieldToTask(row, "system", "SUM, Shell"),
+		).toBe(true);
+		expect(row.content.systems).toEqual(["sum", "shell"]);
+		expect(row.systemTitle).toBe("SUM, Shell");
 	});
 
 	it("sums role estimates into the total person-days", () => {
