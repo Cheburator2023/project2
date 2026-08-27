@@ -35,6 +35,7 @@ export function Header({
 	fixed = false,
 	/** Явный маршрут «Назад» (например, реестр схем из редактора). Надёжнее history.back(). */
 	backTo,
+	onBack,
 }: {
 	children?: React.ReactNode;
 	calcId?: string;
@@ -42,6 +43,7 @@ export function Header({
 	leadingAccessory?: React.ReactNode;
 	fixed?: boolean;
 	backTo?: string;
+	onBack?: () => void;
 }) {
 	const theme = useTheme();
 	const { toggleSideMenu, isSideMenuVisible } = useGlobalSettingsStore();
@@ -55,9 +57,14 @@ export function Header({
 	const id1 = new URLSearchParams(window.location.search).get("id1");
 	const id2 = new URLSearchParams(window.location.search).get("id2");
 
-	const canGoBack = Boolean(backTo) || (history.state?.idx ?? 0) > 0;
+	const canGoBack =
+		Boolean(onBack) || Boolean(backTo) || (history.state?.idx ?? 0) > 0;
 
 	const handleBack = () => {
+		if (onBack) {
+			onBack();
+			return;
+		}
 		if (backTo) {
 			navigate(backTo);
 			return;

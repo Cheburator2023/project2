@@ -41,6 +41,7 @@ import {
 	parseKanbanBoardTaskEditBlockedError,
 	type KanbanBoardTaskEditBlockedErrorDto,
 } from "@smart-anketa/api-contract";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { FuzzyAutocomplete } from "@react-client/common/muiCustom/FuzzyAutocomplete";
@@ -63,6 +64,7 @@ import {
 	useKanbanBoardTaskImages,
 	useKanbanBoardTasksRegistry,
 	useUpdateKanbanBoardTask,
+	kanbanBoardGetBoardTasks,
 } from "@react-client/common/api/queries/kanban-board";
 import {
 	KanbanTaskMultiSelectField,
@@ -94,6 +96,7 @@ import { TrackerIdentityRequiredDialog } from "@react-client/features/tracker/co
 import { TrackerTaskConflictDialog } from "@react-client/features/tracker/components/TrackerTaskConflictDialog";
 import { useKanbanTaskEditLock } from "@react-client/features/tracker/hooks/useKanbanTaskEditLock";
 import { useTrackerTaskSync } from "@react-client/features/tracker/hooks/useTrackerTaskSync";
+import { KANBAN_NEW_TASK_TITLE } from "@react-client/features/kanban-board/useCreateAndOpenKanbanTask";
 
 const PRIORITY_OPTIONS = KANBAN_BOARD_PRIORITIES.map((option) => ({
 	value: option.id,
@@ -195,6 +198,7 @@ function parseColumnParam(
 
 export function KanbanTaskPage({ mode }: Props = {}) {
 	const navigate = useNavigate();
+	const queryClient = useQueryClient();
 	const [searchParams] = useSearchParams();
 	const { boardKey: boardKeyParam = "", taskKey = "" } = useParams<{
 		boardKey?: string;
@@ -767,6 +771,33 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	const handleSaveRef = useRef(handleSave);
 	handleSaveRef.current = handleSave;
 
+	const goBackToBoard = useCallback(async () => {
+		if (autosaveTimerRef.current != null) {
+			window.clearTimeout(autosaveTimerRef.current);
+			autosaveTimerRef.current = null;
+		}
+		if (
+			!isCreate &&
+			(saveStatusRef.current === "dirty" || saveStatusRef.current === "saving")
+		) {
+			await handleSaveRef.current();
+		}
+		const key = boardApiRef?.trim();
+		if (key) {
+			try {
+				await queryClient.fetchQuery({
+					queryKey: ["kanbanBoardTasks", key],
+					queryFn: ({ signal }) => kanbanBoardGetBoardTasks(key, signal),
+				});
+			} catch {
+				await queryClient.invalidateQueries({
+					queryKey: ["kanbanBoardTasks", key],
+				});
+			}
+		}
+		navigate(leaveTaskPath);
+	}, [boardApiRef, isCreate, leaveTaskPath, navigate, queryClient]);
+
 	useEffect(() => {
 		if (isCreate || !task) return;
 		if (!title.trim() || !effectiveBoardId) return;
@@ -859,22 +890,13 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 			data-test-id="kanban-task-page"
 		>
 			<Header
+				title={isCreate ? KANBAN_NEW_TASK_TITLE : taskKey || "Задача"}
+				backTo={leaveTaskPath}
+				onBack={() => void goBackToBoard()}
 				leadingAccessory={
-					<Flex alignItems="center" gap={8} minWidth="0">
-						{!isCreate && taskKey ? (
-							<Typography
-								variant="subtitle2"
-								color="text.secondary"
-								noWrap
-								sx={{ fontWeight: 700, letterSpacing: 0.2 }}
-							>
-								{taskKey}
-							</Typography>
-						) : null}
-						<Typography variant="body2" color="text.secondary" noWrap>
-							{boardSubtitle}
-						</Typography>
-					</Flex>
+					<Typography variant="body2" color="text.secondary" noWrap>
+						{boardSubtitle}
+					</Typography>
 				}
 			>
 				<Flex gap={6} wrap="wrap" alignItems="center">
@@ -1098,7 +1120,11 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 										onChange={(event) => setTitle(event.target.value)}
 										required
 										fullWidth
-										autoFocus={isCreate}
+										autoFocus={
+											isCreate ||
+											title === KANBAN_NEW_TASK_TITLE ||
+											!title.trim()
+										}
 										placeholder="Заголовок задачи"
 										disabled={formLocked}
 										sx={{ flex: 1, minWidth: 220 }}

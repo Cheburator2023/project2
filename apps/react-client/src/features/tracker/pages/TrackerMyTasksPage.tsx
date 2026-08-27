@@ -33,10 +33,8 @@ import {
 	trackerMyTaskRoles,
 } from "@react-client/features/tracker/tracker-my-tasks";
 import { KanbanPageStatus } from "@react-client/features/kanban-board/components/KanbanPageStatus";
-import {
-	kanbanTaskEditPath,
-	trackerStandaloneTaskCreatePath,
-} from "@react-client/features/kanban-board/kanban-task-paths";
+import { kanbanTaskEditPath } from "@react-client/features/kanban-board/kanban-task-paths";
+import { useCreateAndOpenKanbanTask } from "@react-client/features/kanban-board/useCreateAndOpenKanbanTask";
 import { commonRoutes } from "@react-client/routing/common/routes";
 import {
 	KANBAN_BOARD_CANCELLED_COLUMN_ID,
@@ -89,6 +87,7 @@ export function TrackerMyTasksPage() {
 	const { data = [], isLoading } = useKanbanBoardTasksRegistry();
 	const deleteTask = useDeleteKanbanBoardTask();
 	const updateTask = useUpdateKanbanBoardTask();
+	const { createAndOpenSafe } = useCreateAndOpenKanbanTask();
 
 	const myTasks = useMemo(
 		() => data.filter((task) => isTrackerMyTask(task, me)),
@@ -374,7 +373,7 @@ export function TrackerMyTasksPage() {
 				rowData={myTasks}
 				columnDefs={columnDefs}
 				loading={isLoading}
-				onCreateClick={() => navigate(trackerStandaloneTaskCreatePath())}
+				onCreateClick={() => void createAndOpenSafe()}
 				onEditClick={openTask}
 				onRowDoubleClick={openTask}
 				deleteDialogTitle="В корзину"

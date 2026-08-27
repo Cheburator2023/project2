@@ -37,4 +37,15 @@ describe("buildNavbarBreadcrumbTrail", () => {
 			{ label: "Swagger" },
 		]);
 	});
+
+	it("does not fall back to an empty ellipsis on tracker task and board pages", () => {
+		expect(buildNavbarBreadcrumbTrail("/tracker/task/SUM-12")).toEqual([
+			{ label: "Трекер", to: "/tracker/projects" },
+			{ label: "SUM-12" },
+		]);
+		expect(buildNavbarBreadcrumbTrail("/tracker/board/SUM-BOARD")).toEqual([
+			{ label: "Трекер", to: "/tracker/projects" },
+			{ label: "SUM-BOARD" },
+		]);
+	});
 });

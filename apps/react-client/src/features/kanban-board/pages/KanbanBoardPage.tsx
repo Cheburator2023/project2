@@ -87,10 +87,10 @@ import {
 import { KanbanBoardFilterPanel } from "@react-client/features/kanban-board/components/KanbanBoardFilterPanel";
 import { KanbanTaskBoardCard } from "@react-client/features/kanban-board/components/KanbanTaskBoardCard";
 import {
-	kanbanTaskCreatePath,
 	kanbanTaskEditPath,
 	trackerBoardHistoryPath,
 } from "@react-client/features/kanban-board/kanban-task-paths";
+import { useCreateAndOpenKanbanTask } from "@react-client/features/kanban-board/useCreateAndOpenKanbanTask";
 import {
 	EMPTY_KANBAN_BOARD_TASK_FILTERS,
 	countKanbanBoardCards,
@@ -221,7 +221,7 @@ export function KanbanBoardPage() {
 			(tasksQuery.data ?? [])
 				.map(
 					(task) =>
-						`${task.id}:${task.updatedAt}:${task.parentId}:${task.position}:${task.content.title}`,
+						`${task.id}:${task.updatedAt}:${task.parentId}:${task.position}:${JSON.stringify(task.content)}`,
 				)
 				.join("|"),
 		[tasksQuery.data],
@@ -234,7 +234,14 @@ export function KanbanBoardPage() {
 	useEffect(() => {
 		if (!columnsQuery.data || !tasksQuery.data) return;
 		setBoard(buildBoardData(tasksQuery.data, columnsQuery.data));
-	}, [boardApiRef, columnsSignature, columnsQuery.data, tasksSignature]);
+	}, [
+		boardApiRef,
+		columnsSignature,
+		columnsQuery.data,
+		tasksSignature,
+		tasksQuery.data,
+		tasksQuery.dataUpdatedAt,
+	]);
 
 	const getColumns = useCallback(
 		() =>
@@ -386,13 +393,27 @@ export function KanbanBoardPage() {
 		});
 	}, []);
 
+	const { createAndOpen, isPending: isCreatingTask } =
+		useCreateAndOpenKanbanTask();
+
 	const defaultColumnId = columnsQuery.data?.[0]?.id ?? "todo";
 
 	const openCreateTask = useCallback(
-		(columnId = defaultColumnId) => {
-			navigate(kanbanTaskCreatePath(boardMeta?.boardKey ?? boardKey, columnId));
+		async (columnId = defaultColumnId) => {
+			if (!resolvedBoardId) return;
+			try {
+				setOpeningTaskLabel("Новая задача");
+				const created = await createAndOpen({
+					boardId: resolvedBoardId,
+					parentId: columnId,
+				});
+				setOpeningTaskLabel(created.taskKey);
+			} catch (error) {
+				setOpeningTaskLabel(null);
+				toast.error(apiErrorMessage(error));
+			}
 		},
-		[boardKey, boardMeta?.boardKey, navigate],
+		[createAndOpen, defaultColumnId, resolvedBoardId],
 	);
 
 	const handleRenameColumn = useCallback(
@@ -433,7 +454,7 @@ export function KanbanBoardPage() {
 		updateColumn.isPending ||
 		deleteColumn.isPending ||
 		trashColumnTasks.isPending;
-	const isBoardBusy = !isReady || !board || isColumnBusy;
+	const isBoardBusy = !isReady || !board || isColumnBusy || isCreatingTask;
 	const isSavingBoard = saveMutation.isPending;
 
 	const filtersActive = kanbanBoardTaskFiltersActive(filters);
@@ -501,7 +522,7 @@ export function KanbanBoardPage() {
 				disabled={isBoardBusy}
 				onRename={handleRenameColumn}
 				onDelete={handleDeleteColumn}
-				onAddTask={openCreateTask}
+				onAddTask={(columnId) => void openCreateTask(columnId)}
 				onTrashAll={setTrashColumnConfirmId}
 				isTrashing={trashColumnTasks.isPending}
 				blockerCount={
