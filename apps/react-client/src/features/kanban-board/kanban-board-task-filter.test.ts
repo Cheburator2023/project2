@@ -41,6 +41,15 @@ describe("kanban-board-task-filter", () => {
 		);
 	});
 
+	it("matches quick search by system title", () => {
+		const item = card({
+			id: "t1",
+			content: { title: "Миграция", system: "smart-anketa" },
+		});
+		expect(kanbanBoardTaskMatchesSearch(item, "smart anketa")).toBe(true);
+		expect(kanbanBoardTaskMatchesSearch(item, "infra")).toBe(false);
+	});
+
 	it("filters by priority, assignee and due date", () => {
 		const item = card({
 			id: "t1",

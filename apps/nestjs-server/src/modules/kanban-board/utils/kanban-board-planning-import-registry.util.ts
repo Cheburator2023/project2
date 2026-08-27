@@ -78,6 +78,10 @@ const STATUS_ALIASES: Record<string, string> = {
 	"на тестировании": "review_wip",
 	демонстрация: "demo",
 	demo: "demo",
+	отменено: "cancelled",
+	cancelled: "cancelled",
+	canceled: "cancelled",
+	отмена: "cancelled",
 };
 
 export function scoreStatusColumnMatch(

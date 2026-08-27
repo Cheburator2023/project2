@@ -3,11 +3,13 @@ import {
 	KANBAN_BOARD_ROLE_ESTIMATE_FIELDS,
 	KANBAN_BOARD_STANDS,
 	KANBAN_BOARD_STATUSES,
+	KANBAN_BOARD_SYSTEMS,
 	KANBAN_BOARD_TASK_TYPES,
 	KANBAN_BOARD_WORK_TYPES,
 	kanbanBoardEffectiveEstimatePd,
 	kanbanBoardPriorityTitle,
 	kanbanBoardStandTitle,
+	kanbanBoardSystemTitle,
 	kanbanBoardTaskAssignees,
 	kanbanBoardTaskAssigneesTitle,
 	kanbanBoardTaskTypeTitle,
@@ -71,6 +73,7 @@ const PERSIST_COL_IDS = new Set<string>([
 	"taskType",
 	"workType",
 	"stand",
+	"system",
 	"blocker",
 	"estimatePd",
 	"dueDate",
@@ -246,6 +249,10 @@ function syncTaskDisplay(
 	task.standTitle = content.stand
 		? kanbanBoardStandTitle(content.stand)
 		: undefined;
+	task.system = content.system;
+	task.systemTitle = content.system
+		? kanbanBoardSystemTitle(content.system)
+		: undefined;
 	task.backlogNumber = content.backlogNumber;
 	const sprint = lookups.sprintOptions.find(
 		(item) => item.id === content.sprintId,
@@ -367,10 +374,16 @@ export function applyPlanningTaskFieldToTask(
 				{ stand: findCatalogId(KANBAN_BOARD_STANDS, rawValue) },
 				lookups,
 			);
+		case "system":
+			return applyContent(
+				task,
+				{ system: findCatalogId(KANBAN_BOARD_SYSTEMS, rawValue) },
+				lookups,
+			);
 		case "blocker":
 			return applyContent(
 				task,
-				{ hasBlocker: parseBlocker(rawValue) || undefined },
+				{ hasBlocker: parseBlocker(rawValue) },
 				lookups,
 			);
 		case "estimatePd":

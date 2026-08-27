@@ -21,10 +21,12 @@ import {
 	KANBAN_BOARD_PRIORITIES,
 	KANBAN_BOARD_HEAP_BOARD_ID,
 	KANBAN_BOARD_STANDS,
+	KANBAN_BOARD_SYSTEMS,
 	KANBAN_BOARD_TASK_TYPES,
 	KANBAN_BOARD_WORK_TYPES,
 	kanbanBoardPriorityColor,
 	kanbanBoardStandColor,
+	kanbanBoardSystemColor,
 	kanbanBoardTaskAssignees,
 	kanbanBoardTaskTypeColor,
 	kanbanBoardWorkTypeColor,
@@ -234,6 +236,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	const [taskType, setTaskType] = useState("");
 	const [workType, setWorkType] = useState("");
 	const [stand, setStand] = useState("");
+	const [system, setSystem] = useState("");
 	const [hasBlocker, setHasBlocker] = useState(false);
 	const [estimatePd, setEstimatePd] = useState("");
 	const [roleEstimates, setRoleEstimates] = useState<KanbanBoardRoleEstimates>(
@@ -351,6 +354,16 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 				value: option.id,
 				label: option.title,
 				color: kanbanBoardStandColor(option.id),
+			})),
+		[],
+	);
+
+	const systemOptions = useMemo(
+		() =>
+			KANBAN_BOARD_SYSTEMS.map((option) => ({
+				value: option.id,
+				label: option.title,
+				color: kanbanBoardSystemColor(option.id),
 			})),
 		[],
 	);
@@ -542,6 +555,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 		setTaskType(task.content.taskType ?? "");
 		setWorkType(task.content.workType ?? "");
 		setStand(task.content.stand ?? "");
+		setSystem(task.content.system ?? "");
 		setHasBlocker(task.content.hasBlocker === true);
 		setEstimatePd(
 			task.content.estimatePd !== undefined
@@ -616,7 +630,10 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 			stand: stand
 				? (stand as KanbanBoardTaskContent["stand"])
 				: undefined,
-			hasBlocker: hasBlocker || undefined,
+			system: system
+				? (system as KanbanBoardTaskContent["system"])
+				: undefined,
+			hasBlocker,
 			roleEstimates: Object.keys(roleEstimates).length
 				? roleEstimates
 				: undefined,
@@ -650,6 +667,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 				taskType,
 				workType,
 				stand,
+				system,
 				hasBlocker,
 				estimatePd,
 				roleEstimates,
@@ -674,6 +692,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 			taskType,
 			workType,
 			stand,
+			system,
 			hasBlocker,
 			estimatePd,
 			roleEstimates,
@@ -1206,6 +1225,19 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 											fullWidth
 											disabled={formLocked}
 											emptyLabel="— не выбран —"
+										/>
+									</Box>
+								</KanbanTaskDetailRow>
+								<KanbanTaskDetailRow label="Система / приложение">
+									<Box sx={{ textAlign: "left" }}>
+										<KanbanTaskSelectField
+											label=""
+											value={system}
+											options={systemOptions}
+											onChange={setSystem}
+											fullWidth
+											disabled={formLocked}
+											emptyLabel="— не выбрана —"
 										/>
 									</Box>
 								</KanbanTaskDetailRow>

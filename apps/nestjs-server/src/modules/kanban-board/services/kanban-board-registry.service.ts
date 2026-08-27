@@ -9,6 +9,8 @@ import { ulid } from "ulid";
 import {
 	KANBAN_BOARD_HEAP_BOARD_ID,
 	KANBAN_BOARD_STATUSES,
+	KANBAN_BOARD_SYSTEMS,
+	KANBAN_BOARD_CANCELLED_COLUMN_ID,
 	ResetKanbanBoardColumnsResultDto,
 	defaultKanbanBoardColumns,
 	resolveKanbanBoardLegacyColumnId,
@@ -16,12 +18,14 @@ import {
 	kanbanBoardEffectiveEstimatePd,
 	kanbanBoardEffectiveSprintCapacityPd,
 	kanbanBoardIsDoneColumn,
+	kanbanBoardIsCancelledColumn,
 	kanbanBoardPriorityTitle,
 	kanbanBoardTaskAssigneeRoles,
 	kanbanBoardTaskAssigneeRoleTitles,
 	kanbanBoardTaskAssignees,
 	kanbanBoardTaskAssigneesTitle,
 	kanbanBoardStandTitle,
+	kanbanBoardSystemTitle,
 	kanbanBoardTaskReleasesTitle,
 	kanbanBoardTaskTypeTitle,
 	kanbanBoardWorkTypeTitle,
@@ -37,6 +41,7 @@ import {
 	type KanbanBoardPlanningKanbanImportBoardDto,
 	type AssignKanbanBoardTasksToBoardRequestDto,
 	type AssignKanbanBoardTasksToBoardResultDto,
+	type KanbanBoardSystemId,
 	type TrashKanbanBoardColumnTasksResultDto,
 	type CreateKanbanBoardCustomerRequestDto,
 	type CreateKanbanBoardAssigneeRequestDto,
@@ -756,11 +761,13 @@ export class KanbanBoardRegistryService {
 		});
 		if (!columns.length) {
 			await this.seedDefaultColumns(boardId);
-			columns = await this.columnRepository.find({
-				where: { boardId },
-				order: { sortOrder: "ASC", title: "ASC" },
-			});
+		} else {
+			await this.ensureCancelledColumn(boardId);
 		}
+		columns = await this.columnRepository.find({
+			where: { boardId },
+			order: { sortOrder: "ASC", title: "ASC" },
+		});
 		return columns.map((column) => this.toColumnDto(column));
 	}
 
@@ -1722,13 +1729,6 @@ export class KanbanBoardRegistryService {
 		);
 
 		const before = this.historyService.snapshotFromTask(task);
-		const columnTitles = await this.historyService.loadColumnTitleMap([
-			task.boardId,
-		]);
-		const columnTitle = this.historyService.columnTitleResolver(
-			columnTitles,
-			task.boardId,
-		);
 
 		if (dto.boardId !== undefined) {
 			const board = await this.boardRepository.findOne({
@@ -1743,9 +1743,11 @@ export class KanbanBoardRegistryService {
 			task.boardId = dto.boardId;
 			task.board = board;
 		}
-		const nextParentId = dto.parentId ?? task.parentId;
-		await this.ensureColumnOnBoard(task.boardId, nextParentId);
-		if (dto.parentId !== undefined) task.parentId = dto.parentId;
+		const column = await this.ensureColumnOnBoard(
+			task.boardId,
+			dto.parentId ?? task.parentId,
+		);
+		if (dto.parentId !== undefined) task.parentId = column.id;
 		if (dto.position !== undefined) task.position = dto.position;
 		if (dto.createdBy !== undefined) {
 			task.createdBy = dto.createdBy?.trim() || null;
@@ -1763,6 +1765,14 @@ export class KanbanBoardRegistryService {
 			);
 		}
 		task.updatedAt = new Date().toISOString();
+
+		const columnTitles = await this.historyService.loadColumnTitleMap([
+			task.boardId,
+		]);
+		const columnTitle = this.historyService.columnTitleResolver(
+			columnTitles,
+			task.boardId,
+		);
 
 		await this.taskRepository.save(task);
 		await this.historyService.logTaskDiff({
@@ -1908,6 +1918,13 @@ export class KanbanBoardRegistryService {
 		if (!dto.boardId?.trim()) {
 			throw new BadRequestException("Не указана доска");
 		}
+		const systemId = String(dto.system ?? "")
+			.trim()
+			.toLowerCase();
+		if (!KANBAN_BOARD_SYSTEMS.some((item) => item.id === systemId)) {
+			throw new BadRequestException("Укажите систему / приложение");
+		}
+		const system = systemId as KanbanBoardSystemId;
 
 		const board = await this.findBoardEntityByRef(dto.boardId);
 
@@ -1979,6 +1996,10 @@ export class KanbanBoardRegistryService {
 				sourceColumnTitles,
 				positionByColumn,
 				nextNumberByProject,
+			});
+			task.content = normalizeKanbanBoardTaskContent({
+				...task.content,
+				system,
 			});
 			task.updatedAt = now;
 			toSave.push(task);
@@ -2249,6 +2270,12 @@ export class KanbanBoardRegistryService {
 		boardId: string,
 		columnId: string,
 	): Promise<KanbanBoardColumnEntity> {
+		if (
+			columnId === KANBAN_BOARD_CANCELLED_COLUMN_ID ||
+			kanbanBoardIsCancelledColumn({ id: columnId })
+		) {
+			return this.ensureCancelledColumn(boardId);
+		}
 		const column = await this.columnRepository.findOne({
 			where: { id: columnId, boardId },
 		});
@@ -2256,6 +2283,58 @@ export class KanbanBoardRegistryService {
 			throw new BadRequestException("Колонка не найдена на доске");
 		}
 		return column;
+	}
+
+	/** Добавляет заводскую колонку «Отменено» перед «Готово», если её ещё нет. */
+	private async ensureCancelledColumn(
+		boardId: string,
+	): Promise<KanbanBoardColumnEntity> {
+		let columns = await this.columnRepository.find({ where: { boardId } });
+		if (!columns.length) {
+			await this.seedDefaultColumns(boardId);
+			columns = await this.columnRepository.find({ where: { boardId } });
+		}
+		const existing = columns.find((column) =>
+			kanbanBoardIsCancelledColumn({
+				id: column.id,
+				title: column.title,
+			}),
+		);
+		if (existing) return existing;
+
+		const defaults = defaultKanbanBoardColumns(boardId);
+		const def = defaults.find(
+			(column) => column.id === KANBAN_BOARD_CANCELLED_COLUMN_ID,
+		);
+		if (!def) {
+			throw new BadRequestException("Колонка «Отменено» не найдена в шаблоне");
+		}
+
+		const done = columns.find((column) =>
+			kanbanBoardIsDoneColumn({ id: column.id, title: column.title }),
+		);
+		const sortOrder = done
+			? done.sortOrder
+			: Math.max(-1, ...columns.map((column) => column.sortOrder)) + 1;
+
+		if (done) {
+			for (const column of columns) {
+				if (column.sortOrder >= sortOrder) {
+					column.sortOrder += 1;
+					await this.columnRepository.save(column);
+				}
+			}
+		}
+
+		return this.columnRepository.save(
+			this.columnRepository.create({
+				id: def.id,
+				boardId,
+				title: def.title,
+				color: def.color,
+				sortOrder,
+			}),
+		);
 	}
 
 	private async seedDefaultColumns(boardId: string): Promise<void> {
@@ -2411,6 +2490,10 @@ export class KanbanBoardRegistryService {
 			stand: content.stand,
 			standTitle: content.stand
 				? kanbanBoardStandTitle(content.stand)
+				: undefined,
+			system: content.system,
+			systemTitle: content.system
+				? kanbanBoardSystemTitle(content.system)
 				: undefined,
 			releases,
 			releaseTitle: kanbanBoardTaskReleasesTitle(releases) || undefined,

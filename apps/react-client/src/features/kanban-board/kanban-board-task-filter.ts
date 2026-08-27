@@ -1,5 +1,6 @@
 import {
 	formatKanbanTaskKey,
+	kanbanBoardSystemTitle,
 	kanbanBoardTaskAssignees,
 	type KanbanBoardData,
 	type KanbanBoardItem,
@@ -91,6 +92,8 @@ export function kanbanBoardTaskSearchHaystack(
 		content?.customer,
 		content?.parentTask,
 		content?.tags?.join(" "),
+		content?.system,
+		content?.system ? kanbanBoardSystemTitle(content.system) : "",
 	]
 		.filter(Boolean)
 		.join(" ");

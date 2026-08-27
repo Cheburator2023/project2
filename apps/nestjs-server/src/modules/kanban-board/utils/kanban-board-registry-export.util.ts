@@ -5,6 +5,7 @@ import {
 	kanbanBoardEffectiveEstimatePd,
 	kanbanBoardPriorityTitle,
 	kanbanBoardStandTitle,
+	kanbanBoardSystemTitle,
 	kanbanBoardTaskAssignees,
 } from "@smart-anketa/api-contract";
 
@@ -34,6 +35,7 @@ const TASK_EXPORT_COLUMNS = [
 	{ header: "Релиз", key: "release", width: 22 },
 	{ header: "Стрим", key: "stream", width: 18 },
 	{ header: "Стенд", key: "stand", width: 12 },
+	{ header: "Система", key: "system", width: 16 },
 	{ header: "Стенд данных", key: "origin", width: 14 },
 	{ header: "Создал", key: "createdBy", width: 18 },
 	{ header: "Создано", key: "createdAt", width: 22 },
@@ -119,6 +121,9 @@ function taskToExportRow(task: KanbanBoardTaskRegistryDto): Record<string, strin
 		stand:
 			task.standTitle ??
 			(task.content.stand ? kanbanBoardStandTitle(task.content.stand) : ""),
+		system:
+			task.systemTitle ??
+			(task.content.system ? kanbanBoardSystemTitle(task.content.system) : ""),
 		origin: task.origin,
 		createdBy: task.createdBy ?? "",
 		createdAt: task.createdAt ?? "",

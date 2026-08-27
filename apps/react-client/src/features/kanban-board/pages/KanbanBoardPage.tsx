@@ -25,10 +25,13 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-	clearKanbanBoardCurrentAssigneeOnColumnChange,
 	fromBoardData,
 	normalizeKanbanBoardData,
 	toBoardData,
+	findKanbanBoardCancelledColumnId,
+	kanbanBoardIsCancelledColumn,
+	kanbanBoardIsDoneColumn,
+	moveKanbanBoardCardToColumn,
 	type KanbanBoardColumnDto,
 	type KanbanBoardData,
 	type KanbanBoardTaskContent,
@@ -58,6 +61,7 @@ import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { Header } from "@react-client/common/navigation/organisms/Header";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
+import { toast } from "@react-client/common/toasts";
 import {
 	downloadBlob,
 	kanbanBoardExportBoardSnapshot,
@@ -109,6 +113,35 @@ const buildBoardData = (
 	columns: KanbanBoardColumnDto[],
 ): KanbanBoardData => toBoardData(tasks, columns);
 
+function ensureCancelledColumnOnBoard(
+	board: KanbanBoardData,
+	column: Pick<KanbanBoardColumnDto, "id" | "title" | "color">,
+): KanbanBoardData {
+	if (board[column.id]) return board;
+	const children = [...(board.root.children ?? [])];
+	const doneIndex = children.findIndex((id) =>
+		kanbanBoardIsDoneColumn({ id, title: board[id]?.title }),
+	);
+	const insertAt = doneIndex >= 0 ? doneIndex : children.length;
+	children.splice(insertAt, 0, column.id);
+	return {
+		...board,
+		root: {
+			...board.root,
+			children,
+			totalChildrenCount: children.length,
+		},
+		[column.id]: {
+			id: column.id,
+			title: column.title,
+			parentId: "root",
+			children: [],
+			totalChildrenCount: 0,
+			content: { color: column.color },
+		},
+	};
+}
+
 export function KanbanBoardPage() {
 	const { boardKey = "" } = useParams<{ boardKey: string }>();
 	const navigate = useNavigate();
@@ -131,6 +164,12 @@ export function KanbanBoardPage() {
 	const [boardContextMenu, setBoardContextMenu] = useState<{
 		mouseX: number;
 		mouseY: number;
+	} | null>(null);
+	const [cardContextMenu, setCardContextMenu] = useState<{
+		mouseX: number;
+		mouseY: number;
+		cardId: string;
+		parentId: string;
 	} | null>(null);
 
 	const configQuery = useKanbanBoardConfig();
@@ -340,6 +379,7 @@ export function KanbanBoardPage() {
 
 	const handleBoardContextMenu = useCallback((event: MouseEvent) => {
 		event.preventDefault();
+		setCardContextMenu(null);
 		setBoardContextMenu({
 			mouseX: event.clientX,
 			mouseY: event.clientY,
@@ -525,6 +565,63 @@ export function KanbanBoardPage() {
 		},
 		[],
 	);
+
+	const handleCardContextMenu = useCallback(
+		(event: MouseEvent, cardId: string, parentId: string) => {
+			event.preventDefault();
+			event.stopPropagation();
+			setBoardContextMenu(null);
+			setCardContextMenu({
+				mouseX: event.clientX,
+				mouseY: event.clientY,
+				cardId,
+				parentId,
+			});
+		},
+		[],
+	);
+
+	const cancelCardFromMenu = useCallback(() => {
+		if (!cardContextMenu || !board || isSavingBoard) {
+			setCardContextMenu(null);
+			return;
+		}
+		const { cardId, parentId } = cardContextMenu;
+		setCardContextMenu(null);
+		if (kanbanBoardIsCancelledColumn({ id: parentId })) return;
+
+		const columnId =
+			findKanbanBoardCancelledColumnId(columnsQuery.data ?? []) ??
+			findKanbanBoardCancelledColumnId(
+				(board.root.children ?? []).map((id) => ({
+					id,
+					title: board[id]?.title,
+				})),
+			);
+		if (!columnId) {
+			toast.error("Колонка «Отменено» ещё не появилась — обновите доску");
+			return;
+		}
+
+		let nextBoard = board;
+		if (!nextBoard[columnId]) {
+			const column = columnsQuery.data?.find((item) => item.id === columnId);
+			if (!column) {
+				toast.error("Колонка «Отменено» ещё не появилась — обновите доску");
+				return;
+			}
+			nextBoard = ensureCancelledColumnOnBoard(nextBoard, column);
+		}
+		const moved = moveKanbanBoardCardToColumn(nextBoard, cardId, columnId);
+		if (!moved) return;
+		persistBoard(moved);
+	}, [
+		board,
+		cardContextMenu,
+		columnsQuery.data,
+		isSavingBoard,
+		persistBoard,
+	]);
 
 	if (boardsQuery.isLoading) {
 		return <Alert severity="info">Загрузка доски…</Alert>;
@@ -852,6 +949,13 @@ export function KanbanBoardPage() {
 												highlightQuery={debouncedSearch}
 												onContentUpdated={handleTaskContentUpdated}
 												onEditBlocked={handleEditBlocked}
+												onContextMenu={(event) =>
+													handleCardContextMenu(
+														event,
+														data.id,
+														data.parentId ?? column.id,
+													)
+												}
 											/>
 										),
 									},
@@ -859,36 +963,10 @@ export function KanbanBoardPage() {
 								onCardMove={(move) => {
 									if (isSavingBoard || !standId || viewFiltered) return;
 									const prevBoard = board as KanbanBoardData;
-									// dropHandler мутирует children колонок — снимок parentId до дропа.
-									const prevParentByCardId = new Map<string, string | null>();
-									for (const columnId of prevBoard.root?.children ?? []) {
-										const column = prevBoard[columnId];
-										if (!column) continue;
-										for (const cardId of column.children) {
-											prevParentByCardId.set(
-												cardId,
-												prevBoard[cardId]?.parentId ?? columnId,
-											);
-										}
-									}
 									const movedBoard = normalizeKanbanBoardData(
 										dropHandler(move, prevBoard as BoardData) as KanbanBoardData,
 									);
-									const prevSnapshot: KanbanBoardData = {
-										...prevBoard,
-										root: prevBoard.root,
-									};
-									for (const [cardId, parentId] of prevParentByCardId) {
-										const card = prevSnapshot[cardId];
-										if (!card) continue;
-										prevSnapshot[cardId] = { ...card, parentId };
-									}
-									const nextBoard =
-										clearKanbanBoardCurrentAssigneeOnColumnChange(
-											prevSnapshot,
-											movedBoard,
-										);
-									persistBoard(nextBoard);
+									persistBoard(movedBoard);
 								}}
 							/>
 						) : null}
@@ -912,6 +990,29 @@ export function KanbanBoardPage() {
 					}}
 				>
 					История изменений
+				</MenuItem>
+			</Menu>
+			<Menu
+				open={cardContextMenu !== null}
+				onClose={() => setCardContextMenu(null)}
+				anchorReference="anchorPosition"
+				anchorPosition={
+					cardContextMenu
+						? { top: cardContextMenu.mouseY, left: cardContextMenu.mouseX }
+						: undefined
+				}
+			>
+				<MenuItem
+					disabled={
+						!cardContextMenu ||
+						isSavingBoard ||
+						kanbanBoardIsCancelledColumn({
+							id: cardContextMenu.parentId,
+						})
+					}
+					onClick={cancelCardFromMenu}
+				>
+					Отменить задачу
 				</MenuItem>
 			</Menu>
 			<TrackerTaskConflictDialog

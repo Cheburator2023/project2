@@ -49,5 +49,8 @@ describe("kanban board planning import registry util", () => {
 		expect(resolveBestStatusColumnId("Входной буфер", COLUMNS).columnId).toBe(
 			"input_buffer",
 		);
+		expect(resolveBestStatusColumnId("Отменено", COLUMNS).columnId).toBe(
+			"cancelled",
+		);
 	});
 });

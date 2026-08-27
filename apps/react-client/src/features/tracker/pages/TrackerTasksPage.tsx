@@ -4,6 +4,7 @@ import {
 	useAssignKanbanBoardTasksToBoard,
 	useDeleteKanbanBoardTask,
 	useKanbanBoardTasksRegistry,
+	useUpdateKanbanBoardTask,
 } from "@react-client/common/api/queries/kanban-board";
 import { toast } from "@react-client/common/toasts";
 import {
@@ -24,10 +25,12 @@ import {
 	TrackerTaskReleaseChips,
 	TrackerTaskStatusChip,
 	TrackerTaskStreamChip,
+	TrackerTaskSystemChip,
 	TrackerTaskTypeChip,
 	TrackerTaskWorkTypeChip,
 } from "@react-client/features/tracker/components/TrackerTaskFieldChips";
 import { TrackerAssignTasksToBoardDialog } from "@react-client/features/tracker/components/TrackerAssignTasksToBoardDialog";
+import { useTrackerEditIdentity } from "@react-client/features/tracker/hooks/useTrackerEditIdentity";
 import { TrackerRegistryPage } from "@react-client/features/tracker/components/TrackerRegistryPage";
 import { TrackerRegistryExportButton } from "@react-client/features/tracker/components/TrackerRegistryExportButton";
 import { TrackerRegistryImportButton } from "@react-client/features/tracker/components/TrackerRegistryImportButton";
@@ -37,7 +40,12 @@ import {
 	kanbanTaskEditPath,
 	trackerStandaloneTaskCreatePath,
 } from "@react-client/features/kanban-board/kanban-task-paths";
-import type { KanbanBoardTaskRegistryDto } from "@smart-anketa/api-contract";
+import {
+	KANBAN_BOARD_CANCELLED_COLUMN_ID,
+	kanbanBoardIsCancelledColumn,
+	type KanbanBoardSystemId,
+	type KanbanBoardTaskRegistryDto,
+} from "@smart-anketa/api-contract";
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 
@@ -45,7 +53,9 @@ export function TrackerTasksPage() {
 	const navigate = useNavigate();
 	const { data = [], isLoading } = useKanbanBoardTasksRegistry();
 	const deleteTask = useDeleteKanbanBoardTask();
+	const updateTask = useUpdateKanbanBoardTask();
 	const assignToBoard = useAssignKanbanBoardTasksToBoard();
+	const editLabel = useTrackerEditIdentity();
 	const [assignDialogOpen, setAssignDialogOpen] = useState(false);
 	const [assignTaskIds, setAssignTaskIds] = useState<string[]>([]);
 
@@ -58,11 +68,15 @@ export function TrackerTasksPage() {
 		setAssignDialogOpen(true);
 	}, []);
 
-	const confirmAssignToBoard = async (boardId: string) => {
+	const confirmAssignToBoard = async (
+		boardId: string,
+		system: KanbanBoardSystemId,
+	) => {
 		try {
 			const result = await assignToBoard.mutateAsync({
 				taskIds: assignTaskIds,
 				boardId,
+				system,
 			});
 			setAssignDialogOpen(false);
 			setAssignTaskIds([]);
@@ -310,6 +324,20 @@ export function TrackerTasksPage() {
 					) : null,
 			},
 			{
+				colId: "system",
+				headerName: "Система",
+				width: 140,
+				valueGetter: (params) =>
+					params.data?.systemTitle ?? params.data?.content?.system ?? "",
+				cellRenderer: (params: ICellRendererParams<KanbanBoardTaskRegistryDto>) =>
+					params.data ? (
+						<TrackerTaskSystemChip
+							system={params.data.system ?? params.data.content?.system}
+							systemTitle={params.data.systemTitle}
+						/>
+					) : null,
+			},
+			{
 				colId: "origin",
 				headerName: "Стенд данных",
 				width: 130,
@@ -338,6 +366,34 @@ export function TrackerTasksPage() {
 			},
 		],
 		[],
+	);
+
+	const cancelTask = useCallback(
+		async (row: KanbanBoardTaskRegistryDto) => {
+			if (
+				kanbanBoardIsCancelledColumn({
+					id: row.parentId,
+					title: row.statusTitle,
+				})
+			) {
+				return;
+			}
+			try {
+				await updateTask.mutateAsync({
+					id: row.id,
+					data: {
+						boardId: row.boardId,
+						parentId: KANBAN_BOARD_CANCELLED_COLUMN_ID,
+						expectedUpdatedAt: row.updatedAt,
+						lockHolderLabel: editLabel || undefined,
+					},
+				});
+				toast.success("Задача отменена");
+			} catch (error) {
+				toast.error(apiErrorMessage(error));
+			}
+		},
+		[editLabel, updateTask],
 	);
 
 	const bulkContextActions = useMemo(
@@ -373,6 +429,19 @@ export function TrackerTasksPage() {
 						await deleteTask.mutateAsync(row.id);
 					}
 				}}
+				contextActions={[
+					{
+						label: "Отменить задачу",
+						disabled: (row) =>
+							kanbanBoardIsCancelledColumn({
+								id: row.parentId,
+								title: row.statusTitle,
+							}),
+						onClick: (row) => {
+							void cancelTask(row);
+						},
+					},
+				]}
 				bulkContextActions={bulkContextActions}
 				selectionActions={(selected) =>
 					selected.length ? (
@@ -402,7 +471,9 @@ export function TrackerTasksPage() {
 					setAssignDialogOpen(false);
 					setAssignTaskIds([]);
 				}}
-				onConfirm={(boardId) => void confirmAssignToBoard(boardId)}
+				onConfirm={(boardId, system) =>
+					void confirmAssignToBoard(boardId, system)
+				}
 			/>
 		</>
 	);

@@ -8,6 +8,7 @@ import type {
 import {
 	kanbanBoardPriorityTitle,
 	kanbanBoardStandTitle,
+	kanbanBoardSystemTitle,
 	kanbanBoardSubtaskIsDone,
 	kanbanBoardSubtaskStatusTitle,
 	kanbanBoardTaskTypeTitle,
@@ -184,6 +185,11 @@ const CONTENT_FIELDS: ReadonlyArray<{
 		key: "stand",
 		label: "Стенд",
 		format: (value) => kanbanBoardStandTitle(String(value ?? "")),
+	},
+	{
+		key: "system",
+		label: "Система / приложение",
+		format: (value) => kanbanBoardSystemTitle(String(value ?? "")),
 	},
 	{
 		key: "hasBlocker",

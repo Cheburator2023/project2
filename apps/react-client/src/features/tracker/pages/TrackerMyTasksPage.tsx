@@ -7,7 +7,10 @@ import { alpha } from "@mui/material/styles";
 import {
 	useDeleteKanbanBoardTask,
 	useKanbanBoardTasksRegistry,
+	useUpdateKanbanBoardTask,
 } from "@react-client/common/api/queries/kanban-board";
+import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
+import { toast } from "@react-client/common/toasts";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Card } from "@react-client/common/muiCustom/Card";
 import {
@@ -35,8 +38,12 @@ import {
 	trackerStandaloneTaskCreatePath,
 } from "@react-client/features/kanban-board/kanban-task-paths";
 import { commonRoutes } from "@react-client/routing/common/routes";
-import type { KanbanBoardTaskRegistryDto } from "@smart-anketa/api-contract";
-import { useMemo } from "react";
+import {
+	KANBAN_BOARD_CANCELLED_COLUMN_ID,
+	kanbanBoardIsCancelledColumn,
+	type KanbanBoardTaskRegistryDto,
+} from "@smart-anketa/api-contract";
+import { useCallback, useMemo } from "react";
 import { useNavigate } from "react-router";
 
 function StatCard({
@@ -81,6 +88,7 @@ export function TrackerMyTasksPage() {
 	const me = useTrackerEditIdentity();
 	const { data = [], isLoading } = useKanbanBoardTasksRegistry();
 	const deleteTask = useDeleteKanbanBoardTask();
+	const updateTask = useUpdateKanbanBoardTask();
 
 	const myTasks = useMemo(
 		() => data.filter((task) => isTrackerMyTask(task, me)),
@@ -94,6 +102,34 @@ export function TrackerMyTasksPage() {
 	const openTask = (row: KanbanBoardTaskRegistryDto) => {
 		navigate(kanbanTaskEditPath(row.taskKey));
 	};
+
+	const cancelTask = useCallback(
+		async (row: KanbanBoardTaskRegistryDto) => {
+			if (
+				kanbanBoardIsCancelledColumn({
+					id: row.parentId,
+					title: row.statusTitle,
+				})
+			) {
+				return;
+			}
+			try {
+				await updateTask.mutateAsync({
+					id: row.id,
+					data: {
+						boardId: row.boardId,
+						parentId: KANBAN_BOARD_CANCELLED_COLUMN_ID,
+						expectedUpdatedAt: row.updatedAt,
+						lockHolderLabel: me || undefined,
+					},
+				});
+				toast.success("Задача отменена");
+			} catch (error) {
+				toast.error(apiErrorMessage(error));
+			}
+		},
+		[me, updateTask],
+	);
 
 	const columnDefs = useMemo<ColDef<KanbanBoardTaskRegistryDto>[]>(
 		() => [
@@ -350,6 +386,19 @@ export function TrackerMyTasksPage() {
 						await deleteTask.mutateAsync(row.id);
 					}
 				}}
+				contextActions={[
+					{
+						label: "Отменить задачу",
+						disabled: (row) =>
+							kanbanBoardIsCancelledColumn({
+								id: row.parentId,
+								title: row.statusTitle,
+							}),
+						onClick: (row) => {
+							void cancelTask(row);
+						},
+					},
+				]}
 			/>
 		</Flex>
 	);

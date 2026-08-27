@@ -8,6 +8,7 @@ import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import KeyboardDoubleArrowUpIcon from "@mui/icons-material/KeyboardDoubleArrowUp";
 import PauseIcon from "@mui/icons-material/Pause";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
+import ScheduleOutlinedIcon from "@mui/icons-material/ScheduleOutlined";
 import Box from "@mui/material/Box";
 import LinearProgress from "@mui/material/LinearProgress";
 import Typography from "@mui/material/Typography";
@@ -22,6 +23,8 @@ import {
 	kanbanBoardPriorityTitle,
 	kanbanBoardStandColor,
 	kanbanBoardStandTitle,
+	kanbanBoardSystemColor,
+	kanbanBoardSystemTitle,
 	kanbanBoardSubtasksProgress,
 	kanbanBoardTaskTypeColor,
 	kanbanBoardTaskTypeTitle,
@@ -35,15 +38,27 @@ import {
 	type KanbanBoardTaskContent,
 	type KanbanBoardTaskReleaseRefDto,
 } from "@smart-anketa/api-contract";
-import { format, isValid, parseISO } from "date-fns";
+import { differenceInCalendarDays, format, isValid, parseISO } from "date-fns";
 import { ru } from "date-fns/locale";
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 
-function formatCardDate(value?: string): string | null {
+function parseCardDate(value?: string): Date | null {
 	if (!value?.trim()) return null;
 	const parsed = parseISO(value.trim());
 	if (!isValid(parsed)) return null;
+	return parsed;
+}
+
+function formatCardDate(value?: string): string | null {
+	const parsed = parseCardDate(value);
+	if (!parsed) return null;
 	return format(parsed, "d MMM yyyy", { locale: ru });
+}
+
+function hangingDays(createdAt?: string, fallback?: string): number | null {
+	const parsed = parseCardDate(createdAt) ?? parseCardDate(fallback);
+	if (!parsed) return null;
+	return Math.max(0, differenceInCalendarDays(new Date(), parsed));
 }
 
 function PriorityIcon({
@@ -148,6 +163,7 @@ export function KanbanTaskBoardCard({
 	releases,
 	onContentUpdated,
 	onEditBlocked,
+	onContextMenu,
 }: {
 	taskId: string;
 	boardId: string;
@@ -166,12 +182,14 @@ export function KanbanTaskBoardCard({
 	releases?: KanbanBoardTaskReleaseRefDto[];
 	onContentUpdated: (taskId: string, content: KanbanBoardTaskContent) => void;
 	onEditBlocked?: (error: unknown) => void;
+	onContextMenu?: (event: MouseEvent) => void;
 }) {
 	const displayTitle = title ?? content?.title ?? "";
 	const description = content?.description?.trim();
 	/** Только «текущий исполнитель» — без fallback на assignees. */
 	const assignee = content?.currentAssignee?.trim() || "";
 	const createdLabel = formatCardDate(createdAt);
+	const ageDays = hangingDays(createdAt, taskUpdatedAt);
 	const dueLabel = formatCardDate(content?.dueDate);
 	const progress = kanbanBoardSubtasksProgress(content);
 	const imageCount = content?.images?.length ?? 0;
@@ -206,6 +224,12 @@ export function KanbanTaskBoardCard({
 			color: kanbanBoardStandColor(content.stand),
 		});
 	}
+	if (content?.system) {
+		tags.push({
+			label: kanbanBoardSystemTitle(content.system),
+			color: kanbanBoardSystemColor(content.system),
+		});
+	}
 	for (const release of releases ?? []) {
 		tags.push({
 			label: kanbanBoardTaskReleaseLabel(release),
@@ -215,6 +239,7 @@ export function KanbanTaskBoardCard({
 
 	return (
 		<Box
+			onContextMenu={onContextMenu}
 			sx={{
 				minWidth: 0,
 				borderRadius: 1.5,
@@ -335,7 +360,11 @@ export function KanbanTaskBoardCard({
 				{tags.length ? (
 					<Flex gap={4} wrap="wrap" alignItems="center">
 						{tags.map((tag) => (
-							<TagChip key={tag.label} label={tag.label} color={tag.color} />
+							<TagChip
+								key={`${tag.label}:${tag.color}`}
+								label={tag.label}
+								color={tag.color}
+							/>
 						))}
 					</Flex>
 				) : null}
@@ -410,6 +439,13 @@ export function KanbanTaskBoardCard({
 									title="Дата создания"
 									value={createdLabel}
 									icon={<CalendarTodayOutlinedIcon sx={{ fontSize: 14 }} />}
+								/>
+							) : null}
+							{ageDays !== null ? (
+								<MetaStat
+									title={`Висит ${ageDays} дн.`}
+									value={`${ageDays} д`}
+									icon={<ScheduleOutlinedIcon sx={{ fontSize: 14 }} />}
 								/>
 							) : null}
 							{dueLabel ? (

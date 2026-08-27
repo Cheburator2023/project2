@@ -118,6 +118,8 @@ export interface KanbanBoardTaskContent {
 	 * Не путать с `origin` записи (изоляция данных между стендами БД).
 	 */
 	stand?: KanbanBoardStandId;
+	/** Система / приложение, к которому относится задача. */
+	system?: KanbanBoardSystemId;
 	/** На задаче есть блокер — выделяется на доске. */
 	hasBlocker?: boolean;
 }
@@ -150,6 +152,40 @@ export function kanbanBoardStandColor(
 ): string {
 	if (!id) return "#64748b";
 	return KANBAN_BOARD_STAND_COLORS[id as KanbanBoardStandId] ?? "#64748b";
+}
+
+/** Система / приложение задачи. */
+export const KANBAN_BOARD_SYSTEMS = [
+	{ id: "sum", title: "SUM" },
+	{ id: "sum-rm", title: "SUM-RM" },
+	{ id: "data-lineage", title: "Data Lineage" },
+	{ id: "smart-anketa", title: "Smart Anketa" },
+	{ id: "shell", title: "Shell" },
+	{ id: "infra", title: "Инфра" },
+] as const;
+
+export type KanbanBoardSystemId = (typeof KANBAN_BOARD_SYSTEMS)[number]["id"];
+
+export const KANBAN_BOARD_SYSTEM_COLORS: Record<KanbanBoardSystemId, string> = {
+	sum: "#2563eb",
+	"sum-rm": "#7c3aed",
+	"data-lineage": "#0891b2",
+	"smart-anketa": "#16a34a",
+	shell: "#ca8a04",
+	infra: "#64748b",
+};
+
+export function kanbanBoardSystemTitle(
+	id?: KanbanBoardSystemId | string,
+): string {
+	return KANBAN_BOARD_SYSTEMS.find((item) => item.id === id)?.title ?? id ?? "";
+}
+
+export function kanbanBoardSystemColor(
+	id?: KanbanBoardSystemId | string,
+): string {
+	if (!id) return "#64748b";
+	return KANBAN_BOARD_SYSTEM_COLORS[id as KanbanBoardSystemId] ?? "#64748b";
 }
 
 /** Метаданные изображения в content задачи */
@@ -206,6 +242,7 @@ export const KANBAN_BOARD_TASK_FILE_ALLOWED_MIME = [
 export const KANBAN_BOARD_TASK_IMAGE_DONE_RETENTION_DAYS = 7;
 
 export const KANBAN_BOARD_DONE_COLUMN_ID = "done" as const;
+export const KANBAN_BOARD_CANCELLED_COLUMN_ID = "cancelled" as const;
 
 export const KANBAN_BOARD_PRIORITIES = [
 	{ id: "high", title: "Высокий" },
@@ -462,6 +499,8 @@ export interface KanbanBoardTaskRegistryDto extends KanbanBoardTaskRecord {
 	streamCustomer?: string;
 	stand?: KanbanBoardStandId;
 	standTitle?: string;
+	system?: KanbanBoardSystemId;
+	systemTitle?: string;
 	/** Сводка релизов для фильтра/экспорта. */
 	releaseTitle?: string;
 	hasBlocker?: boolean;
@@ -791,6 +830,8 @@ export const KANBAN_BOARD_HEAP_BOARD_SLUG = "heap";
 export interface AssignKanbanBoardTasksToBoardRequestDto {
 	taskIds: string[];
 	boardId: string;
+	/** Система / приложение, которую выставить всем переносимым задачам. */
+	system: KanbanBoardSystemId;
 }
 
 export interface AssignKanbanBoardTasksToBoardResultDto {
@@ -846,6 +887,7 @@ export const KANBAN_BOARD_STATUSES = [
 	{ id: "review_wip", title: "Проверка (В работе)" },
 	{ id: "review_done", title: "Проверка (Готово)" },
 	{ id: "demo", title: "Демонстрация" },
+	{ id: "cancelled", title: "Отменено" },
 	{ id: "done", title: "Готово" },
 ] as const;
 
@@ -867,6 +909,7 @@ export const KANBAN_BOARD_LEGACY_COLUMN_ID_MAP: Record<
 	demo_done: "demo",
 	done_wip: "done",
 	done: "done",
+	cancelled: "cancelled",
 };
 
 export const KANBAN_BOARD_DEFAULT_COLUMN_COLORS = [
@@ -893,7 +936,11 @@ export function pickKanbanBoardColumnColor(sortOrder: number): string {
 export const KANBAN_BOARD_COLUMN_COLORS = Object.fromEntries(
 	KANBAN_BOARD_STATUSES.map((status, sortOrder) => [
 		status.id,
-		status.id === "done" ? "#16a34a" : pickKanbanBoardColumnColor(sortOrder),
+		status.id === "done"
+			? "#16a34a"
+			: status.id === "cancelled"
+				? "#64748b"
+				: pickKanbanBoardColumnColor(sortOrder),
 	]),
 ) as Record<KanbanBoardStatusId, string>;
 

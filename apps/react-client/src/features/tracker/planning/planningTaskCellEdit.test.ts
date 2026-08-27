@@ -60,12 +60,28 @@ describe("applyPlanningTaskFieldToTask", () => {
 		expect(row.statusTitle).toBe("Разработка (В работе)");
 	});
 
+	it("maps cancelled status title to the cancelled column", () => {
+		const row = task({ id: "1" });
+		expect(applyPlanningTaskFieldToTask(row, "status", "Отменено")).toBe(true);
+		expect(row.parentId).toBe("cancelled");
+		expect(row.statusTitle).toBe("Отменено");
+	});
+
 	it("turns the blocker flag on and off", () => {
 		const row = task({ id: "1" });
 		expect(applyPlanningTaskFieldToTask(row, "blocker", "есть")).toBe(true);
 		expect(row.content.hasBlocker).toBe(true);
 		expect(applyPlanningTaskFieldToTask(row, "blocker", "")).toBe(true);
-		expect(row.content.hasBlocker).toBeUndefined();
+		expect(row.content.hasBlocker).toBe(false);
+	});
+
+	it("maps system title to the catalog id", () => {
+		const row = task({ id: "1" });
+		expect(applyPlanningTaskFieldToTask(row, "system", "Smart Anketa")).toBe(
+			true,
+		);
+		expect(row.content.system).toBe("smart-anketa");
+		expect(row.systemTitle).toBe("Smart Anketa");
 	});
 
 	it("sums role estimates into the total person-days", () => {
@@ -95,6 +111,7 @@ describe("applyPlanningTaskFieldToTask", () => {
 describe("isPlanningTaskPersistColId", () => {
 	it("persists task fields but not the planning release column", () => {
 		expect(isPlanningTaskPersistColId("title")).toBe(true);
+		expect(isPlanningTaskPersistColId("system")).toBe(true);
 		expect(isPlanningTaskPersistColId(roleEstimateColId("analyst"))).toBe(true);
 		expect(isPlanningTaskPersistColId("releaseId")).toBe(false);
 		expect(isPlanningTaskPersistColId("groupTitle")).toBe(false);

@@ -10,12 +10,14 @@ import {
 	defaultKanbanBoardColumns,
 	KANBAN_BOARD_ASSIGNEE_ROLES,
 	KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD,
+	KANBAN_BOARD_CANCELLED_COLUMN_ID,
 	KANBAN_BOARD_DONE_COLUMN_ID,
 	KANBAN_BOARD_INPUT_BUFFER_COLUMN_ID,
 	KANBAN_BOARD_LEGACY_COLUMN_ID_MAP,
 	KANBAN_BOARD_STANDS,
 	KANBAN_BOARD_STATUSES,
 	KANBAN_BOARD_SUBTASK_STATUSES,
+	KANBAN_BOARD_SYSTEMS,
 	kanbanBoardAssigneeRoleTitle,
 	kanbanBoardSubtaskIsDone,
 	kanbanBoardTaskHasBlocker,
@@ -27,6 +29,60 @@ export function kanbanBoardIsDoneColumn(column: {
 }): boolean {
 	if (column.id === KANBAN_BOARD_DONE_COLUMN_ID) return true;
 	return (column.title ?? "").trim().toLowerCase() === "готово";
+}
+
+export function kanbanBoardIsCancelledColumn(column: {
+	id: string;
+	title?: string | null;
+}): boolean {
+	if (column.id === KANBAN_BOARD_CANCELLED_COLUMN_ID) return true;
+	const title = (column.title ?? "").trim().toLowerCase();
+	return title === "отменено" || title === "cancelled" || title === "canceled";
+}
+
+export function findKanbanBoardCancelledColumnId(
+	columns: ReadonlyArray<{ id: string; title?: string | null }>,
+): string | undefined {
+	const byId = columns.find(
+		(column) => column.id === KANBAN_BOARD_CANCELLED_COLUMN_ID,
+	);
+	if (byId) return byId.id;
+	return columns.find((column) => kanbanBoardIsCancelledColumn(column))?.id;
+}
+
+/** Переносит карточку в колонку (в конец). Колонка должна уже быть в `board`. */
+export function moveKanbanBoardCardToColumn(
+	board: KanbanBoardData,
+	cardId: string,
+	columnId: string,
+): KanbanBoardData | null {
+	const card = board[cardId];
+	const target = board[columnId];
+	if (!card || !target) return null;
+	if (card.parentId === columnId) return board;
+
+	const next: KanbanBoardData = { ...board, root: { ...board.root } };
+	const prevColumnId = card.parentId;
+	if (prevColumnId && board[prevColumnId]) {
+		const prevColumn = board[prevColumnId];
+		const children = prevColumn.children.filter((id) => id !== cardId);
+		next[prevColumnId] = {
+			...prevColumn,
+			children,
+			totalChildrenCount: children.length,
+		};
+	}
+	const destChildren = [
+		...target.children.filter((id) => id !== cardId),
+		cardId,
+	];
+	next[columnId] = {
+		...target,
+		children: destChildren,
+		totalChildrenCount: destChildren.length,
+	};
+	next[cardId] = { ...card, parentId: columnId };
+	return normalizeKanbanBoardData(next);
 }
 
 export function toBoardData(
@@ -123,45 +179,6 @@ export function normalizeKanbanBoardData(board: KanbanBoardData): KanbanBoardDat
 	}
 
 	return next;
-}
-
-/**
- * При смене колонки (статуса) на доске сбрасывает `currentAssignee`.
- * Перестановка внутри колонки не затрагивается.
- *
- * Важно: пишем `""`, а не `undefined` — иначе ключ пропадает в JSON
- * и серверный merge с prev.content возвращает старого исполнителя.
- */
-export function clearKanbanBoardCurrentAssigneeOnColumnChange(
-	prev: KanbanBoardData,
-	next: KanbanBoardData,
-): KanbanBoardData {
-	let changed = false;
-	const result: KanbanBoardData = { ...next };
-
-	for (const columnId of next.root?.children ?? []) {
-		const column = next[columnId];
-		if (!column) continue;
-		for (const cardId of column.children) {
-			const card = next[cardId];
-			const prevCard = prev[cardId];
-			if (!card || !prevCard) continue;
-			if (prevCard.parentId === card.parentId) continue;
-			const content = card.content as KanbanBoardTaskContent | undefined;
-			if (!content) continue;
-			if (!content.currentAssignee?.trim()) continue;
-			changed = true;
-			result[cardId] = {
-				...card,
-				content: {
-					...content,
-					currentAssignee: "",
-				},
-			};
-		}
-	}
-
-	return changed ? result : next;
 }
 
 export function fromBoardData(
@@ -411,7 +428,19 @@ export function normalizeKanbanBoardTaskContent(
 			? (standId as KanbanBoardTaskContent["stand"])
 			: undefined;
 	}
-	next.hasBlocker = next.hasBlocker === true ? true : undefined;
+	if (next.system !== undefined) {
+		const systemId = String(next.system).trim().toLowerCase();
+		next.system = KANBAN_BOARD_SYSTEMS.some((item) => item.id === systemId)
+			? (systemId as KanbanBoardTaskContent["system"])
+			: undefined;
+	}
+	if (next.hasBlocker === true) {
+		next.hasBlocker = true;
+	} else if (next.hasBlocker === false) {
+		next.hasBlocker = false;
+	} else {
+		next.hasBlocker = undefined;
+	}
 	if (typeof next.currentAssignee === "string") {
 		const trimmed = next.currentAssignee.trim();
 		next.currentAssignee = trimmed || undefined;

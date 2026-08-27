@@ -18,6 +18,7 @@ import {
 	TrackerTaskStandChip,
 	TrackerTaskStatusChip,
 	TrackerTaskStreamChip,
+	TrackerTaskSystemChip,
 	TrackerTaskTypeChip,
 	TrackerTaskWorkTypeChip,
 } from "@react-client/features/tracker/components/TrackerTaskFieldChips";
@@ -26,6 +27,7 @@ import {
 	KANBAN_BOARD_ROLE_ESTIMATE_FIELDS,
 	KANBAN_BOARD_STANDS,
 	KANBAN_BOARD_STATUSES,
+	KANBAN_BOARD_SYSTEMS,
 	KANBAN_BOARD_TASK_TYPES,
 	KANBAN_BOARD_WORK_TYPES,
 	kanbanBoardEffectiveEstimatePd,
@@ -456,6 +458,27 @@ export function createPlanningTaskFieldColDefs<T>(input: {
 					<TrackerTaskStandChip
 						stand={task.stand ?? task.content.stand}
 						standTitle={task.standTitle}
+					/>
+				)),
+		}),
+		editableCol("system", {
+			headerName: "Система",
+			width: 140,
+			cellEditor: "agSelectCellEditor",
+			cellEditorParams: (params: ICellRendererParams<T>) => ({
+				values: uniqueSelectValues(catalogTitles(KANBAN_BOARD_SYSTEMS), [
+					getTask(params.data)?.systemTitle,
+				]),
+			}),
+			valueGetter: (params) =>
+				getTask(params.data)?.systemTitle ??
+				getTask(params.data)?.content.system ??
+				"",
+			cellRenderer: (params: ICellRendererParams<T>) =>
+				taskRenderer(params, (task) => (
+					<TrackerTaskSystemChip
+						system={task.system ?? task.content.system}
+						systemTitle={task.systemTitle}
 					/>
 				)),
 		}),

@@ -7,6 +7,8 @@ import {
 	kanbanBoardPriorityTitle,
 	kanbanBoardStandColor,
 	kanbanBoardStandTitle,
+	kanbanBoardSystemColor,
+	kanbanBoardSystemTitle,
 	kanbanBoardTaskAssigneeRoles,
 	kanbanBoardTaskAssignees,
 	kanbanBoardTaskReleaseLabel,
@@ -18,6 +20,7 @@ import {
 	kanbanBoardTaskHasBlocker,
 	type KanbanBoardAssigneeRoleId,
 	type KanbanBoardStandId,
+	type KanbanBoardSystemId,
 	type KanbanBoardStatusId,
 	type KanbanBoardTaskContent,
 	type KanbanBoardTaskReleaseRefDto,
@@ -281,6 +284,25 @@ export function TrackerTaskStandChip({
 	);
 }
 
+export function TrackerTaskSystemChip({
+	system,
+	systemTitle,
+}: {
+	system?: KanbanBoardSystemId | string;
+	systemTitle?: string;
+}) {
+	const label = systemTitle || kanbanBoardSystemTitle(system);
+	if (!label) return null;
+	return (
+		<TrackerRegistryChipCell>
+			<KanbanTaskFieldChip
+				label={label}
+				color={kanbanBoardSystemColor(system)}
+			/>
+		</TrackerRegistryChipCell>
+	);
+}
+
 export function TrackerTaskBlockerChip({
 	hasBlocker,
 }: {
@@ -365,6 +387,13 @@ export function KanbanTaskContentChips({
 			value: "stand",
 			label: kanbanBoardStandTitle(content.stand),
 			color: kanbanBoardStandColor(content.stand),
+		});
+	}
+	if (content.system) {
+		chips.push({
+			value: "system",
+			label: kanbanBoardSystemTitle(content.system),
+			color: kanbanBoardSystemColor(content.system),
 		});
 	}
 	if (origin) {

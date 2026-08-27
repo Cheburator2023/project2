@@ -1,21 +1,23 @@
 import { describe, expect, it } from "vitest";
 import {
 	boardsEquivalent,
-	clearKanbanBoardCurrentAssigneeOnColumnChange,
+	countKanbanBoardBlockers,
 	defaultKanbanBoardColumns,
+	findKanbanBoardCancelledColumnId,
 	fromBoardData,
 	kanbanBoardEffectiveEstimatePd,
 	kanbanBoardEffectiveSprintCapacityPd,
+	kanbanBoardIsCancelledColumn,
+	kanbanBoardReleaseImageVersionsTitle,
 	kanbanBoardRoleEstimatesTotal,
-	normalizeKanbanBoardTaskContent,
-	normalizeKanbanBoardSubtasks,
 	kanbanBoardSubtasksProgress,
-	countKanbanBoardBlockers,
-	toBoardData,
 	kanbanBoardTaskReleaseLabel,
 	kanbanBoardTaskReleasesTitle,
-	kanbanBoardReleaseImageVersionsTitle,
+	moveKanbanBoardCardToColumn,
 	normalizeKanbanBoardReleaseImageVersions,
+	normalizeKanbanBoardSubtasks,
+	normalizeKanbanBoardTaskContent,
+	toBoardData,
 	type KanbanBoardData,
 } from "@smart-anketa/api-contract";
 
@@ -81,6 +83,30 @@ describe("kanban board mapping", () => {
 		};
 		expect(countKanbanBoardBlockers(board)).toBe(1);
 	});
+
+	it("places cancelled column immediately before done", () => {
+		const columns = defaultKanbanBoardColumns("board-1");
+		const ids = columns.map((column) => column.id);
+		expect(ids.indexOf("cancelled")).toBe(ids.indexOf("done") - 1);
+		expect(columns.find((column) => column.id === "cancelled")?.title).toBe(
+			"Отменено",
+		);
+	});
+
+	it("moves a card into the cancelled column", () => {
+		const board = sampleBoard();
+		expect(findKanbanBoardCancelledColumnId([{ id: "cancelled" }])).toBe(
+			"cancelled",
+		);
+		expect(kanbanBoardIsCancelledColumn({ id: "todo", title: "Отменено" })).toBe(
+			true,
+		);
+		const moved = moveKanbanBoardCardToColumn(board, "task-1", "cancelled");
+		expect(moved).not.toBeNull();
+		expect(moved?.["task-1"].parentId).toBe("cancelled");
+		expect(moved?.todo.children).not.toContain("task-1");
+		expect(moved?.cancelled.children).toContain("task-1");
+	});
 });
 
 describe("kanban board role estimates", () => {
@@ -127,7 +153,7 @@ describe("kanban board role estimates", () => {
 		expect(titleOnly.images).toBeUndefined();
 	});
 
-	it("keeps hasBlocker only when true", () => {
+	it("stores hasBlocker as a boolean so JSON merge can turn it off", () => {
 		expect(
 			normalizeKanbanBoardTaskContent({ title: "Task", hasBlocker: true })
 				.hasBlocker,
@@ -135,65 +161,32 @@ describe("kanban board role estimates", () => {
 		expect(
 			normalizeKanbanBoardTaskContent({ title: "Task", hasBlocker: false })
 				.hasBlocker,
-		).toBeUndefined();
-	});
-});
-
-describe("clearKanbanBoardCurrentAssigneeOnColumnChange", () => {
-	it("clears currentAssignee only when column changes", () => {
-		const prev = sampleBoard();
-		prev["task-1"] = {
-			...prev["task-1"],
-			content: {
-				title: "Demo",
-				priority: "medium",
-				currentAssignee: "Иванов",
-			},
-		};
-		const next: KanbanBoardData = {
-			...prev,
-			todo: {
-				...prev.todo,
-				children: [],
-				totalChildrenCount: 0,
-			},
-			dev_wip: {
-				...prev.dev_wip,
-				children: ["task-1"],
-				totalChildrenCount: 1,
-			},
-			"task-1": {
-				...prev["task-1"],
-				parentId: "dev_wip",
-				content: {
-					title: "Demo",
-					priority: "medium",
-					currentAssignee: "Иванов",
-				},
-			},
-		};
-
-		const cleared = clearKanbanBoardCurrentAssigneeOnColumnChange(prev, next);
-		expect(
-			(cleared["task-1"].content as { currentAssignee?: string })
-				.currentAssignee,
-		).toBe("");
+		).toBe(false);
 		expect(
 			JSON.parse(
 				JSON.stringify(
-					cleared["task-1"].content as { currentAssignee?: string },
+					normalizeKanbanBoardTaskContent({
+						title: "Task",
+						hasBlocker: false,
+					}),
 				),
-			).currentAssignee,
-		).toBe("");
+			).hasBlocker,
+		).toBe(false);
+	});
 
-		const sameColumn = clearKanbanBoardCurrentAssigneeOnColumnChange(
-			prev,
-			prev,
-		);
+	it("keeps a known system id", () => {
 		expect(
-			(sameColumn["task-1"].content as { currentAssignee?: string })
-				.currentAssignee,
-		).toBe("Иванов");
+			normalizeKanbanBoardTaskContent({
+				title: "Task",
+				system: "smart-anketa",
+			}).system,
+		).toBe("smart-anketa");
+		expect(
+			normalizeKanbanBoardTaskContent({
+				title: "Task",
+				system: "unknown",
+			}).system,
+		).toBeUndefined();
 	});
 });
 
