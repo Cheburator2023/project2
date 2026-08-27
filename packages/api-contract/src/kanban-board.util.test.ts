@@ -5,6 +5,7 @@ import {
 	defaultKanbanBoardColumns,
 	findKanbanBoardCancelledColumnId,
 	fromBoardData,
+	kanbanBoardColumnCanTrashTasks,
 	kanbanBoardEffectiveEstimatePd,
 	kanbanBoardEffectiveSprintCapacityPd,
 	kanbanBoardIsCancelledColumn,
@@ -106,6 +107,18 @@ describe("kanban board mapping", () => {
 		expect(moved?.["task-1"].parentId).toBe("cancelled");
 		expect(moved?.todo.children).not.toContain("task-1");
 		expect(moved?.cancelled.children).toContain("task-1");
+	});
+
+	it("allows trash-all only for done and cancelled columns", () => {
+		expect(
+			kanbanBoardColumnCanTrashTasks({ id: "done", title: "Готово" }),
+		).toBe(true);
+		expect(
+			kanbanBoardColumnCanTrashTasks({ id: "cancelled", title: "Отменено" }),
+		).toBe(true);
+		expect(
+			kanbanBoardColumnCanTrashTasks({ id: "todo", title: "К выполнению" }),
+		).toBe(false);
 	});
 });
 

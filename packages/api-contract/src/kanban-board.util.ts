@@ -40,6 +40,16 @@ export function kanbanBoardIsCancelledColumn(column: {
 	return title === "отменено" || title === "cancelled" || title === "canceled";
 }
 
+/** Массово в корзину — только терминальные колонки «Готово» и «Отменено». */
+export function kanbanBoardColumnCanTrashTasks(column: {
+	id: string;
+	title?: string | null;
+}): boolean {
+	return (
+		kanbanBoardIsDoneColumn(column) || kanbanBoardIsCancelledColumn(column)
+	);
+}
+
 export function findKanbanBoardCancelledColumnId(
 	columns: ReadonlyArray<{ id: string; title?: string | null }>,
 ): string | undefined {

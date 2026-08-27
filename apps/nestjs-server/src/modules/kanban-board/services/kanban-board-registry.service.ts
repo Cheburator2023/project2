@@ -19,6 +19,7 @@ import {
 	kanbanBoardEffectiveSprintCapacityPd,
 	kanbanBoardIsDoneColumn,
 	kanbanBoardIsCancelledColumn,
+	kanbanBoardColumnCanTrashTasks,
 	kanbanBoardPriorityTitle,
 	kanbanBoardTaskAssigneeRoles,
 	kanbanBoardTaskAssigneeRoleTitles,
@@ -1874,9 +1875,9 @@ export class KanbanBoardRegistryService {
 		createdBy?: string | null,
 	): Promise<TrashKanbanBoardColumnTasksResultDto> {
 		const column = await this.ensureColumnOnBoard(boardId, columnId);
-		if (!kanbanBoardIsDoneColumn(column)) {
+		if (!kanbanBoardColumnCanTrashTasks(column)) {
 			throw new BadRequestException(
-				"В корзину можно очистить только колонку «Готово»",
+				"В корзину можно очистить только колонки «Готово» и «Отменено»",
 			);
 		}
 		const tasks = await this.taskRepository.find({

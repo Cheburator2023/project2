@@ -10,7 +10,7 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { alpha } from "@mui/material/styles";
 import {
-	kanbanBoardIsDoneColumn,
+	kanbanBoardColumnCanTrashTasks,
 	KANBAN_BOARD_BLOCKER_COLOR,
 } from "@smart-anketa/api-contract";
 import type { BoardItem } from "react-kanban-kit";
@@ -71,7 +71,7 @@ export function KanbanColumnHeader({
 	const canTrashAll =
 		Boolean(onTrashAll) &&
 		hasTasks &&
-		kanbanBoardIsDoneColumn({ id: column.id, title: column.title });
+		kanbanBoardColumnCanTrashTasks({ id: column.id, title: column.title });
 
 	useEffect(() => {
 		if (!editing) setTitle(column.title);

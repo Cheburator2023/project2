@@ -600,7 +600,7 @@ export class KanbanBoardController {
 
 	@Post("boards/:boardId/columns/:columnId/trash-tasks")
 	@ApiOperation({
-		summary: "Переместить все задачи колонки «Готово» в корзину",
+		summary: "Переместить все задачи колонки «Готово» или «Отменено» в корзину",
 	})
 	async trashColumnTasks(
 		@Param("boardId") boardId: string,
