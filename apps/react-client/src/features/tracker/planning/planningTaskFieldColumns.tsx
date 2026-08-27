@@ -25,13 +25,14 @@ import {
 import {
 	KANBAN_BOARD_PRIORITIES,
 	KANBAN_BOARD_ROLE_ESTIMATE_FIELDS,
-	KANBAN_BOARD_STANDS,
 	KANBAN_BOARD_STATUSES,
 	KANBAN_BOARD_TASK_TYPES,
 	KANBAN_BOARD_WORK_TYPES,
 	kanbanBoardEffectiveEstimatePd,
 	kanbanBoardSubtasksProgress,
 	kanbanBoardTaskAssignees,
+	kanbanBoardTaskStands,
+	kanbanBoardTaskStandsTitle,
 	kanbanBoardTaskSystems,
 	kanbanBoardTaskSystemsTitle,
 	kanbanBoardTaskHasBlocker,
@@ -443,20 +444,21 @@ export function createPlanningTaskFieldColDefs<T>(input: {
 		}),
 		editableCol("stand", {
 			headerName: "Стенд",
-			width: 120,
-			cellEditor: "agSelectCellEditor",
-			cellEditorParams: (params: ICellRendererParams<T>) => ({
-				values: uniqueSelectValues(catalogTitles(KANBAN_BOARD_STANDS), [
-					getTask(params.data)?.standTitle,
-				]),
-			}),
-			valueGetter: (params) =>
-				getTask(params.data)?.standTitle ??
-				getTask(params.data)?.content.stand ??
-				"",
+			width: 180,
+			cellEditor: "agTextCellEditor",
+			valueGetter: (params) => {
+				const task = getTask(params.data);
+				if (!task) return "";
+				return task.standTitle || kanbanBoardTaskStandsTitle(task.content);
+			},
 			cellRenderer: (params: ICellRendererParams<T>) =>
 				taskRenderer(params, (task) => (
 					<TrackerTaskStandChip
+						stands={
+							task.stands?.length
+								? task.stands
+								: kanbanBoardTaskStands(task.content)
+						}
 						stand={task.stand ?? task.content.stand}
 						standTitle={task.standTitle}
 					/>

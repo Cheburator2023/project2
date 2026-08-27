@@ -86,6 +86,7 @@ import {
 } from "@react-client/features/kanban-board/components/KanbanBoardColumnChrome";
 import { KanbanBoardFilterPanel } from "@react-client/features/kanban-board/components/KanbanBoardFilterPanel";
 import { KanbanTaskBoardCard } from "@react-client/features/kanban-board/components/KanbanTaskBoardCard";
+import { useKanbanBoardPageScroll } from "@react-client/features/kanban-board/useKanbanBoardPageScroll";
 import {
 	kanbanTaskEditPath,
 	trackerBoardHistoryPath,
@@ -181,6 +182,10 @@ export function KanbanBoardPage() {
 			item.id === boardKey,
 	);
 	const boardApiRef = boardMeta?.boardKey ?? normalizeTrackerCode(boardKey);
+	const { setScroller, persistScroll } = useKanbanBoardPageScroll(
+		boardApiRef,
+		Boolean(board),
+	);
 	const columnsQuery = useKanbanBoardColumns(boardApiRef);
 	const createColumn = useCreateKanbanBoardColumn();
 	const updateColumn = useUpdateKanbanBoardColumn();
@@ -381,8 +386,9 @@ export function KanbanBoardPage() {
 	const openBoardHistory = useCallback(() => {
 		const key = boardMeta?.boardKey ?? boardKey;
 		if (!key) return;
+		persistScroll();
 		navigate(trackerBoardHistoryPath(key));
-	}, [boardKey, boardMeta?.boardKey, navigate]);
+	}, [boardApiRef, boardKey, boardMeta?.boardKey, navigate, persistScroll]);
 
 	const handleBoardContextMenu = useCallback((event: MouseEvent) => {
 		event.preventDefault();
@@ -402,6 +408,7 @@ export function KanbanBoardPage() {
 		async (columnId = defaultColumnId) => {
 			if (!resolvedBoardId) return;
 			try {
+				persistScroll();
 				setOpeningTaskLabel("Новая задача");
 				const created = await createAndOpen({
 					boardId: resolvedBoardId,
@@ -413,7 +420,7 @@ export function KanbanBoardPage() {
 				toast.error(apiErrorMessage(error));
 			}
 		},
-		[createAndOpen, defaultColumnId, resolvedBoardId],
+		[boardApiRef, createAndOpen, defaultColumnId, persistScroll, resolvedBoardId],
 	);
 
 	const handleRenameColumn = useCallback(
@@ -564,11 +571,12 @@ export function KanbanBoardPage() {
 			const projectCode = boardMeta?.projectCode;
 			if (task?.taskNumber && projectCode) {
 				const taskRef = formatKanbanTaskKey(projectCode, task.taskNumber);
+				persistScroll();
 				setOpeningTaskLabel(taskRef);
 				navigate(kanbanTaskEditPath(taskRef));
 			}
 		},
-		[boardMeta?.projectCode, navigate, tasksQuery.data],
+		[boardMeta?.projectCode, navigate, persistScroll, tasksQuery.data],
 	);
 
 	const handleTaskContentUpdated = useCallback(
@@ -857,6 +865,7 @@ export function KanbanBoardPage() {
 				)}
 
 				<Box
+					ref={setScroller}
 					data-test-id="kanban-board-page-content"
 					sx={{
 						flex: 1,
@@ -865,6 +874,8 @@ export function KanbanBoardPage() {
 						width: "100%",
 						maxWidth: "100%",
 						overflow: "auto",
+						overflowX: "auto",
+						overflowY: "auto",
 						boxSizing: "border-box",
 					}}
 				>

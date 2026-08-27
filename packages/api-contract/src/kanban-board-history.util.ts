@@ -73,6 +73,15 @@ const formatPlainObject = (value: Record<string, unknown>): string | null => {
 		.join("; ");
 };
 
+function formatKanbanBoardStandsHistoryValue(value: unknown): string | null {
+	if (value === undefined || value === null || value === "") return null;
+	const ids = Array.isArray(value) ? value : [value];
+	const titles = ids
+		.map((item) => kanbanBoardStandTitle(String(item ?? "")).trim())
+		.filter(Boolean);
+	return titles.length ? titles.join(", ") : null;
+}
+
 function formatKanbanBoardSystemsHistoryValue(value: unknown): string | null {
 	if (value === undefined || value === null || value === "") return null;
 	const ids = Array.isArray(value) ? value : [value];
@@ -191,9 +200,14 @@ const CONTENT_FIELDS: ReadonlyArray<{
 		},
 	},
 	{
+		key: "stands",
+		label: "Стенд",
+		format: (value) => formatKanbanBoardStandsHistoryValue(value),
+	},
+	{
 		key: "stand",
 		label: "Стенд",
-		format: (value) => kanbanBoardStandTitle(String(value ?? "")),
+		format: (value) => formatKanbanBoardStandsHistoryValue(value),
 	},
 	{
 		key: "systems",

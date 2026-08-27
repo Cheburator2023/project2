@@ -25,8 +25,9 @@ import {
 	kanbanBoardTaskAssignees,
 	kanbanBoardTaskAssigneesTitle,
 	kanbanBoardTaskSystems,
+	kanbanBoardTaskStands,
+	kanbanBoardTaskStandsTitle,
 	kanbanBoardTaskSystemsTitle,
-	kanbanBoardStandTitle,
 	kanbanBoardTaskReleasesTitle,
 	kanbanBoardTaskTypeTitle,
 	kanbanBoardWorkTypeTitle,
@@ -2446,6 +2447,7 @@ export class KanbanBoardRegistryService {
 			assigneeRoleByName,
 		);
 		const systems = kanbanBoardTaskSystems(content);
+		const stands = kanbanBoardTaskStands(content);
 		return {
 			id: task.id,
 			boardId: task.boardId,
@@ -2489,10 +2491,9 @@ export class KanbanBoardRegistryService {
 				? sprintTitles.get(content.sprintId) ?? content.sprintId
 				: undefined,
 			streamCustomer: content.streamCustomer,
-			stand: content.stand,
-			standTitle: content.stand
-				? kanbanBoardStandTitle(content.stand)
-				: undefined,
+			stand: stands[0],
+			stands,
+			standTitle: kanbanBoardTaskStandsTitle(content) || undefined,
 			system: systems[0],
 			systems,
 			systemTitle: kanbanBoardTaskSystemsTitle(content) || undefined,

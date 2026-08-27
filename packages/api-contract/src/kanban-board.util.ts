@@ -5,6 +5,7 @@ import {
 	type KanbanBoardRoleEstimates,
 	type KanbanBoardSubtaskItem,
 	type KanbanBoardSubtaskStatusId,
+	type KanbanBoardStandId,
 	type KanbanBoardSystemId,
 	type KanbanBoardTaskContent,
 	type KanbanBoardTaskRecord,
@@ -20,6 +21,7 @@ import {
 	KANBAN_BOARD_SUBTASK_STATUSES,
 	KANBAN_BOARD_SYSTEMS,
 	kanbanBoardAssigneeRoleTitle,
+	kanbanBoardStandTitle,
 	kanbanBoardSubtaskIsDone,
 	kanbanBoardSystemTitle,
 	kanbanBoardTaskHasBlocker,
@@ -270,6 +272,38 @@ export function kanbanBoardTaskSystemsTitle(
 	return kanbanBoardTaskSystems(content).map(kanbanBoardSystemTitle).join(", ");
 }
 
+const KANBAN_BOARD_STAND_IDS = new Set<string>([
+	...KANBAN_BOARD_STANDS.map((item) => item.id),
+	"dev",
+]);
+
+export function kanbanBoardTaskStands(
+	content: Pick<KanbanBoardTaskContent, "stand" | "stands">,
+): KanbanBoardStandId[] {
+	const seen = new Set<string>();
+	const ids: KanbanBoardStandId[] = [];
+	const push = (value: unknown) => {
+		const id = String(value ?? "")
+			.trim()
+			.toLowerCase();
+		if (!id || seen.has(id) || !KANBAN_BOARD_STAND_IDS.has(id)) return;
+		seen.add(id);
+		ids.push(id as KanbanBoardStandId);
+	};
+	if (Array.isArray(content.stands)) {
+		for (const item of content.stands) push(item);
+		return ids;
+	}
+	push(content.stand);
+	return ids;
+}
+
+export function kanbanBoardTaskStandsTitle(
+	content: Pick<KanbanBoardTaskContent, "stand" | "stands">,
+): string {
+	return kanbanBoardTaskStands(content).map(kanbanBoardStandTitle).join(", ");
+}
+
 const KANBAN_BOARD_ASSIGNEE_ROLE_IDS = new Set<string>(
 	KANBAN_BOARD_ASSIGNEE_ROLES.map((item) => item.id),
 );
@@ -465,11 +499,10 @@ export function normalizeKanbanBoardTaskContent(
 			next.files = undefined;
 		}
 	}
-	if (next.stand !== undefined) {
-		const standId = String(next.stand).trim().toLowerCase();
-		next.stand = KANBAN_BOARD_STANDS.some((item) => item.id === standId)
-			? (standId as KanbanBoardTaskContent["stand"])
-			: undefined;
+	if (next.stands !== undefined || next.stand !== undefined) {
+		const ids = kanbanBoardTaskStands(next);
+		next.stands = ids.length ? ids : undefined;
+		next.stand = undefined;
 	}
 	if (next.systems !== undefined || next.system !== undefined) {
 		const ids = kanbanBoardTaskSystems(next);

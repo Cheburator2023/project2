@@ -34,6 +34,7 @@ import {
 	KANBAN_BOARD_RELEASE_CHIP_COLOR,
 	KANBAN_BOARD_BLOCKER_COLOR,
 	kanbanBoardTaskHasBlocker,
+	kanbanBoardTaskStands,
 	kanbanBoardTaskSystems,
 	type KanbanBoardPriorityId,
 	type KanbanBoardTaskContent,
@@ -219,10 +220,10 @@ export function KanbanTaskBoardCard({
 			color: kanbanBoardWorkTypeColor(content.workType),
 		});
 	}
-	if (content?.stand) {
+	for (const standId of kanbanBoardTaskStands(content ?? {})) {
 		tags.push({
-			label: kanbanBoardStandTitle(content.stand),
-			color: kanbanBoardStandColor(content.stand),
+			label: kanbanBoardStandTitle(standId),
+			color: kanbanBoardStandColor(standId),
 		});
 	}
 	for (const systemId of kanbanBoardTaskSystems(content ?? {})) {

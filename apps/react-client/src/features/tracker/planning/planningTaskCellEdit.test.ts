@@ -75,6 +75,15 @@ describe("applyPlanningTaskFieldToTask", () => {
 		expect(row.content.hasBlocker).toBe(false);
 	});
 
+	it("maps stand titles to catalog ids", () => {
+		const row = task({ id: "1" });
+		expect(
+			applyPlanningTaskFieldToTask(row, "stand", "Dev SUMCORE, Dev SUMD"),
+		).toBe(true);
+		expect(row.content.stands).toEqual(["dev-sumcore", "dev-sumd"]);
+		expect(row.standTitle).toBe("Dev SUMCORE, Dev SUMD");
+	});
+
 	it("maps system titles to catalog ids", () => {
 		const row = task({ id: "1" });
 		expect(applyPlanningTaskFieldToTask(row, "system", "Smart Anketa")).toBe(

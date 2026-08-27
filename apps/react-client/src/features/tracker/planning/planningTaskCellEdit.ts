@@ -8,9 +8,10 @@ import {
 	KANBAN_BOARD_WORK_TYPES,
 	kanbanBoardEffectiveEstimatePd,
 	kanbanBoardPriorityTitle,
-	kanbanBoardStandTitle,
 	kanbanBoardTaskAssignees,
 	kanbanBoardTaskAssigneesTitle,
+	kanbanBoardTaskStands,
+	kanbanBoardTaskStandsTitle,
 	kanbanBoardTaskSystems,
 	kanbanBoardTaskSystemsTitle,
 	kanbanBoardTaskTypeTitle,
@@ -246,10 +247,10 @@ function syncTaskDisplay(
 	task.parentTask = content.parentTask;
 	task.customer = content.customer;
 	task.streamCustomer = content.streamCustomer;
-	task.stand = content.stand;
-	task.standTitle = content.stand
-		? kanbanBoardStandTitle(content.stand)
-		: undefined;
+	const stands = kanbanBoardTaskStands(content);
+	task.stand = stands[0];
+	task.stands = stands;
+	task.standTitle = kanbanBoardTaskStandsTitle(content) || undefined;
 	const systems = kanbanBoardTaskSystems(content);
 	task.system = systems[0];
 	task.systems = systems;
@@ -369,12 +370,23 @@ export function applyPlanningTaskFieldToTask(
 				{ workType: findCatalogId(KANBAN_BOARD_WORK_TYPES, rawValue) },
 				lookups,
 			);
-		case "stand":
+		case "stand": {
+			const ids = parseAssigneeList(rawValue)
+				.map((item) => {
+					const found = findCatalogId(KANBAN_BOARD_STANDS, item);
+					if (found) return found;
+					return item.trim().toLowerCase() === "dev" ? "dev" : undefined;
+				})
+				.filter((id): id is NonNullable<typeof id> => Boolean(id));
 			return applyContent(
 				task,
-				{ stand: findCatalogId(KANBAN_BOARD_STANDS, rawValue) },
+				{
+					stands: ids,
+					stand: undefined,
+				},
 				lookups,
 			);
+		}
 		case "system": {
 			const ids = parseAssigneeList(rawValue)
 				.map((item) => findCatalogId(KANBAN_BOARD_SYSTEMS, item))

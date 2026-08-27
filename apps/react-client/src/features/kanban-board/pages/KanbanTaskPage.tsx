@@ -28,6 +28,7 @@ import {
 	kanbanBoardStandColor,
 	kanbanBoardSystemColor,
 	kanbanBoardTaskAssignees,
+	kanbanBoardTaskStands,
 	kanbanBoardTaskSystems,
 	kanbanBoardTaskTypeColor,
 	kanbanBoardWorkTypeColor,
@@ -70,6 +71,7 @@ import {
 import {
 	KanbanTaskMultiSelectField,
 	KanbanTaskSelectField,
+	type KanbanTaskChipOption,
 } from "@react-client/features/kanban-board/components/KanbanTaskSelectField";
 import { KanbanRoleEstimatesFields } from "@react-client/features/kanban-board/components/KanbanRoleEstimatesFields";
 import { KanbanSubtasksChecklist } from "@react-client/features/kanban-board/components/KanbanSubtasksChecklist";
@@ -240,7 +242,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	const [currentAssignee, setCurrentAssignee] = useState("");
 	const [taskType, setTaskType] = useState("");
 	const [workType, setWorkType] = useState("");
-	const [stand, setStand] = useState("");
+	const [stands, setStands] = useState<string[]>([]);
 	const [systems, setSystems] = useState<string[]>([]);
 	const [hasBlocker, setHasBlocker] = useState(false);
 	const [estimatePd, setEstimatePd] = useState("");
@@ -353,15 +355,23 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 		[],
 	);
 
-	const standOptions = useMemo(
-		() =>
-			KANBAN_BOARD_STANDS.map((option) => ({
+	const standOptions = useMemo(() => {
+		const options: KanbanTaskChipOption[] = KANBAN_BOARD_STANDS.map(
+			(option) => ({
 				value: option.id,
 				label: option.title,
 				color: kanbanBoardStandColor(option.id),
-			})),
-		[],
-	);
+			}),
+		);
+		if (stands.includes("dev") && !options.some((item) => item.value === "dev")) {
+			options.unshift({
+				value: "dev",
+				label: "Dev",
+				color: kanbanBoardStandColor("dev"),
+			});
+		}
+		return options;
+	}, [stands]);
 
 	const systemOptions = useMemo(
 		() =>
@@ -559,7 +569,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 		setCurrentAssignee(task.content.currentAssignee ?? "");
 		setTaskType(task.content.taskType ?? "");
 		setWorkType(task.content.workType ?? "");
-		setStand(task.content.stand ?? "");
+		setStands(kanbanBoardTaskStands(task.content));
 		setSystems(kanbanBoardTaskSystems(task.content));
 		setHasBlocker(task.content.hasBlocker === true);
 		setEstimatePd(
@@ -632,9 +642,8 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 			workType: workType
 				? (workType as KanbanBoardTaskContent["workType"])
 				: undefined,
-			stand: stand
-				? (stand as KanbanBoardTaskContent["stand"])
-				: undefined,
+			stands: stands as KanbanBoardTaskContent["stands"],
+			stand: undefined,
 			systems: systems as KanbanBoardTaskContent["systems"],
 			system: undefined,
 			hasBlocker,
@@ -670,7 +679,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 				createdByName,
 				taskType,
 				workType,
-				stand,
+				stands,
 				systems,
 				hasBlocker,
 				estimatePd,
@@ -695,7 +704,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 			createdByName,
 			taskType,
 			workType,
-			stand,
+			stands,
 			systems,
 			hasBlocker,
 			estimatePd,
@@ -1243,11 +1252,11 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 								</KanbanTaskDetailRow>
 								<KanbanTaskDetailRow label="Стенд">
 									<Box sx={{ textAlign: "left" }}>
-										<KanbanTaskSelectField
+										<KanbanTaskMultiSelectField
 											label=""
-											value={stand}
+											value={stands}
 											options={standOptions}
-											onChange={setStand}
+											onChange={setStands}
 											fullWidth
 											disabled={formLocked}
 											emptyLabel="— не выбран —"
@@ -1361,7 +1370,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 										{estimatePd.trim() ? `${estimatePd} чд` : "—"}
 									</Typography>
 								</KanbanTaskDetailRow>
-								{(taskType || workType || stand) && (
+								{(taskType || workType || stands.length > 0) && (
 									<KanbanTaskDetailRow label="Метки">
 										<Flex gap={4} wrap="wrap" justifyContent="flex-end">
 											{taskType ? (
@@ -1396,19 +1405,23 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 													}}
 												/>
 											) : null}
-											{stand ? (
+											{stands.map((standId) => (
 												<Chip
+													key={standId}
 													size="small"
 													label={
-														standOptions.find((o) => o.value === stand)
-															?.label ?? stand
+														standOptions.find((o) => o.value === standId)
+															?.label ?? standId
 													}
 													sx={{
-														bgcolor: alpha(kanbanBoardStandColor(stand), 0.12),
-														color: kanbanBoardStandColor(stand),
+														bgcolor: alpha(
+															kanbanBoardStandColor(standId),
+															0.12,
+														),
+														color: kanbanBoardStandColor(standId),
 													}}
 												/>
-											) : null}
+											))}
 										</Flex>
 									</KanbanTaskDetailRow>
 								)}

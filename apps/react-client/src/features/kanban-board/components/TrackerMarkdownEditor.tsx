@@ -1,9 +1,13 @@
 import { useColorScheme } from "@mui/material/styles";
-import MDEditor from "@uiw/react-md-editor";
+import MDEditor, {
+	type ICommand,
+	type PreviewType,
+} from "@uiw/react-md-editor";
 import { getCodeString } from "rehype-rewrite";
 import mermaid from "mermaid";
 import {
 	Fragment,
+	memo,
 	useCallback,
 	useEffect,
 	useId,
@@ -12,6 +16,8 @@ import {
 	type CSSProperties,
 	type ReactNode,
 } from "react";
+import { flushSync } from "react-dom";
+import { htmlToMarkdown } from "@react-client/features/kanban-board/markdownHtmlToMarkdown";
 import "@uiw/react-md-editor/markdown-editor.css";
 import "@uiw/react-markdown-preview/markdown.css";
 
@@ -71,7 +77,13 @@ function MarkdownCode({
 		return (
 			<Fragment>
 				<code id={diagramId.current} style={{ display: "none" }} />
-				<code className={className} ref={refElement} data-name="mermaid" />
+				<code
+					className={className}
+					ref={refElement}
+					data-name="mermaid"
+					data-mermaid-source={code}
+					contentEditable={false}
+				/>
 			</Fragment>
 		);
 	}
@@ -101,6 +113,79 @@ type Props = {
 	disabled?: boolean;
 };
 
+const FrozenMarkdownPreview = memo(function FrozenMarkdownPreview({
+	source,
+}: {
+	source: string;
+}) {
+	return (
+		<MDEditor.Markdown
+			source={source || ""}
+			style={{ padding: "12px 14px" }}
+			components={{ code: MarkdownCode }}
+		/>
+	);
+});
+
+function tryExecWysiwyg(command: ICommand): boolean {
+	const name = command.name ?? "";
+	const exec = (cmd: string, value?: string) => {
+		document.execCommand("styleWithCSS", false, "false");
+		document.execCommand(cmd, false, value);
+	};
+	switch (name) {
+		case "bold":
+			exec("bold");
+			return true;
+		case "italic":
+			exec("italic");
+			return true;
+		case "strikethrough":
+			exec("strikeThrough");
+			return true;
+		case "hr":
+			exec("insertHorizontalRule");
+			return true;
+		case "unordered-list":
+			exec("insertUnorderedList");
+			return true;
+		case "ordered-list":
+			exec("insertOrderedList");
+			return true;
+		case "checked-list":
+			exec("insertUnorderedList");
+			return true;
+		case "quote":
+			exec("formatBlock", "blockquote");
+			return true;
+		case "title1":
+			exec("formatBlock", "h1");
+			return true;
+		case "title2":
+			exec("formatBlock", "h2");
+			return true;
+		case "title3":
+			exec("formatBlock", "h3");
+			return true;
+		case "title4":
+			exec("formatBlock", "h4");
+			return true;
+		case "title5":
+			exec("formatBlock", "h5");
+			return true;
+		case "title6":
+			exec("formatBlock", "h6");
+			return true;
+		case "link": {
+			const href = window.prompt("URL", "https://");
+			if (href) exec("createLink", href);
+			return true;
+		}
+		default:
+			return false;
+	}
+}
+
 export function TrackerMarkdownEditor({
 	value,
 	onChange,
@@ -110,10 +195,114 @@ export function TrackerMarkdownEditor({
 }: Props) {
 	const { mode } = useColorScheme();
 	const isDark = mode === "dark";
+	const [preview, setPreview] = useState<PreviewType>("preview");
+	const previewRootRef = useRef<HTMLDivElement | null>(null);
+	const frozenPreviewSourceRef = useRef<string | null>(null);
 
 	useEffect(() => {
 		ensureMermaidInitialized(isDark);
 	}, [isDark]);
+
+	useEffect(() => {
+		if (disabled) setPreview("preview");
+	}, [disabled]);
+
+	const commitPreview = useCallback(() => {
+		const markdownRoot =
+			previewRootRef.current?.querySelector<HTMLElement>(".wmde-markdown") ??
+			previewRootRef.current;
+		if (!markdownRoot) return;
+		onChange(htmlToMarkdown(markdownRoot));
+	}, [onChange]);
+
+	const renderToolbar = useCallback(
+		(
+			command: ICommand,
+			_libDisabled: boolean,
+			executeCommand: (command: ICommand, name?: string) => void,
+		) => {
+			if (!command.buttonProps) return command.icon;
+			const previewSwitch = command.keyCommand === "preview";
+			const locked = disabled && !previewSwitch;
+			return (
+				<button
+					type="button"
+					disabled={locked}
+					data-name={command.name}
+					{...command.buttonProps}
+					onMouseDown={(event) => {
+						event.preventDefault();
+					}}
+					onClick={(event) => {
+						event.stopPropagation();
+						if (locked) return;
+						if (previewSwitch && command.value) {
+							flushSync(() => setPreview(command.value as PreviewType));
+							executeCommand(command);
+							return;
+						}
+						if (preview === "preview") {
+							const editable =
+								previewRootRef.current?.querySelector<HTMLElement>(
+									"[contenteditable='true']",
+								);
+							editable?.focus();
+							if (tryExecWysiwyg(command)) return;
+						}
+						executeCommand(command);
+					}}
+				>
+					{command.icon}
+				</button>
+			);
+		},
+		[disabled, preview],
+	);
+
+	const renderPreview = useCallback(
+		(source: string) => (
+			<div
+				ref={previewRootRef}
+				className="tracker-md-wysiwyg"
+				onInput={() => {
+					if (frozenPreviewSourceRef.current == null) {
+						frozenPreviewSourceRef.current = source;
+					}
+				}}
+				onBlur={(event) => {
+					if (disabled) return;
+					if (
+						previewRootRef.current?.contains(event.relatedTarget as Node)
+					) {
+						return;
+					}
+					flushSync(() => commitPreview());
+					frozenPreviewSourceRef.current = null;
+				}}
+			>
+				<FrozenMarkdownPreview
+					source={frozenPreviewSourceRef.current ?? source}
+				/>
+			</div>
+		),
+		[commitPreview, disabled],
+	);
+
+	useEffect(() => {
+		const root =
+			previewRootRef.current?.querySelector<HTMLElement>(".wmde-markdown");
+		if (!root) return;
+		if (disabled) {
+			root.removeAttribute("contenteditable");
+			root.removeAttribute("data-placeholder");
+			return;
+		}
+		root.setAttribute("contenteditable", "true");
+		root.setAttribute("role", "textbox");
+		root.setAttribute("aria-label", "Описание");
+		root.setAttribute("spellcheck", "true");
+		root.setAttribute("data-placeholder", placeholder);
+	}, [disabled, placeholder, preview, value]);
 
 	const shellStyle = {
 		["--md-editor-font-family" as string]: EDITOR_FONT,
@@ -252,6 +441,20 @@ export function TrackerMarkdownEditor({
 					height: 18px;
 					margin: 0 4px !important;
 				}
+				.tracker-md-wysiwyg .wmde-markdown {
+					min-height: 240px;
+					cursor: text;
+					outline: none;
+				}
+				.tracker-md-wysiwyg .wmde-markdown[contenteditable="true"]:focus {
+					box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 18%, transparent);
+					border-radius: 4px;
+				}
+				.tracker-md-wysiwyg .wmde-markdown:empty::before {
+					content: attr(data-placeholder);
+					color: #94a3b8;
+					pointer-events: none;
+				}
 			`}</style>
 			<MDEditor
 				className="tracker-md-editor"
@@ -261,10 +464,14 @@ export function TrackerMarkdownEditor({
 					onChange(nextValue);
 				}}
 				height="100%"
-				preview={disabled ? "preview" : "edit"}
+				preview={preview}
 				hideToolbar={disabled}
 				highlightEnable={false}
 				visibleDragbar={false}
+				components={{
+					toolbar: renderToolbar,
+					preview: renderPreview,
+				}}
 				textareaProps={{
 					placeholder,
 					disabled,

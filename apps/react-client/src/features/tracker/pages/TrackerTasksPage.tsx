@@ -47,6 +47,8 @@ import {
 	kanbanBoardIsCancelledColumn,
 	kanbanBoardTaskSystems,
 	kanbanBoardTaskSystemsTitle,
+	kanbanBoardTaskStands,
+	kanbanBoardTaskStandsTitle,
 	type KanbanBoardSystemId,
 	type KanbanBoardTaskRegistryDto,
 } from "@smart-anketa/api-contract";
@@ -323,12 +325,22 @@ export function TrackerTasksPage() {
 			{
 				colId: "stand",
 				headerName: "Стенд",
-				width: 120,
+				width: 160,
 				valueGetter: (params) =>
-					params.data?.standTitle ?? params.data?.content?.stand ?? "",
-				cellRenderer: (params: ICellRendererParams<KanbanBoardTaskRegistryDto>) =>
+					params.data?.standTitle ||
+					(params.data
+						? kanbanBoardTaskStandsTitle(params.data.content)
+						: ""),
+				cellRenderer: (
+					params: ICellRendererParams<KanbanBoardTaskRegistryDto>,
+				) =>
 					params.data ? (
 						<TrackerTaskStandChip
+							stands={
+								params.data.stands?.length
+									? params.data.stands
+									: kanbanBoardTaskStands(params.data.content)
+							}
 							stand={params.data.stand ?? params.data.content?.stand}
 							standTitle={params.data.standTitle}
 						/>

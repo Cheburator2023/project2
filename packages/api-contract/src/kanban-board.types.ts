@@ -114,10 +114,12 @@ export interface KanbanBoardTaskContent {
 	/** Офисные/прочие вложения (скачивание без превью) */
 	files?: KanbanBoardTaskFileRef[];
 	/**
-	 * Целевой стенд задачи (dev / ИФТ / пре-прод / прод).
+	 * Целевые стенды задачи (dev SUMCORE / dev SUMD / ИФТ / пре-прод / прод).
 	 * Не путать с `origin` записи (изоляция данных между стендами БД).
+	 * @deprecated use stands
 	 */
 	stand?: KanbanBoardStandId;
+	stands?: KanbanBoardStandId[];
 	/** @deprecated use systems */
 	system?: KanbanBoardSystemId;
 	/** Системы / приложения, к которым относится задача. */
@@ -128,15 +130,20 @@ export interface KanbanBoardTaskContent {
 
 /** Целевой стенд задачи (куда выкатываем / где проверяем). */
 export const KANBAN_BOARD_STANDS = [
-	{ id: "dev", title: "Dev" },
+	{ id: "dev-sumcore", title: "Dev SUMCORE" },
+	{ id: "dev-sumd", title: "Dev SUMD" },
 	{ id: "ift", title: "ИФТ" },
 	{ id: "preprod", title: "Пре-прод" },
 	{ id: "prod", title: "Прод" },
 ] as const;
 
-export type KanbanBoardStandId = (typeof KANBAN_BOARD_STANDS)[number]["id"];
+export type KanbanBoardStandId =
+	| (typeof KANBAN_BOARD_STANDS)[number]["id"]
+	| "dev";
 
 export const KANBAN_BOARD_STAND_COLORS: Record<KanbanBoardStandId, string> = {
+	"dev-sumcore": "#2563eb",
+	"dev-sumd": "#0284c7",
 	dev: "#2563eb",
 	ift: "#7c3aed",
 	preprod: "#ca8a04",
@@ -146,6 +153,7 @@ export const KANBAN_BOARD_STAND_COLORS: Record<KanbanBoardStandId, string> = {
 export function kanbanBoardStandTitle(
 	id?: KanbanBoardStandId | string,
 ): string {
+	if (id === "dev") return "Dev";
 	return KANBAN_BOARD_STANDS.find((item) => item.id === id)?.title ?? id ?? "";
 }
 
@@ -500,6 +508,7 @@ export interface KanbanBoardTaskRegistryDto extends KanbanBoardTaskRecord {
 	sprintTitle?: string;
 	streamCustomer?: string;
 	stand?: KanbanBoardStandId;
+	stands?: KanbanBoardStandId[];
 	standTitle?: string;
 	system?: KanbanBoardSystemId;
 	systems?: KanbanBoardSystemId[];

@@ -12,6 +12,7 @@ import {
 	kanbanBoardTaskAssigneeRoles,
 	kanbanBoardTaskAssignees,
 	kanbanBoardTaskReleaseLabel,
+	kanbanBoardTaskStands,
 	kanbanBoardTaskSystems,
 	kanbanBoardTaskTypeColor,
 	kanbanBoardTaskTypeTitle,
@@ -267,19 +268,36 @@ export function TrackerTaskOriginChip({ origin }: { origin?: string }) {
 }
 
 export function TrackerTaskStandChip({
+	stands,
 	stand,
 	standTitle,
 }: {
+	stands?: Array<KanbanBoardStandId | string>;
 	stand?: KanbanBoardStandId | string;
 	standTitle?: string;
 }) {
-	const label = standTitle || kanbanBoardStandTitle(stand);
-	if (!label) return null;
+	const ids = (stands?.length ? stands : stand ? [stand] : [])
+		.map((id) => String(id).trim())
+		.filter(Boolean);
+	if (ids.length) {
+		return (
+			<TrackerRegistryChipCell>
+				{ids.map((id) => (
+					<KanbanTaskFieldChip
+						key={id}
+						label={kanbanBoardStandTitle(id)}
+						color={kanbanBoardStandColor(id)}
+					/>
+				))}
+			</TrackerRegistryChipCell>
+		);
+	}
+	if (!standTitle) return null;
 	return (
 		<TrackerRegistryChipCell>
 			<KanbanTaskFieldChip
-				label={label}
-				color={kanbanBoardStandColor(stand)}
+				label={standTitle}
+				color={kanbanBoardStandColor()}
 			/>
 		</TrackerRegistryChipCell>
 	);
@@ -400,11 +418,11 @@ export function KanbanTaskContentChips({
 			color: LIST_FIELD_COLORS.stream,
 		});
 	}
-	if (content.stand) {
+	for (const standId of kanbanBoardTaskStands(content)) {
 		chips.push({
-			value: "stand",
-			label: kanbanBoardStandTitle(content.stand),
-			color: kanbanBoardStandColor(content.stand),
+			value: `stand:${standId}`,
+			label: kanbanBoardStandTitle(standId),
+			color: kanbanBoardStandColor(standId),
 		});
 	}
 	for (const systemId of kanbanBoardTaskSystems(content)) {

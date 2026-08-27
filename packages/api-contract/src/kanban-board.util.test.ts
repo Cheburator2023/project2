@@ -211,6 +211,20 @@ describe("kanban board role estimates", () => {
 		expect(next.systems).toEqual(["smart-anketa", "shell"]);
 		expect(next.system).toBeUndefined();
 	});
+
+	it("keeps a legacy dev stand and splits new catalog ids", () => {
+		const fromLegacy = normalizeKanbanBoardTaskContent({
+			title: "Task",
+			stand: "dev",
+		});
+		expect(fromLegacy.stands).toEqual(["dev"]);
+		expect(fromLegacy.stand).toBeUndefined();
+		const next = normalizeKanbanBoardTaskContent({
+			title: "Task",
+			stands: ["dev-sumcore", "dev-sumd", "nope"],
+		} as unknown as KanbanBoardTaskContent);
+		expect(next.stands).toEqual(["dev-sumcore", "dev-sumd"]);
+	});
 });
 
 describe("kanban board sprint capacity", () => {

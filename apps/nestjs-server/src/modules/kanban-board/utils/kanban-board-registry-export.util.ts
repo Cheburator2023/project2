@@ -4,7 +4,7 @@ import {
 	KANBAN_BOARD_ROLE_ESTIMATE_FIELDS,
 	kanbanBoardEffectiveEstimatePd,
 	kanbanBoardPriorityTitle,
-	kanbanBoardStandTitle,
+	kanbanBoardTaskStandsTitle,
 	kanbanBoardTaskSystemsTitle,
 	kanbanBoardTaskAssignees,
 } from "@smart-anketa/api-contract";
@@ -118,9 +118,7 @@ function taskToExportRow(task: KanbanBoardTaskRegistryDto): Record<string, strin
 		sprint: task.sprintTitle ?? "",
 		release: task.releaseTitle ?? "",
 		stream: task.streamCustomer ?? "",
-		stand:
-			task.standTitle ??
-			(task.content.stand ? kanbanBoardStandTitle(task.content.stand) : ""),
+		stand: task.standTitle || kanbanBoardTaskStandsTitle(task.content),
 		system: task.systemTitle || kanbanBoardTaskSystemsTitle(task.content),
 		origin: task.origin,
 		createdBy: task.createdBy ?? "",
