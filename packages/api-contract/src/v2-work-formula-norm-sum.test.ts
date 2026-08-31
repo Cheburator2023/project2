@@ -97,7 +97,6 @@ describe("Этап 211 formula N*P + N*arch", () => {
 		const sources = Array.from({ length: 6 }, (_, i) => ({
 			name: `Источник ${i + 1}`,
 			type: "Внутренний",
-			field_L1lRlgf1: i === 0 ? "Высокая" : "Средняя",
 		}));
 		const formData = {
 			detailInfo: {

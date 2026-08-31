@@ -84,7 +84,7 @@ describe("v2-schema-dictionary.util", () => {
 			jsonSchema: V2_DEFAULT_TEMPLATE_SNAPSHOT.jsonSchema,
 			uiSchema: V2_DEFAULT_TEMPLATE_SNAPSHOT.uiSchema,
 		}).filter((param) => param.name === "Сложность реализации");
-		expect(params).toHaveLength(3);
+		expect(params).toHaveLength(1);
 		for (const param of params) {
 			expect(param.values?.map((value) => value.label).sort()).toEqual([
 				"Высокая",

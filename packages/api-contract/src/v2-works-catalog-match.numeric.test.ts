@@ -169,7 +169,7 @@ describe("numeric labor coefficient ranges", () => {
 	it("falls back to same-titled field on source when formula code points elsewhere", () => {
 		const source = {
 			name: "Источник 1",
-			field_L1lRlgf1: "Высокая",
+			field_sameTitleComplexity: "Высокая",
 		};
 		const lookup = buildLaborCoefficientLookupSource(
 			source,
@@ -181,10 +181,10 @@ describe("numeric labor coefficient ranges", () => {
 					schemaPointer: "/detailInfo/dataProcess/field_UEzs5Q87",
 				},
 				{
-					code: "field_L1lRlgf1",
+					code: "field_sameTitleComplexity",
 					name: "Сложность реализации",
 					schemaPointer:
-						"/detailInfo/sourceSystems/items/field_L1lRlgf1",
+						"/detailInfo/sourceSystems/items/field_sameTitleComplexity",
 				},
 			],
 			["field_UEzs5Q87"],

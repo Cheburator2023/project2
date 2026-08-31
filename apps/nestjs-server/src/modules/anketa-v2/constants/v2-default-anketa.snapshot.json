@@ -18,7 +18,10 @@
 						"title": "Наименование анкеты"
 					},
 					"status": {
-						"enum": ["Активная", "Архив"],
+						"enum": [
+							"Активная",
+							"Архив"
+						],
 						"type": "string",
 						"title": "Статус",
 						"default": "Активная"
@@ -132,29 +135,48 @@
 						"readOnly": true,
 						"properties": {
 							"detailInfo": {
-								"enum": ["Создано", "В работе", "Заполнено"],
+								"enum": [
+									"Создано",
+									"В работе",
+									"Заполнено"
+								],
 								"type": "string",
 								"default": "Создано"
 							},
 							"generalInfo": {
-								"enum": ["Создано", "В работе", "Заполнено"],
+								"enum": [
+									"Создано",
+									"В работе",
+									"Заполнено"
+								],
 								"type": "string",
 								"default": "Создано"
 							},
 							"streamDataSources": {
-								"enum": ["Создано", "В работе", "Заполнено"],
+								"enum": [
+									"Создано",
+									"В работе",
+									"Заполнено"
+								],
 								"type": "string",
 								"default": "Создано"
 							},
 							"streamModelControl": {
-								"enum": ["Создано", "В работе", "Заполнено"],
+								"enum": [
+									"Создано",
+									"В работе",
+									"Заполнено"
+								],
 								"type": "string",
 								"default": "Создано"
 							}
 						}
 					},
 					"globalStatus": {
-						"enum": ["Черновик", "Заполнено"],
+						"enum": [
+							"Черновик",
+							"Заполнено"
+						],
 						"type": "string",
 						"title": "Глобальный статус",
 						"default": "Черновик",
@@ -169,10 +191,17 @@
 					"dataMart": {
 						"type": "object",
 						"title": "Объект / Витрина данных",
-						"required": ["field_zApubb5V"],
+						"required": [
+							"field_zApubb5V"
+						],
 						"properties": {
 							"workType": {
-								"enum": ["Разработка", "Доработка", "Настройка", "Неизвестно"],
+								"enum": [
+									"Разработка",
+									"Доработка",
+									"Настройка",
+									"Неизвестно"
+								],
 								"type": "string",
 								"title": "Тип работ"
 							},
@@ -181,7 +210,11 @@
 								"title": "Количество признаков в Наборе признаков"
 							},
 							"field_0uV7wafS": {
-								"enum": ["Да", "Нет", "Неизвестно"],
+								"enum": [
+									"Да",
+									"Нет",
+									"Неизвестно"
+								],
 								"type": "string",
 								"title": "Требуется хэширование/ шифрование"
 							},
@@ -190,37 +223,41 @@
 								"title": "Количество метрик"
 							},
 							"field_46LCnfWo": {
-								"enum": ["Высокая", "Средняя", "Низкая", "Неизвестно"],
+								"enum": [
+									"Высокая",
+									"Средняя",
+									"Низкая",
+									"Неизвестно"
+								],
 								"type": "string",
 								"title": "Сложность реализации Набора признаков"
 							},
 							"field_L-WWLDWY": {
-								"enum": ["Да", "Нет", "Неизвестно"],
+								"enum": [
+									"Да",
+									"Нет",
+									"Неизвестно"
+								],
 								"type": "string",
 								"title": "Наличие конфиденциальных данных"
 							},
 							"field_N9LFD6Hu": {
-								"enum": ["Да", "Нет", "Неизвестно"],
+								"enum": [
+									"Да",
+									"Нет",
+									"Неизвестно"
+								],
 								"type": "string",
 								"title": "Двусторонний обмен данными"
 							},
-							"field_Q8DGJNTn": {
-								"type": "number",
-								"title": "Количество контролей качества признаков"
-							},
 							"field_fRuMuWtn": {
-								"enum": ["Непосредственно", "Опосредованно", "Неизвестно"],
+								"enum": [
+									"Непосредственно",
+									"Опосредованно",
+									"Неизвестно"
+								],
 								"type": "string",
 								"title": "Способ предоставления данных заказчику"
-							},
-							"field_hIM0c5gG": {
-								"type": "boolean",
-								"title": "Содержит сырые данные"
-							},
-							"field_le47srI7": {
-								"enum": ["Холодный", "Теплый", "Горячий", "Потоковый"],
-								"type": "string",
-								"title": "Слой хранения"
 							},
 							"field_lovKvLZc": {
 								"type": "boolean",
@@ -261,14 +298,20 @@
 						"items": {
 							"type": "object",
 							"title": "Модель",
-							"required": ["field_atxiq-UM"],
+							"required": [
+								"field_atxiq-UM"
+							],
 							"properties": {
 								"autoML": {
 									"type": "boolean",
 									"title": "Необходимость AutoML"
 								},
 								"workType": {
-									"enum": ["Обучение", "Дообучение", "Калибровка"],
+									"enum": [
+										"Обучение",
+										"Дообучение",
+										"Калибровка"
+									],
 									"type": "string",
 									"title": "Тип работ"
 								},
@@ -303,7 +346,10 @@
 									"title": "AutoML: требуется новая библиотека"
 								},
 								"field_VbI-0aiT": {
-									"enum": ["Обычная", "Оркестратор"],
+									"enum": [
+										"Обычная",
+										"Оркестратор"
+									],
 									"type": "string",
 									"title": "Роль модели"
 								},
@@ -362,20 +408,33 @@
 					"dataProcess": {
 						"type": "object",
 						"title": "Процессы обработки данных",
-						"required": ["field_It-B8PfV"],
+						"required": [
+							"field_It-B8PfV"
+						],
 						"properties": {
 							"deliveryMode": {
-								"enum": ["Напрямую", "Опосредованно", "Неизвестно"],
+								"enum": [
+									"Напрямую",
+									"Опосредованно",
+									"Неизвестно"
+								],
 								"type": "string",
 								"title": "Способ предоставления данных заказчику"
 							},
 							"field_C6oqyTPh": {
-								"enum": ["Да", "Нет", "Неизвестно"],
+								"enum": [
+									"Да",
+									"Нет",
+									"Неизвестно"
+								],
 								"type": "string",
 								"title": "Требуется хэширование/ шифрование"
 							},
 							"field_HgUCNn6E": {
-								"enum": ["Пакетный", "Потоковый"],
+								"enum": [
+									"Пакетный",
+									"Потоковый"
+								],
 								"type": "string",
 								"title": "Тип процесса обработки данных"
 							},
@@ -384,12 +443,21 @@
 								"title": "Название процесса"
 							},
 							"field_R3Lx-csF": {
-								"enum": ["Да", "Нет", "Неизвестно"],
+								"enum": [
+									"Да",
+									"Нет",
+									"Неизвестно"
+								],
 								"type": "string",
 								"title": "Двусторонний обмен данными"
 							},
 							"field_UEzs5Q87": {
-								"enum": ["Низкая", "Средняя", "Высокая", "Неизвестно"],
+								"enum": [
+									"Низкая",
+									"Средняя",
+									"Высокая",
+									"Неизвестно"
+								],
 								"type": "string",
 								"title": "Сложность реализации"
 							},
@@ -398,12 +466,21 @@
 								"title": "Требуется интеграция с промежуточной системой (СХК, СФП и др.)"
 							},
 							"field_yJ51GkCR": {
-								"enum": ["Разработка", "Доработка", "Настройка", "Неизвестно"],
+								"enum": [
+									"Разработка",
+									"Доработка",
+									"Настройка",
+									"Неизвестно"
+								],
 								"type": "string",
 								"title": "Тип работ"
 							},
 							"confidentialData": {
-								"enum": ["Да", "Нет", "Неизвестно"],
+								"enum": [
+									"Да",
+									"Нет",
+									"Неизвестно"
+								],
 								"type": "string",
 								"title": "Наличие конфиденциальных данных"
 							}
@@ -414,38 +491,54 @@
 						"items": {
 							"type": "object",
 							"title": "Система источник",
-							"required": ["name"],
+							"required": [
+								"name"
+							],
 							"properties": {
 								"name": {
 									"type": "string",
 									"title": "Название источника"
 								},
 								"type": {
-									"enum": ["Внутренний", "Внешний"],
+									"enum": [
+										"Внутренний",
+										"Внешний"
+									],
 									"type": "string",
 									"title": "Тип системы-источника"
 								},
-								"field_-EGYyyJF": {
-									"type": "boolean",
-									"title": "Необходим новый тракт данных от источника"
-								},
 								"field_-t8JSf3p": {
-									"enum": ["Неизвестно", "Стандартная", "Нестандартная"],
+									"enum": [
+										"Неизвестно",
+										"Стандартная",
+										"Нестандартная"
+									],
 									"type": "string",
 									"title": "Форма договора"
 								},
 								"field_1ANadh7U": {
-									"enum": ["Однократный", "Регламентный"],
+									"enum": [
+										"Однократный",
+										"Регламентный"
+									],
 									"type": "string",
 									"title": "Тип загрузки данных"
 								},
 								"field_3a0vme2u": {
-									"enum": ["Да", "Нет", "Неизвестно"],
+									"enum": [
+										"Да",
+										"Нет",
+										"Неизвестно"
+									],
 									"type": "string",
 									"title": "Предусмотрено проведение конкурса"
 								},
 								"field_4jxR0E0m": {
-									"enum": ["Первичный", "Повторный", "Не требуется"],
+									"enum": [
+										"Первичный",
+										"Повторный",
+										"Не требуется"
+									],
 									"type": "string",
 									"title": "Пилот"
 								},
@@ -454,24 +547,31 @@
 									"title": "Наличие реплики в DAPP"
 								},
 								"field_9BXQE8SI": {
-									"enum": ["Односторонний", "Двусторонний", "Неизвестно"],
+									"enum": [
+										"Односторонний",
+										"Двусторонний",
+										"Неизвестно"
+									],
 									"type": "string",
 									"title": "Режим обмена данными"
 								},
 								"field_AKLVuyFy": {
-									"enum": ["Да", "Нет", "Неизвестно"],
+									"enum": [
+										"Да",
+										"Нет",
+										"Неизвестно"
+									],
 									"type": "string",
 									"title": "Наличие конфиденциальных данных"
 								},
 								"field_DBFG7kIN": {
-									"enum": ["Да", "Нет", "Неизвестно"],
+									"enum": [
+										"Да",
+										"Нет",
+										"Неизвестно"
+									],
 									"type": "string",
 									"title": "Наличие юридического основания для пилота"
-								},
-								"field_L1lRlgf1": {
-									"enum": ["Высокая", "Средняя", "Низкая", "Неизвестно"],
-									"type": "string",
-									"title": "Сложность реализации"
 								},
 								"field_Y_K0Hy0e": {
 									"enum": [
@@ -487,7 +587,12 @@
 									"title": "Количество сущностей (исходных таблиц)"
 								},
 								"field_d3OCFyaC": {
-									"enum": ["Низкая", "Средняя", "Высокая", "Неизвестно"],
+									"enum": [
+										"Низкая",
+										"Средняя",
+										"Высокая",
+										"Неизвестно"
+									],
 									"type": "string",
 									"title": "Сложность предметной области"
 								},
@@ -496,7 +601,12 @@
 									"title": "Необходимо подтвердить возможность интеграции"
 								},
 								"field_nE73kPQl": {
-									"enum": ["Высокая", "Средняя", "Низкая", "Неизвестно"],
+									"enum": [
+										"Высокая",
+										"Средняя",
+										"Низкая",
+										"Неизвестно"
+									],
 									"type": "string",
 									"title": "Детализация и ясность запроса постановки задачи"
 								},
@@ -511,7 +621,11 @@
 									"title": "NDA"
 								},
 								"field_vqqlHbU6": {
-									"enum": ["Да", "Нет", "Неизвестно"],
+									"enum": [
+										"Да",
+										"Нет",
+										"Неизвестно"
+									],
 									"type": "string",
 									"title": "Требуется хэширование/ шифрование"
 								},
@@ -530,12 +644,20 @@
 								"field_DnB8Ur4I": {
 									"type": "string",
 									"title": "Маркер: сложность настройки шаблона разметки данных и подготовки сырых данных для загрузки",
-									"enum": ["норма", "средняя", "высокая"]
+									"enum": [
+										"норма",
+										"средняя",
+										"высокая"
+									]
 								},
 								"field_OyRJyJxD": {
 									"type": "string",
 									"title": "Маркер: размер новой модели, доп. библиотеки, сложность подключения, конфигурации, тестирования и отладки модели (вкл. Active Learning и сетевые доступы)",
-									"enum": ["норма", "средняя", "высокая"]
+									"enum": [
+										"норма",
+										"средняя",
+										"высокая"
+									]
 								},
 								"field_xi0W_vl-": {
 									"type": "boolean",
@@ -544,7 +666,11 @@
 								"field__NUAXSNP": {
 									"type": "string",
 									"title": "Маркер: сложность реализации интеграции, правил обработки данных (в т.ч. конфиденциальных) и настройки режима обмена данными",
-									"enum": ["норма", "средняя", "высокая"]
+									"enum": [
+										"норма",
+										"средняя",
+										"высокая"
+									]
 								},
 								"field_nx1zBg1X": {
 									"type": "boolean",
@@ -553,7 +679,11 @@
 								"field_wluxUVJ9": {
 									"type": "string",
 									"title": "Маркер: правила обработки данных (в т.ч. конфиденциальных), режим обмена данными, сложность развёртывания отдельного инстанса и наличие доп. доработок",
-									"enum": ["норма", "средняя", "высокая"]
+									"enum": [
+										"норма",
+										"средняя",
+										"высокая"
+									]
 								},
 								"field_KnIEmMxM": {
 									"type": "boolean",
@@ -577,7 +707,9 @@
 						"items": {
 							"type": "object",
 							"title": "Нетиповая задача",
-							"required": ["name"],
+							"required": [
+								"name"
+							],
 							"properties": {
 								"name": {
 									"type": "string",
@@ -683,7 +815,9 @@
 					"modelService": {
 						"type": "object",
 						"title": "Модельный сервис",
-						"required": ["field_dEVFQVQn"],
+						"required": [
+							"field_dEVFQVQn"
+						],
 						"properties": {
 							"workType": {
 								"enum": [
@@ -714,22 +848,6 @@
 							"prePromEval": {
 								"type": "boolean",
 								"title": "Необходимость поддержки проведения пилота"
-							},
-							"field_4IL7OStC": {
-								"enum": ["Ручной", "Автоматизированный"],
-								"type": "string",
-								"title": "Способ загрузки данных в BI-систему"
-							},
-							"field_F7nK-We5": {
-								"enum": [
-									"Векторные",
-									"Графовые",
-									"Временные ряды и события",
-									"Документо-ориентированные",
-									"Специализированные"
-								],
-								"type": "string",
-								"title": "Тип БД для BI-системы"
 							},
 							"field_JcKtx9Mg": {
 								"type": "boolean",
@@ -1081,7 +1199,9 @@
 						"items": {
 							"type": "object",
 							"title": "Нетиповая задача",
-							"required": ["name"],
+							"required": [
+								"name"
+							],
 							"properties": {
 								"name": {
 									"type": "string",
@@ -1174,7 +1294,9 @@
 						"items": {
 							"type": "object",
 							"title": "Нетиповая задача",
-							"required": ["name"],
+							"required": [
+								"name"
+							],
 							"properties": {
 								"name": {
 									"type": "string",
@@ -1246,17 +1368,29 @@
 								"title": "Объем изменений в ТИС"
 							},
 							"field_P1nnb5h5": {
-								"enum": ["Да", "Нет", "Неизвестно"],
+								"enum": [
+									"Да",
+									"Нет",
+									"Неизвестно"
+								],
 								"type": "string",
 								"title": "Необходимость изучения регламентов Банка"
 							},
 							"field_fWcU13WA": {
-								"enum": ["Да", "Нет", "Неизвестно"],
+								"enum": [
+									"Да",
+									"Нет",
+									"Неизвестно"
+								],
 								"type": "string",
 								"title": "Необходимо пересогласование артефакта"
 							},
 							"field_oHrG3Q3A": {
-								"enum": ["Да", "Нет", "Неизвестно"],
+								"enum": [
+									"Да",
+									"Нет",
+									"Неизвестно"
+								],
 								"type": "string",
 								"title": "Стейкхолдеры известны (владелец сервиса, разработчик модели / витрин, РП и тд.)?"
 							}
@@ -1298,7 +1432,9 @@
 						"items": {
 							"type": "object",
 							"title": "Нетиповая задача",
-							"required": ["name"],
+							"required": [
+								"name"
+							],
 							"properties": {
 								"name": {
 									"type": "string",
@@ -1364,7 +1500,10 @@
 								"title": "Новый вид контроля"
 							},
 							"field_Vc8LdrIe": {
-								"enum": ["Да", "Нет"],
+								"enum": [
+									"Да",
+									"Нет"
+								],
 								"type": "string",
 								"title": "Тип источника"
 							},
@@ -1423,7 +1562,9 @@
 						"items": {
 							"type": "object",
 							"title": "Нетиповая задача",
-							"required": ["name"],
+							"required": [
+								"name"
+							],
 							"properties": {
 								"name": {
 									"type": "string",
@@ -1483,7 +1624,9 @@
 						"items": {
 							"type": "object",
 							"title": "Нетиповая задача",
-							"required": ["name"],
+							"required": [
+								"name"
+							],
 							"properties": {
 								"name": {
 									"type": "string",
@@ -1543,7 +1686,9 @@
 						"items": {
 							"type": "object",
 							"title": "Нетиповая задача",
-							"required": ["name"],
+							"required": [
+								"name"
+							],
 							"properties": {
 								"name": {
 									"type": "string",
@@ -1978,7 +2123,12 @@
 				},
 				"ui:readonly": true
 			},
-			"ui:order": ["id", "name", "version", "status"],
+			"ui:order": [
+				"id",
+				"name",
+				"version",
+				"status"
+			],
 			"ui:options": {
 				"hidden": true,
 				"schemaFieldUid": "field_3a9e594d-f19e-4cbd-975e-19dfd615b74c"
@@ -2180,27 +2330,24 @@
 		},
 		"detailInfo": {
 			"dataMart": {
-        "ui:order": [
-          "field_zApubb5V",
-          "workType",
-          "field_xva1dRvW",
-          "field_hIM0c5gG",
-          "field_le47srI7",
-          "field_Q8DGJNTn",
-          "field_0uV7wafS",
-          "field_L-WWLDWY",
-          "field_N9LFD6Hu",
-          "field_fRuMuWtn",
-          "field_x-1d7wUh",
-          "field_28IPlEQu",
-          "field_lovKvLZc",
-          "field__CwXDnEl",
-          "field_saveRawFs",
-          "field_w_EN6lWe",
-          "metricsCount",
-          "field_46LCnfWo",
-          "field_rZeUo8a_"
-        ],
+				"ui:order": [
+					"field_zApubb5V",
+					"workType",
+					"field_xva1dRvW",
+					"field_0uV7wafS",
+					"field_L-WWLDWY",
+					"field_N9LFD6Hu",
+					"field_fRuMuWtn",
+					"field_x-1d7wUh",
+					"field_28IPlEQu",
+					"field_lovKvLZc",
+					"field__CwXDnEl",
+					"field_saveRawFs",
+					"field_w_EN6lWe",
+					"metricsCount",
+					"field_46LCnfWo",
+					"field_rZeUo8a_"
+				],
 				"workType": {
 					"ui:widget": "select",
 					"ui:options": {
@@ -2252,28 +2399,11 @@
 						"schemaFieldUid": "field_8cff1155-e458-4fea-a8c7-abad1260df8f"
 					}
 				},
-				"field_Q8DGJNTn": {
-					"ui:options": {
-						"schemaFieldUid": "field_e48e94c0-465e-47de-8a9c-ae8d95ca8d6c"
-					}
-				},
 				"field_fRuMuWtn": {
 					"ui:widget": "select",
 					"ui:options": {
 						"dictionaryCode": "v2.detailInfo.dataMart.deliveryMode",
 						"schemaFieldUid": "field_5389285c-9fe6-4a47-bfdb-2ad6a082cbd0"
-					}
-				},
-				"field_hIM0c5gG": {
-					"ui:options": {
-						"schemaFieldUid": "field_73e7ba4b-2124-44c9-bfc3-7d5d524c9076"
-					}
-				},
-				"field_le47srI7": {
-					"ui:widget": "select",
-					"ui:options": {
-						"dictionaryCode": "v2.detailInfo.dataMart.field_le47srI7",
-						"schemaFieldUid": "field_bffd7490-feee-4eb1-a48e-524746fd659c"
 					}
 				},
 				"field_lovKvLZc": {
@@ -2335,20 +2465,20 @@
 							"semanticRole": "autoML"
 						}
 					},
-          "ui:order": [
-            "field_atxiq-UM",
-            "workType",
-            "readyPromReports",
-            "algorithmType",
-            "field_jUm5syZf",
-            "field_VbI-0aiT",
-            "autoML",
-            "field_58TkWuwu",
-            "field_CeBkWcQc",
-            "field_S23CbRXp",
-            "field_S41Rqt5E",
-            "field_Ifnu_c_H"
-          ],
+					"ui:order": [
+						"field_atxiq-UM",
+						"workType",
+						"readyPromReports",
+						"algorithmType",
+						"field_jUm5syZf",
+						"field_VbI-0aiT",
+						"autoML",
+						"field_58TkWuwu",
+						"field_CeBkWcQc",
+						"field_S23CbRXp",
+						"field_S41Rqt5E",
+						"field_Ifnu_c_H"
+					],
 					"workType": {
 						"ui:widget": "select",
 						"ui:options": {
@@ -2430,7 +2560,10 @@
 				}
 			},
 			"parameters": {
-				"ui:order": ["streamsOutsideDADM", "streamNames"],
+				"ui:order": [
+					"streamsOutsideDADM",
+					"streamNames"
+				],
 				"ui:options": {
 					"sectionRole": "subsection",
 					"schemaFieldUid": "field_799212d3-0ea8-449f-a392-a0ba12223f74",
@@ -2454,22 +2587,28 @@
 				"streamBlock": true,
 				"titleVariant": "h5",
 				"schemaFieldUid": "field_bece32d7-0463-49e8-8591-4827109e563b",
-				"streamExecutor": ["kmbkcb", "rb", "ptitpc", "finmdl", "rnd"],
+				"streamExecutor": [
+					"kmbkcb",
+					"rb",
+					"ptitpc",
+					"finmdl",
+					"rnd"
+				],
 				"defaultExpanded": false,
 				"workflowSectionId": "detailInfo"
 			},
 			"dataProcess": {
-        "ui:order": [
-          "field_It-B8PfV",
-          "field_yJ51GkCR",
-          "field_UEzs5Q87",
-          "deliveryMode",
-          "field_R3Lx-csF",
-          "field_C6oqyTPh",
-          "confidentialData",
-          "field_qMxSfHk1",
-          "field_HgUCNn6E"
-        ],
+				"ui:order": [
+					"field_It-B8PfV",
+					"field_yJ51GkCR",
+					"field_UEzs5Q87",
+					"deliveryMode",
+					"field_R3Lx-csF",
+					"field_C6oqyTPh",
+					"confidentialData",
+					"field_qMxSfHk1",
+					"field_HgUCNn6E"
+				],
 				"ui:options": {
 					"sectionRole": "subsection",
 					"archComponent": "dataProcess",
@@ -2555,43 +2694,35 @@
 							"schemaFieldUid": "field_f0070137-09a8-432a-bd47-dd6e901d8cb2"
 						}
 					},
-          "ui:order": [
-            "name",
-            "type",
-            "field_whHc-OoW",
-            "field_-EGYyyJF",
-            "field_L1lRlgf1",
-            "field_fJ_7OdE7",
-            "field_d3OCFyaC",
-            "field_Y_K0Hy0e",
-            "field_nE73kPQl",
-            "field_tpROQBf5",
-            "field_AKLVuyFy",
-            "field_4jxR0E0m",
-            "field_DBFG7kIN",
-            "field_vqqlHbU6",
-            "field_9BXQE8SI",
-            "field_1ANadh7U",
-            "field_3a0vme2u",
-            "field_-t8JSf3p",
-            "field_8pFvwc-v",
-            "field_LGUdr5mq",
-            "field_eIIWBdCg",
-            "field_DnB8Ur4I",
-            "field_OyRJyJxD",
-            "field_xi0W_vl-",
-            "field__NUAXSNP",
-            "field_nx1zBg1X",
-            "field_wluxUVJ9",
-            "field_KnIEmMxM",
-            "field_TrX4G9Gc"
-          ],
-					"field_-EGYyyJF": {
-						"ui:options": {
-							"schemaFieldUid": "field_6676112d-2c43-41a0-8b3c-bd0d492ecd49"
-						},
-						"ui:placeholder": "Необходим новый тракт данных от источника"
-					},
+					"ui:order": [
+						"name",
+						"type",
+						"field_whHc-OoW",
+						"field_fJ_7OdE7",
+						"field_d3OCFyaC",
+						"field_Y_K0Hy0e",
+						"field_nE73kPQl",
+						"field_tpROQBf5",
+						"field_AKLVuyFy",
+						"field_4jxR0E0m",
+						"field_DBFG7kIN",
+						"field_vqqlHbU6",
+						"field_9BXQE8SI",
+						"field_1ANadh7U",
+						"field_3a0vme2u",
+						"field_-t8JSf3p",
+						"field_8pFvwc-v",
+						"field_LGUdr5mq",
+						"field_eIIWBdCg",
+						"field_DnB8Ur4I",
+						"field_OyRJyJxD",
+						"field_xi0W_vl-",
+						"field__NUAXSNP",
+						"field_nx1zBg1X",
+						"field_wluxUVJ9",
+						"field_KnIEmMxM",
+						"field_TrX4G9Gc"
+					],
 					"field_-t8JSf3p": {
 						"ui:widget": "select",
 						"ui:options": {
@@ -2645,13 +2776,6 @@
 						"ui:options": {
 							"dictionaryCode": "v2.detailInfo.sourceSystems.items.field_DBFG7kIN",
 							"schemaFieldUid": "field_c5eb01d6-6ed6-45c5-8e44-521568e0b7ac"
-						}
-					},
-					"field_L1lRlgf1": {
-						"ui:widget": "select",
-						"ui:options": {
-							"dictionaryCode": "v2.detailInfo.sourceSystems.items.field_L1lRlgf1",
-							"schemaFieldUid": "field_8cc4ea6a-62b9-410e-b56f-dda6755e65ff"
 						}
 					},
 					"field_Y_K0Hy0e": {
@@ -2936,25 +3060,23 @@
 				"workflowSectionId": "generalInfo"
 			},
 			"modelService": {
-        "ui:order": [
-          "field_dEVFQVQn",
-          "workType",
-          "field_o_HRj6VO",
-          "prePromEval",
-          "field_F7nK-We5",
-          "field_4IL7OStC",
-          "modelClass",
-          "field_SvNx6iEq",
-          "field_imxB4YEd",
-          "field_kkbRs50S",
-          "field_r66ph-79",
-          "field_Y2S_XRAQ",
-          "field_JcKtx9Mg",
-          "field_IGQX_9FN",
-          "field_KzzDtkB0",
-          "field_-AZPYdbp",
-          "field_UNSRK-JY"
-        ],
+				"ui:order": [
+					"field_dEVFQVQn",
+					"workType",
+					"field_o_HRj6VO",
+					"prePromEval",
+					"modelClass",
+					"field_SvNx6iEq",
+					"field_imxB4YEd",
+					"field_kkbRs50S",
+					"field_r66ph-79",
+					"field_Y2S_XRAQ",
+					"field_JcKtx9Mg",
+					"field_IGQX_9FN",
+					"field_KzzDtkB0",
+					"field_-AZPYdbp",
+					"field_UNSRK-JY"
+				],
 				"workType": {
 					"ui:widget": "select",
 					"ui:options": {
@@ -2985,22 +3107,6 @@
 						"semanticRole": "prePromEval"
 					},
 					"ui:placeholder": "Необходимость поддержки проведения пилота"
-				},
-				"field_4IL7OStC": {
-					"ui:widget": "select",
-					"ui:options": {
-						"dictionaryCode": "Способ загрузки данных в BI-систему",
-						"schemaFieldUid": "field_2ceb3182-537b-4ffb-80e7-03ff397d61f2"
-					},
-					"ui:placeholder": "Способ загрузки данных в BI-систему"
-				},
-				"field_F7nK-We5": {
-					"ui:widget": "select",
-					"ui:options": {
-						"dictionaryCode": "v2.modelserviceiInfo.bidbtype",
-						"schemaFieldUid": "field_f1d16b7e-c700-40fc-abee-8c7dbad9e6ac"
-					},
-					"ui:placeholder": "Тип БД для BI-системы"
 				},
 				"field_JcKtx9Mg": {
 					"ui:options": {
@@ -3180,7 +3286,11 @@
 			}
 		},
 		"field_aJEu5ziT": {
-			"ui:order": ["field_DWMBYTaF", "sourceTypicalTasks", "field_eCyDEFw3"],
+			"ui:order": [
+				"field_DWMBYTaF",
+				"sourceTypicalTasks",
+				"field_eCyDEFw3"
+			],
 			"ui:options": {
 				"sectionRole": "main",
 				"streamBlock": true,
@@ -3364,7 +3474,9 @@
 			}
 		},
 		"field_i8dL7QZa": {
-			"ui:order": ["field_eCyDEFw3"],
+			"ui:order": [
+				"field_eCyDEFw3"
+			],
 			"ui:options": {
 				"sectionRole": "main",
 				"streamBlock": true,
@@ -3437,7 +3549,11 @@
 			}
 		},
 		"streamDataSources": {
-			"ui:order": ["localParams", "field_u-7AkDrP", "field_eCyDEFw3"],
+			"ui:order": [
+				"localParams",
+				"field_u-7AkDrP",
+				"field_eCyDEFw3"
+			],
 			"ui:options": {
 				"groupActive": false,
 				"sectionRole": "main",
@@ -3506,7 +3622,12 @@
 						},
 						"ui:readonly": true
 					},
-					"ui:order": ["name", "estimateHoursPerDay", "coefficient", "total"],
+					"ui:order": [
+						"name",
+						"estimateHoursPerDay",
+						"coefficient",
+						"total"
+					],
 					"coefficient": {
 						"ui:widget": "text",
 						"ui:options": {
@@ -3669,7 +3790,11 @@
 			}
 		},
 		"streamModelControl": {
-			"ui:order": ["localParams", "field_G0AoYAl8", "field_hQeUoQl4"],
+			"ui:order": [
+				"localParams",
+				"field_G0AoYAl8",
+				"field_hQeUoQl4"
+			],
 			"ui:options": {
 				"groupActive": false,
 				"sectionRole": "main",
@@ -3753,7 +3878,12 @@
 						},
 						"ui:readonly": true
 					},
-					"ui:order": ["name", "estimateHoursPerDay", "coefficient", "total"],
+					"ui:order": [
+						"name",
+						"estimateHoursPerDay",
+						"coefficient",
+						"total"
+					],
 					"coefficient": {
 						"ui:widget": "text",
 						"ui:options": {
@@ -3849,7 +3979,10 @@
 			}
 		},
 		"streamDigitalAgents": {
-			"ui:order": ["field_8R2HHTY4", "field_AuPTJbZa"],
+			"ui:order": [
+				"field_8R2HHTY4",
+				"field_AuPTJbZa"
+			],
 			"ui:options": {
 				"groupActive": false,
 				"sectionRole": "panel",
@@ -3933,7 +4066,10 @@
 			}
 		},
 		"streamStreamingData": {
-			"ui:order": ["field_8uYGWAZ9", "field_xzzoJBAc"],
+			"ui:order": [
+				"field_8uYGWAZ9",
+				"field_xzzoJBAc"
+			],
 			"ui:options": {
 				"groupActive": false,
 				"sectionRole": "panel",
@@ -4044,7 +4180,10 @@
 							"schemaFieldUid": "field_d4a57f56-4127-474c-9115-bec24e7db610"
 						}
 					},
-					"ui:order": ["probability", "goals"],
+					"ui:order": [
+						"probability",
+						"goals"
+					],
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Запрет/задержка разрешения от внешних регуляторов на работы\n\\n* Отсутствие приемлемого контрагента (вендор/поставщик)",
@@ -4068,7 +4207,10 @@
 							"schemaFieldUid": "field_ac409196-e123-47ee-9747-ec3378c0f7ad"
 						}
 					},
-					"ui:order": ["probability", "goals"],
+					"ui:order": [
+						"probability",
+						"goals"
+					],
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Недостаток / отсутствие ресурсов на работы по реализации проекта разработки и внедрению доработок проекта (в т.ч. у подрядчика)\n\\n* Недостаточные компетенции персонала\n\\n* Недостаточный уровень набора дополнительного персонала",
@@ -4089,7 +4231,10 @@
 							"schemaFieldUid": "field_8c12cec4-56f5-441d-8e0d-eadca46e9a77"
 						}
 					},
-					"ui:order": ["probability", "goals"],
+					"ui:order": [
+						"probability",
+						"goals"
+					],
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Сбои в работе инфраструктуры и сервисного обслуживания\n\\n* Сбои в работе ПО\n\\n* Сбои продукта на этапе интеграции\n\\n* Ошибки в системном ПО, интегрируемых системах",
@@ -4110,7 +4255,10 @@
 							"schemaFieldUid": "field_593d6f1e-4d27-4d27-aaf2-62e30fa661f6"
 						}
 					},
-					"ui:order": ["probability", "goals"],
+					"ui:order": [
+						"probability",
+						"goals"
+					],
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Недостаточная проработка требований на этапах детального анализа\n\\n* Недостатки планирования и обеспечения непрерывности деятельности\n\\n* Расширение границ задач проекта или изменение трудозатрат по задачам",
@@ -4131,7 +4279,10 @@
 							"schemaFieldUid": "field_43131069-d1ad-45d4-95d3-ecb011101ac4"
 						}
 					},
-					"ui:order": ["probability", "goals"],
+					"ui:order": [
+						"probability",
+						"goals"
+					],
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Изменение требований внешних регуляторов и прочие несовершенства правовой системы",
@@ -4152,7 +4303,10 @@
 							"schemaFieldUid": "field_0d7189b0-f075-4b1d-a55c-c2bf0f2ea693"
 						}
 					},
-					"ui:order": ["probability", "goals"],
+					"ui:order": [
+						"probability",
+						"goals"
+					],
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Изменение бизнес-процессов Банка\n\\n* Недостатки коммуникаций / взаимодействия\n\\n* Неполные и нечеткие обязанности\n\\n* Отсутствие выделения ставок на наем персонала необходимого для реализации проекта\n\\n* Задержка заключения договоров с подрядчиками\n\\n* Длительное согласование проектных документов в Банке\n\\n* Отсутствие утвержденных нормативных документов",
@@ -4173,7 +4327,10 @@
 							"schemaFieldUid": "field_ee27dd8e-24d6-4f9a-86c8-84f97e047dde"
 						}
 					},
-					"ui:order": ["probability", "goals"],
+					"ui:order": [
+						"probability",
+						"goals"
+					],
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Задержка в закупке, поставке и развертывании оборудования\n\\n* Ненадлежащее качество исполнения услуг со стороны привлеченных контрагентов/подрядчиков\n\\n* Нарушение подрядчиками сроков выполнения работ\n\\n* Экономические события, влиящие на состояние третьих лиц, в том числе банкротство",
@@ -4194,7 +4351,10 @@
 							"schemaFieldUid": "field_e4eb17ab-1b85-43da-ab2c-10a63479eb7d"
 						}
 					},
-					"ui:order": ["probability", "goals"],
+					"ui:order": [
+						"probability",
+						"goals"
+					],
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Недостаточное вовлечение руководства\n\\n* Недостатки контрольных механизмов",
@@ -4215,7 +4375,10 @@
 							"schemaFieldUid": "field_85cd7a69-e7cd-41c3-9bad-443f712654bf"
 						}
 					},
-					"ui:order": ["probability", "goals"],
+					"ui:order": [
+						"probability",
+						"goals"
+					],
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Создание ИС (с ID в РИС), не введенной в эксплуатацию про итогам завершения проекта",
@@ -4236,7 +4399,10 @@
 							"schemaFieldUid": "field_27425e38-0e84-4642-a739-4d6eb99b9cac"
 						}
 					},
-					"ui:order": ["probability", "goals"],
+					"ui:order": [
+						"probability",
+						"goals"
+					],
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Изменения принципов реализации целевой архитектуры Банка",
@@ -4257,7 +4423,10 @@
 							"schemaFieldUid": "field_00f1f778-297c-47c6-9cc4-7937f53cc1cc"
 						}
 					},
-					"ui:order": ["probability", "goals"],
+					"ui:order": [
+						"probability",
+						"goals"
+					],
 					"ui:widget": "select",
 					"ui:options": {
 						"tooltip": "В группу рисков входят:\n\\n* Пересечение с большим количеством проектов и увеличение сроков по смежным проектам\n\\n* Задержки из за изменения сроков реализации смежных ИТ систем и проектов",
@@ -4325,7 +4494,10 @@
 				},
 				"targetPath": "/summary/total",
 				"description": "ФТ-026: совокупная итоговая калькуляция анкеты.",
-				"dependencies": ["/summary/typicalTotal", "/summary/atypicalTotal"]
+				"dependencies": [
+					"/summary/typicalTotal",
+					"/summary/atypicalTotal"
+				]
 			},
 			{
 				"id": "j9AJHYMlHF7o6lSuzoREu",
@@ -4350,7 +4522,9 @@
 					]
 				},
 				"targetPath": "/",
-				"dependencies": ["/generalInfo/modelService/prePromEval"]
+				"dependencies": [
+					"/generalInfo/modelService/prePromEval"
+				]
 			},
 			{
 				"id": "TJNtbRBNc9qBOhqvd2nk9",
@@ -4368,7 +4542,9 @@
 					]
 				},
 				"targetPath": "/",
-				"dependencies": ["/generalInfo/modelService/prePromEval"]
+				"dependencies": [
+					"/generalInfo/modelService/prePromEval"
+				]
 			},
 			{
 				"id": "typical-works-catalog-detailInfo-detailTypicalTasks",
@@ -4567,7 +4743,9 @@
 				"condition": true,
 				"targetPath": "/streamDataSources/field_u-7AkDrP",
 				"description": "ФТ-024: типовые работы «Система-источник» из справочника работ (назначения + триггеры).",
-				"dependencies": ["/detailInfo/sourceSystems"]
+				"dependencies": [
+					"/detailInfo/sourceSystems"
+				]
 			},
 			{
 				"id": "typical-works-catalog-streamModelControl-field_G0AoYAl8",
@@ -4988,8 +5166,20 @@
 							}
 						],
 						"matrix": [
-							["grp_low", "grp_low", "grp_low", "grp_medium", "grp_medium"],
-							["grp_low", "grp_low", "grp_medium", "grp_high", "grp_high"],
+							[
+								"grp_low",
+								"grp_low",
+								"grp_low",
+								"grp_medium",
+								"grp_medium"
+							],
+							[
+								"grp_low",
+								"grp_low",
+								"grp_medium",
+								"grp_high",
+								"grp_high"
+							],
 							[
 								"grp_low",
 								"grp_medium",
@@ -5614,7 +5804,6 @@
 			"v2.detailInfo.dataMart.field_46LCnfWo",
 			"v2.detailInfo.dataMart.field_L-WWLDWY",
 			"v2.detailInfo.dataMart.field_N9LFD6Hu",
-			"v2.detailInfo.dataMart.field_le47srI7",
 			"v2.detailInfo.dataMart.workType",
 			"v2.detailInfo.dataProcess.confidentialData",
 			"v2.detailInfo.dataProcess.deliveryMode",
@@ -5632,7 +5821,6 @@
 			"v2.detailInfo.sourceSystems.items.field_DBFG7kIN",
 			"v2.detailInfo.sourceSystems.items.field_HMnqITVb",
 			"v2.detailInfo.sourceSystems.items.field_K2ioHD8d",
-			"v2.detailInfo.sourceSystems.items.field_L1lRlgf1",
 			"v2.detailInfo.sourceSystems.items.field_VX7y3PsB",
 			"v2.detailInfo.sourceSystems.items.field_p4zxdNZG",
 			"v2.detailInfo.sourceSystems.items.field_wuYlhnu0",
@@ -5674,8 +5862,7 @@
 			"v2.workflow.sections.detailInfo",
 			"v2.workflow.sections.generalInfo",
 			"v2.workflow.sections.streamDataSources",
-			"v2.workflow.sections.streamModelControl",
-			"Способ загрузки данных в BI-систему"
+			"v2.workflow.sections.streamModelControl"
 		]
 	}
 }

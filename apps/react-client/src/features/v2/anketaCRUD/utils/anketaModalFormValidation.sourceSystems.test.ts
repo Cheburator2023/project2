@@ -18,10 +18,6 @@ const sourceSystemItemSchema: RJSFSchema = {
 			title: "Тип системы-источника",
 			enum: ["Внутренний", "Внешний"],
 		},
-		"field_-EGYyyJF": {
-			type: "boolean",
-			title: "Необходим новый тракт данных от источника",
-		},
 		field_xva1dRvW: {
 			type: "string",
 			title:
@@ -55,7 +51,6 @@ describe("sourceSystems modal save (regression)", () => {
 			type: "Внутренний",
 			field_xva1dRvW: "Да",
 			field_HuOLfL4K: "Есть",
-			"field_-EGYyyJF": "",
 			field_other: "",
 		};
 		expect(isAnketaModalFormValid(formData, sourceSystemItemSchema, {})).toBe(
@@ -69,7 +64,6 @@ describe("sourceSystems modal save (regression)", () => {
 			type: "",
 			field_xva1dRvW: null,
 			field_HuOLfL4K: undefined,
-			"field_-EGYyyJF": "",
 		};
 		expect(
 			omitUnsetOptionalFields(
@@ -99,7 +93,6 @@ describe("sourceSystems modal save (regression)", () => {
 			"field_3a0vme2u",
 			"field_4jxR0E0m",
 			"field_DBFG7kIN",
-			"field_-EGYyyJF",
 			"field_8pFvwc-v",
 		]) {
 			formData[key] = null;

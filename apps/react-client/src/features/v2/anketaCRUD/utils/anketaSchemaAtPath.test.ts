@@ -96,8 +96,6 @@ describe("anketaSchemaAtPath modal slices", () => {
 			"field_Y2S_XRAQ",
 			"field_JcKtx9Mg",
 			"field_KzzDtkB0",
-			"field_F7nK-We5",
-			"field_4IL7OStC",
 		];
 
 		const slice = getObjectSchemaSliceForModal(

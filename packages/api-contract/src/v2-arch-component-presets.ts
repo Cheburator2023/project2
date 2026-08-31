@@ -54,25 +54,6 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 					"type": "boolean",
 					"title": "Необходимость поддержки проведения пилота"
 				},
-				"field_4IL7OStC": {
-					"enum": [
-						"Ручной",
-						"Автоматизированный"
-					],
-					"type": "string",
-					"title": "Способ загрузки данных в BI-систему"
-				},
-				"field_F7nK-We5": {
-					"enum": [
-						"Векторные",
-						"Графовые",
-						"Временные ряды и события",
-						"Документо-ориентированные",
-						"Специализированные"
-					],
-					"type": "string",
-					"title": "Тип БД для BI-системы"
-				},
 				"field_JcKtx9Mg": {
 					"type": "boolean",
 					"title": "Требуется оркестратор ПИМ"
@@ -153,8 +134,6 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				"workType",
 				"field_o_HRj6VO",
 				"prePromEval",
-				"field_F7nK-We5",
-				"field_4IL7OStC",
 				"modelClass",
 				"field_SvNx6iEq",
 				"field_imxB4YEd",
@@ -189,22 +168,6 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 					"semanticRole": "prePromEval"
 				},
 				"ui:placeholder": "Необходимость поддержки проведения пилота"
-			},
-			"field_4IL7OStC": {
-				"ui:widget": "select",
-				"ui:options": {
-					"dictionaryCode": "Способ загрузки данных в BI-систему",
-					"schemaFieldUid": "field_2ceb3182-537b-4ffb-80e7-03ff397d61f2"
-				},
-				"ui:placeholder": "Способ загрузки данных в BI-систему"
-			},
-			"field_F7nK-We5": {
-				"ui:widget": "select",
-				"ui:options": {
-					"dictionaryCode": "v2.modelserviceiInfo.bidbtype",
-					"schemaFieldUid": "field_f1d16b7e-c700-40fc-abee-8c7dbad9e6ac"
-				},
-				"ui:placeholder": "Тип БД для BI-системы"
 			},
 			"field_JcKtx9Mg": {
 				"ui:options": {
@@ -307,10 +270,6 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 						"type": "string",
 						"title": "Тип системы-источника"
 					},
-					"field_-EGYyyJF": {
-						"type": "boolean",
-						"title": "Необходим новый тракт данных от источника"
-					},
 					"field_-t8JSf3p": {
 						"enum": [
 							"Неизвестно",
@@ -376,16 +335,6 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 						],
 						"type": "string",
 						"title": "Наличие юридического основания для пилота"
-					},
-					"field_L1lRlgf1": {
-						"enum": [
-							"Высокая",
-							"Средняя",
-							"Низкая",
-							"Неизвестно"
-						],
-						"type": "string",
-						"title": "Сложность реализации"
 					},
 					"field_Y_K0Hy0e": {
 						"enum": [
@@ -545,8 +494,6 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 					"name",
 					"type",
 					"field_whHc-OoW",
-					"field_-EGYyyJF",
-					"field_L1lRlgf1",
 					"field_fJ_7OdE7",
 					"field_d3OCFyaC",
 					"field_Y_K0Hy0e",
@@ -572,12 +519,6 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 					"field_KnIEmMxM",
 					"field_TrX4G9Gc"
 				],
-				"field_-EGYyyJF": {
-					"ui:options": {
-						"schemaFieldUid": "field_6676112d-2c43-41a0-8b3c-bd0d492ecd49"
-					},
-					"ui:placeholder": "Необходим новый тракт данных от источника"
-				},
 				"field_-t8JSf3p": {
 					"ui:widget": "select",
 					"ui:options": {
@@ -631,13 +572,6 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 					"ui:options": {
 						"dictionaryCode": "v2.detailInfo.sourceSystems.items.field_DBFG7kIN",
 						"schemaFieldUid": "field_c5eb01d6-6ed6-45c5-8e44-521568e0b7ac"
-					}
-				},
-				"field_L1lRlgf1": {
-					"ui:widget": "select",
-					"ui:options": {
-						"dictionaryCode": "v2.detailInfo.sourceSystems.items.field_L1lRlgf1",
-						"schemaFieldUid": "field_8cc4ea6a-62b9-410e-b56f-dda6755e65ff"
 					}
 				},
 				"field_Y_K0Hy0e": {
@@ -982,10 +916,6 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 					"type": "string",
 					"title": "Двусторонний обмен данными"
 				},
-				"field_Q8DGJNTn": {
-					"type": "number",
-					"title": "Количество контролей качества признаков"
-				},
 				"field_fRuMuWtn": {
 					"enum": [
 						"Непосредственно",
@@ -994,20 +924,6 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 					],
 					"type": "string",
 					"title": "Способ предоставления данных заказчику"
-				},
-				"field_hIM0c5gG": {
-					"type": "boolean",
-					"title": "Содержит сырые данные"
-				},
-				"field_le47srI7": {
-					"enum": [
-						"Холодный",
-						"Теплый",
-						"Горячий",
-						"Потоковый"
-					],
-					"type": "string",
-					"title": "Слой хранения"
 				},
 				"field_lovKvLZc": {
 					"type": "boolean",
@@ -1054,9 +970,6 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 				"field_zApubb5V",
 				"workType",
 				"field_xva1dRvW",
-				"field_hIM0c5gG",
-				"field_le47srI7",
-				"field_Q8DGJNTn",
 				"field_0uV7wafS",
 				"field_L-WWLDWY",
 				"field_N9LFD6Hu",
@@ -1116,28 +1029,11 @@ const SNAPSHOT_ARCH_PRESETS: Record<string, SnapshotArchPresetRaw> = {
 					"schemaFieldUid": "field_8cff1155-e458-4fea-a8c7-abad1260df8f"
 				}
 			},
-			"field_Q8DGJNTn": {
-				"ui:options": {
-					"schemaFieldUid": "field_e48e94c0-465e-47de-8a9c-ae8d95ca8d6c"
-				}
-			},
 			"field_fRuMuWtn": {
 				"ui:widget": "select",
 				"ui:options": {
 					"dictionaryCode": "v2.detailInfo.dataMart.deliveryMode",
 					"schemaFieldUid": "field_5389285c-9fe6-4a47-bfdb-2ad6a082cbd0"
-				}
-			},
-			"field_hIM0c5gG": {
-				"ui:options": {
-					"schemaFieldUid": "field_73e7ba4b-2124-44c9-bfc3-7d5d524c9076"
-				}
-			},
-			"field_le47srI7": {
-				"ui:widget": "select",
-				"ui:options": {
-					"dictionaryCode": "v2.detailInfo.dataMart.field_le47srI7",
-					"schemaFieldUid": "field_bffd7490-feee-4eb1-a48e-524746fd659c"
 				}
 			},
 			"field_lovKvLZc": {

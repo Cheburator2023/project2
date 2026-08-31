@@ -58,14 +58,7 @@ export const V2_ARCH_PARAM_CLASSIFICATION: Record<
 	Partial<Record<V2ArchParamGroupId, readonly string[]>>
 > = {
 	modelService: {
-		common: [
-			"field_dEVFQVQn",
-			"workType",
-			"field_o_HRj6VO",
-			"prePromEval",
-			"field_F7nK-We5",
-			"field_4IL7OStC",
-		],
+		common: ["field_dEVFQVQn", "workType", "field_o_HRj6VO", "prePromEval"],
 		mdlctl: ["modelClass", "field_SvNx6iEq"],
 		pirm: [
 			"field_imxB4YEd",
@@ -80,14 +73,7 @@ export const V2_ARCH_PARAM_CLASSIFICATION: Record<
 		],
 	},
 	dataMart: {
-		common: [
-			"field_zApubb5V",
-			"workType",
-			"field_xva1dRvW",
-			"field_hIM0c5gG",
-			"field_le47srI7",
-			"field_Q8DGJNTn",
-		],
+		common: ["field_zApubb5V", "workType", "field_xva1dRvW"],
 		idsrc_ext: [
 			"field_0uV7wafS",
 			"field_L-WWLDWY",
@@ -117,13 +103,7 @@ export const V2_ARCH_PARAM_CLASSIFICATION: Record<
 		pirm: ["field_HgUCNn6E"],
 	},
 	sourceSystem: {
-		common: [
-			"name",
-			"type",
-			"field_whHc-OoW",
-			"field_-EGYyyJF",
-			"field_L1lRlgf1",
-		],
+		common: ["name", "type", "field_whHc-OoW"],
 		idsrc_ext: [
 			"field_fJ_7OdE7",
 			"field_d3OCFyaC",
@@ -178,10 +158,10 @@ export const V2_ARCH_PARAM_NOT_IN_CALCULATION_KEYS: Record<
 	V2ArchParamGroupingKind,
 	readonly string[]
 > = {
-	modelService: ["field_F7nK-We5", "field_4IL7OStC"],
-	dataMart: ["field_hIM0c5gG", "field_le47srI7", "field_Q8DGJNTn"],
+	modelService: [],
+	dataMart: [],
 	dataProcess: [],
-	sourceSystem: ["field_-EGYyyJF", "field_L1lRlgf1"],
+	sourceSystem: [],
 	model: [],
 };
 
