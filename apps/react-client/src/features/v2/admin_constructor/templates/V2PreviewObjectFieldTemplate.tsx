@@ -6,6 +6,7 @@ import AccordionDetails from "@mui/material/AccordionDetails";
 import AccordionSummary from "@mui/material/AccordionSummary";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Divider from "@mui/material/Divider";
 import Grid from "@mui/material/Grid";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
@@ -629,7 +630,13 @@ function ObjectFieldsGrid({
 						minWidth={0}
 						data-test-id={V2_TEMPLATE_READ_TEST_IDS.archParamGroup}
 					>
-						{groupIndex > 0 ? <Spacer space={12} /> : null}
+						{groupIndex > 0 ? (
+							<>
+								<Spacer space={16} />
+								<Divider />
+								<Spacer space={16} />
+							</>
+						) : null}
 						<Typography variant="subtitle2" fontWeight={700}>
 							{group.label}
 						</Typography>

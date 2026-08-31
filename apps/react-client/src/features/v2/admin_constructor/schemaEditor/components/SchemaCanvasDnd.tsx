@@ -27,6 +27,7 @@ import {
 	type TreeMethods,
 } from "@minoru/react-dnd-treeview";
 import { Flex } from "@react-client/common/primitives/Flex";
+import { Spacer } from "@react-client/common/primitives/Spacer";
 import { useSchemaConstructorSettings } from "@react-client/common/settings/schemaConstructorSettings";
 import { describeAffectedWorkImpact } from "../panels/typicalWorksPanel/SchemaWorkSyncConfirmDialog";
 import {
@@ -487,32 +488,56 @@ function SchemaCanvasFieldRow({
 		? `${node.text} · ${typicalWorkTitleSuffix}`
 		: node.text;
 
+	const parentPointer = node.data?.parentPointer ?? "";
 	const paramGroupLabel = resolveCanvasArchParamGroupLabel(
 		jsonSchema,
 		uiSchema,
-		node.data?.parentPointer ?? "",
+		parentPointer,
 		fieldKey,
 	);
+	const siblingIndex = listOrderedChildKeys(
+		jsonSchema,
+		parentPointer,
+		uiSchema,
+	).indexOf(fieldKey);
+	const showParamGroupDivider = Boolean(paramGroupLabel) && siblingIndex > 0;
 
 	return (
 		<Box>
 			{paramGroupLabel ? (
-				<Typography
-					data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.canvasParamGroup}
-					variant="caption"
-					color="text.secondary"
-					sx={{
-						display: "block",
-						ml: `${depth * DEPTH_INDENT_PX}px`,
-						mt: 1,
-						mb: 0.25,
-						px: 1,
-						fontWeight: 700,
-						letterSpacing: 0.2,
-					}}
-				>
-					{paramGroupLabel}
-				</Typography>
+				<>
+					{showParamGroupDivider ? (
+						<Flex flexDirection="column" width="100%">
+							<Spacer space={12} />
+							<Box
+								sx={{
+									ml: `${depth * DEPTH_INDENT_PX}px`,
+									mr: 1,
+									px: 1,
+								}}
+							>
+								<Divider />
+							</Box>
+							<Spacer space={8} />
+						</Flex>
+					) : null}
+					<Typography
+						data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.canvasParamGroup}
+						variant="caption"
+						color="text.secondary"
+						sx={{
+							display: "block",
+							ml: `${depth * DEPTH_INDENT_PX}px`,
+							mt: showParamGroupDivider ? 0 : 1,
+							mb: 0.25,
+							px: 1,
+							fontWeight: 700,
+							letterSpacing: 0.2,
+						}}
+					>
+						{paramGroupLabel}
+					</Typography>
+				</>
 			) : null}
 			<Box
 				data-test-id={V2_TEMPLATE_EDIT_TEST_IDS.canvasFieldRow}

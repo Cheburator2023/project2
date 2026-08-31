@@ -14,6 +14,7 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import { FuzzyAutocomplete } from "@react-client/common/muiCustom/FuzzyAutocomplete";
 import { Flex } from "@react-client/common/primitives/Flex";
+import { Spacer } from "@react-client/common/primitives/Spacer";
 import type { V2DictionaryDto } from "@smart-anketa/api-contract";
 import type { FieldTypePreset, PrimitiveFieldTypeVariant } from "../constants";
 import {
@@ -216,8 +217,15 @@ function GroupChildFieldsList({
 
 	return (
 		<Flex flexDirection="column" gap={8} width="100%">
-			{grouped.map((group) => (
+			{grouped.map((group, groupIndex) => (
 				<Flex key={group.id} flexDirection="column" gap={4} width="100%">
+					{groupIndex > 0 ? (
+						<>
+							<Spacer space={8} />
+							<Divider />
+							<Spacer space={8} />
+						</>
+					) : null}
 					{group.label ? (
 						<Typography
 							variant="caption"
