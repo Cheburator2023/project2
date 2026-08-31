@@ -126,6 +126,13 @@ export interface KanbanBoardTaskContent {
 	systems?: KanbanBoardSystemId[];
 	/** На задаче есть блокер — выделяется на доске. */
 	hasBlocker?: boolean;
+	/**
+	 * Задачу передали другому текущему исполнителю.
+	 * Висит, пока новый исполнитель не нажмёт «Взял в работу».
+	 */
+	assigneeHandoffPending?: boolean;
+	/** Кто вёл задачу до передачи (для подсказки на доске). */
+	assigneeHandoffFrom?: string;
 }
 
 /** Целевой стенд задачи (куда выкатываем / где проверяем). */
@@ -1115,10 +1122,32 @@ export const KANBAN_BOARD_RELEASE_CHIP_COLOR = "#d97706";
 
 export const KANBAN_BOARD_BLOCKER_COLOR = "#dc2626";
 
+/** Карточка ожидает, пока новый исполнитель возьмёт задачу. */
+export const KANBAN_BOARD_HANDOFF_COLOR = "#c2410c";
+
 export function kanbanBoardTaskHasBlocker(
 	content?: Pick<KanbanBoardTaskContent, "hasBlocker"> | null,
 ): boolean {
 	return content?.hasBlocker === true;
+}
+
+export function kanbanBoardTaskHasAssigneeHandoff(
+	content?: Pick<KanbanBoardTaskContent, "assigneeHandoffPending"> | null,
+): boolean {
+	return content?.assigneeHandoffPending === true;
+}
+
+export function kanbanBoardAssigneeHandoffTitle(
+	content?: Pick<
+		KanbanBoardTaskContent,
+		"currentAssignee" | "assigneeHandoffFrom"
+	> | null,
+): string {
+	const to = content?.currentAssignee?.trim() || "";
+	const from = content?.assigneeHandoffFrom?.trim() || "";
+	if (from && to) return `Передано: ${from} → ${to}. Нужно взять в работу.`;
+	if (to) return `Передано исполнителю ${to}. Нужно взять в работу.`;
+	return "Задачу передали — нужно взять в работу.";
 }
 
 export const KANBAN_BOARD_RELEASE_IMAGE_TARGETS = [

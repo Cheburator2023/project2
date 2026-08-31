@@ -34,6 +34,7 @@ import {
 	isKanbanBoardAssigneeRoleId,
 	kanbanBoardColumnTitleLengthError,
 	kanbanBoardTaskContentLengthErrorMessage,
+	applyKanbanBoardAssigneeHandoff,
 	normalizeKanbanBoardTaskContent,
 	normalizeTrackerCode,
 	formatKanbanBoardKey,
@@ -1764,6 +1765,8 @@ export class KanbanBoardRegistryService {
 			task.createdBy = dto.createdBy?.trim() || null;
 		}
 		if (dto.content !== undefined) {
+			const previousContent = task.content;
+			const pickup = dto.content.assigneeHandoffPending === false;
 			const mergedContent: KanbanBoardTaskContent = {
 				...task.content,
 				...dto.content,
@@ -1771,8 +1774,12 @@ export class KanbanBoardRegistryService {
 					? { images: dto.content.images }
 					: { images: task.content.images }),
 			};
-			task.content = await this.validateTaskContent(
-				normalizeKanbanBoardTaskContent(mergedContent),
+			task.content = applyKanbanBoardAssigneeHandoff(
+				previousContent,
+				await this.validateTaskContent(
+					normalizeKanbanBoardTaskContent(mergedContent),
+				),
+				{ pickup },
 			);
 		}
 		task.updatedAt = new Date().toISOString();

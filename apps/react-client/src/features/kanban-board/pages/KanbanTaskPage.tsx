@@ -37,6 +37,9 @@ import {
 	kanbanBoardTaskReleaseLabel,
 	kanbanBoardTaskContentLengthErrorMessage,
 	kanbanBoardTextLengthHint,
+	kanbanBoardTaskHasAssigneeHandoff,
+	kanbanBoardAssigneeHandoffTitle,
+	KANBAN_BOARD_HANDOFF_COLOR,
 	normalizeKanbanBoardTaskContent,
 	normalizeKanbanBoardSubtasks,
 	kanbanBoardRoleEstimatesTotal,
@@ -256,6 +259,8 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	const [stands, setStands] = useState<string[]>([]);
 	const [systems, setSystems] = useState<string[]>([]);
 	const [hasBlocker, setHasBlocker] = useState(false);
+	const [handoffPending, setHandoffPending] = useState(false);
+	const [handoffFrom, setHandoffFrom] = useState("");
 	const [estimatePd, setEstimatePd] = useState("");
 	const [roleEstimates, setRoleEstimates] = useState<KanbanBoardRoleEstimates>(
 		{},
@@ -585,6 +590,8 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 		setStands(kanbanBoardTaskStands(task.content));
 		setSystems(kanbanBoardTaskSystems(task.content));
 		setHasBlocker(task.content.hasBlocker === true);
+		setHandoffPending(kanbanBoardTaskHasAssigneeHandoff(task.content));
+		setHandoffFrom(task.content.assigneeHandoffFrom ?? "");
 		setEstimatePd(
 			task.content.estimatePd !== undefined
 				? String(task.content.estimatePd)
@@ -732,9 +739,15 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 		],
 	);
 
-	const handleSave = async (forceOverwrite?: boolean) => {
+	const handleSave = async (
+		forceOverwrite?: boolean,
+		options?: { pickup?: boolean },
+	) => {
 		const content = buildContent();
 		if (!content || !effectiveBoardId) return;
+		if (options?.pickup) {
+			content.assigneeHandoffPending = false;
+		}
 		if (kanbanBoardTaskContentLengthErrorMessage(content)) {
 			if (!isCreate) setSaveStatus("error");
 			return;
@@ -773,6 +786,8 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 			});
 			expectedUpdatedAtRef.current = updated.updatedAt;
 			lastSavedKeyRef.current = keyBeingSaved;
+			setHandoffPending(kanbanBoardTaskHasAssigneeHandoff(updated.content));
+			setHandoffFrom(updated.content.assigneeHandoffFrom ?? "");
 			setRemoteStale(false);
 			setEditBlocked(null);
 			const stillDirty = pendingDraftKeyRef.current !== keyBeingSaved;
@@ -984,6 +999,21 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 					>
 						{hasBlocker ? "Блокер" : "Есть блокер"}
 					</Button>
+					{!isCreate && handoffPending ? (
+						<Button
+							size="small"
+							variant="contained"
+							color="warning"
+							disabled={formLocked}
+							onClick={() => void handleSave(undefined, { pickup: true })}
+							title={kanbanBoardAssigneeHandoffTitle({
+								currentAssignee,
+								assigneeHandoffFrom: handoffFrom || undefined,
+							})}
+						>
+							Взял в работу
+						</Button>
+					) : null}
 					<Spacer />
 					{!isCreate && isLockedByOther && foreignLock ? (
 						<Chip
@@ -1091,6 +1121,27 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 						уложится в лимит.
 					</Alert>
 				) : null}
+				{showForm && !isCreate && handoffPending ? (
+					<Alert
+						severity="warning"
+						sx={{ mx: { xs: 1.5, md: 2 }, mt: 1 }}
+						action={
+							<Button
+								color="inherit"
+								size="small"
+								disabled={formLocked}
+								onClick={() => void handleSave(undefined, { pickup: true })}
+							>
+								Взял в работу
+							</Button>
+						}
+					>
+						{kanbanBoardAssigneeHandoffTitle({
+							currentAssignee,
+							assigneeHandoffFrom: handoffFrom || undefined,
+						})}
+					</Alert>
+				) : null}
 				{showForm && (createTask.isError || updateTask.isError) ? (
 					<Alert severity="error" sx={{ mx: { xs: 1.5, md: 2 }, mt: 1 }}>
 						{apiErrorMessage(createTask.error ?? updateTask.error) ||
@@ -1154,6 +1205,21 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 										title={isCreate ? "Новая" : statusTitle}
 										color={columnColor}
 									/>
+									{handoffPending ? (
+										<Chip
+											size="small"
+											label="Передано"
+											title={kanbanBoardAssigneeHandoffTitle({
+												currentAssignee,
+												assigneeHandoffFrom: handoffFrom || undefined,
+											})}
+											sx={{
+												bgcolor: alpha(KANBAN_BOARD_HANDOFF_COLOR, 0.12),
+												color: KANBAN_BOARD_HANDOFF_COLOR,
+												fontWeight: 700,
+											}}
+										/>
+									) : null}
 									{taskType ? (
 										<Chip
 											size="small"

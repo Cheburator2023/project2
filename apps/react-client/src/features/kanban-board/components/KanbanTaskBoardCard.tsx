@@ -33,7 +33,10 @@ import {
 	kanbanBoardTaskReleaseLabel,
 	KANBAN_BOARD_RELEASE_CHIP_COLOR,
 	KANBAN_BOARD_BLOCKER_COLOR,
+	KANBAN_BOARD_HANDOFF_COLOR,
 	kanbanBoardTaskHasBlocker,
+	kanbanBoardTaskHasAssigneeHandoff,
+	kanbanBoardAssigneeHandoffTitle,
 	kanbanBoardTaskStands,
 	kanbanBoardTaskSystems,
 	type KanbanBoardPriorityId,
@@ -120,10 +123,19 @@ function MetaStat({
 	);
 }
 
-function TagChip({ label, color }: { label: string; color: string }) {
+function TagChip({
+	label,
+	color,
+	title,
+}: {
+	label: string;
+	color: string;
+	title?: string;
+}) {
 	return (
 		<Box
 			component="span"
+			title={title}
 			sx={{
 				display: "inline-flex",
 				alignItems: "center",
@@ -201,7 +213,16 @@ export function KanbanTaskBoardCard({
 		? kanbanBoardEffectiveEstimatePd(content)
 		: undefined;
 	const hasBlocker = kanbanBoardTaskHasBlocker(content);
-	const tags: Array<{ label: string; color: string }> = [];
+	const hasHandoff = kanbanBoardTaskHasAssigneeHandoff(content);
+	const handoffTitle = kanbanBoardAssigneeHandoffTitle(content);
+	const tags: Array<{ label: string; color: string; title?: string }> = [];
+	if (hasHandoff) {
+		tags.push({
+			label: "Передано",
+			color: KANBAN_BOARD_HANDOFF_COLOR,
+			title: handoffTitle,
+		});
+	}
 	if (hasBlocker) {
 		tags.push({
 			label: "Блокер",
@@ -366,6 +387,7 @@ export function KanbanTaskBoardCard({
 								key={`${tag.label}:${tag.color}`}
 								label={tag.label}
 								color={tag.color}
+								title={tag.title}
 							/>
 						))}
 					</Flex>
@@ -489,13 +511,24 @@ export function KanbanTaskBoardCard({
 							{assignee ? (
 								<Flex alignItems="center" gap={4} minWidth={0}>
 									<PersonOutlineIcon
-										sx={{ fontSize: 14, color: "text.secondary", flexShrink: 0 }}
+										sx={{
+											fontSize: 14,
+											color: hasHandoff
+												? KANBAN_BOARD_HANDOFF_COLOR
+												: "text.secondary",
+											flexShrink: 0,
+										}}
 									/>
 									<Typography
 										variant="caption"
-										color="text.primary"
+										color={hasHandoff ? KANBAN_BOARD_HANDOFF_COLOR : "text.primary"}
+										fontWeight={hasHandoff ? 700 : 400}
 										noWrap
-										title={`Ответственный: ${assignee}`}
+										title={
+											hasHandoff
+												? handoffTitle
+												: `Ответственный: ${assignee}`
+										}
 										sx={{ minWidth: 0 }}
 									>
 										{assignee}

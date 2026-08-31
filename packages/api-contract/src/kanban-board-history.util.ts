@@ -224,6 +224,11 @@ const CONTENT_FIELDS: ReadonlyArray<{
 		label: "Блокер",
 		format: (value) => (value === true ? "есть" : null),
 	},
+	{
+		key: "assigneeHandoffPending",
+		label: "Передача в работу",
+		format: (value) => (value === true ? "ожидает" : null),
+	},
 ];
 
 export function kanbanBoardTaskHistorySnapshot(input: {

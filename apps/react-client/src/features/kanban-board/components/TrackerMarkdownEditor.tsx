@@ -11,9 +11,13 @@ import {
 	useCallback,
 	useEffect,
 	useId,
+	useLayoutEffect,
+	useMemo,
 	useRef,
 	useState,
 	type CSSProperties,
+	type MutableRefObject,
+	type PointerEvent as ReactPointerEvent,
 	type ReactNode,
 } from "react";
 import { flushSync } from "react-dom";
@@ -96,6 +100,10 @@ function MarkdownCode({
 }
 
 /**
+ * Нельзя делать contenteditable корень ReactMarkdown: вставка добавляет
+ * узлы рядом с деревом React, и текст визуально двоится до перемонтирования.
+ * Правки идут в снимок HTML, который React не согласовывает.
+ *
  * Глобальный `* { font-family: Inter }` ломает live-highlight MDEditor
  * (textarea и pre/code расходятся → курсор/выделение «плывут»).
  * Highlight выключен; без pre-слоя textarea absolute схлопывает родителя —
@@ -188,6 +196,131 @@ function tryExecWysiwyg(command: ICommand): boolean {
 	}
 }
 
+function rangeFromPoint(x: number, y: number): Range | null {
+	const doc = document as Document & {
+		caretRangeFromPoint?: (x: number, y: number) => Range | null;
+		caretPositionFromPoint?: (
+			x: number,
+			y: number,
+		) => { offsetNode: Node; offset: number } | null;
+	};
+	if (typeof doc.caretRangeFromPoint === "function") {
+		return doc.caretRangeFromPoint(x, y);
+	}
+	const pos = doc.caretPositionFromPoint?.(x, y);
+	if (!pos) return null;
+	const range = document.createRange();
+	range.setStart(pos.offsetNode, pos.offset);
+	range.collapse(true);
+	return range;
+}
+
+function placeCaretAtEnd(el: HTMLElement) {
+	const range = document.createRange();
+	range.selectNodeContents(el);
+	range.collapse(false);
+	const selection = window.getSelection();
+	selection?.removeAllRanges();
+	selection?.addRange(range);
+}
+
+function snapshotMarkdownHtml(root: HTMLElement | null): string {
+	if (!root) return "<p><br></p>";
+	const html = root.innerHTML.trim();
+	return html ? root.innerHTML : "<p><br></p>";
+}
+
+function insertPlainText(text: string) {
+	if (!text) return;
+	try {
+		if (
+			typeof document.execCommand === "function" &&
+			document.execCommand("insertText", false, text)
+		) {
+			return;
+		}
+	} catch {
+		// happy-dom и часть браузеров не реализуют execCommand.
+	}
+
+	const editable =
+		document.activeElement instanceof HTMLElement &&
+		document.activeElement.isContentEditable
+			? document.activeElement
+			: document.querySelector<HTMLElement>("[contenteditable='true']");
+	if (!editable) return;
+
+	const selection = window.getSelection();
+	const range =
+		selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+	if (range && selection && editable.contains(range.commonAncestorContainer)) {
+		range.deleteContents();
+		const node = document.createTextNode(text);
+		range.insertNode(node);
+		range.setStartAfter(node);
+		range.collapse(true);
+		selection.removeAllRanges();
+		selection.addRange(range);
+		return;
+	}
+
+	const block = editable.querySelector("p") ?? editable;
+	block.querySelector("br")?.remove();
+	block.append(text);
+}
+
+const WysiwygEditSurface = memo(
+	function WysiwygEditSurface({
+		initialHtml,
+		placeholder,
+		editRef,
+		caretRef,
+	}: {
+		initialHtml: string;
+		placeholder: string;
+		editRef: MutableRefObject<HTMLDivElement | null>;
+		caretRef: MutableRefObject<{ x: number; y: number } | null>;
+	}) {
+		useLayoutEffect(() => {
+			const el = editRef.current;
+			if (!el) return;
+			el.focus();
+			const pending = caretRef.current;
+			caretRef.current = null;
+			if (pending) {
+				const range = rangeFromPoint(pending.x, pending.y);
+				if (range && el.contains(range.startContainer)) {
+					const selection = window.getSelection();
+					selection?.removeAllRanges();
+					selection?.addRange(range);
+					return;
+				}
+			}
+			placeCaretAtEnd(el);
+		}, [caretRef, editRef]);
+
+		return (
+			<div
+				ref={editRef}
+				className="wmde-markdown wmde-markdown-color"
+				contentEditable
+				role="textbox"
+				aria-label="Описание"
+				spellCheck
+				data-placeholder={placeholder}
+				suppressContentEditableWarning
+				style={{ padding: "12px 14px" }}
+				dangerouslySetInnerHTML={{ __html: initialHtml }}
+				onPaste={(event) => {
+					event.preventDefault();
+					insertPlainText(event.clipboardData?.getData("text/plain") ?? "");
+				}}
+			/>
+		);
+	},
+	() => true,
+);
+
 export function TrackerMarkdownEditor({
 	value,
 	onChange,
@@ -199,15 +332,23 @@ export function TrackerMarkdownEditor({
 	const { mode } = useColorScheme();
 	const isDark = mode === "dark";
 	const [preview, setPreview] = useState<PreviewType>("preview");
+	const [wysiwygEditing, setWysiwygEditing] = useState(false);
 	const previewRootRef = useRef<HTMLDivElement | null>(null);
-	const frozenPreviewSourceRef = useRef<string | null>(null);
+	const wysiwygEditRef = useRef<HTMLDivElement | null>(null);
+	const wysiwygHtmlRef = useRef("<p><br></p>");
+	const wysiwygEditingRef = useRef(false);
+	const pendingCaretRef = useRef<{ x: number; y: number } | null>(null);
+	wysiwygEditingRef.current = wysiwygEditing;
 
 	useEffect(() => {
 		ensureMermaidInitialized(isDark);
 	}, [isDark]);
 
 	useEffect(() => {
-		if (disabled) setPreview("preview");
+		if (!disabled) return;
+		wysiwygEditingRef.current = false;
+		setPreview("preview");
+		setWysiwygEditing(false);
 	}, [disabled]);
 
 	const commitValue = useCallback(
@@ -226,13 +367,33 @@ export function TrackerMarkdownEditor({
 		[disabled, maxLength, onChange, value],
 	);
 
-	const commitPreview = useCallback(() => {
-		const markdownRoot =
-			previewRootRef.current?.querySelector<HTMLElement>(".wmde-markdown") ??
-			previewRootRef.current;
-		if (!markdownRoot) return;
-		commitValue(htmlToMarkdown(markdownRoot));
+	const commitWysiwyg = useCallback(() => {
+		const root = wysiwygEditRef.current;
+		if (!root) return;
+		commitValue(htmlToMarkdown(root));
 	}, [commitValue]);
+
+	const startWysiwygFromPreview = useCallback(
+		(caret?: { x: number; y: number }) => {
+			if (disabled || wysiwygEditingRef.current) return;
+			const rendered =
+				previewRootRef.current?.querySelector<HTMLElement>(".wmde-markdown") ??
+				null;
+			wysiwygHtmlRef.current = snapshotMarkdownHtml(rendered);
+			pendingCaretRef.current = caret ?? null;
+			wysiwygEditingRef.current = true;
+			flushSync(() => setWysiwygEditing(true));
+		},
+		[disabled],
+	);
+
+	useEffect(() => {
+		if (wysiwygEditing || disabled) return;
+		const root =
+			previewRootRef.current?.querySelector<HTMLElement>(".wmde-markdown");
+		if (!root) return;
+		root.setAttribute("data-placeholder", placeholder);
+	}, [disabled, placeholder, preview, value, wysiwygEditing]);
 
 	const renderToolbar = useCallback(
 		(
@@ -256,16 +417,20 @@ export function TrackerMarkdownEditor({
 						event.stopPropagation();
 						if (locked) return;
 						if (previewSwitch && command.value) {
-							flushSync(() => setPreview(command.value as PreviewType));
+							flushSync(() => {
+								if (wysiwygEditingRef.current) {
+									commitWysiwyg();
+									wysiwygEditingRef.current = false;
+									setWysiwygEditing(false);
+								}
+								setPreview(command.value as PreviewType);
+							});
 							executeCommand(command);
 							return;
 						}
 						if (preview === "preview") {
-							const editable =
-								previewRootRef.current?.querySelector<HTMLElement>(
-									"[contenteditable='true']",
-								);
-							editable?.focus();
+							startWysiwygFromPreview();
+							wysiwygEditRef.current?.focus();
 							if (tryExecWysiwyg(command)) return;
 						}
 						executeCommand(command);
@@ -275,7 +440,17 @@ export function TrackerMarkdownEditor({
 				</button>
 			);
 		},
-		[disabled, preview],
+		[commitWysiwyg, disabled, preview, startWysiwygFromPreview],
+	);
+
+	const onWysiwygPointerDown = useCallback(
+		(event: ReactPointerEvent<HTMLDivElement>) => {
+			if (disabled || wysiwygEditingRef.current) return;
+			if (event.button !== 0) return;
+			event.preventDefault();
+			startWysiwygFromPreview({ x: event.clientX, y: event.clientY });
+		},
+		[disabled, startWysiwygFromPreview],
 	);
 
 	const renderPreview = useCallback(
@@ -283,45 +458,54 @@ export function TrackerMarkdownEditor({
 			<div
 				ref={previewRootRef}
 				className="tracker-md-wysiwyg"
-				onInput={() => {
-					if (frozenPreviewSourceRef.current == null) {
-						frozenPreviewSourceRef.current = source;
-					}
+				tabIndex={disabled || wysiwygEditing ? undefined : 0}
+				onPointerDown={wysiwygEditing ? undefined : onWysiwygPointerDown}
+				onFocus={(event) => {
+					if (disabled || wysiwygEditingRef.current) return;
+					if (event.target !== event.currentTarget) return;
+					startWysiwygFromPreview();
 				}}
 				onBlur={(event) => {
-					if (disabled) return;
-					if (
-						previewRootRef.current?.contains(event.relatedTarget as Node)
-					) {
+					if (disabled || !wysiwygEditingRef.current) return;
+					if (previewRootRef.current?.contains(event.relatedTarget as Node)) {
 						return;
 					}
-					flushSync(() => commitPreview());
-					frozenPreviewSourceRef.current = null;
+					flushSync(() => {
+						commitWysiwyg();
+						wysiwygEditingRef.current = false;
+						setWysiwygEditing(false);
+					});
 				}}
 			>
-				<FrozenMarkdownPreview
-					source={frozenPreviewSourceRef.current ?? source}
-				/>
+				{wysiwygEditing ? (
+					<WysiwygEditSurface
+						initialHtml={wysiwygHtmlRef.current}
+						placeholder={placeholder}
+						editRef={wysiwygEditRef}
+						caretRef={pendingCaretRef}
+					/>
+				) : (
+					<FrozenMarkdownPreview source={source} />
+				)}
 			</div>
 		),
-		[commitPreview, disabled],
+		[
+			commitWysiwyg,
+			disabled,
+			onWysiwygPointerDown,
+			placeholder,
+			startWysiwygFromPreview,
+			wysiwygEditing,
+		],
 	);
 
-	useEffect(() => {
-		const root =
-			previewRootRef.current?.querySelector<HTMLElement>(".wmde-markdown");
-		if (!root) return;
-		if (disabled) {
-			root.removeAttribute("contenteditable");
-			root.removeAttribute("data-placeholder");
-			return;
-		}
-		root.setAttribute("contenteditable", "true");
-		root.setAttribute("role", "textbox");
-		root.setAttribute("aria-label", "Описание");
-		root.setAttribute("spellcheck", "true");
-		root.setAttribute("data-placeholder", placeholder);
-	}, [disabled, placeholder, preview, value]);
+	const editorComponents = useMemo(
+		() => ({
+			toolbar: renderToolbar,
+			preview: renderPreview,
+		}),
+		[renderPreview, renderToolbar],
+	);
 
 	const shellStyle = {
 		["--md-editor-font-family" as string]: EDITOR_FONT,
@@ -460,6 +644,9 @@ export function TrackerMarkdownEditor({
 					height: 18px;
 					margin: 0 4px !important;
 				}
+				.tracker-md-wysiwyg {
+					outline: none;
+				}
 				.tracker-md-wysiwyg .wmde-markdown {
 					min-height: 240px;
 					cursor: text;
@@ -486,10 +673,7 @@ export function TrackerMarkdownEditor({
 				hideToolbar={disabled}
 				highlightEnable={false}
 				visibleDragbar={false}
-				components={{
-					toolbar: renderToolbar,
-					preview: renderPreview,
-				}}
+				components={editorComponents}
 				textareaProps={{
 					placeholder,
 					disabled,

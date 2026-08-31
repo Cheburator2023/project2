@@ -516,6 +516,17 @@ export function normalizeKanbanBoardTaskContent(
 	} else {
 		next.hasBlocker = undefined;
 	}
+	if (next.assigneeHandoffPending === true) {
+		next.assigneeHandoffPending = true;
+	} else {
+		next.assigneeHandoffPending = undefined;
+	}
+	if (typeof next.assigneeHandoffFrom === "string") {
+		const from = next.assigneeHandoffFrom.trim().slice(0, 255);
+		next.assigneeHandoffFrom = from || undefined;
+	} else {
+		next.assigneeHandoffFrom = undefined;
+	}
 	if (typeof next.currentAssignee === "string") {
 		const trimmed = next.currentAssignee.trim();
 		next.currentAssignee = trimmed || undefined;
@@ -537,6 +548,64 @@ export function normalizeKanbanBoardTaskContent(
 		next.estimatePd = roleTotal;
 	}
 	return next;
+}
+
+type AssigneeHandoffFields = Pick<
+	KanbanBoardTaskContent,
+	"currentAssignee" | "assigneeHandoffPending" | "assigneeHandoffFrom"
+>;
+
+/**
+ * Ставит «Передано», когда сменился текущий исполнитель.
+ * Снимает, если новый исполнитель взял задачу (`pickup`) или исполнителя убрали.
+ */
+export function applyKanbanBoardAssigneeHandoff(
+	previous: AssigneeHandoffFields,
+	next: KanbanBoardTaskContent,
+	options?: { pickup?: boolean },
+): KanbanBoardTaskContent {
+	const prevAssignee = previous.currentAssignee?.trim() || "";
+	const nextAssignee = next.currentAssignee?.trim() || "";
+	const wasPending = previous.assigneeHandoffPending === true;
+	const prevFrom = previous.assigneeHandoffFrom?.trim() || undefined;
+
+	if (nextAssignee && nextAssignee !== prevAssignee) {
+		return {
+			...next,
+			assigneeHandoffPending: true,
+			assigneeHandoffFrom: prevAssignee || undefined,
+		};
+	}
+
+	if (!nextAssignee) {
+		return {
+			...next,
+			assigneeHandoffPending: undefined,
+			assigneeHandoffFrom: undefined,
+		};
+	}
+
+	if (options?.pickup) {
+		return {
+			...next,
+			assigneeHandoffPending: undefined,
+			assigneeHandoffFrom: undefined,
+		};
+	}
+
+	if (wasPending) {
+		return {
+			...next,
+			assigneeHandoffPending: true,
+			assigneeHandoffFrom: prevFrom,
+		};
+	}
+
+	return {
+		...next,
+		assigneeHandoffPending: undefined,
+		assigneeHandoffFrom: undefined,
+	};
 }
 
 export function boardsEquivalent(

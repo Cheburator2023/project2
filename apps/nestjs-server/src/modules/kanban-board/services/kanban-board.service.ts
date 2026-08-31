@@ -5,6 +5,7 @@ import * as ExcelJS from "exceljs";
 import { DataSource, IsNull, Not, Repository } from "typeorm";
 import type { KanbanBoardTaskRecord } from "@smart-anketa/api-contract";
 import {
+	applyKanbanBoardAssigneeHandoff,
 	formatKanbanTaskKey,
 	normalizeKanbanBoardTaskContent,
 } from "@smart-anketa/api-contract";
@@ -206,17 +207,22 @@ export class KanbanBoardService {
 			for (const task of prepared) {
 				const prev = existingById.get(task.id);
 				if (prev?.content) {
-					task.content = normalizeKanbanBoardTaskContent({
-						...prev.content,
-						...task.content,
-						...(task.content.images !== undefined
-							? { images: task.content.images }
-							: { images: prev.content.images }),
-						...(task.content.currentAssignee === "" ||
-						task.content.currentAssignee === null
-							? { currentAssignee: undefined }
-							: {}),
-					});
+					const pickup = task.content.assigneeHandoffPending === false;
+					task.content = applyKanbanBoardAssigneeHandoff(
+						prev.content,
+						normalizeKanbanBoardTaskContent({
+							...prev.content,
+							...task.content,
+							...(task.content.images !== undefined
+								? { images: task.content.images }
+								: { images: prev.content.images }),
+							...(task.content.currentAssignee === "" ||
+							task.content.currentAssignee === null
+								? { currentAssignee: undefined }
+								: {}),
+						}),
+						{ pickup },
+					);
 				}
 				const entity = this.fromRecord(task);
 				entity.deletedAt = null;
