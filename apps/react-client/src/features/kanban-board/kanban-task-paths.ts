@@ -4,9 +4,38 @@ import type {
 } from "@smart-anketa/api-contract";
 import { normalizeTrackerCode } from "@smart-anketa/api-contract";
 
-export function trackerBoardPath(board: Pick<KanbanBoardBoardDto, "boardKey"> | string) {
+export function trackerBoardPath(
+	board: Pick<KanbanBoardBoardDto, "boardKey"> | string,
+) {
 	const key = typeof board === "string" ? board : board.boardKey;
 	return `/tracker/board/${encodeURIComponent(key)}`;
+}
+
+/** Query доски, чтобы вернуться с тем же видом фильтров. */
+export type KanbanBoardReturnLocationState = {
+	boardSearch?: string;
+};
+
+export function withQueryString(path: string, search?: string | null): string {
+	const query = (search ?? "").replace(/^\?/, "").trim();
+	if (!query) return path;
+	return path.includes("?") ? `${path}&${query}` : `${path}?${query}`;
+}
+
+export function readKanbanBoardReturnSearch(state: unknown): string {
+	if (!state || typeof state !== "object") return "";
+	const value = (state as KanbanBoardReturnLocationState).boardSearch;
+	return typeof value === "string" ? value.replace(/^\?/, "") : "";
+}
+
+export function trackerBoardPathFromReturnState(
+	board: Pick<KanbanBoardBoardDto, "boardKey"> | string,
+	state: unknown,
+): string {
+	return withQueryString(
+		trackerBoardPath(board),
+		readKanbanBoardReturnSearch(state),
+	);
 }
 
 export function trackerBoardHistoryPath(boardKey?: string) {
@@ -39,7 +68,9 @@ export function isTrackerTaskCreateRoute(taskKey: string | undefined) {
 }
 
 /** @deprecated используйте trackerBoardPath */
-export function kanbanBoardPath(board: Pick<KanbanBoardBoardDto, "boardKey"> | string) {
+export function kanbanBoardPath(
+	board: Pick<KanbanBoardBoardDto, "boardKey"> | string,
+) {
 	return trackerBoardPath(board);
 }
 

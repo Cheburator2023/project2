@@ -45,7 +45,12 @@ import {
 } from "@smart-anketa/api-contract";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router";
+import {
+	useLocation,
+	useNavigate,
+	useParams,
+	useSearchParams,
+} from "react-router";
 import { FuzzyAutocomplete } from "@react-client/common/muiCustom/FuzzyAutocomplete";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
@@ -90,7 +95,7 @@ import {
 } from "@react-client/features/kanban-board/components/KanbanTaskPageCards";
 import {
 	isKanbanTaskCreateRoute,
-	trackerBoardPath,
+	trackerBoardPathFromReturnState,
 	trackerTaskPath,
 } from "@react-client/features/kanban-board/kanban-task-paths";
 import { normalizeTrackerCode } from "@smart-anketa/api-contract";
@@ -201,6 +206,7 @@ function parseColumnParam(
 
 export function KanbanTaskPage({ mode }: Props = {}) {
 	const navigate = useNavigate();
+	const location = useLocation();
 	const queryClient = useQueryClient();
 	const [searchParams] = useSearchParams();
 	const { boardKey: boardKeyParam = "", taskKey = "" } = useParams<{
@@ -363,7 +369,10 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 				color: kanbanBoardStandColor(option.id),
 			}),
 		);
-		if (stands.includes("dev") && !options.some((item) => item.value === "dev")) {
+		if (
+			stands.includes("dev") &&
+			!options.some((item) => item.value === "dev")
+		) {
 			options.unshift({
 				value: "dev",
 				label: "Dev",
@@ -516,9 +525,9 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 
 	const leaveTaskPath = useMemo(() => {
 		const key = boardApiRef?.trim();
-		if (key) return trackerBoardPath(key);
+		if (key) return trackerBoardPathFromReturnState(key, location.state);
 		return "/tracker";
-	}, [boardApiRef]);
+	}, [boardApiRef, location.state]);
 
 	const handleIdleTimeout = useCallback(() => {
 		navigate(leaveTaskPath, { replace: true });
@@ -537,8 +546,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 		baselineUpdatedAt: task?.updatedAt,
 		isLocalBusy: useCallback(
 			() =>
-				saveStatusRef.current === "dirty" ||
-				saveStatusRef.current === "saving",
+				saveStatusRef.current === "dirty" || saveStatusRef.current === "saving",
 			[],
 		),
 		onRemoteStale: useCallback(() => setRemoteStale(true), []),
@@ -880,15 +888,16 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 						? "Ошибка сохранения"
 						: null;
 
-	const pageStatus = !isCreate && !taskKey
-		? ("missing-key" as const)
-		: isPageLoading
-			? ("loading" as const)
-			: !isCreate && taskByRefQuery.isError
-				? ("load-error" as const)
-				: !isCreate && taskByRefQuery.isSuccess && !task
-					? ("not-found" as const)
-					: null;
+	const pageStatus =
+		!isCreate && !taskKey
+			? ("missing-key" as const)
+			: isPageLoading
+				? ("loading" as const)
+				: !isCreate && taskByRefQuery.isError
+					? ("load-error" as const)
+					: !isCreate && taskByRefQuery.isSuccess && !task
+						? ("not-found" as const)
+						: null;
 
 	return (
 		<Flex
@@ -912,11 +921,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 					<Chip
 						size="small"
 						label={
-							isCreate
-								? "Создание"
-								: isPageLoading
-									? "Загрузка…"
-									: statusTitle
+							isCreate ? "Создание" : isPageLoading ? "Загрузка…" : statusTitle
 						}
 						sx={{
 							bgcolor: alpha(columnColor, 0.14),
@@ -994,11 +999,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 				{pageStatus === "loading" ? (
 					<KanbanPageStatus
 						loading
-						title={
-							isTaskLoading
-								? `Загрузка задачи ${taskKey}…`
-								: "Загрузка…"
-						}
+						title={isTaskLoading ? `Загрузка задачи ${taskKey}…` : "Загрузка…"}
 						description={
 							isTaskLoading
 								? "Подтягиваем карточку и связанные данные"
@@ -1226,9 +1227,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 											options={columnOptions}
 											onChange={setParentId}
 											disabled={
-												formLocked ||
-												columnsQuery.isLoading ||
-												!columns.length
+												formLocked || columnsQuery.isLoading || !columns.length
 											}
 											fullWidth
 										/>
@@ -1294,9 +1293,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 										value={currentAssignee}
 										options={currentAssigneeOptions}
 										onChange={setCurrentAssignee}
-										disabled={
-											formLocked || !currentAssigneeOptions.length
-										}
+										disabled={formLocked || !currentAssigneeOptions.length}
 										fullWidth
 									/>
 								</Box>
@@ -1570,11 +1567,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 				) : null}
 			</Flex>
 			<TrackerIdentityRequiredDialog
-				open={
-					isCreate &&
-					!settingsQuery.isLoading &&
-					!editLabel.trim()
-				}
+				open={isCreate && !settingsQuery.isLoading && !editLabel.trim()}
 				onCancel={() => navigate(leaveTaskPath)}
 				onSaved={() => undefined}
 			/>

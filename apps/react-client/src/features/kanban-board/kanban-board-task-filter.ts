@@ -1,5 +1,7 @@
 import {
 	formatKanbanTaskKey,
+	KANBAN_BOARD_PRIORITIES,
+	KANBAN_BOARD_TASK_TYPES,
 	kanbanBoardTaskAssignees,
 	kanbanBoardTaskSystems,
 	kanbanBoardTaskSystemsTitle,
@@ -49,10 +51,103 @@ export const EMPTY_KANBAN_BOARD_TASK_FILTERS: KanbanBoardTaskFilters = {
 	createdTo: "",
 };
 
+/** Query-ключи вида доски: фильтры + быстрый поиск. */
+export const KANBAN_BOARD_VIEW_QUERY = {
+	q: "q",
+	assignee: "assignee",
+	createdBy: "createdBy",
+	priority: "priority",
+	taskType: "type",
+	dueFrom: "dueFrom",
+	dueTo: "dueTo",
+	createdFrom: "createdFrom",
+	createdTo: "createdTo",
+} as const;
+
+const PRIORITY_IDS = new Set<string>(
+	KANBAN_BOARD_PRIORITIES.map((item) => item.id),
+);
+const TASK_TYPE_IDS = new Set<string>(
+	KANBAN_BOARD_TASK_TYPES.map((item) => item.id),
+);
+
+const readParam = (params: URLSearchParams, key: string): string =>
+	params.get(key)?.trim() ?? "";
+
+const readDateParam = (params: URLSearchParams, key: string): string => {
+	const value = readParam(params, key);
+	return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : "";
+};
+
+export function parseKanbanBoardSearchQuery(params: URLSearchParams): string {
+	return params.get(KANBAN_BOARD_VIEW_QUERY.q)?.trim() ?? "";
+}
+
+export function parseKanbanBoardTaskFiltersFromSearchParams(
+	params: URLSearchParams,
+): KanbanBoardTaskFilters {
+	const priority = readParam(params, KANBAN_BOARD_VIEW_QUERY.priority);
+	const taskType = readParam(params, KANBAN_BOARD_VIEW_QUERY.taskType);
+	return {
+		assignee: readParam(params, KANBAN_BOARD_VIEW_QUERY.assignee),
+		createdBy: readParam(params, KANBAN_BOARD_VIEW_QUERY.createdBy),
+		priority: PRIORITY_IDS.has(priority)
+			? (priority as KanbanBoardPriorityId)
+			: "",
+		taskType: TASK_TYPE_IDS.has(taskType)
+			? (taskType as KanbanBoardTaskTypeId)
+			: "",
+		dueFrom: readDateParam(params, KANBAN_BOARD_VIEW_QUERY.dueFrom),
+		dueTo: readDateParam(params, KANBAN_BOARD_VIEW_QUERY.dueTo),
+		createdFrom: readDateParam(params, KANBAN_BOARD_VIEW_QUERY.createdFrom),
+		createdTo: readDateParam(params, KANBAN_BOARD_VIEW_QUERY.createdTo),
+	};
+}
+
+function setOrDelete(params: URLSearchParams, key: string, value: string) {
+	const trimmed = value.trim();
+	if (trimmed) params.set(key, trimmed);
+	else params.delete(key);
+}
+
+/** Пишет вид доски в query, чужие параметры не трогает. */
+export function applyKanbanBoardViewToSearchParams(
+	current: URLSearchParams,
+	view: { filters: KanbanBoardTaskFilters; query: string },
+): URLSearchParams {
+	const next = new URLSearchParams(current);
+	setOrDelete(next, KANBAN_BOARD_VIEW_QUERY.q, view.query);
+	setOrDelete(next, KANBAN_BOARD_VIEW_QUERY.assignee, view.filters.assignee);
+	setOrDelete(next, KANBAN_BOARD_VIEW_QUERY.createdBy, view.filters.createdBy);
+	setOrDelete(next, KANBAN_BOARD_VIEW_QUERY.priority, view.filters.priority);
+	setOrDelete(next, KANBAN_BOARD_VIEW_QUERY.taskType, view.filters.taskType);
+	setOrDelete(next, KANBAN_BOARD_VIEW_QUERY.dueFrom, view.filters.dueFrom);
+	setOrDelete(next, KANBAN_BOARD_VIEW_QUERY.dueTo, view.filters.dueTo);
+	setOrDelete(
+		next,
+		KANBAN_BOARD_VIEW_QUERY.createdFrom,
+		view.filters.createdFrom,
+	);
+	setOrDelete(next, KANBAN_BOARD_VIEW_QUERY.createdTo, view.filters.createdTo);
+	return next;
+}
+
+export function kanbanBoardViewSearchString(view: {
+	filters: KanbanBoardTaskFilters;
+	query: string;
+}): string {
+	return applyKanbanBoardViewToSearchParams(
+		new URLSearchParams(),
+		view,
+	).toString();
+}
+
 export function kanbanBoardTaskFiltersActive(
 	filters: KanbanBoardTaskFilters,
 ): boolean {
-	return Object.values(filters).some((value) => Boolean(value?.trim?.() ?? value));
+	return Object.values(filters).some((value) =>
+		Boolean(value?.trim?.() ?? value),
+	);
 }
 
 const dateOnly = (value: string | undefined | null): string => {

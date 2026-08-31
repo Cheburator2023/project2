@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { KanbanBoardData, KanbanBoardItem } from "@smart-anketa/api-contract";
+import type {
+	KanbanBoardData,
+	KanbanBoardItem,
+} from "@smart-anketa/api-contract";
 import {
 	EMPTY_KANBAN_BOARD_TASK_FILTERS,
 	countKanbanBoardCards,
@@ -7,6 +10,9 @@ import {
 	kanbanBoardTaskFiltersActive,
 	kanbanBoardTaskMatchesFilters,
 	kanbanBoardTaskMatchesSearch,
+	applyKanbanBoardViewToSearchParams,
+	parseKanbanBoardSearchQuery,
+	parseKanbanBoardTaskFiltersFromSearchParams,
 } from "./kanban-board-task-filter";
 
 const card = (
@@ -110,8 +116,16 @@ describe("kanban-board-task-filter", () => {
 				children: ["a", "b"],
 				totalChildrenCount: 2,
 			},
-			a: card({ id: "a", title: "Alpha", content: { title: "Alpha", priority: "high" } }),
-			b: card({ id: "b", title: "Beta", content: { title: "Beta", priority: "low" } }),
+			a: card({
+				id: "a",
+				title: "Alpha",
+				content: { title: "Alpha", priority: "high" },
+			}),
+			b: card({
+				id: "b",
+				title: "Beta",
+				content: { title: "Beta", priority: "low" },
+			}),
 		};
 		const filtered = filterKanbanBoardData(board, (item) =>
 			kanbanBoardTaskMatchesFilters(item, {
@@ -130,5 +144,36 @@ describe("kanban-board-task-filter", () => {
 				priority: "high",
 			}),
 		).toBe(true);
+	});
+
+	it("round-trips board filters and search through URL params", () => {
+		const filters = {
+			...EMPTY_KANBAN_BOARD_TASK_FILTERS,
+			assignee: "Петров",
+			priority: "high" as const,
+			dueFrom: "2026-08-01",
+		};
+		const query = applyKanbanBoardViewToSearchParams(new URLSearchParams(), {
+			filters,
+			query: "интеграция",
+		});
+		expect(query.get("q")).toBe("интеграция");
+		expect(query.get("assignee")).toBe("Петров");
+		expect(query.get("priority")).toBe("high");
+		expect(query.get("dueFrom")).toBe("2026-08-01");
+		expect(query.get("type")).toBeNull();
+		expect(parseKanbanBoardSearchQuery(query)).toBe("интеграция");
+		expect(parseKanbanBoardTaskFiltersFromSearchParams(query)).toEqual(filters);
+	});
+
+	it("ignores unknown priority and invalid dates in URL", () => {
+		const params = new URLSearchParams(
+			"priority=urgent&type=story&dueFrom=10.08.2026&createdBy=Иванов",
+		);
+		expect(parseKanbanBoardTaskFiltersFromSearchParams(params)).toEqual({
+			...EMPTY_KANBAN_BOARD_TASK_FILTERS,
+			createdBy: "Иванов",
+			taskType: "story",
+		});
 	});
 });

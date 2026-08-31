@@ -55,7 +55,7 @@ import {
 	useState,
 	type MouseEvent,
 } from "react";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate, useParams, useSearchParams } from "react-router";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
@@ -90,15 +90,18 @@ import { useKanbanBoardPageScroll } from "@react-client/features/kanban-board/us
 import {
 	kanbanTaskEditPath,
 	trackerBoardHistoryPath,
+	type KanbanBoardReturnLocationState,
 } from "@react-client/features/kanban-board/kanban-task-paths";
 import { useCreateAndOpenKanbanTask } from "@react-client/features/kanban-board/useCreateAndOpenKanbanTask";
 import {
-	EMPTY_KANBAN_BOARD_TASK_FILTERS,
 	countKanbanBoardCards,
 	filterKanbanBoardData,
 	kanbanBoardTaskFiltersActive,
 	kanbanBoardTaskMatchesFilters,
 	kanbanBoardTaskMatchesSearch,
+	applyKanbanBoardViewToSearchParams,
+	parseKanbanBoardSearchQuery,
+	parseKanbanBoardTaskFiltersFromSearchParams,
 	type KanbanBoardTaskFilters,
 } from "@react-client/features/kanban-board/kanban-board-task-filter";
 import { TrackerTaskConflictDialog } from "@react-client/features/tracker/components/TrackerTaskConflictDialog";
@@ -146,22 +149,57 @@ function ensureCancelledColumnOnBoard(
 export function KanbanBoardPage() {
 	const { boardKey = "" } = useParams<{ boardKey: string }>();
 	const navigate = useNavigate();
+	const [searchParams, setSearchParams] = useSearchParams();
 	const queryClient = useQueryClient();
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const [board, setBoard] = useState<KanbanBoardData | null>(null);
 	const [importError, setImportError] = useState<string | null>(null);
 	const [editBlocked, setEditBlocked] =
 		useState<KanbanBoardTaskEditBlockedErrorDto | null>(null);
-	const [pendingBoard, setPendingBoard] = useState<KanbanBoardData | null>(null);
+	const [pendingBoard, setPendingBoard] = useState<KanbanBoardData | null>(
+		null,
+	);
 	const [remoteStale, setRemoteStale] = useState(false);
 	const [openingTaskLabel, setOpeningTaskLabel] = useState<string | null>(null);
-	const [searchQuery, setSearchQuery] = useState("");
-	const [filtersOpen, setFiltersOpen] = useState(false);
-	const [filters, setFilters] = useState<KanbanBoardTaskFilters>(
-		EMPTY_KANBAN_BOARD_TASK_FILTERS,
+	const searchQuery = parseKanbanBoardSearchQuery(searchParams);
+	const filters = useMemo(
+		() => parseKanbanBoardTaskFiltersFromSearchParams(searchParams),
+		[searchParams],
+	);
+	const [filtersOpen, setFiltersOpen] = useState(() =>
+		kanbanBoardTaskFiltersActive(
+			parseKanbanBoardTaskFiltersFromSearchParams(searchParams),
+		),
 	);
 	const debouncedSearch = useDebouncedValue(searchQuery, SEARCH_DEBOUNCE_MS);
 	const editLabel = useTrackerEditIdentity();
+	const boardSearch = searchParams.toString();
+	const boardReturnState = useMemo<KanbanBoardReturnLocationState>(
+		() => ({ boardSearch }),
+		[boardSearch],
+	);
+	const setBoardView = useCallback(
+		(next: { filters?: KanbanBoardTaskFilters; query?: string }) => {
+			setSearchParams(
+				(prev) =>
+					applyKanbanBoardViewToSearchParams(prev, {
+						filters:
+							next.filters ?? parseKanbanBoardTaskFiltersFromSearchParams(prev),
+						query: next.query ?? parseKanbanBoardSearchQuery(prev),
+					}),
+				{ replace: true },
+			);
+		},
+		[setSearchParams],
+	);
+	const setSearchQuery = useCallback(
+		(query: string) => setBoardView({ query }),
+		[setBoardView],
+	);
+	const setFilters = useCallback(
+		(next: KanbanBoardTaskFilters) => setBoardView({ filters: next }),
+		[setBoardView],
+	);
 	const [boardContextMenu, setBoardContextMenu] = useState<{
 		mouseX: number;
 		mouseY: number;
@@ -178,8 +216,7 @@ export function KanbanBoardPage() {
 	const assigneesQuery = useKanbanBoardAssignees();
 	const boardMeta = boardsQuery.data?.find(
 		(item) =>
-			item.boardKey === normalizeTrackerCode(boardKey) ||
-			item.id === boardKey,
+			item.boardKey === normalizeTrackerCode(boardKey) || item.id === boardKey,
 	);
 	const boardApiRef = boardMeta?.boardKey ?? normalizeTrackerCode(boardKey);
 	const { setScroller, persistScroll } = useKanbanBoardPageScroll(
@@ -191,19 +228,19 @@ export function KanbanBoardPage() {
 	const updateColumn = useUpdateKanbanBoardColumn();
 	const deleteColumn = useDeleteKanbanBoardColumn();
 	const trashColumnTasks = useTrashKanbanBoardColumnTasks();
-	const [trashColumnConfirmId, setTrashColumnConfirmId] = useState<string | null>(
-		null,
-	);
+	const [trashColumnConfirmId, setTrashColumnConfirmId] = useState<
+		string | null
+	>(null);
 
 	const tasksQuery = useQuery({
 		queryKey: ["kanbanBoardTasks", boardApiRef],
 		enabled: Boolean(boardApiRef),
-		queryFn: async ({ signal }) => kanbanBoardGetBoardTasks(boardApiRef, signal),
+		queryFn: async ({ signal }) =>
+			kanbanBoardGetBoardTasks(boardApiRef, signal),
 		refetchOnMount: "always",
 	});
 
-	const resolvedBoardId =
-		boardMeta?.id ?? tasksQuery.data?.[0]?.boardId ?? "";
+	const resolvedBoardId = boardMeta?.id ?? tasksQuery.data?.[0]?.boardId ?? "";
 
 	const standId = configQuery.data?.standId;
 	const isReady =
@@ -271,15 +308,12 @@ export function KanbanBoardPage() {
 				throw new Error("Не загружен standId трекера");
 			}
 			const now = new Date().toISOString();
-			const rows = fromBoardData(
-				nextBoard,
-				standId,
-				now,
-				resolvedBoardId,
-			).map((task) => ({
-				...task,
-				origin: standId,
-			}));
+			const rows = fromBoardData(nextBoard, standId, now, resolvedBoardId).map(
+				(task) => ({
+					...task,
+					origin: standId,
+				}),
+			);
 			return kanbanBoardSaveBoardTasks(boardApiRef, {
 				tasks: rows,
 				expectedUpdatedAtByTaskId:
@@ -326,10 +360,7 @@ export function KanbanBoardPage() {
 		mutationFn: () => kanbanBoardExportBoardSnapshot(boardApiRef),
 		onSuccess: (blob) => {
 			const date = new Date().toISOString().slice(0, 10);
-			downloadBlob(
-				blob,
-				`kanban-board-${boardApiRef}-${standId}-${date}.xlsx`,
-			);
+			downloadBlob(blob, `kanban-board-${boardApiRef}-${standId}-${date}.xlsx`);
 		},
 	});
 
@@ -413,6 +444,7 @@ export function KanbanBoardPage() {
 				const created = await createAndOpen({
 					boardId: resolvedBoardId,
 					parentId: columnId,
+					returnState: boardReturnState,
 				});
 				setOpeningTaskLabel(created.taskKey);
 			} catch (error) {
@@ -420,7 +452,14 @@ export function KanbanBoardPage() {
 				toast.error(apiErrorMessage(error));
 			}
 		},
-		[boardApiRef, createAndOpen, defaultColumnId, persistScroll, resolvedBoardId],
+		[
+			boardApiRef,
+			boardReturnState,
+			createAndOpen,
+			defaultColumnId,
+			persistScroll,
+			resolvedBoardId,
+		],
 	);
 
 	const handleRenameColumn = useCallback(
@@ -478,13 +517,7 @@ export function KanbanBoardPage() {
 			}
 			return kanbanBoardTaskMatchesFilters(item, filters);
 		});
-	}, [
-		board,
-		boardMeta?.projectCode,
-		debouncedSearch,
-		filters,
-		viewFiltered,
-	]);
+	}, [board, boardMeta?.projectCode, debouncedSearch, filters, viewFiltered]);
 
 	const totalCardCount = useMemo(
 		() => (board ? countKanbanBoardCards(board) : 0),
@@ -573,10 +606,16 @@ export function KanbanBoardPage() {
 				const taskRef = formatKanbanTaskKey(projectCode, task.taskNumber);
 				persistScroll();
 				setOpeningTaskLabel(taskRef);
-				navigate(kanbanTaskEditPath(taskRef));
+				navigate(kanbanTaskEditPath(taskRef), { state: boardReturnState });
 			}
 		},
-		[boardMeta?.projectCode, navigate, persistScroll, tasksQuery.data],
+		[
+			boardMeta?.projectCode,
+			boardReturnState,
+			navigate,
+			persistScroll,
+			tasksQuery.data,
+		],
 	);
 
 	const handleTaskContentUpdated = useCallback(
@@ -644,13 +683,7 @@ export function KanbanBoardPage() {
 		const moved = moveKanbanBoardCardToColumn(nextBoard, cardId, columnId);
 		if (!moved) return;
 		persistBoard(moved);
-	}, [
-		board,
-		cardContextMenu,
-		columnsQuery.data,
-		isSavingBoard,
-		persistBoard,
-	]);
+	}, [board, cardContextMenu, columnsQuery.data, isSavingBoard, persistBoard]);
 
 	if (boardsQuery.isLoading) {
 		return <Alert severity="info">Загрузка доски…</Alert>;
@@ -694,7 +727,11 @@ export function KanbanBoardPage() {
 						placeholder="Быстрый поиск…"
 						value={searchQuery}
 						onChange={(event) => setSearchQuery(event.target.value)}
-						sx={{ width: { xs: "100%", sm: 260 }, maxWidth: 360, flexShrink: 0 }}
+						sx={{
+							width: { xs: "100%", sm: 260 },
+							maxWidth: 360,
+							flexShrink: 0,
+						}}
 						InputProps={{
 							startAdornment: (
 								<InputAdornment position="start">
@@ -996,7 +1033,10 @@ export function KanbanBoardPage() {
 									if (isSavingBoard || !standId || viewFiltered) return;
 									const prevBoard = board as KanbanBoardData;
 									const movedBoard = normalizeKanbanBoardData(
-										dropHandler(move, prevBoard as BoardData) as KanbanBoardData,
+										dropHandler(
+											move,
+											prevBoard as BoardData,
+										) as KanbanBoardData,
 									);
 									persistBoard(movedBoard);
 								}}
