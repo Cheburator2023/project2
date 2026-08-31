@@ -12,6 +12,7 @@ import { alpha } from "@mui/material/styles";
 import {
 	kanbanBoardColumnCanTrashTasks,
 	KANBAN_BOARD_BLOCKER_COLOR,
+	KANBAN_BOARD_COLUMN_TITLE_MAX_LENGTH,
 } from "@smart-anketa/api-contract";
 import type { BoardItem } from "react-kanban-kit";
 import { useEffect, useState } from "react";
@@ -78,7 +79,9 @@ export function KanbanColumnHeader({
 	}, [column.title, editing]);
 
 	const commitRename = () => {
-		const nextTitle = title.trim();
+		const nextTitle = title
+			.trim()
+			.slice(0, KANBAN_BOARD_COLUMN_TITLE_MAX_LENGTH);
 		setEditing(false);
 		if (!nextTitle || nextTitle === column.title) {
 			setTitle(column.title);
@@ -107,6 +110,10 @@ export function KanbanColumnHeader({
 						disabled={disabled}
 						onChange={(event) => setTitle(event.target.value)}
 						onBlur={commitRename}
+						inputProps={{
+							maxLength: KANBAN_BOARD_COLUMN_TITLE_MAX_LENGTH,
+							title: `Название колонки: до ${KANBAN_BOARD_COLUMN_TITLE_MAX_LENGTH} символов`,
+						}}
 						onKeyDown={(event) => {
 							if (event.key === "Enter") {
 								event.preventDefault();
@@ -219,7 +226,9 @@ export function KanbanColumnAdder({
 	const [title, setTitle] = useState("");
 
 	const commitAdd = () => {
-		const nextTitle = title.trim();
+		const nextTitle = title
+			.trim()
+			.slice(0, KANBAN_BOARD_COLUMN_TITLE_MAX_LENGTH);
 		if (!nextTitle) {
 			setEditing(false);
 			setTitle("");
@@ -254,6 +263,10 @@ export function KanbanColumnAdder({
 						disabled={disabled || isPending}
 						onChange={(event) => setTitle(event.target.value)}
 						onBlur={commitAdd}
+						inputProps={{
+							maxLength: KANBAN_BOARD_COLUMN_TITLE_MAX_LENGTH,
+							title: `Название колонки: до ${KANBAN_BOARD_COLUMN_TITLE_MAX_LENGTH} символов`,
+						}}
 						onKeyDown={(event) => {
 							if (event.key === "Enter") {
 								event.preventDefault();

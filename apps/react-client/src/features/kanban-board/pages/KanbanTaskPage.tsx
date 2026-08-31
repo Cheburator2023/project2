@@ -22,6 +22,8 @@ import {
 	KANBAN_BOARD_HEAP_BOARD_ID,
 	KANBAN_BOARD_STANDS,
 	KANBAN_BOARD_SYSTEMS,
+	KANBAN_BOARD_TASK_DESCRIPTION_MAX_LENGTH,
+	KANBAN_BOARD_TASK_TITLE_MAX_LENGTH,
 	KANBAN_BOARD_TASK_TYPES,
 	KANBAN_BOARD_WORK_TYPES,
 	kanbanBoardPriorityColor,
@@ -33,6 +35,8 @@ import {
 	kanbanBoardTaskTypeColor,
 	kanbanBoardWorkTypeColor,
 	kanbanBoardTaskReleaseLabel,
+	kanbanBoardTaskContentLengthErrorMessage,
+	kanbanBoardTextLengthHint,
 	normalizeKanbanBoardTaskContent,
 	normalizeKanbanBoardSubtasks,
 	kanbanBoardRoleEstimatesTotal,
@@ -100,6 +104,7 @@ import {
 } from "@react-client/features/kanban-board/kanban-task-paths";
 import { normalizeTrackerCode } from "@smart-anketa/api-contract";
 import { TrackerMarkdownEditor } from "@react-client/features/kanban-board/components/TrackerMarkdownEditor";
+import { KanbanFieldLengthHint } from "@react-client/features/kanban-board/components/KanbanFieldLengthHint";
 import { TrackerIdentityRequiredDialog } from "@react-client/features/tracker/components/TrackerIdentityRequiredDialog";
 import { TrackerTaskConflictDialog } from "@react-client/features/tracker/components/TrackerTaskConflictDialog";
 import { useKanbanTaskEditLock } from "@react-client/features/tracker/hooks/useKanbanTaskEditLock";
@@ -730,6 +735,10 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	const handleSave = async (forceOverwrite?: boolean) => {
 		const content = buildContent();
 		if (!content || !effectiveBoardId) return;
+		if (kanbanBoardTaskContentLengthErrorMessage(content)) {
+			if (!isCreate) setSaveStatus("error");
+			return;
+		}
 
 		if (isCreate) {
 			const created = await createTask.mutateAsync({
@@ -830,6 +839,21 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 			return;
 		}
 
+		if (
+			kanbanBoardTaskContentLengthErrorMessage({
+				title,
+				description,
+				subtasks,
+			})
+		) {
+			if (autosaveTimerRef.current != null) {
+				window.clearTimeout(autosaveTimerRef.current);
+				autosaveTimerRef.current = null;
+			}
+			setSaveStatus("error");
+			return;
+		}
+
 		setSaveStatus("dirty");
 		if (autosaveTimerRef.current != null) {
 			window.clearTimeout(autosaveTimerRef.current);
@@ -852,8 +876,10 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 		isCreate,
 		isLockedByOther,
 		remoteStale,
+		subtasks,
 		task,
 		title,
+		description,
 	]);
 
 	const formLocked = isLockedByOther || createTask.isPending;
@@ -871,14 +897,29 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	const boardSubtitle = boardMeta
 		? `${boardMeta.boardKey} · ${"name" in boardMeta ? boardMeta.name : boardMeta.boardName}`
 		: boardKey || "Новая задача";
+	const contentLengthError = useMemo(
+		() =>
+			kanbanBoardTaskContentLengthErrorMessage({
+				title,
+				description,
+				subtasks,
+			}),
+		[description, subtasks, title],
+	);
+	const titleHint = kanbanBoardTextLengthHint(
+		title.length,
+		KANBAN_BOARD_TASK_TITLE_MAX_LENGTH,
+	);
 	const createDisabled =
 		!title.trim() ||
 		!effectiveBoardId ||
 		createTask.isPending ||
-		isLockedByOther;
+		isLockedByOther ||
+		Boolean(contentLengthError);
 
-	const saveStatusLabel =
-		saveStatus === "saving"
+	const saveStatusLabel = contentLengthError
+		? "Сохранение заблокировано: сократите текст"
+		: saveStatus === "saving"
 			? "Сохранение…"
 			: saveStatus === "saved"
 				? "Сохранено"
@@ -953,7 +994,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 							title={`Задача сейчас редактируется пользователем ${foreignLock.lockedByLabel}. Поля заблокированы.`}
 						/>
 					) : null}
-					{!isCreate && saveStatusLabel ? (
+					{!isCreate && (saveStatusLabel || contentLengthError) ? (
 						<Flex alignItems="center" gap={6}>
 							{saveStatus === "saving" ? (
 								<CircularProgress size={14} thickness={5} />
@@ -961,7 +1002,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 							<Typography
 								variant="caption"
 								color={
-									saveStatus === "error"
+									contentLengthError || saveStatus === "error"
 										? "error"
 										: saveStatus === "saved"
 											? "success.main"
@@ -979,6 +1020,13 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 							size="small"
 							onClick={() => void handleSave()}
 							disabled={createDisabled}
+							title={
+								contentLengthError
+									? contentLengthError
+									: !title.trim()
+										? "Укажите заголовок"
+										: undefined
+							}
 						>
 							Создать
 						</Button>
@@ -1036,6 +1084,12 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 						title="Задача не найдена"
 						description={`Задача ${taskKey} отсутствует или недоступна.`}
 					/>
+				) : null}
+				{showForm && contentLengthError ? (
+					<Alert severity="error" sx={{ mx: { xs: 1.5, md: 2 }, mt: 1 }}>
+						{contentLengthError}. Сохранение заблокировано, пока текст не
+						уложится в лимит.
+					</Alert>
 				) : null}
 				{showForm && (createTask.isError || updateTask.isError) ? (
 					<Alert severity="error" sx={{ mx: { xs: 1.5, md: 2 }, mt: 1 }}>
@@ -1125,7 +1179,6 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 									sx={{ mb: 2 }}
 								>
 									<TextField
-										// label="Заголовок"
 										value={title}
 										onChange={(event) => setTitle(event.target.value)}
 										required
@@ -1137,6 +1190,17 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 										}
 										placeholder="Заголовок задачи"
 										disabled={formLocked}
+										error={titleHint.over}
+										helperText={titleHint.text}
+										title={`Заголовок: до ${KANBAN_BOARD_TASK_TITLE_MAX_LENGTH} символов`}
+										inputProps={{
+											maxLength: KANBAN_BOARD_TASK_TITLE_MAX_LENGTH,
+										}}
+										FormHelperTextProps={{
+											sx: titleHint.near
+												? { color: "warning.main" }
+												: undefined,
+										}}
 										sx={{ flex: 1, minWidth: 220 }}
 									/>
 									<Box sx={{ width: { xs: "100%", sm: 200 }, flexShrink: 0 }}>
@@ -1159,22 +1223,29 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 									<Typography variant="subtitle2" fontWeight={700}>
 										Описание
 									</Typography>
-									<IconButton
-										size="small"
-										disabled={!description.trim()}
-										onClick={() => {
-											void navigator.clipboard.writeText(description);
-										}}
-										aria-label="Копировать описание"
-										title="Копировать текст"
-									>
-										<ContentCopyOutlinedIcon fontSize="small" />
-									</IconButton>
+									<Flex alignItems="center" gap={8}>
+										<KanbanFieldLengthHint
+											length={description.length}
+											max={KANBAN_BOARD_TASK_DESCRIPTION_MAX_LENGTH}
+										/>
+										<IconButton
+											size="small"
+											disabled={!description.trim()}
+											onClick={() => {
+												void navigator.clipboard.writeText(description);
+											}}
+											aria-label="Копировать описание"
+											title="Копировать текст"
+										>
+											<ContentCopyOutlinedIcon fontSize="small" />
+										</IconButton>
+									</Flex>
 								</Flex>
 								<TrackerMarkdownEditor
 									value={description}
 									onChange={setDescription}
 									disabled={formLocked}
+									maxLength={KANBAN_BOARD_TASK_DESCRIPTION_MAX_LENGTH}
 								/>
 							</KanbanTaskSectionCard>
 

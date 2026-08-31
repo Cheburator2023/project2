@@ -15,6 +15,7 @@ import { alpha } from "@mui/material/styles";
 import { useUpdateKanbanBoardTask } from "@react-client/common/api/queries/kanban-board";
 import {
 	KANBAN_BOARD_SUBTASK_STATUSES,
+	KANBAN_BOARD_SUBTASK_TEXT_MAX_LENGTH,
 	kanbanBoardSubtaskDefaultStatus,
 	kanbanBoardSubtaskIsDone,
 	kanbanBoardSubtaskStatusColor,
@@ -218,11 +219,20 @@ export function KanbanSubtasksChecklist({
 	};
 
 	const updateText = (id: string, text: string) => {
-		onChange(items.map((item) => (item.id === id ? { ...item, text } : item)));
+		onChange(
+			items.map((item) =>
+				item.id === id
+					? {
+							...item,
+							text: text.slice(0, KANBAN_BOARD_SUBTASK_TEXT_MAX_LENGTH),
+						}
+					: item,
+			),
+		);
 	};
 
 	const commitText = (id: string, text: string) => {
-		const trimmed = text.trim();
+		const trimmed = text.trim().slice(0, KANBAN_BOARD_SUBTASK_TEXT_MAX_LENGTH);
 		if (!trimmed) {
 			apply(
 				items.filter((item) => item.id !== id),
@@ -244,7 +254,7 @@ export function KanbanSubtasksChecklist({
 	};
 
 	const addItem = () => {
-		const text = draft.trim();
+		const text = draft.trim().slice(0, KANBAN_BOARD_SUBTASK_TEXT_MAX_LENGTH);
 		if (!text) return;
 		apply(
 			[
@@ -424,10 +434,11 @@ export function KanbanSubtasksChecklist({
 									multiline={!compact}
 									maxRows={compact ? 1 : 3}
 									inputProps={{
+										maxLength: KANBAN_BOARD_SUBTASK_TEXT_MAX_LENGTH,
 										title:
 											compact && item.text.trim()
 												? item.text
-												: undefined,
+												: `Подзадача: до ${KANBAN_BOARD_SUBTASK_TEXT_MAX_LENGTH} символов`,
 									}}
 									sx={{
 										flex: 1,
@@ -505,6 +516,10 @@ export function KanbanSubtasksChecklist({
 					onKeyDown={handleDraftKeyDown}
 					disabled={disabled}
 					placeholder="Новая подзадача…"
+					inputProps={{
+						maxLength: KANBAN_BOARD_SUBTASK_TEXT_MAX_LENGTH,
+						title: `Подзадача: до ${KANBAN_BOARD_SUBTASK_TEXT_MAX_LENGTH} символов`,
+					}}
 					sx={{
 						flex: 1,
 						minWidth: 0,

@@ -111,6 +111,8 @@ type Props = {
 	height?: number | string;
 	placeholder?: string;
 	disabled?: boolean;
+	/** Лимит символов (textarea + clamp при вводе). */
+	maxLength?: number;
 };
 
 const FrozenMarkdownPreview = memo(function FrozenMarkdownPreview({
@@ -192,6 +194,7 @@ export function TrackerMarkdownEditor({
 	height = "min(560px, max(360px, calc(100vh - 320px)))",
 	placeholder = "Описание задачи в Markdown…",
 	disabled = false,
+	maxLength,
 }: Props) {
 	const { mode } = useColorScheme();
 	const isDark = mode === "dark";
@@ -207,13 +210,29 @@ export function TrackerMarkdownEditor({
 		if (disabled) setPreview("preview");
 	}, [disabled]);
 
+	const commitValue = useCallback(
+		(nextValue: string) => {
+			if (disabled) return;
+			if (maxLength != null && nextValue.length > maxLength) {
+				if (value.length > maxLength) {
+					if (nextValue.length < value.length) onChange(nextValue);
+					return;
+				}
+				onChange(nextValue.slice(0, maxLength));
+				return;
+			}
+			onChange(nextValue);
+		},
+		[disabled, maxLength, onChange, value],
+	);
+
 	const commitPreview = useCallback(() => {
 		const markdownRoot =
 			previewRootRef.current?.querySelector<HTMLElement>(".wmde-markdown") ??
 			previewRootRef.current;
 		if (!markdownRoot) return;
-		onChange(htmlToMarkdown(markdownRoot));
-	}, [onChange]);
+		commitValue(htmlToMarkdown(markdownRoot));
+	}, [commitValue]);
 
 	const renderToolbar = useCallback(
 		(
@@ -460,8 +479,7 @@ export function TrackerMarkdownEditor({
 				className="tracker-md-editor"
 				value={value}
 				onChange={(nextValue = "") => {
-					if (disabled) return;
-					onChange(nextValue);
+					commitValue(nextValue);
 				}}
 				height="100%"
 				preview={preview}
@@ -476,6 +494,7 @@ export function TrackerMarkdownEditor({
 					placeholder,
 					disabled,
 					readOnly: disabled,
+					maxLength,
 					spellCheck: true,
 					// Inline fallback: часть браузеров слабо уважает word-break только из stylesheet у textarea.
 					style: {

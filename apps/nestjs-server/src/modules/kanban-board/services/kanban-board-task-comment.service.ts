@@ -4,9 +4,10 @@ import {
 	NotFoundException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import type {
-	CreateKanbanBoardTaskCommentRequestDto,
-	KanbanBoardTaskCommentDto,
+import {
+	kanbanBoardCommentLengthError,
+	type CreateKanbanBoardTaskCommentRequestDto,
+	type KanbanBoardTaskCommentDto,
 } from "@smart-anketa/api-contract";
 import { Repository } from "typeorm";
 import { ulid } from "ulid";
@@ -62,6 +63,10 @@ export class KanbanBoardTaskCommentService {
 		const authorName = dto.authorName.trim();
 		if (!body) {
 			throw new BadRequestException("Текст комментария не может быть пустым");
+		}
+		const lengthError = kanbanBoardCommentLengthError(body);
+		if (lengthError) {
+			throw new BadRequestException(lengthError);
 		}
 		if (!authorName) {
 			throw new BadRequestException("Укажите автора комментария");

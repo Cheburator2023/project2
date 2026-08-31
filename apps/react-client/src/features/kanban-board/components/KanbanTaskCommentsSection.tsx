@@ -20,6 +20,11 @@ import {
 import { FuzzyAutocomplete } from "@react-client/common/muiCustom/FuzzyAutocomplete";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
+import {
+	kanbanBoardCommentLengthError,
+	KANBAN_BOARD_TASK_COMMENT_MAX_LENGTH,
+	kanbanBoardTextLengthHint,
+} from "@smart-anketa/api-contract";
 import { getTrackerCurrentUserAssigneeName } from "@react-client/features/tracker/utils/trackerCurrentUserAssignee.storage";
 import { useEffect, useMemo, useState } from "react";
 
@@ -141,6 +146,11 @@ export function KanbanTaskCommentsSection({ taskId, disabled }: Props) {
 			setError("Введите текст комментария");
 			return;
 		}
+		const lengthError = kanbanBoardCommentLengthError(body);
+		if (lengthError) {
+			setError(lengthError);
+			return;
+		}
 		try {
 			await createComment.mutateAsync({
 				taskId,
@@ -154,6 +164,10 @@ export function KanbanTaskCommentsSection({ taskId, disabled }: Props) {
 
 	const isBusy = disabled || createComment.isPending || deleteComment.isPending;
 	const comments = commentsQuery.data ?? [];
+	const draftHint = kanbanBoardTextLengthHint(
+		draft.length,
+		KANBAN_BOARD_TASK_COMMENT_MAX_LENGTH,
+	);
 
 	return (
 		<Flex flexDirection="column" gap={12}>
@@ -268,6 +282,15 @@ export function KanbanTaskCommentsSection({ taskId, disabled }: Props) {
 					minRows={3}
 					maxRows={8}
 					placeholder="Оставить комментарий…"
+					error={draftHint.over}
+					helperText={draftHint.text}
+					title={`Комментарий: до ${KANBAN_BOARD_TASK_COMMENT_MAX_LENGTH} символов`}
+					inputProps={{
+						maxLength: KANBAN_BOARD_TASK_COMMENT_MAX_LENGTH,
+					}}
+					FormHelperTextProps={{
+						sx: draftHint.near ? { color: "warning.main" } : undefined,
+					}}
 					onKeyDown={(event) => {
 						if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
 							event.preventDefault();
@@ -283,7 +306,7 @@ export function KanbanTaskCommentsSection({ taskId, disabled }: Props) {
 						variant="contained"
 						size="small"
 						startIcon={<SendIcon />}
-						disabled={isBusy}
+						disabled={isBusy || !draft.trim() || draftHint.over}
 						onClick={() => void handleSubmit()}
 					>
 						Комментарий

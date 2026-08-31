@@ -32,6 +32,8 @@ import {
 	kanbanBoardTaskTypeTitle,
 	kanbanBoardWorkTypeTitle,
 	isKanbanBoardAssigneeRoleId,
+	kanbanBoardColumnTitleLengthError,
+	kanbanBoardTaskContentLengthErrorMessage,
 	normalizeKanbanBoardTaskContent,
 	normalizeTrackerCode,
 	formatKanbanBoardKey,
@@ -781,6 +783,10 @@ export class KanbanBoardRegistryService {
 		if (!title) {
 			throw new BadRequestException("Название колонки обязательно");
 		}
+		const columnTitleError = kanbanBoardColumnTitleLengthError(title);
+		if (columnTitleError) {
+			throw new BadRequestException(columnTitleError);
+		}
 
 		const maxSortOrder = await this.columnRepository
 			.createQueryBuilder("column")
@@ -811,6 +817,10 @@ export class KanbanBoardRegistryService {
 			const title = dto.title.trim();
 			if (!title) {
 				throw new BadRequestException("Название колонки обязательно");
+			}
+			const columnTitleError = kanbanBoardColumnTitleLengthError(title);
+			if (columnTitleError) {
+				throw new BadRequestException(columnTitleError);
 			}
 			column.title = title;
 		}
@@ -2777,6 +2787,10 @@ export class KanbanBoardRegistryService {
 	private async validateTaskContent(
 		content: KanbanBoardTaskContent,
 	): Promise<KanbanBoardTaskContent> {
+		const lengthError = kanbanBoardTaskContentLengthErrorMessage(content);
+		if (lengthError) {
+			throw new BadRequestException(lengthError);
+		}
 		if (content.sprintId) {
 			const sprint = await this.sprintRepository.findOne({
 				where: { id: content.sprintId },

@@ -26,6 +26,8 @@ import {
 	KANBAN_BOARD_PRIORITIES,
 	KANBAN_BOARD_ROLE_ESTIMATE_FIELDS,
 	KANBAN_BOARD_STATUSES,
+	KANBAN_BOARD_TASK_DESCRIPTION_MAX_LENGTH,
+	KANBAN_BOARD_TASK_TITLE_MAX_LENGTH,
 	KANBAN_BOARD_TASK_TYPES,
 	KANBAN_BOARD_WORK_TYPES,
 	kanbanBoardEffectiveEstimatePd,
@@ -109,6 +111,7 @@ export function createPlanningTaskFieldColDefs<T>(input: {
 			flex: 1.4,
 			minWidth: 180,
 			valueGetter: (params) => getTask(params.data)?.title ?? "",
+			cellEditorParams: { maxLength: KANBAN_BOARD_TASK_TITLE_MAX_LENGTH },
 		}),
 		editableCol("blocker", {
 			headerName: "Блокер",
@@ -504,7 +507,11 @@ export function createPlanningTaskFieldColDefs<T>(input: {
 			minWidth: 200,
 			flex: 1.2,
 			cellEditor: "agLargeTextCellEditor",
-			cellEditorParams: { maxLength: 20_000, rows: 12, cols: 60 },
+			cellEditorParams: {
+				maxLength: KANBAN_BOARD_TASK_DESCRIPTION_MAX_LENGTH,
+				rows: 12,
+				cols: 60,
+			},
 			valueGetter: (params) => getTask(params.data)?.content.description ?? "",
 		}),
 		{

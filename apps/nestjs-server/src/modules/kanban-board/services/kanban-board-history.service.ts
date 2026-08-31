@@ -6,6 +6,7 @@ import {
 	diffKanbanTaskChanges,
 	formatKanbanBoardKey,
 	formatKanbanTaskKey,
+	clampKanbanBoardHistoryTaskTitle,
 	KANBAN_BOARD_HISTORY_OVERVIEW_PREVIEW_LIMIT,
 	KANBAN_BOARD_TASK_HISTORY_MAX_PER_TASK,
 	kanbanBoardTaskHistorySnapshot,
@@ -56,7 +57,7 @@ export class KanbanBoardHistoryService {
 			boardId: input.boardId,
 			taskId: input.taskId,
 			taskKey: input.taskKey,
-			taskTitle: input.taskTitle,
+			taskTitle: clampKanbanBoardHistoryTaskTitle(input.taskTitle ?? ""),
 			changes: input.changes,
 			createdBy: input.createdBy ?? null,
 		});
