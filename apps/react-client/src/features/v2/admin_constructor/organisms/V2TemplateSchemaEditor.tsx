@@ -14,9 +14,7 @@ import { apiClient } from "@react-client/common/api/helpers/apiClient";
 import { toast } from "@react-client/common/toasts";
 import {
 	pathForAdminV2Template,
-	pathForAdminV2TemplateRead,
 	pathForPlaygroundV2Template,
-	pathForPlaygroundV2TemplateRead,
 } from "@react-client/routing/common/pathHelpers";
 import { Card } from "@react-client/common/muiCustom/Card";
 import { Flex } from "@react-client/common/primitives/Flex";
@@ -209,7 +207,6 @@ export type V2EditorHeaderActions = {
 	activatePending: boolean;
 	canActivateAsCurrent: boolean;
 	hasUnsavedChanges: boolean;
-	getExternalPreviewPath: () => string | null;
 	onOpenLogic: () => void;
 	/** Полный dump: schema + dictionaries + typicalWorks (для factory publish). */
 	onFullExport: () => void;
@@ -842,13 +839,6 @@ export const V2TemplateSchemaEditor = ({
 	// 	window.addEventListener("beforeunload", onBeforeUnload);
 	// 	return () => window.removeEventListener("beforeunload", onBeforeUnload);
 	// }, [hasUnsavedChanges]);
-
-	const getExternalPreviewPath = useCallback(() => {
-		if (!activeVersion?.id) return null;
-		return isAdminEditor
-			? pathForAdminV2TemplateRead(templateId, activeVersion.id)
-			: pathForPlaygroundV2TemplateRead(templateId, activeVersion.id);
-	}, [activeVersion?.id, isAdminEditor, templateId]);
 
 	const cycles = useMemo(
 		() => dependencyCycleWarnings(logic.rules),
@@ -2589,7 +2579,6 @@ export const V2TemplateSchemaEditor = ({
 				(activeVersion.status === "draft" && updateVersion.isPending),
 			canActivateAsCurrent: isAdminEditor && !isSystemCurrent,
 			hasUnsavedChanges,
-			getExternalPreviewPath,
 			onOpenLogic: openLogicWorkspace,
 			onFullExport,
 			fullExportReady:
@@ -2600,7 +2589,6 @@ export const V2TemplateSchemaEditor = ({
 		activateVersion.isPending,
 		editorSnapshot,
 		editorSnapshotLoading,
-		getExternalPreviewPath,
 		hasUnsavedChanges,
 		isAdminEditor,
 		isSystemCurrent,
