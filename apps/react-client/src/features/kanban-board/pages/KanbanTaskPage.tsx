@@ -43,7 +43,8 @@ import {
 	KANBAN_BOARD_HANDOFF_COLOR,
 	normalizeKanbanBoardTaskContent,
 	normalizeKanbanBoardSubtasks,
-	normalizeKanbanBoardRelatedTaskIds,
+	kanbanBoardRelatedLinksFromContent,
+	type KanbanBoardRelatedTaskLink,
 	kanbanBoardSubtaskOwnedImageIds,
 	kanbanBoardRoleEstimatesTotal,
 	type KanbanBoardRoleEstimates,
@@ -279,7 +280,9 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	const [streamCustomer, setStreamCustomer] = useState("");
 	const [description, setDescription] = useState("");
 	const [subtasks, setSubtasks] = useState<KanbanBoardSubtaskItem[]>([]);
-	const [relatedTaskIds, setRelatedTaskIds] = useState<string[]>([]);
+	const [relatedLinks, setRelatedLinks] = useState<
+		KanbanBoardRelatedTaskLink[]
+	>([]);
 	const [createdByName, setCreatedByName] = useState("");
 	const [pendingCreatedBy, setPendingCreatedBy] = useState<string | null>(null);
 
@@ -620,9 +623,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 		setStreamCustomer(task.content.streamCustomer ?? "");
 		setDescription(task.content.description ?? "");
 		setSubtasks(normalizeKanbanBoardSubtasks(task.content.subtasks) ?? []);
-		setRelatedTaskIds(
-			normalizeKanbanBoardRelatedTaskIds(task.content.relatedTaskIds) ?? [],
-		);
+		setRelatedLinks(kanbanBoardRelatedLinksFromContent(task.content));
 		setCreatedByName(task.createdBy ?? "");
 		expectedUpdatedAtRef.current = task.updatedAt;
 		lastSavedKeyRef.current = null;
@@ -697,7 +698,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 			sprintId: sprintId || undefined,
 			streamCustomer: streamCustomer.trim() || undefined,
 			subtasks: subtasks.length ? subtasks : undefined,
-			relatedTaskIds,
+			relatedLinks,
 			images: taskImages.length ? taskImages : undefined,
 			files: taskFiles.length ? taskFiles : undefined,
 		});
@@ -729,7 +730,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 				releaseIds,
 				streamCustomer,
 				subtasks,
-				relatedTaskIds,
+				relatedLinks,
 			}),
 		[
 			effectiveBoardId,
@@ -755,7 +756,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 			releaseIds,
 			streamCustomer,
 			subtasks,
-			relatedTaskIds,
+			relatedLinks,
 		],
 	);
 
@@ -1346,8 +1347,8 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 
 							<KanbanTaskSectionCard>
 								<KanbanRelatedTasksPanel
-									relatedTaskIds={relatedTaskIds}
-									onChange={setRelatedTaskIds}
+									relatedLinks={relatedLinks}
+									onChange={setRelatedLinks}
 									tasks={tasksRegistryQuery.data ?? []}
 									currentTaskId={taskId || undefined}
 									disabled={formLocked}

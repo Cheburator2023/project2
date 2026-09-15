@@ -24,6 +24,10 @@ import {
 	KANBAN_BOARD_RELEASES_MIN_LANE_CARDS,
 	KANBAN_BOARD_RELEASES_UNASSIGNED_LANE_TITLE,
 	KANBAN_BOARD_RELATED_TASKS_MAX,
+	KANBAN_BOARD_DEFAULT_RELATION_TYPE_ID,
+	isKanbanBoardRelationTypeId,
+	kanbanBoardRelationInverseType,
+	type KanbanBoardRelatedTaskLink,
 	KANBAN_BOARD_STANDS,
 	KANBAN_BOARD_STATUSES,
 	KANBAN_BOARD_SUBTASK_STATUSES,
@@ -834,52 +838,173 @@ export function normalizeKanbanBoardTaskContent(
 	if (roleTotal !== undefined) {
 		next.estimatePd = roleTotal;
 	}
-	next.relatedTaskIds = normalizeKanbanBoardRelatedTaskIds(next.relatedTaskIds);
+	next.relatedLinks = resolveNormalizedRelatedLinks(content, next);
+	next.relatedTaskIds = undefined;
 	return next;
+}
+
+function contentHasRelatedField(
+	content: Partial<KanbanBoardTaskContent>,
+): boolean {
+	return (
+		Object.hasOwn(content, "relatedLinks") ||
+		Object.hasOwn(content, "relatedTaskIds") ||
+		(Array.isArray(content.relatedLinks) && content.relatedLinks.length > 0) ||
+		(Array.isArray(content.relatedTaskIds) && content.relatedTaskIds.length > 0)
+	);
+}
+
+function resolveNormalizedRelatedLinks(
+	original: KanbanBoardTaskContent,
+	next: KanbanBoardTaskContent,
+): KanbanBoardRelatedTaskLink[] | undefined {
+	const links = kanbanBoardRelatedLinksFromContent(next);
+	if (links.length) return links;
+	if (contentHasRelatedField(original)) return [];
+	return undefined;
+}
+
+export function normalizeKanbanBoardRelatedLinks(
+	links: unknown,
+	options?: { excludeId?: string },
+): KanbanBoardRelatedTaskLink[] {
+	if (!Array.isArray(links)) return [];
+	const seen = new Set<string>();
+	const out: KanbanBoardRelatedTaskLink[] = [];
+	for (const raw of links) {
+		let taskId = "";
+		let type = KANBAN_BOARD_DEFAULT_RELATION_TYPE_ID;
+		if (typeof raw === "string") {
+			taskId = raw.trim();
+		} else if (raw && typeof raw === "object") {
+			const rec = raw as Record<string, unknown>;
+			if (typeof rec.taskId === "string") taskId = rec.taskId.trim();
+			else if (typeof rec.id === "string") taskId = rec.id.trim();
+			if (typeof rec.type === "string" && isKanbanBoardRelationTypeId(rec.type)) {
+				type = rec.type;
+			}
+		}
+		if (!taskId) continue;
+		if (options?.excludeId && taskId === options.excludeId) continue;
+		if (seen.has(taskId)) continue;
+		seen.add(taskId);
+		out.push({ taskId, type });
+		if (out.length >= KANBAN_BOARD_RELATED_TASKS_MAX) break;
+	}
+	return out;
+}
+
+export function kanbanBoardRelatedLinksFromContent(
+	content: Partial<KanbanBoardTaskContent> | undefined,
+	options?: { excludeId?: string },
+): KanbanBoardRelatedTaskLink[] {
+	if (!content) return [];
+	if (Array.isArray(content.relatedLinks)) {
+		return normalizeKanbanBoardRelatedLinks(content.relatedLinks, options);
+	}
+	return normalizeKanbanBoardRelatedLinks(content.relatedTaskIds, options);
 }
 
 export function normalizeKanbanBoardRelatedTaskIds(
 	ids: unknown,
 	options?: { excludeId?: string },
 ): string[] | undefined {
-	if (!Array.isArray(ids)) return undefined;
-	const seen = new Set<string>();
-	const out: string[] = [];
-	for (const raw of ids) {
-		if (typeof raw !== "string") continue;
-		const id = raw.trim();
-		if (!id) continue;
-		if (options?.excludeId && id === options.excludeId) continue;
-		if (seen.has(id)) continue;
-		seen.add(id);
-		out.push(id);
-		if (out.length >= KANBAN_BOARD_RELATED_TASKS_MAX) break;
-	}
-	return out;
+	const links = normalizeKanbanBoardRelatedLinks(ids, options);
+	return links.length ? links.map((item) => item.taskId) : undefined;
 }
 
 /** Если поле не пришло в payload — оставляем прошлые связи (persist доски не затирает). */
+export function pickKanbanBoardRelatedLinks(
+	incoming: Partial<KanbanBoardTaskContent>,
+	previous?: KanbanBoardTaskContent,
+): KanbanBoardRelatedTaskLink[] | undefined {
+	if (
+		Object.hasOwn(incoming, "relatedLinks") ||
+		Object.hasOwn(incoming, "relatedTaskIds")
+	) {
+		return kanbanBoardRelatedLinksFromContent(incoming);
+	}
+	if (previous) return kanbanBoardRelatedLinksFromContent(previous);
+	return undefined;
+}
+
+/** @deprecated используйте pickKanbanBoardRelatedLinks */
 export function pickKanbanBoardRelatedTaskIds(
 	incoming: Partial<KanbanBoardTaskContent>,
 	previous?: KanbanBoardTaskContent,
 ): string[] | undefined {
-	if (Object.hasOwn(incoming, "relatedTaskIds")) {
-		return incoming.relatedTaskIds;
-	}
-	return previous?.relatedTaskIds;
+	const links = pickKanbanBoardRelatedLinks(incoming, previous);
+	if (links === undefined) return undefined;
+	return links.map((item) => item.taskId);
 }
 
+export function kanbanBoardRelatedLinksDiff(
+	previous: unknown,
+	next: unknown,
+): {
+	added: KanbanBoardRelatedTaskLink[];
+	removed: KanbanBoardRelatedTaskLink[];
+	changed: KanbanBoardRelatedTaskLink[];
+} {
+	const prev = normalizeKanbanBoardRelatedLinks(previous);
+	const nxt = normalizeKanbanBoardRelatedLinks(next);
+	const prevMap = new Map(prev.map((item) => [item.taskId, item.type]));
+	const nextMap = new Map(nxt.map((item) => [item.taskId, item.type]));
+	const added: KanbanBoardRelatedTaskLink[] = [];
+	const removed: KanbanBoardRelatedTaskLink[] = [];
+	const changed: KanbanBoardRelatedTaskLink[] = [];
+	for (const item of nxt) {
+		const prevType = prevMap.get(item.taskId);
+		if (!prevType) added.push(item);
+		else if (prevType !== item.type) changed.push(item);
+	}
+	for (const item of prev) {
+		if (!nextMap.has(item.taskId)) removed.push(item);
+	}
+	return { added, removed, changed };
+}
+
+export function upsertKanbanBoardRelatedLink(
+	links: KanbanBoardRelatedTaskLink[],
+	link: KanbanBoardRelatedTaskLink,
+): KanbanBoardRelatedTaskLink[] {
+	const type = isKanbanBoardRelationTypeId(link.type)
+		? link.type
+		: KANBAN_BOARD_DEFAULT_RELATION_TYPE_ID;
+	const next = links.filter((item) => item.taskId !== link.taskId);
+	const index = links.findIndex((item) => item.taskId === link.taskId);
+	const row = { taskId: link.taskId, type };
+	if (index >= 0) next.splice(index, 0, row);
+	else next.push(row);
+	return normalizeKanbanBoardRelatedLinks(next);
+}
+
+export function applyKanbanBoardRelatedLinkInverse(
+	links: KanbanBoardRelatedTaskLink[],
+	fromTaskId: string,
+	type: KanbanBoardRelatedTaskLink["type"] | undefined,
+	remove: boolean,
+): KanbanBoardRelatedTaskLink[] {
+	if (remove) {
+		return normalizeKanbanBoardRelatedLinks(
+			links.filter((item) => item.taskId !== fromTaskId),
+		);
+	}
+	return upsertKanbanBoardRelatedLink(links, {
+		taskId: fromTaskId,
+		type: kanbanBoardRelationInverseType(type),
+	});
+}
+
+/** @deprecated используйте kanbanBoardRelatedLinksDiff */
 export function kanbanBoardRelatedTaskIdsDiff(
 	previous: unknown,
 	next: unknown,
 ): { added: string[]; removed: string[] } {
-	const prev = normalizeKanbanBoardRelatedTaskIds(previous) ?? [];
-	const nxt = normalizeKanbanBoardRelatedTaskIds(next) ?? [];
-	const prevSet = new Set(prev);
-	const nextSet = new Set(nxt);
+	const diff = kanbanBoardRelatedLinksDiff(previous, next);
 	return {
-		added: nxt.filter((id) => !prevSet.has(id)),
-		removed: prev.filter((id) => !nextSet.has(id)),
+		added: diff.added.map((item) => item.taskId),
+		removed: diff.removed.map((item) => item.taskId),
 	};
 }
 

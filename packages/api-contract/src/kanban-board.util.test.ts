@@ -27,8 +27,14 @@ import {
 	normalizeKanbanBoardSubtasks,
 	normalizeKanbanBoardTaskContent,
 	normalizeKanbanBoardRelatedTaskIds,
+	normalizeKanbanBoardRelatedLinks,
+	kanbanBoardRelatedLinksFromContent,
+	pickKanbanBoardRelatedLinks,
 	pickKanbanBoardRelatedTaskIds,
 	kanbanBoardRelatedTaskIdsDiff,
+	kanbanBoardRelatedLinksDiff,
+	upsertKanbanBoardRelatedLink,
+	applyKanbanBoardRelatedLinkInverse,
 	parseKanbanBoardReleasesLaneId,
 	toBoardData,
 	type KanbanBoardData,
@@ -514,32 +520,84 @@ describe("kanban releases column lanes", () => {
 			normalizeKanbanBoardTaskContent({
 				title: "Task",
 				relatedTaskIds: ["t-2", "t-2", "  "],
-			}).relatedTaskIds,
-		).toEqual(["t-2"]);
+			}).relatedLinks,
+		).toEqual([{ taskId: "t-2", type: "relates" }]);
 		expect(
 			normalizeKanbanBoardTaskContent({
 				title: "Task",
 				relatedTaskIds: [],
-			}).relatedTaskIds,
+			}).relatedLinks,
 		).toEqual([]);
+	});
+
+	it("keeps related link type and migrates legacy ids", () => {
+		expect(
+			normalizeKanbanBoardRelatedLinks([
+				{ taskId: "t-2", type: "parent" },
+				{ taskId: "t-2", type: "blocks" },
+				{ taskId: "self", type: "child" },
+			], { excludeId: "self" }),
+		).toEqual([{ taskId: "t-2", type: "parent" }]);
+		expect(
+			kanbanBoardRelatedLinksFromContent({
+				title: "Task",
+				relatedTaskIds: ["t-3"],
+			}),
+		).toEqual([{ taskId: "t-3", type: "relates" }]);
 	});
 
 	it("picks related ids only when the field is present", () => {
 		const previous: KanbanBoardTaskContent = {
 			title: "Task",
-			relatedTaskIds: ["t-2"],
+			relatedLinks: [{ taskId: "t-2", type: "blocks" }],
 		};
-		expect(pickKanbanBoardRelatedTaskIds({ title: "x" }, previous)).toEqual([
-			"t-2",
+		expect(pickKanbanBoardRelatedLinks({ title: "x" }, previous)).toEqual([
+			{ taskId: "t-2", type: "blocks" },
 		]);
 		expect(
-			pickKanbanBoardRelatedTaskIds({ title: "x", relatedTaskIds: [] }, previous),
+			pickKanbanBoardRelatedLinks({ title: "x", relatedLinks: [] }, previous),
 		).toEqual([]);
+		expect(
+			kanbanBoardRelatedLinksDiff(
+				[{ taskId: "t-2", type: "relates" }, { taskId: "t-3", type: "parent" }],
+				[{ taskId: "t-3", type: "child" }, { taskId: "t-4", type: "blocks" }],
+			),
+		).toEqual({
+			added: [{ taskId: "t-4", type: "blocks" }],
+			removed: [{ taskId: "t-2", type: "relates" }],
+			changed: [{ taskId: "t-3", type: "child" }],
+		});
+		expect(
+			upsertKanbanBoardRelatedLink(
+				[
+					{ taskId: "t-2", type: "relates" },
+					{ taskId: "t-3", type: "blocks" },
+				],
+				{ taskId: "t-2", type: "parent" },
+			),
+		).toEqual([
+			{ taskId: "t-2", type: "parent" },
+			{ taskId: "t-3", type: "blocks" },
+		]);
 		expect(
 			kanbanBoardRelatedTaskIdsDiff(["t-2", "t-3"], ["t-3", "t-4"]),
 		).toEqual({
 			added: ["t-4"],
 			removed: ["t-2"],
 		});
+		expect(pickKanbanBoardRelatedTaskIds({ title: "x" }, previous)).toEqual([
+			"t-2",
+		]);
+		expect(
+			applyKanbanBoardRelatedLinkInverse([], "from-1", "parent", false),
+		).toEqual([{ taskId: "from-1", type: "child" }]);
+		expect(
+			applyKanbanBoardRelatedLinkInverse(
+				[{ taskId: "from-1", type: "child" }],
+				"from-1",
+				undefined,
+				true,
+			),
+		).toEqual([]);
 	});
 });

@@ -100,7 +100,12 @@ export interface KanbanBoardTaskContent {
 	dueDate?: string;
 	/** Родительская задача (ручной ввод) */
 	parentTask?: string;
-	/** Связанные задачи (id), двусторонняя связь */
+	/** Связи с другими задачами (тип + id), двусторонние */
+	relatedLinks?: KanbanBoardRelatedTaskLink[];
+	/**
+	 * @deprecated используйте relatedLinks
+	 * Старые записи: список id без типа (нормализуется в relatedLinks).
+	 */
 	relatedTaskIds?: string[];
 	/** Заказчик (ручной ввод) */
 	customer?: string;
@@ -307,6 +312,106 @@ export const KANBAN_BOARD_DEFAULT_TASK_TYPE_ID: KanbanBoardTaskTypeId = "task";
 
 /** Максимум связанных задач у одной карточки. */
 export const KANBAN_BOARD_RELATED_TASKS_MAX = 50;
+
+export const KANBAN_BOARD_RELATION_TYPES = [
+	{
+		id: "relates",
+		title: "Связана с",
+		inverseId: "relates",
+		color: "#64748b",
+	},
+	{
+		id: "parent",
+		title: "Родительская",
+		inverseId: "child",
+		color: "#7c3aed",
+	},
+	{
+		id: "child",
+		title: "Дочерняя",
+		inverseId: "parent",
+		color: "#7c3aed",
+	},
+	{
+		id: "blocks",
+		title: "Блокирует",
+		inverseId: "blocked_by",
+		color: "#dc2626",
+	},
+	{
+		id: "blocked_by",
+		title: "Блокируется",
+		inverseId: "blocks",
+		color: "#dc2626",
+	},
+	{
+		id: "duplicates",
+		title: "Дублирует",
+		inverseId: "duplicated_by",
+		color: "#ca8a04",
+	},
+	{
+		id: "duplicated_by",
+		title: "Дублируется",
+		inverseId: "duplicates",
+		color: "#ca8a04",
+	},
+	{
+		id: "depends_on",
+		title: "Зависит от",
+		inverseId: "required_for",
+		color: "#2563eb",
+	},
+	{
+		id: "required_for",
+		title: "Нужна для",
+		inverseId: "depends_on",
+		color: "#2563eb",
+	},
+] as const;
+
+export type KanbanBoardRelationTypeId =
+	(typeof KANBAN_BOARD_RELATION_TYPES)[number]["id"];
+
+export const KANBAN_BOARD_DEFAULT_RELATION_TYPE_ID: KanbanBoardRelationTypeId =
+	"relates";
+
+export type KanbanBoardRelatedTaskLink = {
+	taskId: string;
+	type: KanbanBoardRelationTypeId;
+};
+
+export function isKanbanBoardRelationTypeId(
+	id: string,
+): id is KanbanBoardRelationTypeId {
+	return KANBAN_BOARD_RELATION_TYPES.some((item) => item.id === id);
+}
+
+export function kanbanBoardRelationTypeTitle(
+	id?: KanbanBoardRelationTypeId | string,
+): string {
+	return (
+		KANBAN_BOARD_RELATION_TYPES.find((item) => item.id === id)?.title ??
+		id ??
+		""
+	);
+}
+
+export function kanbanBoardRelationTypeColor(
+	id?: KanbanBoardRelationTypeId | string,
+): string {
+	return (
+		KANBAN_BOARD_RELATION_TYPES.find((item) => item.id === id)?.color ??
+		"#64748b"
+	);
+}
+
+export function kanbanBoardRelationInverseType(
+	id?: KanbanBoardRelationTypeId | string,
+): KanbanBoardRelationTypeId {
+	const found = KANBAN_BOARD_RELATION_TYPES.find((item) => item.id === id);
+	return found?.inverseId ?? KANBAN_BOARD_DEFAULT_RELATION_TYPE_ID;
+}
 
 export const KANBAN_BOARD_WORK_TYPES = [
 	{ id: "architecture", title: "Архитектурная задача" },

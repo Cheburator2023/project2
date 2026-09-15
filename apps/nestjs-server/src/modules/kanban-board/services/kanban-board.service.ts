@@ -9,7 +9,7 @@ import {
 	formatKanbanTaskKey,
 	mergeKanbanBoardSubtaskImages,
 	normalizeKanbanBoardTaskContent,
-	pickKanbanBoardRelatedTaskIds,
+	pickKanbanBoardRelatedLinks,
 } from "@smart-anketa/api-contract";
 import { KanbanBoardTaskEntity } from "../entities/kanban-board-task.entity";
 import { KanbanBoardReleaseTaskEntity } from "../entities/kanban-board-release-task.entity";
@@ -222,7 +222,7 @@ export class KanbanBoardService {
 								task.content.subtasks,
 								prev.content.subtasks,
 							),
-							relatedTaskIds: pickKanbanBoardRelatedTaskIds(
+							relatedLinks: pickKanbanBoardRelatedLinks(
 								task.content,
 								prev.content,
 							),

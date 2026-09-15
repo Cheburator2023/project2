@@ -13,7 +13,9 @@ import {
 	kanbanBoardSubtaskStatusTitle,
 	kanbanBoardTaskTypeTitle,
 	kanbanBoardWorkTypeTitle,
+	kanbanBoardRelationTypeTitle,
 } from "./kanban-board.types";
+import { normalizeKanbanBoardRelatedLinks } from "./kanban-board.util";
 
 export const KANBAN_BOARD_TASK_HISTORY_MAX_PER_TASK = 6;
 
@@ -137,6 +139,20 @@ export function formatKanbanBoardHistoryValue(value: unknown): string | null {
 	return String(value);
 }
 
+const formatRelatedLinks = (value: unknown): string | null => {
+	const links = normalizeKanbanBoardRelatedLinks(value);
+	if (!links.length) {
+		if (!Array.isArray(value) || !value.length) return null;
+		const ids = value
+			.map((item) => (typeof item === "string" ? item.trim() : ""))
+			.filter(Boolean);
+		return ids.length ? ids.join(", ") : null;
+	}
+	return links
+		.map((item) => `${kanbanBoardRelationTypeTitle(item.type)}: ${item.taskId}`)
+		.join("; ");
+};
+
 const formatValue = formatKanbanBoardHistoryValue;
 
 const CONTENT_FIELDS: ReadonlyArray<{
@@ -183,15 +199,14 @@ const CONTENT_FIELDS: ReadonlyArray<{
 		format: formatSubtasks,
 	},
 	{
+		key: "relatedLinks",
+		label: "Связанные задачи",
+		format: formatRelatedLinks,
+	},
+	{
 		key: "relatedTaskIds",
 		label: "Связанные задачи",
-		format: (value) => {
-			if (!Array.isArray(value) || !value.length) return null;
-			return value
-				.map((item) => (typeof item === "string" ? item.trim() : ""))
-				.filter(Boolean)
-				.join(", ");
-		},
+		format: formatRelatedLinks,
 	},
 	{
 		key: "images",

@@ -39,9 +39,11 @@ import {
 	applyKanbanBoardAssigneeHandoff,
 	mergeKanbanBoardSubtaskImages,
 	normalizeKanbanBoardTaskContent,
-	normalizeKanbanBoardRelatedTaskIds,
-	pickKanbanBoardRelatedTaskIds,
-	kanbanBoardRelatedTaskIdsDiff,
+	normalizeKanbanBoardRelatedLinks,
+	kanbanBoardRelatedLinksFromContent,
+	pickKanbanBoardRelatedLinks,
+	kanbanBoardRelatedLinksDiff,
+	applyKanbanBoardRelatedLinkInverse,
 	normalizeTrackerCode,
 	formatKanbanBoardKey,
 	formatKanbanTaskKey,
@@ -1722,7 +1724,7 @@ export class KanbanBoardRegistryService {
 		await this.syncRelatedTaskLinks(
 			entity.id,
 			undefined,
-			content.relatedTaskIds,
+			content.relatedLinks,
 			createdBy,
 		);
 		const [created] = await this.mapTasksToRegistry([entity]);
@@ -1760,7 +1762,7 @@ export class KanbanBoardRegistryService {
 		);
 
 		const before = this.historyService.snapshotFromTask(task);
-		const previousRelated = task.content.relatedTaskIds;
+		const previousRelated = kanbanBoardRelatedLinksFromContent(task.content);
 
 		if (dto.boardId !== undefined) {
 			const board = await this.boardRepository.findOne({
@@ -1797,7 +1799,7 @@ export class KanbanBoardRegistryService {
 					dto.content.subtasks,
 					task.content.subtasks,
 				),
-				relatedTaskIds: pickKanbanBoardRelatedTaskIds(
+				relatedLinks: pickKanbanBoardRelatedLinks(
 					dto.content,
 					task.content,
 				),
@@ -1836,7 +1838,7 @@ export class KanbanBoardRegistryService {
 		await this.syncRelatedTaskLinks(
 			task.id,
 			previousRelated,
-			task.content.relatedTaskIds,
+			task.content.relatedLinks,
 			createdBy,
 		);
 		const [updated] = await this.mapTasksToRegistry([task]);
@@ -2848,18 +2850,17 @@ export class KanbanBoardRegistryService {
 			assignees.push(currentAssignee);
 		}
 		const resolvedCurrent = currentAssignee || assignees[0];
-		let relatedTaskIds = normalizeKanbanBoardRelatedTaskIds(
-			content.relatedTaskIds,
-			{ excludeId: options?.taskId },
-		);
-		if (relatedTaskIds?.length) {
+		let relatedLinks = kanbanBoardRelatedLinksFromContent(content, {
+			excludeId: options?.taskId,
+		});
+		if (relatedLinks.length) {
 			const found = await this.taskRepository.find({
-				where: { id: In(relatedTaskIds), deletedAt: IsNull() },
+				where: { id: In(relatedLinks.map((item) => item.taskId)), deletedAt: IsNull() },
 				select: ["id"],
 			});
 			const foundIds = new Set(found.map((row) => row.id));
-			relatedTaskIds = normalizeKanbanBoardRelatedTaskIds(
-				relatedTaskIds.filter((id) => foundIds.has(id)),
+			relatedLinks = normalizeKanbanBoardRelatedLinks(
+				relatedLinks.filter((item) => foundIds.has(item.taskId)),
 			);
 		}
 		const { assigneeRole: _legacyRole, ...rest } = content;
@@ -2867,48 +2868,57 @@ export class KanbanBoardRegistryService {
 			...rest,
 			assignees: assignees.length ? assignees : undefined,
 			currentAssignee: resolvedCurrent || undefined,
-			relatedTaskIds,
+			relatedLinks,
+			relatedTaskIds: undefined,
 		};
 	}
 
 	private async syncRelatedTaskLinks(
 		taskId: string,
-		previousIds: string[] | undefined,
-		nextIds: string[] | undefined,
+		previousLinks: KanbanBoardTaskContent["relatedLinks"],
+		nextLinks: KanbanBoardTaskContent["relatedLinks"],
 		createdBy?: string | null,
 	): Promise<void> {
-		const { added, removed } = kanbanBoardRelatedTaskIdsDiff(
-			previousIds,
-			nextIds,
+		const { added, removed, changed } = kanbanBoardRelatedLinksDiff(
+			previousLinks,
+			nextLinks,
 		);
-		const counterpartIds = [...added, ...removed];
+		const counterpartIds = [
+			...added,
+			...removed,
+			...changed,
+		].map((item) => item.taskId);
 		if (!counterpartIds.length) return;
 
 		const counterparts = await this.taskRepository.find({
 			where: { id: In(counterpartIds), deletedAt: IsNull() },
 			relations: { board: { project: true } },
 		});
-		const addedSet = new Set(added);
+		const nextById = new Map(
+			[...added, ...changed].map((item) => [item.taskId, item.type]),
+		);
+		const removedSet = new Set(removed.map((item) => item.taskId));
 
 		for (const other of counterparts) {
 			const before = this.historyService.snapshotFromTask(other);
-			const current =
-				normalizeKanbanBoardRelatedTaskIds(other.content.relatedTaskIds) ?? [];
-			const nextRelated = addedSet.has(other.id)
-				? normalizeKanbanBoardRelatedTaskIds([...current, taskId])
-				: normalizeKanbanBoardRelatedTaskIds(
-						current.filter((id) => id !== taskId),
-					);
-			const currentSet = new Set(current);
-			const nextList = nextRelated ?? [];
-			const unchanged =
-				currentSet.size === nextList.length &&
-				nextList.every((id) => currentSet.has(id));
-			if (unchanged) continue;
+			const current = kanbanBoardRelatedLinksFromContent(other.content);
+			const nextRelated = applyKanbanBoardRelatedLinkInverse(
+				current,
+				taskId,
+				nextById.get(other.id),
+				removedSet.has(other.id),
+			);
+			const currentKey = current
+				.map((item) => `${item.taskId}:${item.type}`)
+				.join("|");
+			const nextKey = nextRelated
+				.map((item) => `${item.taskId}:${item.type}`)
+				.join("|");
+			if (currentKey === nextKey) continue;
 
 			other.content = normalizeKanbanBoardTaskContent({
 				...other.content,
-				relatedTaskIds: nextRelated,
+				relatedLinks: nextRelated,
 			});
 			other.updatedAt = new Date().toISOString();
 			await this.taskRepository.save(other);

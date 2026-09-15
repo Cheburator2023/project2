@@ -80,7 +80,7 @@ describe("kanban-board-history.util", () => {
 			boardId: "board-1",
 			content: {
 				title: "Задача",
-				relatedTaskIds: ["task-a"],
+				relatedLinks: [{ taskId: "task-a", type: "relates" }],
 			},
 		});
 		const after = kanbanBoardTaskHistorySnapshot({
@@ -89,15 +89,18 @@ describe("kanban-board-history.util", () => {
 			boardId: "board-1",
 			content: {
 				title: "Задача",
-				relatedTaskIds: ["task-a", "task-b"],
+				relatedLinks: [
+					{ taskId: "task-a", type: "parent" },
+					{ taskId: "task-b", type: "blocks" },
+				],
 			},
 		});
 		const changes = diffKanbanTaskChanges(before, after);
 		expect(changes).toEqual([
 			expect.objectContaining({
 				label: "Связанные задачи",
-				from: "task-a",
-				to: "task-a, task-b",
+				from: "Связана с: task-a",
+				to: "Родительская: task-a; Блокирует: task-b",
 			}),
 		]);
 	});

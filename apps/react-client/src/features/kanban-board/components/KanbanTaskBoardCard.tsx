@@ -15,6 +15,7 @@ import Typography from "@mui/material/Typography";
 import { alpha } from "@mui/material/styles";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { KanbanHighlightedText } from "@react-client/features/kanban-board/components/KanbanHighlightedText";
+import { KanbanTaskCardRelations } from "@react-client/features/kanban-board/components/KanbanTaskCardRelations";
 import { KanbanTaskCardSubtasks } from "@react-client/features/kanban-board/components/KanbanSubtasksChecklist";
 import { KanbanTaskImagesSection } from "@react-client/features/kanban-board/components/KanbanTaskImagesSection";
 import {
@@ -436,6 +437,8 @@ export function KanbanTaskBoardCard({
 						onEditBlocked={onEditBlocked}
 					/>
 				) : null}
+
+				{content ? <KanbanTaskCardRelations content={content} /> : null}
 
 				{content?.images?.length ? (
 					<KanbanTaskImagesSection
