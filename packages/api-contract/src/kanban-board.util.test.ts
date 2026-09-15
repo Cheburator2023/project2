@@ -6,21 +6,31 @@ import {
 	findKanbanBoardCancelledColumnId,
 	fromBoardData,
 	kanbanBoardColumnCanTrashTasks,
+	kanbanBoardDisplayColumnTitle,
 	kanbanBoardEffectiveEstimatePd,
 	kanbanBoardEffectiveSprintCapacityPd,
 	kanbanBoardIsCancelledColumn,
+	kanbanBoardIsReleasesColumn,
 	kanbanBoardReleaseImageVersionsTitle,
+	kanbanBoardReleasesLaneId,
+	kanbanBoardReleasesLaneWidthPx,
 	kanbanBoardRoleEstimatesTotal,
 	kanbanBoardSubtasksProgress,
 	kanbanBoardTaskReleaseLabel,
 	kanbanBoardTaskReleasesTitle,
+	collapseKanbanBoardReleasesLanes,
+	expandKanbanBoardReleasesLanes,
 	moveKanbanBoardCardToColumn,
 	normalizeKanbanBoardReleaseImageVersions,
 	normalizeKanbanBoardSubtasks,
 	normalizeKanbanBoardTaskContent,
+	parseKanbanBoardReleasesLaneId,
 	toBoardData,
 	type KanbanBoardData,
 	type KanbanBoardTaskContent,
+	KANBAN_BOARD_COLUMN_WIDTH_PX,
+	KANBAN_BOARD_RELEASES_COLUMN_TITLE,
+	KANBAN_BOARD_RELEASES_UNASSIGNED_LANE_TITLE,
 } from "@smart-anketa/api-contract";
 
 const boardColumns = defaultKanbanBoardColumns("board-1").map((column) => ({
@@ -318,5 +328,72 @@ describe("normalizeKanbanBoardReleaseImageVersions", () => {
 				"smart-anketa-ui": "0.9",
 			}),
 		).toBe("SUM 1.2.3, Smart Anketa UI 0.9");
+	});
+});
+
+describe("kanban releases column lanes", () => {
+	it("recognizes the renamed demo column as Релизы", () => {
+		expect(kanbanBoardIsReleasesColumn({ id: "demo", title: "Демонстрация" })).toBe(
+			true,
+		);
+		expect(kanbanBoardDisplayColumnTitle({ id: "demo", title: "Демонстрация" })).toBe(
+			KANBAN_BOARD_RELEASES_COLUMN_TITLE,
+		);
+		expect(kanbanBoardIsReleasesColumn({ id: "todo", title: "Сделать" })).toBe(
+			false,
+		);
+	});
+
+	it("widens the group to at least three card columns", () => {
+		expect(kanbanBoardReleasesLaneWidthPx(1)).toBe(KANBAN_BOARD_COLUMN_WIDTH_PX * 3);
+		expect(kanbanBoardReleasesLaneWidthPx(2)).toBe(KANBAN_BOARD_COLUMN_WIDTH_PX * 1.5);
+		expect(kanbanBoardReleasesLaneWidthPx(3)).toBe(KANBAN_BOARD_COLUMN_WIDTH_PX);
+		expect(kanbanBoardReleasesLaneWidthPx(5)).toBe(KANBAN_BOARD_COLUMN_WIDTH_PX);
+	});
+
+	it("splits Релизы by primary release and collapses lanes before persist", () => {
+		const board = sampleBoard();
+		board.demo = { ...board.demo, children: ["task-1"], totalChildrenCount: 1 };
+		board.todo = { ...board.todo, children: [], totalChildrenCount: 0 };
+		board["task-1"] = {
+			...board["task-1"],
+			parentId: "demo",
+			releases: [{ id: "rel-1", code: "REL-1", name: "Апрель" }],
+		};
+
+		const expanded = expandKanbanBoardReleasesLanes(board, [
+			{ id: "rel-1", code: "REL-1", name: "Апрель" },
+			{ id: "rel-2", code: "REL-2", name: "Май" },
+		]);
+		const unassignedId = kanbanBoardReleasesLaneId("demo", null);
+		const aprilId = kanbanBoardReleasesLaneId("demo", "rel-1");
+		const mayId = kanbanBoardReleasesLaneId("demo", "rel-2");
+
+		expect(expanded.root.children).not.toContain("demo");
+		expect(expanded.root.children).toEqual(
+			expect.arrayContaining([unassignedId, aprilId, mayId]),
+		);
+		expect(expanded[aprilId]?.children).toEqual(["task-1"]);
+		expect(expanded[unassignedId]?.children).toEqual([]);
+		expect(expanded[unassignedId]?.title).toBe(
+			KANBAN_BOARD_RELEASES_UNASSIGNED_LANE_TITLE,
+		);
+		expect(parseKanbanBoardReleasesLaneId(aprilId)).toEqual({
+			columnId: "demo",
+			releaseId: "rel-1",
+		});
+
+		const collapsed = collapseKanbanBoardReleasesLanes(expanded);
+		expect(collapsed.root.children).toContain("demo");
+		expect(collapsed.demo.children).toEqual(["task-1"]);
+		expect(collapsed["task-1"].parentId).toBe("demo");
+
+		const rows = fromBoardData(
+			expanded,
+			"local-dev",
+			"2026-06-16T12:00:00.000Z",
+			"board-1",
+		);
+		expect(rows.find((row) => row.id === "task-1")?.parentId).toBe("demo");
 	});
 });

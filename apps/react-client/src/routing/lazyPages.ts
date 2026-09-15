@@ -263,6 +263,20 @@ export const TrackerPlanningPage = lazyPage(
 		),
 	"TrackerPlanningPage",
 );
+export const TrackerReleasesPage = lazyPage(
+	() =>
+		import(
+			/* webpackChunkName: "page-tracker-releases" */ "@react-client/features/tracker/pages/TrackerReleasesPage"
+		),
+	"TrackerReleasesPage",
+);
+export const TrackerReleasePage = lazyPage(
+	() =>
+		import(
+			/* webpackChunkName: "page-tracker-release" */ "@react-client/features/tracker/pages/TrackerReleasePage"
+		),
+	"TrackerReleasePage",
+);
 export const TrackerMyTasksPage = lazyPage(
 	() =>
 		import(

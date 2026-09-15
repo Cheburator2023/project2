@@ -95,6 +95,9 @@ export function usePlanningTaskGridEdits() {
 				void queryClient.invalidateQueries({
 					queryKey: ["kanbanBoardPlanning"],
 				});
+				void queryClient.invalidateQueries({
+					queryKey: ["kanbanBoardRelease"],
+				});
 			}
 		},
 		[editLabel, queryClient, updateTask],
@@ -109,6 +112,9 @@ export function usePlanningTaskGridEdits() {
 				pendingRef.current = null;
 				void queryClient.invalidateQueries({
 					queryKey: ["kanbanBoardPlanning"],
+				});
+				void queryClient.invalidateQueries({
+					queryKey: ["kanbanBoardRelease"],
 				});
 			}}
 			onForceOverwrite={() => {

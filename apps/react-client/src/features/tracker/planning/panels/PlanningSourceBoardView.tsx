@@ -14,6 +14,10 @@ import {
 	formatKanbanTaskKey,
 	normalizeTrackerCode,
 	toBoardData,
+	expandKanbanBoardReleasesLanes,
+	kanbanBoardReleasesLaneWidthPx,
+	KANBAN_BOARD_RELEASES_COLUMN_TITLE,
+	parseKanbanBoardReleasesLaneId,
 	countKanbanBoardBlockers,
 	countKanbanBoardColumnBlockers,
 	type KanbanBoardItem,
@@ -38,6 +42,7 @@ import {
 	useDetachKanbanBoardReleaseTask,
 	useKanbanBoardBoards,
 	useKanbanBoardColumns,
+	useKanbanBoardReleases,
 } from "@react-client/common/api/queries/kanban-board";
 import {
 	getKanbanColumnColor,
@@ -45,23 +50,52 @@ import {
 } from "@react-client/features/kanban-board/components/KanbanBoardColumnChrome";
 import { KanbanTaskBoardCard } from "@react-client/features/kanban-board/components/KanbanTaskBoardCard";
 import { trackerTaskPath } from "@react-client/features/kanban-board/kanban-task-paths";
+import {
+	kanbanBoardColumnWrapperClassName,
+	kanbanBoardColumnWrapperStyle,
+	kanbanBoardRkkBoardSx,
+} from "@react-client/features/kanban-board/kanbanBoardColumnLayout";
+
 import { usePlanningWorkspace } from "@react-client/features/tracker/planning/PlanningWorkspaceContext";
 
-const COLUMN_WIDTH_PX = 320;
+type Props = {
+	releaseId: string | null;
+	attachedTaskIds: string[];
+	storageKey: string;
+	missingReleaseMessage?: string;
+};
 
 function sourceBoardStorageKey(planningId: string) {
 	return `smart-anketa:planning:${planningId}:sourceBoardKey`;
 }
 
 export function PlanningSourceBoardView() {
-	const navigate = useNavigate();
 	const { planning, activeReleaseId } = usePlanningWorkspace();
+	return (
+		<ReleaseSourceBoardPicker
+			releaseId={activeReleaseId}
+			attachedTaskIds={planning.tasks
+				.filter((item) => item.releaseId === activeReleaseId)
+				.map((item) => item.taskId)}
+			storageKey={sourceBoardStorageKey(planning.id)}
+			missingReleaseMessage="Создайте релиз на панели «Релизы», чтобы прикреплять задачи"
+		/>
+	);
+}
+
+export function ReleaseSourceBoardPicker({
+	releaseId,
+	attachedTaskIds,
+	storageKey,
+	missingReleaseMessage = "Релиз не выбран",
+}: Props) {
+	const navigate = useNavigate();
 	const boardsQuery = useKanbanBoardBoards();
 	const attachTasks = useAttachKanbanBoardReleaseTasks();
 	const detachTask = useDetachKanbanBoardReleaseTask();
 	const [boardKey, setBoardKey] = useState(() => {
 		try {
-			return sessionStorage.getItem(sourceBoardStorageKey(planning.id)) ?? "";
+			return sessionStorage.getItem(storageKey) ?? "";
 		} catch {
 			return "";
 		}
@@ -77,7 +111,6 @@ export function PlanningSourceBoardView() {
 
 	useEffect(() => {
 		try {
-			const storageKey = sourceBoardStorageKey(planning.id);
 			if (boardApiRef) {
 				sessionStorage.setItem(storageKey, boardApiRef);
 			} else {
@@ -86,20 +119,24 @@ export function PlanningSourceBoardView() {
 		} catch {
 			// ignore
 		}
-	}, [boardApiRef, planning.id]);
+	}, [boardApiRef, storageKey]);
 
 	useEffect(() => {
 		const list = boardsQuery.data;
-		if (!boardsQuery.isSuccess || !boardKey || !list) return;
-		const exists = list.some(
-			(item) =>
-				item.boardKey === normalizeTrackerCode(boardKey) ||
-				item.id === boardKey,
+		if (!boardsQuery.isSuccess || !list?.length) return;
+		const exists = Boolean(
+			boardKey &&
+				list.some(
+					(item) =>
+						item.boardKey === normalizeTrackerCode(boardKey) ||
+						item.id === boardKey,
+				),
 		);
-		if (!exists) setBoardKey("");
+		if (!exists) setBoardKey(list[0].boardKey);
 	}, [boardKey, boardsQuery.data, boardsQuery.isSuccess]);
 
 	const columnsQuery = useKanbanBoardColumns(boardApiRef);
+	const releasesQuery = useKanbanBoardReleases();
 	const tasksQuery = useQuery({
 		queryKey: ["kanbanBoardTasks", boardApiRef],
 		enabled: Boolean(boardApiRef),
@@ -108,30 +145,36 @@ export function PlanningSourceBoardView() {
 
 	const boardData = useMemo(() => {
 		if (!columnsQuery.data || !tasksQuery.data) return null;
-		return toBoardData(tasksQuery.data, columnsQuery.data);
-	}, [columnsQuery.data, tasksQuery.data]);
+		return expandKanbanBoardReleasesLanes(
+			toBoardData(tasksQuery.data, columnsQuery.data),
+			releasesQuery.data ?? [],
+		);
+	}, [columnsQuery.data, releasesQuery.data, tasksQuery.data]);
+	const releasesLaneCount = useMemo(
+		() =>
+			boardData
+				? boardData.root.children.filter((id) =>
+						parseKanbanBoardReleasesLaneId(id),
+					).length
+				: 1,
+		[boardData],
+	);
+	const releasesLaneWidthPx = kanbanBoardReleasesLaneWidthPx(
+		releasesLaneCount,
+	);
 	const sourceBoardBlockerCount = boardData
 		? countKanbanBoardBlockers(boardData)
 		: 0;
 
 	const attachedIds = useMemo(
-		() =>
-			new Set(
-				planning.tasks
-					.filter((item) => item.releaseId === activeReleaseId)
-					.map((item) => item.taskId),
-			),
-		[activeReleaseId, planning.tasks],
-	);
-	const releaseByTaskId = useMemo(
-		() => new Map(planning.tasks.map((item) => [item.taskId, item.releaseId])),
-		[planning.tasks],
+		() => new Set(attachedTaskIds),
+		[attachedTaskIds],
 	);
 
 	const resolvedBoardId = boardMeta?.id ?? tasksQuery.data?.[0]?.boardId ?? "";
 
 	const attach = async (taskIds: string[]) => {
-		if (!activeReleaseId) {
+		if (!releaseId) {
 			toast.error("Сначала создайте релиз");
 			return;
 		}
@@ -142,7 +185,7 @@ export function PlanningSourceBoardView() {
 		}
 		try {
 			await attachTasks.mutateAsync({
-				releaseId: activeReleaseId,
+				releaseId,
 				data: { taskIds: incoming },
 			});
 			toast.success(
@@ -159,7 +202,7 @@ export function PlanningSourceBoardView() {
 		if (attachedIds.has(taskId)) {
 			try {
 				await detachTask.mutateAsync({
-					releaseId: activeReleaseId ?? releaseByTaskId.get(taskId) ?? "",
+					releaseId: releaseId ?? "",
 					taskId,
 				});
 			} catch (error) {
@@ -189,6 +232,11 @@ export function PlanningSourceBoardView() {
 			background: `color-mix(in srgb, ${color}, transparent 92%)`,
 		};
 	}, []);
+	const columnWrapperStyle = useCallback(
+		(column: BoardItem) =>
+			kanbanBoardColumnWrapperStyle(column, releasesLaneWidthPx),
+		[releasesLaneWidthPx],
+	);
 
 	const unattachedOnBoard = (tasksQuery.data ?? []).filter(
 		(task) => !attachedIds.has(task.id),
@@ -217,9 +265,11 @@ export function PlanningSourceBoardView() {
 					onChange={(event) => setBoardKey(event.target.value)}
 					sx={{ minWidth: 280, flexGrow: 1, maxWidth: 480 }}
 				>
-					<MenuItem value="">
-						<em>Выберите доску</em>
-					</MenuItem>
+					{!selectValue ? (
+						<MenuItem value="" disabled>
+							Доска
+						</MenuItem>
+					) : null}
 					{boards.map((board) => (
 						<MenuItem key={board.id} value={board.boardKey}>
 							{board.projectCode} · {board.name}
@@ -231,13 +281,13 @@ export function PlanningSourceBoardView() {
 					size="small"
 					variant="outlined"
 					disabled={
-						!activeReleaseId ||
+						!releaseId ||
 						!unattachedOnBoard.length ||
 						attachTasks.isPending
 					}
 					onClick={() => void attach(unattachedOnBoard.map((task) => task.id))}
 					title={
-						activeReleaseId
+						releaseId
 							? "Добавить задачи доски в выбранный релиз"
 							: "Сначала создайте релиз"
 					}
@@ -249,10 +299,8 @@ export function PlanningSourceBoardView() {
 					label={`Блокер: ${sourceBoardBlockerCount}`}
 				/>
 			</Flex>
-			{!activeReleaseId ? (
-				<Alert severity="info">
-					Создайте релиз на панели «Релизы», чтобы прикреплять задачи
-				</Alert>
+			{!releaseId ? (
+				<Alert severity="info">{missingReleaseMessage}</Alert>
 			) : boardsQuery.isError ? (
 				<Alert severity="error">Не удалось загрузить список досок</Alert>
 			) : boardsQuery.isSuccess && !boards.length ? (
@@ -274,47 +322,7 @@ export function PlanningSourceBoardView() {
 						minHeight: 0,
 						minWidth: 0,
 						overflow: "auto",
-						"& .rkk-board": {
-							overflow: "visible",
-							height: "auto",
-							minHeight: "100%",
-							width: "max-content",
-							minWidth: "100%",
-							alignItems: "flex-start",
-						},
-						"& .rkk-column-outer": {
-							height: "auto",
-							alignSelf: "stretch",
-							width: COLUMN_WIDTH_PX,
-							minWidth: COLUMN_WIDTH_PX,
-							maxWidth: COLUMN_WIDTH_PX,
-						},
-						"& .rkk-column-outer .rkk-column": {
-							height: "auto",
-							minHeight: "100%",
-							overflow: "visible !important",
-							borderRadius: "4px",
-							width: "100%",
-						},
-						"& .rkk-column-outer .rkk-column-wrapper": {
-							maxHeight: "none",
-							overflow: "visible",
-						},
-						"& .rkk-column-content": {
-							height: "auto",
-							flex: "none",
-							minHeight: "unset",
-							overflow: "visible",
-						},
-						"& .rkk-column-content-list": {
-							height: "auto",
-							overflow: "visible !important",
-							overflowX: "visible !important",
-							overflowY: "visible !important",
-						},
-						"& .rkk-card-shadow-container": {
-							overflow: "visible",
-						},
+						...kanbanBoardRkkBoardSx,
 					}}
 				>
 					<Kanban
@@ -330,6 +338,8 @@ export function PlanningSourceBoardView() {
 						allowColumnAdder={false}
 						allowColumnDrag={false}
 						columnStyle={columnStyle}
+						columnWrapperStyle={columnWrapperStyle}
+						columnWrapperClassName={kanbanBoardColumnWrapperClassName}
 						onCardClick={handleCardClick}
 						renderColumnHeader={(column: BoardItem) => (
 							<SourceColumnHeader
@@ -396,6 +406,9 @@ function SourceColumnHeader({
 	const unattached = (column.children ?? []).filter(
 		(id) => !attachedIds.has(id),
 	).length;
+	const title = parseKanbanBoardReleasesLaneId(column.id)
+		? `${KANBAN_BOARD_RELEASES_COLUMN_TITLE} · ${column.title}`
+		: column.title;
 	return (
 		<Flex
 			alignItems="center"
@@ -410,10 +423,10 @@ function SourceColumnHeader({
 				variant="subtitle2"
 				fontWeight={700}
 				noWrap
-				title={column.title}
+				title={title}
 				sx={{ color, flexGrow: 1, minWidth: 0 }}
 			>
-				{column.title}
+				{title}
 			</Typography>
 			<KanbanBlockerCountChip count={blockerCount} />
 			<Typography variant="caption" color="text.secondary">

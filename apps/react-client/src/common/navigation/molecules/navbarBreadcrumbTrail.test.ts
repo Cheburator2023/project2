@@ -48,4 +48,20 @@ describe("buildNavbarBreadcrumbTrail", () => {
 			{ label: "SUM-BOARD" },
 		]);
 	});
+
+	it("links release workspace crumbs to the releases registry", () => {
+		expect(buildNavbarBreadcrumbTrail("/tracker/releases/rel-1")).toEqual([
+			{ label: "Трекер", to: "/tracker/projects" },
+			{ label: "Релизы", to: "/tracker/releases" },
+			{ label: "Релиз" },
+		]);
+	});
+
+	it("links planning workspace crumbs to the plannings registry", () => {
+		expect(buildNavbarBreadcrumbTrail("/tracker/plannings/pln-1")).toEqual([
+			{ label: "Трекер", to: "/tracker/projects" },
+			{ label: "Планирования", to: "/tracker/plannings" },
+			{ label: "Планирование" },
+		]);
+	});
 });

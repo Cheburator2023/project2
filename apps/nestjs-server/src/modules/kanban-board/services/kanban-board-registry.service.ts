@@ -19,6 +19,7 @@ import {
 	kanbanBoardIsDoneColumn,
 	kanbanBoardIsCancelledColumn,
 	kanbanBoardColumnCanTrashTasks,
+	kanbanBoardDisplayColumnTitle,
 	kanbanBoardPriorityTitle,
 	kanbanBoardTaskAssigneeRoles,
 	kanbanBoardTaskAssigneeRoleTitles,
@@ -2379,7 +2380,7 @@ export class KanbanBoardRegistryService {
 		return {
 			id: column.id,
 			boardId: column.boardId,
-			title: column.title,
+			title: kanbanBoardDisplayColumnTitle(column),
 			color: column.color,
 			sortOrder: column.sortOrder,
 			createdAt: column.createdAt.toISOString(),

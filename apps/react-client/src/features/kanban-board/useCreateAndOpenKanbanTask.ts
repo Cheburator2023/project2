@@ -22,6 +22,7 @@ export function useCreateAndOpenKanbanTask() {
 		async (options?: {
 			boardId?: string;
 			parentId?: string;
+			releaseIds?: string[];
 			returnState?: KanbanBoardReturnLocationState;
 		}) => {
 			const created = await mutateAsync({
@@ -29,6 +30,7 @@ export function useCreateAndOpenKanbanTask() {
 				parentId: options?.parentId || "todo",
 				content: { title: KANBAN_NEW_TASK_TITLE },
 				createdBy: createdBy.trim() || null,
+				...(options?.releaseIds ? { releaseIds: options.releaseIds } : {}),
 			});
 			navigate(trackerTaskPath(created.taskKey), {
 				state: options?.returnState,
@@ -42,6 +44,7 @@ export function useCreateAndOpenKanbanTask() {
 		async (options?: {
 			boardId?: string;
 			parentId?: string;
+			releaseIds?: string[];
 			returnState?: KanbanBoardReturnLocationState;
 		}) => {
 			try {
