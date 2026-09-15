@@ -18,6 +18,7 @@ import { Flex } from "../../primitives/Flex";
 import { useGlobalSettingsStore } from "../../store/globalSettingsStore";
 import { ColorModeIconDropdown } from "../../../theme/ColorModeIconDropdown";
 import { HeaderServerNotices } from "./HeaderServerNotices";
+import { isServerNoticesEnabled } from "@react-client/common/serverStatus/serverNoticesFeatureFlag";
 import { MenuButton } from "../molecules/MenuButton";
 import { NavbarBreadcrumbs } from "@react-client/common/navigation/molecules/NavbarBreadcrumbs";
 import { useLayoutEffect, useRef, useState } from "react";
@@ -222,7 +223,7 @@ export function Header({
 									Выйти
 								</Button>
 							) : null}
-							<HeaderServerNotices />
+							{isServerNoticesEnabled() ? <HeaderServerNotices /> : null}
 							<ColorModeIconDropdown data-test-id="header--ColorModeIconDropdown-0" />
 						</Flex>
 					</Flex>

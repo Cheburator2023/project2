@@ -1,4 +1,5 @@
 import { recordToastNotice } from "@react-client/common/serverStatus/serverNoticesStore";
+import { isServerNoticesEnabled } from "@react-client/common/serverStatus/serverNoticesFeatureFlag";
 import {
 	CSSProperties,
 	useCallback,
@@ -117,10 +118,12 @@ export const Toaster = ({
 				} catch {
 					apply();
 				}
-				try {
-					recordToastNotice(event as ToastT);
-				} catch {
-					// панель не должна срывать показ тоста
+				if (isServerNoticesEnabled()) {
+					try {
+						recordToastNotice(event as ToastT);
+					} catch {
+						// панель не должна срывать показ тоста
+					}
 				}
 			});
 		});

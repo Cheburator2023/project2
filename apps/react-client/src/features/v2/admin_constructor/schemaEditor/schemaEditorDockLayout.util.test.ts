@@ -89,7 +89,6 @@ describe("schemaEditorDockLayout.util", () => {
 			"logic",
 			"issues",
 			"preview",
-			"relations",
 		]);
 	});
 
@@ -177,13 +176,8 @@ describe("schemaEditorDockLayout.util", () => {
 
 		const added = ensureAllMissingDockPanels(api as never);
 
-		expect(added).toEqual([
-			"logic",
-			"issues",
-			"preview",
-			"relations",
-		]);
-		expect(api.addPanel).toHaveBeenCalledTimes(4);
+		expect(added).toEqual(["logic", "issues", "preview"]);
+		expect(api.addPanel).toHaveBeenCalledTimes(3);
 	});
 
 	it("getMissingDockPanelIds returns ids absent from the current dock", () => {
@@ -196,7 +190,6 @@ describe("schemaEditorDockLayout.util", () => {
 			"logic",
 			"issues",
 			"preview",
-			"relations",
 		]);
 	});
 

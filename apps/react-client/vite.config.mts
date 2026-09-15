@@ -265,6 +265,12 @@ export const viteCommonConfig = ({
 					// "https://sum-shell-sumd.sumd.dk1-sumd01.innodev.local/proxy/smart-anketa-api",
 				),
 				"process.env.NO_ROLES": JSON.stringify(NO_ROLES || ""),
+				"process.env.ENABLE_SERVER_NOTICES": JSON.stringify(
+					process.env.ENABLE_SERVER_NOTICES || "",
+				),
+				"process.env.ENABLE_RELATIONS_GRAPH": JSON.stringify(
+					process.env.ENABLE_RELATIONS_GRAPH || "",
+				),
 			},
 
 			// resolve: {

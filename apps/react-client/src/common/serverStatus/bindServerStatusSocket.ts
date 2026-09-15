@@ -1,4 +1,5 @@
 import type { Socket } from "socket.io-client";
+import { isServerNoticesEnabled } from "./serverNoticesFeatureFlag";
 import {
 	reportServerReachable,
 	reportServerUnreachable,
@@ -6,6 +7,7 @@ import {
 
 /** Обрыв канала Socket.IO — процесс API скорее мёртв, чем «упал один REST-метод». */
 export function bindServerStatusSocket(client: Socket): void {
+	if (!isServerNoticesEnabled()) return;
 	client.on("connect", () => {
 		reportServerReachable();
 	});
