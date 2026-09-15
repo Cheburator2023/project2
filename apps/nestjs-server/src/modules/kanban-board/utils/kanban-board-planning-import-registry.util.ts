@@ -76,6 +76,7 @@ const STATUS_ALIASES: Record<string, string> = {
 	тестирование: "review_wip",
 	uat: "review_wip",
 	"на тестировании": "review_wip",
+	релизы: "demo",
 	демонстрация: "demo",
 	demo: "demo",
 	отменено: "cancelled",

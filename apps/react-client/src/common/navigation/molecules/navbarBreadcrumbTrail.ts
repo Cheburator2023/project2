@@ -279,6 +279,30 @@ function trackerTrail(pathname: string): NavbarBreadcrumbItem[] | null {
 		return [rootCrumb(), { label: decodeURIComponent(taskView[1]) }];
 	}
 
+	const releaseView = pathname.match(/^\/tracker\/releases\/([^/]+)$/);
+	if (releaseView) {
+		return [
+			rootCrumb(),
+			{
+				label: commonRoutes.trackerReleases.name,
+				to: commonRoutes.trackerReleases.rootPath,
+			},
+			{ label: commonRoutes.trackerReleaseView.shortName ?? "Релиз" },
+		];
+	}
+
+	const planningView = pathname.match(/^\/tracker\/plannings\/([^/]+)$/);
+	if (planningView) {
+		return [
+			rootCrumb(),
+			{
+				label: commonRoutes.trackerPlannings.name,
+				to: commonRoutes.trackerPlannings.rootPath,
+			},
+			{ label: commonRoutes.trackerPlanningView.shortName ?? "Планирование" },
+		];
+	}
+
 	const staticRoutes = Object.values(commonRoutes)
 		.filter((segment) => {
 			if (!("rootPath" in segment) || typeof segment.rootPath !== "string") {

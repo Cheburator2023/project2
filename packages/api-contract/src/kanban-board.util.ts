@@ -8,14 +8,21 @@ import {
 	type KanbanBoardStandId,
 	type KanbanBoardSystemId,
 	type KanbanBoardTaskContent,
+	type KanbanBoardTaskImageRef,
 	type KanbanBoardTaskRecord,
 	defaultKanbanBoardColumns,
+	type KanbanBoardTaskReleaseRefDto,
 	KANBAN_BOARD_ASSIGNEE_ROLES,
+	KANBAN_BOARD_COLUMN_WIDTH_PX,
 	KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD,
 	KANBAN_BOARD_CANCELLED_COLUMN_ID,
 	KANBAN_BOARD_DONE_COLUMN_ID,
 	KANBAN_BOARD_INPUT_BUFFER_COLUMN_ID,
 	KANBAN_BOARD_LEGACY_COLUMN_ID_MAP,
+	KANBAN_BOARD_RELEASES_COLUMN_ID,
+	KANBAN_BOARD_RELEASES_COLUMN_TITLE,
+	KANBAN_BOARD_RELEASES_MIN_LANE_CARDS,
+	KANBAN_BOARD_RELEASES_UNASSIGNED_LANE_TITLE,
 	KANBAN_BOARD_STANDS,
 	KANBAN_BOARD_STATUSES,
 	KANBAN_BOARD_SUBTASK_STATUSES,
@@ -25,6 +32,7 @@ import {
 	kanbanBoardSubtaskIsDone,
 	kanbanBoardSystemTitle,
 	kanbanBoardTaskHasBlocker,
+	kanbanBoardTaskReleaseLabel,
 } from "./kanban-board.types";
 
 export function kanbanBoardIsDoneColumn(column: {
@@ -42,6 +50,68 @@ export function kanbanBoardIsCancelledColumn(column: {
 	if (column.id === KANBAN_BOARD_CANCELLED_COLUMN_ID) return true;
 	const title = (column.title ?? "").trim().toLowerCase();
 	return title === "отменено" || title === "cancelled" || title === "canceled";
+}
+
+export function kanbanBoardIsReleasesColumn(column: {
+	id: string;
+	title?: string | null;
+}): boolean {
+	if (column.id === KANBAN_BOARD_RELEASES_COLUMN_ID) return true;
+	const title = (column.title ?? "").trim().toLowerCase();
+	return title === "релизы" || title === "демонстрация" || title === "demo";
+}
+
+export function kanbanBoardDisplayColumnTitle(column: {
+	id: string;
+	title?: string | null;
+}): string {
+	if (kanbanBoardIsReleasesColumn(column)) {
+		return KANBAN_BOARD_RELEASES_COLUMN_TITLE;
+	}
+	return column.title ?? "";
+}
+
+const RELEASES_UNASSIGNED_LANE_SUFFIX = "::__unassigned";
+const RELEASES_LANE_ID_MARKER = "::__rel:";
+
+export function kanbanBoardReleasesLaneId(
+	columnId: string,
+	releaseId: string | null,
+): string {
+	return releaseId
+		? `${columnId}${RELEASES_LANE_ID_MARKER}${releaseId}`
+		: `${columnId}${RELEASES_UNASSIGNED_LANE_SUFFIX}`;
+}
+
+export function parseKanbanBoardReleasesLaneId(
+	id: string,
+): { columnId: string; releaseId: string | null } | null {
+	const relIndex = id.indexOf(RELEASES_LANE_ID_MARKER);
+	if (relIndex > 0) {
+		return {
+			columnId: id.slice(0, relIndex),
+			releaseId: id.slice(relIndex + RELEASES_LANE_ID_MARKER.length),
+		};
+	}
+	if (id.endsWith(RELEASES_UNASSIGNED_LANE_SUFFIX)) {
+		return {
+			columnId: id.slice(0, -RELEASES_UNASSIGNED_LANE_SUFFIX.length),
+			releaseId: null,
+		};
+	}
+	return null;
+}
+
+export function kanbanBoardResolveColumnId(id: string): string {
+	return parseKanbanBoardReleasesLaneId(id)?.columnId ?? id;
+}
+
+export function kanbanBoardReleasesLaneWidthPx(laneCount: number): number {
+	const n = Math.max(1, laneCount);
+	const groupWidth =
+		KANBAN_BOARD_COLUMN_WIDTH_PX *
+		Math.max(KANBAN_BOARD_RELEASES_MIN_LANE_CARDS, n);
+	return Math.floor(groupWidth / n);
 }
 
 /** Массово в корзину — только терминальные колонки «Готово» и «Отменено». */
@@ -140,7 +210,7 @@ export function toBoardData(
 		const tasks = byColumn.get(column.id) ?? [];
 		board[column.id] = {
 			id: column.id,
-			title: column.title,
+			title: kanbanBoardDisplayColumnTitle(column),
 			parentId: "root",
 			children: tasks.map((task) => task.id),
 			totalChildrenCount: tasks.length,
@@ -195,19 +265,166 @@ export function normalizeKanbanBoardData(board: KanbanBoardData): KanbanBoardDat
 	return next;
 }
 
+export function expandKanbanBoardReleasesLanes(
+	board: KanbanBoardData,
+	releases: ReadonlyArray<
+		Pick<KanbanBoardTaskReleaseRefDto, "id" | "code" | "name">
+	>,
+): KanbanBoardData {
+	const columnId = board.root.children.find((id) =>
+		kanbanBoardIsReleasesColumn({ id, title: board[id]?.title }),
+	);
+	if (!columnId) return board;
+	const column = board[columnId];
+	if (!column) return board;
+
+	const sortedReleases = [...releases].sort(
+		(a, b) =>
+			a.code.localeCompare(b.code, "ru") || a.name.localeCompare(b.name, "ru"),
+	);
+	const lanes = [
+		{
+			id: kanbanBoardReleasesLaneId(columnId, null),
+			title: KANBAN_BOARD_RELEASES_UNASSIGNED_LANE_TITLE,
+			releaseId: null as string | null,
+		},
+		...sortedReleases.map((release) => ({
+			id: kanbanBoardReleasesLaneId(columnId, release.id),
+			title: kanbanBoardTaskReleaseLabel(release),
+			releaseId: release.id,
+		})),
+	];
+
+	const buckets = new Map<string, string[]>();
+	for (const lane of lanes) buckets.set(lane.id, []);
+
+	for (const cardId of column.children) {
+		const card = board[cardId];
+		const primaryId = card?.releases?.[0]?.id;
+		const laneId =
+			lanes.find((lane) => lane.releaseId && lane.releaseId === primaryId)
+				?.id ?? lanes[0].id;
+		buckets.get(laneId)?.push(cardId);
+	}
+
+	const next: KanbanBoardData = { ...board, root: { ...board.root } };
+	const rootChildren: string[] = [];
+	for (const id of board.root.children) {
+		if (id !== columnId) {
+			rootChildren.push(id);
+			continue;
+		}
+		for (const lane of lanes) rootChildren.push(lane.id);
+	}
+	next.root = {
+		...board.root,
+		children: rootChildren,
+		totalChildrenCount: rootChildren.length,
+	};
+	delete next[columnId];
+
+	const color =
+		typeof column.content === "object" &&
+		column.content &&
+		"color" in column.content &&
+		typeof column.content.color === "string"
+			? column.content.color
+			: "#94a3b8";
+
+	for (const lane of lanes) {
+		const children = buckets.get(lane.id) ?? [];
+		next[lane.id] = {
+			id: lane.id,
+			title: lane.title,
+			parentId: "root",
+			children,
+			totalChildrenCount: children.length,
+			content: { color },
+		};
+		for (const cardId of children) {
+			const card = board[cardId];
+			if (!card) continue;
+			next[cardId] = { ...card, parentId: lane.id };
+		}
+	}
+
+	return next;
+}
+
+export function collapseKanbanBoardReleasesLanes(
+	board: KanbanBoardData,
+): KanbanBoardData {
+	const grouped = new Map<string, string[]>();
+	for (const id of board.root.children) {
+		const parsed = parseKanbanBoardReleasesLaneId(id);
+		if (!parsed) continue;
+		const list = grouped.get(parsed.columnId) ?? [];
+		list.push(id);
+		grouped.set(parsed.columnId, list);
+	}
+	if (grouped.size === 0) return board;
+
+	const next: KanbanBoardData = { ...board, root: { ...board.root } };
+	const rootChildren: string[] = [];
+	const seen = new Set<string>();
+
+	for (const id of board.root.children) {
+		const parsed = parseKanbanBoardReleasesLaneId(id);
+		if (!parsed) {
+			rootChildren.push(id);
+			continue;
+		}
+		if (seen.has(parsed.columnId)) continue;
+		seen.add(parsed.columnId);
+		const laneIds = grouped.get(parsed.columnId) ?? [];
+		const children: string[] = [];
+		let content = board[id]?.content;
+		for (const laneId of laneIds) {
+			const lane = board[laneId];
+			if (!lane) continue;
+			if (lane.content) content = lane.content;
+			children.push(...lane.children);
+		}
+		next[parsed.columnId] = {
+			id: parsed.columnId,
+			title: KANBAN_BOARD_RELEASES_COLUMN_TITLE,
+			parentId: "root",
+			children,
+			totalChildrenCount: children.length,
+			content,
+		};
+		for (const cardId of children) {
+			const card = board[cardId];
+			if (card) next[cardId] = { ...card, parentId: parsed.columnId };
+		}
+		for (const laneId of laneIds) {
+			delete next[laneId];
+		}
+		rootChildren.push(parsed.columnId);
+	}
+
+	next.root = {
+		...board.root,
+		children: rootChildren,
+		totalChildrenCount: rootChildren.length,
+	};
+	return normalizeKanbanBoardData(next);
+}
+
 export function fromBoardData(
 	board: KanbanBoardData,
 	stand: string,
 	now: string,
 	boardId: string,
 ): KanbanBoardTaskRecord[] {
+	const source = collapseKanbanBoardReleasesLanes(board);
 	const out: KanbanBoardTaskRecord[] = [];
-	const columnIds = board.root?.children ?? [];
+	const columnIds = source.root?.children ?? [];
 	for (const columnId of columnIds) {
-		const column = board[columnId];
+		const column = source[columnId];
 		if (!column) continue;
 		column.children.forEach((cardId, position) => {
-			const node = board[cardId];
+			const node = source[cardId];
 			if (!node) return;
 			out.push({
 				id: node.id,
@@ -382,7 +599,89 @@ export function kanbanBoardEffectiveSprintCapacityPd(input: {
 	return fallback;
 }
 
-/** Нормализует чеклист подзадач: убирает пустые строки, сохраняет порядок. */
+export function normalizeKanbanBoardTaskImageRefs(
+	items: KanbanBoardTaskImageRef[] | undefined,
+): KanbanBoardTaskImageRef[] | undefined {
+	if (!items?.length) return undefined;
+	const cleaned = items
+		.filter(
+			(item) =>
+				item &&
+				typeof item.id === "string" &&
+				typeof item.name === "string" &&
+				Number.isFinite(item.width) &&
+				Number.isFinite(item.height),
+		)
+		.map((item) => ({
+			id: item.id,
+			name: item.name.trim().slice(0, 255) || "image",
+			width: Math.max(0, Math.round(item.width)),
+			height: Math.max(0, Math.round(item.height)),
+			fullByteSize: Math.max(0, Math.round(item.fullByteSize ?? 0)),
+			thumbByteSize: Math.max(0, Math.round(item.thumbByteSize ?? 0)),
+			createdAt: item.createdAt ?? new Date().toISOString(),
+		}));
+	return cleaned.length ? cleaned : undefined;
+}
+
+export function kanbanBoardSubtaskOwnedImageIds(
+	subtasks: KanbanBoardSubtaskItem[] | undefined,
+): Set<string> {
+	const ids = new Set<string>();
+	for (const item of subtasks ?? []) {
+		for (const image of item.images ?? []) {
+			if (image.id) ids.add(image.id);
+		}
+	}
+	return ids;
+}
+
+/**
+ * Раскладывает сохранённые blob-ы: ref на подзадаче остаётся на ней,
+ * остальные попадают в галерею задачи.
+ */
+export function applyKanbanBoardStoredImagesToContent(
+	content: KanbanBoardTaskContent,
+	stored: KanbanBoardTaskImageRef[],
+): KanbanBoardTaskContent {
+	const byId = new Map(stored.map((item) => [item.id, item]));
+	const subtasks = (content.subtasks ?? []).map((subtask) => {
+		const images = normalizeKanbanBoardTaskImageRefs(
+			(subtask.images ?? [])
+				.map((ref) => byId.get(ref.id))
+				.filter((item): item is KanbanBoardTaskImageRef => Boolean(item)),
+		);
+		return images ? { ...subtask, images } : { ...subtask, images: undefined };
+	});
+	const owned = kanbanBoardSubtaskOwnedImageIds(subtasks);
+	return normalizeKanbanBoardTaskContent({
+		...content,
+		subtasks: subtasks.length ? subtasks : undefined,
+		images: stored.filter((item) => !owned.has(item.id)),
+	});
+}
+
+/** Сохраняет картинки подзадач, если клиент прислал чеклист без этого поля. */
+export function mergeKanbanBoardSubtaskImages(
+	incoming: KanbanBoardSubtaskItem[] | undefined,
+	previous: KanbanBoardSubtaskItem[] | undefined,
+): KanbanBoardSubtaskItem[] | undefined {
+	if (incoming === undefined) return previous;
+	if (!incoming.length) return undefined;
+	const prevById = new Map((previous ?? []).map((item) => [item.id, item]));
+	return incoming.map((item) => {
+		const merged = new Map(
+			(prevById.get(item.id)?.images ?? []).map((image) => [image.id, image]),
+		);
+		for (const image of item.images ?? []) {
+			merged.set(image.id, image);
+		}
+		const images = normalizeKanbanBoardTaskImageRefs([...merged.values()]);
+		return images ? { ...item, images } : { ...item, images: undefined };
+	});
+}
+
+/** Нормализует чеклист подзадач: убирает пустые строки, сохраняет порядок и картинки. */
 export function normalizeKanbanBoardSubtasks(
 	items: KanbanBoardSubtaskItem[] | undefined,
 ): KanbanBoardSubtaskItem[] | undefined {
@@ -390,10 +689,12 @@ export function normalizeKanbanBoardSubtasks(
 	const cleaned = items
 		.map((item) => {
 			const status = normalizeKanbanBoardSubtaskStatus(item);
+			const images = normalizeKanbanBoardTaskImageRefs(item.images);
 			return {
 				id: item.id.trim(),
 				text: item.text.trim(),
 				status,
+				...(images ? { images } : {}),
 			};
 		})
 		.filter((item) => item.id && item.text);
@@ -451,29 +752,14 @@ export function normalizeKanbanBoardTaskContent(
 	const next: KanbanBoardTaskContent = { ...content };
 	next.subtasks = normalizeKanbanBoardSubtasks(next.subtasks);
 	if (content.images !== undefined) {
-		if (content.images.length) {
-			next.images = content.images
-				.filter(
-					(item) =>
-						item &&
-						typeof item.id === "string" &&
-						typeof item.name === "string" &&
-						Number.isFinite(item.width) &&
-						Number.isFinite(item.height),
-				)
-				.map((item) => ({
-					id: item.id,
-					name: item.name.trim().slice(0, 255) || "image",
-					width: Math.max(0, Math.round(item.width)),
-					height: Math.max(0, Math.round(item.height)),
-					fullByteSize: Math.max(0, Math.round(item.fullByteSize ?? 0)),
-					thumbByteSize: Math.max(0, Math.round(item.thumbByteSize ?? 0)),
-					createdAt: item.createdAt ?? new Date().toISOString(),
-				}));
-			if (!next.images.length) next.images = undefined;
-		} else {
-			next.images = undefined;
-		}
+		next.images = normalizeKanbanBoardTaskImageRefs(
+			content.images.length ? content.images : undefined,
+		);
+	}
+	const ownedImageIds = kanbanBoardSubtaskOwnedImageIds(next.subtasks);
+	if (ownedImageIds.size && next.images?.length) {
+		next.images = next.images.filter((item) => !ownedImageIds.has(item.id));
+		if (!next.images.length) next.images = undefined;
 	}
 	if (content.files !== undefined) {
 		if (content.files.length) {

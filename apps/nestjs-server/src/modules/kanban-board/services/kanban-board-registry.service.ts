@@ -19,6 +19,7 @@ import {
 	kanbanBoardIsDoneColumn,
 	kanbanBoardIsCancelledColumn,
 	kanbanBoardColumnCanTrashTasks,
+	kanbanBoardDisplayColumnTitle,
 	kanbanBoardPriorityTitle,
 	kanbanBoardTaskAssigneeRoles,
 	kanbanBoardTaskAssigneeRoleTitles,
@@ -35,6 +36,7 @@ import {
 	kanbanBoardColumnTitleLengthError,
 	kanbanBoardTaskContentLengthErrorMessage,
 	applyKanbanBoardAssigneeHandoff,
+	mergeKanbanBoardSubtaskImages,
 	normalizeKanbanBoardTaskContent,
 	normalizeTrackerCode,
 	formatKanbanBoardKey,
@@ -1773,6 +1775,10 @@ export class KanbanBoardRegistryService {
 				...(dto.content.images !== undefined
 					? { images: dto.content.images }
 					: { images: task.content.images }),
+				subtasks: mergeKanbanBoardSubtaskImages(
+					dto.content.subtasks,
+					task.content.subtasks,
+				),
 			};
 			task.content = applyKanbanBoardAssigneeHandoff(
 				previousContent,
@@ -2379,7 +2385,7 @@ export class KanbanBoardRegistryService {
 		return {
 			id: column.id,
 			boardId: column.boardId,
-			title: column.title,
+			title: kanbanBoardDisplayColumnTitle(column),
 			color: column.color,
 			sortOrder: column.sortOrder,
 			createdAt: column.createdAt.toISOString(),

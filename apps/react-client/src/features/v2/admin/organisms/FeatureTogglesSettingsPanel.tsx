@@ -22,8 +22,8 @@ export function FeatureTogglesSettingsPanel() {
 	const resetDadm = useResetV2DadmProgramManagerSetting();
 	const dadmPending = updateDadm.isPending || resetDadm.isPending;
 
-	const dadmEnabled = dadm.data?.enabled ?? false;
-	const dadmEnvDefault = dadm.data?.envDefaultEnabled ?? false;
+	const dadmEnabled = dadm.data?.enabled ?? true;
+	const dadmEnvDefault = dadm.data?.envDefaultEnabled ?? true;
 	const dadmHasOverride = dadm.data?.override != null;
 
 	const hardDisable = useV2EditLockHardDisableSetting();
@@ -43,8 +43,7 @@ export function FeatureTogglesSettingsPanel() {
 				<Typography variant="body2" color="text.secondary">
 					Утверждение оценки («Утверждена»), режимы реестра «Актуальные» /
 					«Утверждённые», деактивация утверждённых при удалении и исторические
-					срезы версий. По умолчанию выключено — старое поведение без этого
-					функционала.
+					срезы версий. По умолчанию включено.
 				</Typography>
 				{dadm.isError ? (
 					<Alert severity="error">Не удалось загрузить настройку</Alert>
@@ -107,13 +106,13 @@ export function FeatureTogglesSettingsPanel() {
 
 			<Flex flexDirection="column" gap={8}>
 				<Typography variant="h6">
-					Блокировка формы при чужом редактировании
+					Блокировка открытия из реестра при чужом редактировании
 				</Typography>
 				<Typography variant="body2" color="text.secondary">
-					По умолчанию выключено: если анкету уже кто-то открыл, показывается
-					предупреждение, но форма остаётся доступной. При включении — форма и
-					открытие из реестра жёстко блокируются, пока lock не снимется (idle 3
-					мин / закрытие вкладки).
+					Форма анкеты при чужом lock всегда открывается только для чтения.
+					Этот переключатель дополнительно запрещает открытие из реестра
+					(двойной клик / контекстное меню), пока lock не снимется (idle 3 мин /
+					закрытие вкладки).
 				</Typography>
 				{hardDisable.isError ? (
 					<Alert severity="error">Не удалось загрузить настройку</Alert>
@@ -132,8 +131,8 @@ export function FeatureTogglesSettingsPanel() {
 									onSuccess: () =>
 										toast.success(
 											checked
-												? "Жёсткая блокировка формы при чужом lock включена"
-												: "Жёсткая блокировка формы выключена — только предупреждение",
+												? "Запрет открытия из реестра при чужом lock включён"
+												: "Открытие из реестра разрешено — анкета откроется только для чтения",
 										),
 									onError: (err) =>
 										toast.error("Не удалось сохранить", {
@@ -143,11 +142,11 @@ export function FeatureTogglesSettingsPanel() {
 							}
 							inputProps={{
 								"aria-label":
-									"Жёсткая блокировка формы при чужом редактировании",
+									"Запретить открытие из реестра при чужом редактировании",
 							}}
 						/>
 					}
-					label="Жёстко блокировать форму, если анкету редактирует другой пользователь"
+					label="Запретить открытие из реестра, пока анкету редактирует другой"
 				/>
 				<Typography variant="body2" color="text.secondary">
 					Default из env Nest:{" "}

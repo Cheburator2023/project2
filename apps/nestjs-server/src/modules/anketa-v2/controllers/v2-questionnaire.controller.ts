@@ -454,6 +454,11 @@ export class V2QuestionnaireController {
         const correlationId = uuidv4();
         const initiator = this.buildInitiator(user);
 
+        await this.editLockService.assertMutableBy(
+        	id,
+        	this.editLockHolderFromUser(user),
+        );
+
         // Получаем текущую анкету до обновления для сравнения статусов
         const before = await this.questionnaireService.findOne(id);
         const beforeWorkflow = normalizeV2AnketaWorkflow(before.formData?.workflow);
@@ -774,4 +779,21 @@ export class V2QuestionnaireController {
             realm: user?.realm ?? "",
         };
     }
+
+	private editLockHolderFromUser(user: Record<string, unknown> | undefined): {
+		label: string;
+		userId: string | null;
+	} {
+		const preferred =
+			typeof user?.preferred_username === "string"
+				? user.preferred_username.trim()
+				: "";
+		const username =
+			typeof user?.username === "string" ? user.username.trim() : "";
+		const login = typeof user?.login === "string" ? user.login.trim() : "";
+		return {
+			label: preferred || username || login || "Пользователь",
+			userId: questionnaireAuditUserId(user),
+		};
+	}
 }

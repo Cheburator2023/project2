@@ -188,7 +188,7 @@ export class V2QuestionnaireEditLockGateway
 				ok: false,
 				message: denied.message,
 				lock: denied.lock,
-				reason: denied.lock ? "lock" : undefined,
+				reason: error instanceof ConflictException ? "lock" : undefined,
 			};
 		}
 	}

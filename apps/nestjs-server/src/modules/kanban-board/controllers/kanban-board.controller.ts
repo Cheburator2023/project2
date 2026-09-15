@@ -45,6 +45,7 @@ import type {
 	KanbanBoardPlanningDto,
 	KanbanBoardPlanningDetailDto,
 	KanbanBoardReleaseDto,
+	KanbanBoardReleaseDetailDto,
 	KanbanBoardReleaseThemeDto,
 	CreateKanbanBoardPlanningRequestDto,
 	CreateKanbanBoardReleaseRequestDto,
@@ -381,6 +382,13 @@ export class KanbanBoardController {
 		);
 	}
 
+	@Get("releases/:id")
+	async findReleaseById(
+		@Param("id") id: string,
+	): Promise<KanbanBoardReleaseDetailDto> {
+		return this.planningService.findReleaseById(id);
+	}
+
 	@Post("releases")
 	async createRelease(
 		@Body() dto: CreateKanbanBoardReleaseRequestDto,
@@ -430,7 +438,7 @@ export class KanbanBoardController {
 	async attachReleaseTasks(
 		@Param("id") id: string,
 		@Body() dto: AttachKanbanBoardReleaseTasksRequestDto,
-	): Promise<KanbanBoardPlanningDetailDto> {
+	): Promise<KanbanBoardReleaseDetailDto> {
 		return this.planningService.attachTasks(id, dto);
 	}
 
@@ -438,7 +446,7 @@ export class KanbanBoardController {
 	async reorderReleaseTasks(
 		@Param("id") id: string,
 		@Body() dto: ReorderKanbanBoardReleaseTasksRequestDto,
-	): Promise<KanbanBoardPlanningDetailDto> {
+	): Promise<KanbanBoardReleaseDetailDto> {
 		return this.planningService.reorderTasks(id, dto);
 	}
 
@@ -457,7 +465,7 @@ export class KanbanBoardController {
 		@Param("taskId") taskId: string,
 		@Body() dto: MoveKanbanBoardReleaseTaskStatusRequestDto,
 		@CurrentUser() user: Record<string, unknown> | undefined,
-	): Promise<KanbanBoardPlanningDetailDto> {
+	): Promise<KanbanBoardReleaseDetailDto> {
 		return this.planningService.moveTaskStatus(id, taskId, dto, {
 			createdBy: kanbanAuditUserId(user),
 			lockHolderLabel: dto.lockHolderLabel,
@@ -468,7 +476,7 @@ export class KanbanBoardController {
 	async detachReleaseTask(
 		@Param("id") id: string,
 		@Param("taskId") taskId: string,
-	): Promise<KanbanBoardPlanningDetailDto> {
+	): Promise<KanbanBoardReleaseDetailDto> {
 		return this.planningService.detachTask(id, taskId);
 	}
 
@@ -846,6 +854,7 @@ export class KanbanBoardController {
 			width?: string;
 			height?: string;
 			mimeType?: string;
+			subtaskId?: string;
 		},
 	): Promise<KanbanBoardTaskImageDto> {
 		const full = files?.full?.[0];
@@ -862,6 +871,7 @@ export class KanbanBoardController {
 			height: Number(body.height),
 			full: full.buffer,
 			thumb: thumb.buffer,
+			subtaskId: body.subtaskId,
 		});
 	}
 

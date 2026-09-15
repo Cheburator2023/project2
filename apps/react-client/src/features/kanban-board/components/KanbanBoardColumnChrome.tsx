@@ -13,6 +13,8 @@ import {
 	kanbanBoardColumnCanTrashTasks,
 	KANBAN_BOARD_BLOCKER_COLOR,
 	KANBAN_BOARD_COLUMN_TITLE_MAX_LENGTH,
+	KANBAN_BOARD_RELEASES_COLUMN_TITLE,
+	parseKanbanBoardReleasesLaneId,
 } from "@smart-anketa/api-contract";
 import type { BoardItem } from "react-kanban-kit";
 import { useEffect, useState } from "react";
@@ -69,6 +71,7 @@ export function KanbanColumnHeader({
 	const [editing, setEditing] = useState(false);
 	const [title, setTitle] = useState(column.title);
 	const hasTasks = column.totalChildrenCount > 0;
+	const locked = Boolean(parseKanbanBoardReleasesLaneId(column.id));
 	const canTrashAll =
 		Boolean(onTrashAll) &&
 		hasTasks &&
@@ -103,7 +106,7 @@ export function KanbanColumnHeader({
 			}}
 		>
 			<Stack direction="row" alignItems="center" spacing={0.5} minWidth={0}>
-				{editing ? (
+				{editing && !locked ? (
 					<InputBase
 						value={title}
 						autoFocus
@@ -140,18 +143,22 @@ export function KanbanColumnHeader({
 						variant="subtitle2"
 						fontWeight={700}
 						noWrap
-						title={column.title}
+						title={
+							locked
+								? `${KANBAN_BOARD_RELEASES_COLUMN_TITLE}: ${column.title}`
+								: column.title
+						}
 						onClick={() => {
-							if (!disabled) setEditing(true);
+							if (!disabled && !locked) setEditing(true);
 						}}
 						sx={{
 							flex: 1,
 							minWidth: 0,
 							color,
-							cursor: disabled ? "default" : "text",
+							cursor: disabled || locked ? "default" : "text",
 						}}
 					>
-						{column.title}
+						{locked ? `${KANBAN_BOARD_RELEASES_COLUMN_TITLE} · ${column.title}` : column.title}
 					</Typography>
 				)}
 				{canTrashAll ? (
@@ -166,18 +173,20 @@ export function KanbanColumnHeader({
 						<DeleteSweepIcon fontSize="small" />
 					</IconButton>
 				) : null}
-				<IconButton
-					size="small"
-					disabled={disabled || hasTasks}
-					onClick={() => onDelete(column.id)}
-					title={
-						hasTasks ? "Нельзя удалить колонку с задачами" : "Удалить колонку"
-					}
-					aria-label="Удалить колонку"
-					sx={{ color: hasTasks ? "text.disabled" : "text.secondary" }}
-				>
-					<DeleteOutlineIcon fontSize="small" />
-				</IconButton>
+				{locked ? null : (
+					<IconButton
+						size="small"
+						disabled={disabled || hasTasks}
+						onClick={() => onDelete(column.id)}
+						title={
+							hasTasks ? "Нельзя удалить колонку с задачами" : "Удалить колонку"
+						}
+						aria-label="Удалить колонку"
+						sx={{ color: hasTasks ? "text.disabled" : "text.secondary" }}
+					>
+						<DeleteOutlineIcon fontSize="small" />
+					</IconButton>
+				)}
 				<KanbanBlockerCountChip count={blockerCount} />
 				<Chip
 					size="small"

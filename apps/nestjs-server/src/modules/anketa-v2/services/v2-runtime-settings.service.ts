@@ -27,7 +27,7 @@ export type V2RoleCompatSettingDto = {
 	allowNestedLeadGroupsOverride: boolean | null;
 };
 
-/** Feature flag ДАДМ: default OFF (старое поведение без утверждения/срезов). */
+/** Feature flag ДАДМ: default ON (утверждение / срезы версий). */
 export type V2DadmProgramManagerSettingDto = {
 	enabled: boolean;
 	envDefaultEnabled: boolean;
@@ -84,9 +84,9 @@ export class V2RuntimeSettingsService implements OnModuleInit {
 		return process.env.ALLOW_NESTED_LEAD_GROUPS !== "false";
 	}
 
-	/** Default OFF — включается явно через админку или `DADM_PROGRAM_MANAGER_ENABLED=true`. */
+	/** Default ON — выключается через админку или `DADM_PROGRAM_MANAGER_ENABLED=false`. */
 	getEnvDadmProgramManagerEnabled(): boolean {
-		return process.env.DADM_PROGRAM_MANAGER_ENABLED === "true";
+		return process.env.DADM_PROGRAM_MANAGER_ENABLED !== "false";
 	}
 
 	/** Default OFF — `EDIT_LOCK_HARD_DISABLE_ENABLED=true` или override в админке. */

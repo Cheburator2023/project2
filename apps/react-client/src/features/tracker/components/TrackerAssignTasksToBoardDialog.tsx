@@ -52,11 +52,15 @@ export function TrackerAssignTasksToBoardDialog({
 	);
 
 	useEffect(() => {
-		if (open) {
-			setBoardId("");
-			setSystems([]);
-		}
+		if (!open) return;
+		setSystems([]);
+		setBoardId("");
 	}, [open]);
+
+	useEffect(() => {
+		if (!open) return;
+		if (!boardId && boardOptions[0]) setBoardId(boardOptions[0].value);
+	}, [boardId, boardOptions, open]);
 
 	const canConfirm = Boolean(boardId && systems.length) && !isSubmitting;
 

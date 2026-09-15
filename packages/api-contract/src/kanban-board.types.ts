@@ -15,6 +15,8 @@ export interface KanbanBoardSubtaskItem {
 	status?: KanbanBoardSubtaskStatusId;
 	/** @deprecated используйте status === "done" */
 	done?: boolean;
+	/** Картинки этой подзадачи (те же blob, что у задачи; не дублируются в content.images) */
+	images?: KanbanBoardTaskImageRef[];
 }
 
 export const KANBAN_BOARD_SUBTASK_STATUSES = [
@@ -260,6 +262,11 @@ export const KANBAN_BOARD_TASK_IMAGE_DONE_RETENTION_DAYS = 7;
 
 export const KANBAN_BOARD_DONE_COLUMN_ID = "done" as const;
 export const KANBAN_BOARD_CANCELLED_COLUMN_ID = "cancelled" as const;
+export const KANBAN_BOARD_RELEASES_COLUMN_ID = "demo" as const;
+export const KANBAN_BOARD_RELEASES_COLUMN_TITLE = "Релизы" as const;
+export const KANBAN_BOARD_RELEASES_UNASSIGNED_LANE_TITLE = "Без релиза" as const;
+export const KANBAN_BOARD_COLUMN_WIDTH_PX = 320;
+export const KANBAN_BOARD_RELEASES_MIN_LANE_CARDS = 3;
 
 export const KANBAN_BOARD_PRIORITIES = [
 	{ id: "high", title: "Высокий" },
@@ -907,7 +914,7 @@ export const KANBAN_BOARD_STATUSES = [
 	{ id: "dev_done", title: "Разработка (Готово)" },
 	{ id: "review_wip", title: "Проверка (В работе)" },
 	{ id: "review_done", title: "Проверка (Готово)" },
-	{ id: "demo", title: "Демонстрация" },
+	{ id: "demo", title: KANBAN_BOARD_RELEASES_COLUMN_TITLE },
 	{ id: "cancelled", title: "Отменено" },
 	{ id: "done", title: "Готово" },
 ] as const;
@@ -1233,6 +1240,10 @@ export interface KanbanBoardReleaseDto {
 	planningName: string;
 	createdAt: string;
 	updatedAt: string;
+}
+
+export interface KanbanBoardReleaseDetailDto extends KanbanBoardReleaseDto {
+	tasks: KanbanBoardReleaseTaskDto[];
 }
 
 export interface KanbanBoardPlanningDto {

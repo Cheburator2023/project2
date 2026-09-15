@@ -58,6 +58,9 @@ module.exports = merge(common, {
 			"process.env.ENABLE_SERVER_NOTICES": JSON.stringify(
 				process.env.ENABLE_SERVER_NOTICES || "",
 			),
+			"process.env.ENABLE_RELATIONS_GRAPH": JSON.stringify(
+				process.env.ENABLE_RELATIONS_GRAPH || "",
+			),
 		}),
 	],
 	watchOptions: {

@@ -15,6 +15,29 @@ describe("kanban-board-history.util", () => {
 		).toBe("Сделать API (Готово); Написать тесты (В работе)");
 	});
 
+	it("includes subtask image count in history text", () => {
+		expect(
+			formatKanbanBoardHistoryValue([
+				{
+					id: "1",
+					text: "Скрин",
+					status: "next_up",
+					images: [
+						{
+							id: "img-1",
+							name: "a.png",
+							width: 1,
+							height: 1,
+							fullByteSize: 1,
+							thumbByteSize: 1,
+							createdAt: "2026-09-15T00:00:00.000Z",
+						},
+					],
+				},
+			]),
+		).toBe("Скрин (Следующая · 1 изобр.)");
+	});
+
 	it("formats role estimates", () => {
 		expect(
 			formatKanbanBoardHistoryValue({ developer: 2, qa: 1, analyst: 0 }),

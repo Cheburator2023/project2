@@ -1,9 +1,8 @@
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
 import type { V2LogicRuleDto } from "@smart-anketa/api-contract";
-import type { DOCK_PANEL_HEADINGS } from "./constants";
+import type { SchemaEditorDockPanelId } from "./constants";
 
-export type SchemaEditorDockPanelId = (typeof DOCK_PANEL_HEADINGS)[number][0];
-
+export type { SchemaEditorDockPanelId };
 export type SchemaEditorMainTab = SchemaEditorDockPanelId;
 
 export type SchemaFieldRow = {

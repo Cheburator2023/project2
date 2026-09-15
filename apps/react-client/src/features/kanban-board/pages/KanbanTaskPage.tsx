@@ -42,6 +42,7 @@ import {
 	KANBAN_BOARD_HANDOFF_COLOR,
 	normalizeKanbanBoardTaskContent,
 	normalizeKanbanBoardSubtasks,
+	kanbanBoardSubtaskOwnedImageIds,
 	kanbanBoardRoleEstimatesTotal,
 	type KanbanBoardRoleEstimates,
 	type KanbanBoardSubtaskItem,
@@ -466,9 +467,16 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	}, [parentTask, tasksRegistryQuery.data]);
 
 	const task = taskByRefQuery.data;
-	const taskImages = taskImagesQuery.isLoading
+	const listedImages = taskImagesQuery.isLoading
 		? (task?.content.images ?? [])
 		: (taskImagesQuery.data ?? []);
+	const subtaskImageIds = kanbanBoardSubtaskOwnedImageIds([
+		...(task?.content.subtasks ?? []),
+		...subtasks,
+	]);
+	const taskImages = listedImages.filter(
+		(image) => !subtaskImageIds.has(image.id),
+	);
 	const taskFiles = taskFilesQuery.isLoading
 		? (task?.content.files ?? [])
 		: (taskFilesQuery.data ?? []);
@@ -1319,6 +1327,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 								<KanbanSubtasksChecklist
 									items={subtasks}
 									onChange={setSubtasks}
+									taskId={!isCreate && taskId ? taskId : undefined}
 									disabled={formLocked}
 								/>
 							</KanbanTaskSectionCard>

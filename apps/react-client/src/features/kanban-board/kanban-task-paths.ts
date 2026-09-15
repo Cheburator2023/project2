@@ -119,3 +119,7 @@ export function trackerStreamPath(code: string) {
 export function trackerPlanningPath(planningId: string) {
 	return `/tracker/plannings/${encodeURIComponent(planningId)}`;
 }
+
+export function trackerReleasePath(releaseId: string) {
+	return `/tracker/releases/${encodeURIComponent(releaseId)}`;
+}
