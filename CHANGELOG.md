@@ -1,5 +1,35 @@
 # Semantic Versioning Changelog
 
+# [1.67.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.66.0...v1.67.0) (2026-09-11)
+
+
+### Bug Fixes
+
+* admin ui fixes ([7deba64](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/7deba648b6e886ed64aa97fa1f828986c2df78fe))
+
+
+### Features
+
+* add blocker management to Kanban board functionality ([f6001ce](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/f6001ce9e7278898f40576ea91cfbef0ec769dfe))
+* add endpoints for current template schema and version retrieval ([48c04a3](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/48c04a3240f4643e8ab4a77b45cb052e4ef910f9))
+* add planning release management dialogs and tests ([aebe4b4](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/aebe4b402841bc542577811a9356f404322527ce))
+* add Swagger UI integration and related routing ([9c04738](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/9c047386c91d1a12d5689e8ec4a065e3f149a0cf))
+* enhance Kanban board task filtering and URL parameter handling ([01fa3be](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/01fa3beb8dff5bab63ce2ac3037246b91618a036))
+* enhance Kanban board to support multiple stands for tasks ([ce24be5](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/ce24be5954d061688693398e24e26b33df7f019a))
+* enhance Kanban board with system management and cancellation features ([e602cc8](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/e602cc8af40a8e5280aad89fde9144dfa61dac24))
+* enhance schema editor with improved layout and spacing ([f0a6f0a](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/f0a6f0a9928dbb73631b3340381bd3690eb5ee07))
+* enhance Tracker components with row styling and blocker management ([a83cf12](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/a83cf1260574d51a213af0fc5cea9358060245e4))
+* enhance V2QuestionnaireController with new endpoints and delete functionality ([43aa384](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/43aa384688315f38be83b06e3cf04d6b5f63efd7))
+* implement assignee handoff functionality in Kanban board ([7c1b987](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/7c1b9872e356837aad527e1c76407b8b4c68598f))
+* implement kanban planning import functionality ([9247720](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/92477205914d2b36c4930961f2edc5a26847efab))
+* implement planning and release management features in Kanban board ([4bb087b](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/4bb087b1776e49486b0115da5b53ffd78f1a1755))
+* implement row tint preference management in ag-grid ([a14aebb](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/a14aebbc042de01018f9e5c4aaac945890d3b29e))
+* implement text length validation for Kanban board components ([636d6bd](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/636d6bdc2697c14c160e448ad570b1b60272be03))
+* refactor Kanban board task management to support multiple systems ([ba1250b](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/ba1250b812715a1a14f601dc72b85d121be0121c))
+* update Kanban board task management to support trashing from multiple columns ([8ced0c2](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/8ced0c25b8be4c8e8075967bd8a4c0f7cc076f45))
+* update Kanban board task management to support trashing from multiple columns ([fede7f9](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/fede7f9a5f5e3e4cec7c5ef257bc871cda21ed5c))
+* update UI schema handling and enhance arch parameter grouping ([6dcefbc](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/6dcefbcdae485d80fc65ea8d54bdc0ed56f57325))
+
 # [1.66.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.65.0...v1.66.0) (2026-08-20)
 
 
