@@ -48,7 +48,10 @@ const formatSubtasks = (value: unknown): string | null => {
 					? "Готово"
 					: "В работе";
 			const text = item.text.trim() || `Подзадача ${index + 1}`;
-			return `${text} (${status})`;
+			const photos = item.images?.length
+				? ` · ${item.images.length} изобр.`
+				: "";
+			return `${text} (${status}${photos})`;
 		})
 		.filter(Boolean)
 		.join("; ");

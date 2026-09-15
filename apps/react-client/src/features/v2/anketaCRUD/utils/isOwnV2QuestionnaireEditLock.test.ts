@@ -12,6 +12,15 @@ describe("isForeignV2EditLockJoinDenial", () => {
 		expect(isForeignV2EditLockJoinDenial(ack)).toBe(false);
 	});
 
+	it("treats reason=lock without payload as another editor", () => {
+		const ack: V2EditLockJoinAck = {
+			ok: false,
+			message: "Анкета сейчас редактируется другим пользователем",
+			reason: "lock",
+		};
+		expect(isForeignV2EditLockJoinDenial(ack)).toBe(true);
+	});
+
 	it("treats a lock payload as another editor so the registry can show occupancy", () => {
 		const ack: V2EditLockJoinAck = {
 			ok: false,

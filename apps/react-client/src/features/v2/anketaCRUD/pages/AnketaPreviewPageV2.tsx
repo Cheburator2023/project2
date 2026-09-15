@@ -2,7 +2,6 @@ import {
 	useUpdateV2Questionnaire,
 	useV2QuestionnaireFormPackage,
 } from "@react-client/common/api/queries/v2-questionnaires";
-import { useEditLockHardDisableFeature } from "@react-client/common/api/queries/v2-runtime-settings";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { toast } from "@react-client/common/toasts";
 import { AnketaFormShell } from "@react-client/features/v2/anketaCRUD/templates/AnketaFormShell";
@@ -21,10 +20,9 @@ export const AnketaPreviewPageV2 = () => {
 		id ?? "",
 	);
 	const updateMutation = useUpdateV2Questionnaire();
-	const editLockHardDisable = useEditLockHardDisableFeature();
 	const editLock = useQuestionnaireEditLock({
 		questionnaireId: id,
-		enabled: Boolean(formPackage && !formPackage.readOnly),
+		enabled: Boolean(id) && formPackage?.readOnly !== true,
 	});
 	const {
 		readOnlyByLock,
@@ -57,10 +55,9 @@ export const AnketaPreviewPageV2 = () => {
 		[engine.displayFormData],
 	);
 
-	/** Жёсткий disable — только по фиче-тогглу; иначе форма остаётся editable. */
-	const lockForcesReadOnly = editLockHardDisable && readOnlyByLock;
+	/** Чужой lock / idle-timeout → только просмотр (поля, сохранение, переименование). */
 	const effectiveReadOnly =
-		Boolean(formPackage?.readOnly) || lockForcesReadOnly;
+		Boolean(formPackage?.readOnly) || readOnlyByLock;
 
 	const autosave = useDebouncedQuestionnaireSave({
 		questionnaireId: id,
@@ -118,7 +115,7 @@ export const AnketaPreviewPageV2 = () => {
 		"другой пользователь";
 	const lockMessage =
 		Boolean(foreignLock) && !sessionTimedOut
-			? `Анкета сейчас редактируется пользователем «${foreignEditorLabel}»`
+			? `Анкета сейчас редактируется пользователем «${foreignEditorLabel}». Открыт режим только для чтения — поля и сохранение недоступны, пока сессия не освободится.`
 			: null;
 
 	if (sessionTimedOut && !errorMessage) {
@@ -154,7 +151,9 @@ export const AnketaPreviewPageV2 = () => {
 			schemaBinding={formPackage?.questionnaire.schemaBinding}
 			readOnly={effectiveReadOnly}
 			lockMessage={lockMessage}
-			onSave={formPackage && !errorMessage && !effectiveReadOnly ? onSave : undefined}
+			onSave={
+				formPackage && !errorMessage && !effectiveReadOnly ? onSave : undefined
+			}
 			savePending={autosave.isSaving}
 			saveStatus={autosave.status}
 			saveErrorMessage={autosave.errorMessage}

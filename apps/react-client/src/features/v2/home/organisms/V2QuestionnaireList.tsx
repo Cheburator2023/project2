@@ -1052,7 +1052,7 @@ export function V2QuestionnaireList() {
 			const lockedHint = hardLocked
 				? "Анкета сейчас редактируется"
 				: row.isEditLocked
-					? "уже редактируется — можно открыть"
+					? "уже редактируется — откроется только для чтения"
 					: undefined;
 
 			const menu: MenuItemDef[] = [

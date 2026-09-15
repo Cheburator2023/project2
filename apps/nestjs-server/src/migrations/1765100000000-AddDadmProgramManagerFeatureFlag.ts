@@ -3,7 +3,7 @@ import type { MigrationInterface, QueryRunner } from "typeorm";
 /**
  * Feature flag: функционал менеджера программ ДАДМ
  * (утверждение оценки, режимы реестра, версии как исторические срезы).
- * null = env default (`DADM_PROGRAM_MANAGER_ENABLED`, default OFF).
+ * null = env default (`DADM_PROGRAM_MANAGER_ENABLED`, default ON).
  */
 export class AddDadmProgramManagerFeatureFlag1765100000000
 	implements MigrationInterface

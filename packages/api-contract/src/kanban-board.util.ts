@@ -8,6 +8,7 @@ import {
 	type KanbanBoardStandId,
 	type KanbanBoardSystemId,
 	type KanbanBoardTaskContent,
+	type KanbanBoardTaskImageRef,
 	type KanbanBoardTaskRecord,
 	defaultKanbanBoardColumns,
 	type KanbanBoardTaskReleaseRefDto,
@@ -598,7 +599,89 @@ export function kanbanBoardEffectiveSprintCapacityPd(input: {
 	return fallback;
 }
 
-/** Нормализует чеклист подзадач: убирает пустые строки, сохраняет порядок. */
+export function normalizeKanbanBoardTaskImageRefs(
+	items: KanbanBoardTaskImageRef[] | undefined,
+): KanbanBoardTaskImageRef[] | undefined {
+	if (!items?.length) return undefined;
+	const cleaned = items
+		.filter(
+			(item) =>
+				item &&
+				typeof item.id === "string" &&
+				typeof item.name === "string" &&
+				Number.isFinite(item.width) &&
+				Number.isFinite(item.height),
+		)
+		.map((item) => ({
+			id: item.id,
+			name: item.name.trim().slice(0, 255) || "image",
+			width: Math.max(0, Math.round(item.width)),
+			height: Math.max(0, Math.round(item.height)),
+			fullByteSize: Math.max(0, Math.round(item.fullByteSize ?? 0)),
+			thumbByteSize: Math.max(0, Math.round(item.thumbByteSize ?? 0)),
+			createdAt: item.createdAt ?? new Date().toISOString(),
+		}));
+	return cleaned.length ? cleaned : undefined;
+}
+
+export function kanbanBoardSubtaskOwnedImageIds(
+	subtasks: KanbanBoardSubtaskItem[] | undefined,
+): Set<string> {
+	const ids = new Set<string>();
+	for (const item of subtasks ?? []) {
+		for (const image of item.images ?? []) {
+			if (image.id) ids.add(image.id);
+		}
+	}
+	return ids;
+}
+
+/**
+ * Раскладывает сохранённые blob-ы: ref на подзадаче остаётся на ней,
+ * остальные попадают в галерею задачи.
+ */
+export function applyKanbanBoardStoredImagesToContent(
+	content: KanbanBoardTaskContent,
+	stored: KanbanBoardTaskImageRef[],
+): KanbanBoardTaskContent {
+	const byId = new Map(stored.map((item) => [item.id, item]));
+	const subtasks = (content.subtasks ?? []).map((subtask) => {
+		const images = normalizeKanbanBoardTaskImageRefs(
+			(subtask.images ?? [])
+				.map((ref) => byId.get(ref.id))
+				.filter((item): item is KanbanBoardTaskImageRef => Boolean(item)),
+		);
+		return images ? { ...subtask, images } : { ...subtask, images: undefined };
+	});
+	const owned = kanbanBoardSubtaskOwnedImageIds(subtasks);
+	return normalizeKanbanBoardTaskContent({
+		...content,
+		subtasks: subtasks.length ? subtasks : undefined,
+		images: stored.filter((item) => !owned.has(item.id)),
+	});
+}
+
+/** Сохраняет картинки подзадач, если клиент прислал чеклист без этого поля. */
+export function mergeKanbanBoardSubtaskImages(
+	incoming: KanbanBoardSubtaskItem[] | undefined,
+	previous: KanbanBoardSubtaskItem[] | undefined,
+): KanbanBoardSubtaskItem[] | undefined {
+	if (incoming === undefined) return previous;
+	if (!incoming.length) return undefined;
+	const prevById = new Map((previous ?? []).map((item) => [item.id, item]));
+	return incoming.map((item) => {
+		const merged = new Map(
+			(prevById.get(item.id)?.images ?? []).map((image) => [image.id, image]),
+		);
+		for (const image of item.images ?? []) {
+			merged.set(image.id, image);
+		}
+		const images = normalizeKanbanBoardTaskImageRefs([...merged.values()]);
+		return images ? { ...item, images } : { ...item, images: undefined };
+	});
+}
+
+/** Нормализует чеклист подзадач: убирает пустые строки, сохраняет порядок и картинки. */
 export function normalizeKanbanBoardSubtasks(
 	items: KanbanBoardSubtaskItem[] | undefined,
 ): KanbanBoardSubtaskItem[] | undefined {
@@ -606,10 +689,12 @@ export function normalizeKanbanBoardSubtasks(
 	const cleaned = items
 		.map((item) => {
 			const status = normalizeKanbanBoardSubtaskStatus(item);
+			const images = normalizeKanbanBoardTaskImageRefs(item.images);
 			return {
 				id: item.id.trim(),
 				text: item.text.trim(),
 				status,
+				...(images ? { images } : {}),
 			};
 		})
 		.filter((item) => item.id && item.text);
@@ -667,29 +752,14 @@ export function normalizeKanbanBoardTaskContent(
 	const next: KanbanBoardTaskContent = { ...content };
 	next.subtasks = normalizeKanbanBoardSubtasks(next.subtasks);
 	if (content.images !== undefined) {
-		if (content.images.length) {
-			next.images = content.images
-				.filter(
-					(item) =>
-						item &&
-						typeof item.id === "string" &&
-						typeof item.name === "string" &&
-						Number.isFinite(item.width) &&
-						Number.isFinite(item.height),
-				)
-				.map((item) => ({
-					id: item.id,
-					name: item.name.trim().slice(0, 255) || "image",
-					width: Math.max(0, Math.round(item.width)),
-					height: Math.max(0, Math.round(item.height)),
-					fullByteSize: Math.max(0, Math.round(item.fullByteSize ?? 0)),
-					thumbByteSize: Math.max(0, Math.round(item.thumbByteSize ?? 0)),
-					createdAt: item.createdAt ?? new Date().toISOString(),
-				}));
-			if (!next.images.length) next.images = undefined;
-		} else {
-			next.images = undefined;
-		}
+		next.images = normalizeKanbanBoardTaskImageRefs(
+			content.images.length ? content.images : undefined,
+		);
+	}
+	const ownedImageIds = kanbanBoardSubtaskOwnedImageIds(next.subtasks);
+	if (ownedImageIds.size && next.images?.length) {
+		next.images = next.images.filter((item) => !ownedImageIds.has(item.id));
+		if (!next.images.length) next.images = undefined;
 	}
 	if (content.files !== undefined) {
 		if (content.files.length) {

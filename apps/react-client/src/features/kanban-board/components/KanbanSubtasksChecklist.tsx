@@ -12,7 +12,10 @@ import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { alpha } from "@mui/material/styles";
-import { useUpdateKanbanBoardTask } from "@react-client/common/api/queries/kanban-board";
+import {
+	useDeleteKanbanBoardTaskImage,
+	useUpdateKanbanBoardTask,
+} from "@react-client/common/api/queries/kanban-board";
 import {
 	KANBAN_BOARD_SUBTASK_STATUSES,
 	KANBAN_BOARD_SUBTASK_TEXT_MAX_LENGTH,
@@ -29,12 +32,14 @@ import {
 import { ulid } from "ulid";
 import {
 	useEffect,
+	useRef,
 	useState,
 	type KeyboardEvent,
 	type MouseEvent,
 } from "react";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
+import { KanbanSubtaskImages } from "@react-client/features/kanban-board/components/KanbanSubtaskImages";
 
 const SUBTASK_STATUS_OPTIONS = KANBAN_BOARD_SUBTASK_STATUSES.map((option) => ({
 	value: option.id,
@@ -56,6 +61,8 @@ type ChecklistProps = {
 	collapsible?: boolean;
 	/** Не открывать карточку при клике по чеклисту на доске */
 	stopCardClick?: boolean;
+	/** Нужен, чтобы грузить/крепить картинки подзадачи */
+	taskId?: string;
 };
 
 const stopCardNavigation = (
@@ -181,9 +188,14 @@ export function KanbanSubtasksChecklist({
 	compact = false,
 	collapsible = false,
 	stopCardClick = false,
+	taskId,
 }: ChecklistProps) {
 	const [draft, setDraft] = useState("");
 	const [expanded, setExpanded] = useState(false);
+	const deleteImage = useDeleteKanbanBoardTaskImage();
+	const itemsRef = useRef(items);
+	itemsRef.current = items;
+	const textBeforeEditRef = useRef<Record<string, string>>({});
 	const progress = kanbanBoardSubtasksProgress({ subtasks: items });
 	const checkboxSlot = compact ? CHECKBOX_SLOT.compact : CHECKBOX_SLOT.default;
 	const rowMinHeight = compact
@@ -234,10 +246,16 @@ export function KanbanSubtasksChecklist({
 	const commitText = (id: string, text: string) => {
 		const trimmed = text.trim().slice(0, KANBAN_BOARD_SUBTASK_TEXT_MAX_LENGTH);
 		if (!trimmed) {
-			apply(
-				items.filter((item) => item.id !== id),
-				true,
-			);
+			if (compact) {
+				const previous = textBeforeEditRef.current[id] ?? "";
+				onChange(
+					itemsRef.current.map((item) =>
+						item.id === id ? { ...item, text: previous } : item,
+					),
+				);
+				return;
+			}
+			dropItem(id);
 			return;
 		}
 		apply(
@@ -246,11 +264,24 @@ export function KanbanSubtasksChecklist({
 		);
 	};
 
-	const removeItem = (id: string) => {
+	const dropItem = (id: string) => {
+		const imageIds =
+			itemsRef.current
+				.find((item) => item.id === id)
+				?.images?.map((image) => image.id) ?? [];
 		apply(
-			items.filter((item) => item.id !== id),
+			itemsRef.current.filter((item) => item.id !== id),
 			true,
 		);
+		if (taskId) {
+			for (const imageId of imageIds) {
+				void deleteImage.mutateAsync({ taskId, imageId });
+			}
+		}
+	};
+
+	const removeItem = (id: string) => {
+		dropItem(id);
 	};
 
 	const addItem = () => {
@@ -393,8 +424,13 @@ export function KanbanSubtasksChecklist({
 						const isSkipped = item.status === "skipped";
 
 						return (
-							<Stack
+							<Flex
 								key={item.id}
+								flexDirection="column"
+								gap={compact ? 4 : 6}
+								minWidth={0}
+							>
+							<Stack
 								direction="row"
 								alignItems="center"
 								spacing={2}
@@ -429,6 +465,9 @@ export function KanbanSubtasksChecklist({
 								<InputBase
 									value={item.text}
 									onChange={(event) => updateText(item.id, event.target.value)}
+									onFocus={() => {
+										textBeforeEditRef.current[item.id] = item.text;
+									}}
 									onBlur={(event) => commitText(item.id, event.target.value)}
 									disabled={disabled}
 									multiline={!compact}
@@ -469,6 +508,7 @@ export function KanbanSubtasksChecklist({
 									compact={compact}
 									onMouseDown={stopIfNeeded}
 								/>
+								{compact ? null : (
 								<IconButton
 									className="kanban-subtask-remove"
 									size="small"
@@ -481,13 +521,63 @@ export function KanbanSubtasksChecklist({
 										width: 22,
 										height: 22,
 										flexShrink: 0,
-										opacity: compact ? 0.45 : 0,
+										opacity: 0,
 										transition: "opacity 0.15s",
 									}}
 								>
 									<CloseIcon sx={{ fontSize: 14 }} />
 								</IconButton>
+								)}
 							</Stack>
+							{!compact || (item.images?.length ?? 0) > 0 ? (
+							<Flex
+								padding={`0 0 0 ${checkboxSlot + 8}px`}
+								minWidth={0}
+							>
+								<KanbanSubtaskImages
+									taskId={taskId}
+									subtaskId={item.id}
+									images={item.images ?? []}
+									disabled={disabled}
+									compact={compact}
+									allowUpload={!compact}
+									onUploaded={(image) => {
+										apply(
+											itemsRef.current.map((row) =>
+												row.id === item.id
+													? {
+															...row,
+															images: [
+																...(row.images ?? []).filter(
+																	(current) => current.id !== image.id,
+																),
+																image,
+															],
+														}
+													: row,
+											),
+											false,
+										);
+									}}
+									onDeleted={(imageId) => {
+										apply(
+											itemsRef.current.map((row) => {
+												if (row.id !== item.id) return row;
+												const images = (row.images ?? []).filter(
+													(current) => current.id !== imageId,
+												);
+												return {
+													...row,
+													images: images.length ? images : undefined,
+												};
+											}),
+											false,
+										);
+									}}
+								/>
+							</Flex>
+							) : null}
+							</Flex>
 						);
 					})}
 				</Flex>
@@ -638,6 +728,7 @@ export function KanbanTaskCardSubtasks({
 			<KanbanSubtasksChecklist
 				items={items}
 				onChange={setItems}
+				taskId={taskId}
 				onCommit={(next) => {
 					void persist(next);
 				}}

@@ -15,6 +15,8 @@ export interface KanbanBoardSubtaskItem {
 	status?: KanbanBoardSubtaskStatusId;
 	/** @deprecated используйте status === "done" */
 	done?: boolean;
+	/** Картинки этой подзадачи (те же blob, что у задачи; не дублируются в content.images) */
+	images?: KanbanBoardTaskImageRef[];
 }
 
 export const KANBAN_BOARD_SUBTASK_STATUSES = [

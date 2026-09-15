@@ -71,14 +71,20 @@ export function useQuestionnaireEditLock({
 			heldRef.current = false;
 			setHolding(false);
 			setLockError(message);
-			if (!lock) {
-				setForeignLock(null);
-				return;
-			}
-			setForeignLock(lock);
-			upsertLock(lock);
+			const occupancy =
+				lock ??
+				(questionnaireId
+					? {
+							questionnaireId,
+							lockedByLabel: "другой пользователь",
+							lockedByUserId: null,
+							expiresAt: new Date(Date.now() + 60_000).toISOString(),
+						}
+					: null);
+			setForeignLock(occupancy);
+			if (lock) upsertLock(lock);
 		},
-		[upsertLock],
+		[questionnaireId, upsertLock],
 	);
 
 	const tryAcquire = useCallback(async () => {
@@ -106,17 +112,14 @@ export function useQuestionnaireEditLock({
 					labelRef.current,
 				);
 			}
-			if (!ack?.ok) {
-				if (ack && isForeignV2EditLockJoinDenial(ack)) {
+			if (!ack.ok) {
+				if (isForeignV2EditLockJoinDenial(ack)) {
 					applyDenied(ack.lock, ack.message);
 					return false;
 				}
 				heldRef.current = false;
 				setHolding(false);
-				setForeignLock(null);
-				setLockError(
-					ack?.message ?? "Не удалось захватить анкету",
-				);
+				setLockError(ack.message || "Не удалось захватить анкету");
 				return false;
 			}
 			heldRef.current = true;

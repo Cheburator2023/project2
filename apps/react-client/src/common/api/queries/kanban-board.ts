@@ -963,6 +963,7 @@ export const kanbanBoardUploadTaskImage = async (
 	taskId: string,
 	prepared: KanbanBoardTaskImageUploadPayload,
 	signal?: AbortSignal,
+	subtaskId?: string,
 ): Promise<KanbanBoardTaskImageDto> => {
 	const formData = new FormData();
 	formData.append("full", prepared.full, "full");
@@ -971,6 +972,7 @@ export const kanbanBoardUploadTaskImage = async (
 	formData.append("mimeType", prepared.mimeType);
 	formData.append("width", String(prepared.width));
 	formData.append("height", String(prepared.height));
+	if (subtaskId) formData.append("subtaskId", subtaskId);
 	return apiClient<KanbanBoardTaskImageDto>({
 		url: `/kanban-board/tasks/${taskId}/images`,
 		method: "POST",
@@ -986,10 +988,12 @@ export const useUploadKanbanBoardTaskImage = () => {
 		mutationFn: ({
 			taskId,
 			prepared,
+			subtaskId,
 		}: {
 			taskId: string;
 			prepared: KanbanBoardTaskImageUploadPayload;
-		}) => kanbanBoardUploadTaskImage(taskId, prepared),
+			subtaskId?: string;
+		}) => kanbanBoardUploadTaskImage(taskId, prepared, undefined, subtaskId),
 		onSuccess: (_image, { taskId }) => {
 			invalidateTracker(queryClient);
 			queryClient.invalidateQueries({

@@ -7,6 +7,7 @@ import {
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import {
+	applyKanbanBoardStoredImagesToContent,
 	KANBAN_BOARD_TASK_IMAGE_MAX_FULL_BYTES,
 	normalizeKanbanBoardTaskContent,
 	type KanbanBoardTaskImageDto,
@@ -65,14 +66,11 @@ export class KanbanBoardTaskImageService implements OnModuleInit {
 
 	async syncTaskContentImages(task: KanbanBoardTaskEntity): Promise<boolean> {
 		const images = await this.listForTask(task.id);
-		const current = task.content.images ?? [];
-		if (kanbanBoardTaskImageRefsEqual(current, images)) {
+		const next = applyKanbanBoardStoredImagesToContent(task.content, images);
+		if (this.imagePlacementUnchanged(task.content, next)) {
 			return false;
 		}
-		task.content = normalizeKanbanBoardTaskContent({
-			...task.content,
-			images: images.length ? images : undefined,
-		});
+		task.content = next;
 		await this.taskRepository.save(task);
 		return true;
 	}
@@ -96,12 +94,9 @@ export class KanbanBoardTaskImageService implements OnModuleInit {
 		const toSave: KanbanBoardTaskEntity[] = [];
 		for (const task of tasks) {
 			const images = imagesByTaskId.get(task.id) ?? [];
-			const current = task.content.images ?? [];
-			if (kanbanBoardTaskImageRefsEqual(current, images)) continue;
-			task.content = normalizeKanbanBoardTaskContent({
-				...task.content,
-				images: images.length ? images : undefined,
-			});
+			const next = applyKanbanBoardStoredImagesToContent(task.content, images);
+			if (this.imagePlacementUnchanged(task.content, next)) continue;
+			task.content = next;
 			toSave.push(task);
 		}
 
@@ -119,9 +114,19 @@ export class KanbanBoardTaskImageService implements OnModuleInit {
 			height: number;
 			full: Buffer;
 			thumb: Buffer;
+			subtaskId?: string;
 		},
 	): Promise<KanbanBoardTaskImageDto> {
-		await this.ensureTaskExists(taskId);
+		const task = await this.ensureTaskExists(taskId);
+		const subtaskId = payload.subtaskId?.trim() || undefined;
+		if (subtaskId) {
+			const exists = (task.content.subtasks ?? []).some(
+				(item) => item.id === subtaskId,
+			);
+			if (!exists) {
+				throw new BadRequestException("Подзадача не найдена");
+			}
+		}
 		this.validateUpload(payload);
 
 		const id = ulid();
@@ -155,7 +160,7 @@ export class KanbanBoardTaskImageService implements OnModuleInit {
 		});
 		// Blob в БД — источник истины: в k8s часто нет writable volume под data/.
 		await this.imageRepository.save(entity);
-		await this.appendImageRef(taskId, this.toDto(entity));
+		await this.appendImageRef(taskId, this.toDto(entity), subtaskId);
 
 		await this.tryWriteDiskFiles(
 			taskId,
@@ -220,11 +225,14 @@ export class KanbanBoardTaskImageService implements OnModuleInit {
 
 		const task = await this.taskRepository.findOne({ where: { id: taskId } });
 		if (task) {
-			const content = normalizeKanbanBoardTaskContent({
+			task.content = normalizeKanbanBoardTaskContent({
 				...task.content,
 				images: [],
+				subtasks: (task.content.subtasks ?? []).map((item) => {
+					const { images: _images, ...rest } = item;
+					return rest;
+				}),
 			});
-			task.content = content;
 			await this.taskRepository.save(task);
 		}
 
@@ -420,18 +428,57 @@ export class KanbanBoardTaskImageService implements OnModuleInit {
 		};
 	}
 
+	private imagePlacementUnchanged(
+		current: KanbanBoardTaskEntity["content"],
+		next: KanbanBoardTaskEntity["content"],
+	): boolean {
+		if (!kanbanBoardTaskImageRefsEqual(current.images ?? [], next.images ?? [])) {
+			return false;
+		}
+		const left = current.subtasks ?? [];
+		const right = next.subtasks ?? [];
+		if (left.length !== right.length) return false;
+		return left.every(
+			(item, index) =>
+				item.id === right[index]?.id &&
+				kanbanBoardTaskImageRefsEqual(
+					item.images ?? [],
+					right[index]?.images ?? [],
+				),
+		);
+	}
+
 	private async appendImageRef(
 		taskId: string,
 		image: KanbanBoardTaskImageDto,
+		subtaskId?: string,
 	) {
 		const task = await this.ensureTaskExists(taskId);
 		const content = normalizeKanbanBoardTaskContent({ ...task.content });
-		const images = [...(content.images ?? [])];
-		if (!images.some((item) => item.id === image.id)) {
-			images.push(image);
+		if (subtaskId) {
+			const subtasks = [...(content.subtasks ?? [])];
+			const index = subtasks.findIndex((item) => item.id === subtaskId);
+			if (index < 0) {
+				throw new BadRequestException("Подзадача не найдена");
+			}
+			const images = [...(subtasks[index].images ?? [])];
+			if (!images.some((item) => item.id === image.id)) {
+				images.push(image);
+			}
+			subtasks[index] = { ...subtasks[index], images };
+			content.subtasks = subtasks;
+			content.images = (content.images ?? []).filter(
+				(item) => item.id !== image.id,
+			);
+			if (!content.images.length) content.images = undefined;
+		} else {
+			const images = [...(content.images ?? [])];
+			if (!images.some((item) => item.id === image.id)) {
+				images.push(image);
+			}
+			content.images = images.length ? images : undefined;
 		}
-		content.images = images.length ? images : undefined;
-		task.content = content;
+		task.content = normalizeKanbanBoardTaskContent(content);
 		await this.taskRepository.save(task);
 	}
 
@@ -457,7 +504,15 @@ export class KanbanBoardTaskImageService implements OnModuleInit {
 		const content = normalizeKanbanBoardTaskContent({ ...task.content });
 		const images = (content.images ?? []).filter((item) => item.id !== imageId);
 		content.images = images.length ? images : undefined;
-		task.content = content;
+		content.subtasks = (content.subtasks ?? []).map((item) => {
+			const nextImages = (item.images ?? []).filter(
+				(image) => image.id !== imageId,
+			);
+			return nextImages.length
+				? { ...item, images: nextImages }
+				: { ...item, images: undefined };
+		});
+		task.content = normalizeKanbanBoardTaskContent(content);
 		await this.taskRepository.save(task);
 	}
 }

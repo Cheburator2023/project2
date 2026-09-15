@@ -74,7 +74,7 @@ export class V2RuntimeSettingsEntity {
 
 	/**
 	 * Функционал менеджера программ ДАДМ (утверждение, режимы реестра, срезы версий).
-	 * null = env `DADM_PROGRAM_MANAGER_ENABLED` (default OFF).
+	 * null = env `DADM_PROGRAM_MANAGER_ENABLED` (default ON).
 	 */
 	@Column({
 		name: "dadm_program_manager_enabled",

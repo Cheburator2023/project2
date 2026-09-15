@@ -15,13 +15,12 @@ export function isOwnV2QuestionnaireEditLock(
 }
 
 /**
- * Чужой редактор — только если сервер прислал lock.
- * «Анкета не найдена» без lock — не occupancy, иначе баннер «другой пользователь».
+ * Чужой редактор — occupancy join denial.
+ * «Анкета не найдена» без lock — не occupancy.
  */
 export function isForeignV2EditLockJoinDenial(
 	ack: V2EditLockJoinAck,
-): ack is Extract<V2EditLockJoinAck, { ok: false }> & {
-	lock: V2QuestionnaireEditLockDto;
-} {
-	return !ack.ok && Boolean(ack.lock) && ack.reason !== "not_found";
+): boolean {
+	if (ack.ok || ack.reason === "not_found") return false;
+	return Boolean(ack.lock) || ack.reason === "lock";
 }

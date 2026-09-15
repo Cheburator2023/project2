@@ -8,17 +8,22 @@ import { In, QueryFailedError, Repository } from "typeorm";
 import { V2QuestionnaireEditLockEntity } from "../entities/v2-questionnaire-edit-lock.entity";
 import { V2QuestionnaireEntity } from "../entities/v2-questionnaire.entity";
 
-function isPostgresForeignKeyViolation(error: unknown): boolean {
+function postgresDriverCode(error: unknown): string | undefined {
 	if (error instanceof QueryFailedError) {
-		const driver = error.driverError as { code?: string } | undefined;
-		return driver?.code === "23503";
+		return (error.driverError as { code?: string } | undefined)?.code;
 	}
-	return (
-		typeof error === "object" &&
-		error !== null &&
-		"code" in error &&
-		(error as { code?: string }).code === "23503"
-	);
+	if (typeof error === "object" && error !== null && "code" in error) {
+		return (error as { code?: string }).code;
+	}
+	return undefined;
+}
+
+function isPostgresForeignKeyViolation(error: unknown): boolean {
+	return postgresDriverCode(error) === "23503";
+}
+
+function isPostgresUniqueViolation(error: unknown): boolean {
+	return postgresDriverCode(error) === "23505";
 }
 
 export type V2QuestionnaireEditLockHolder = {
@@ -75,6 +80,24 @@ export class V2QuestionnaireEditLockService {
 		return this.fallbackLocks.get(questionnaireId) ?? null;
 	}
 
+	/**
+	 * Запрещает мутацию, если активный lock держит другой пользователь.
+	 * Без lock — ok (скрипты / после idle-release).
+	 */
+	async assertMutableBy(
+		questionnaireId: string,
+		holder: V2QuestionnaireEditLockHolder,
+	): Promise<void> {
+		const lock = await this.getLock(questionnaireId);
+		if (!lock) return;
+		if (this.isSameHolder(lock, holder)) return;
+		throw new ConflictException({
+			message: "Анкета сейчас редактируется другим пользователем",
+			reason: "lock",
+			lock,
+		});
+	}
+
 	async acquire(
 		questionnaireId: string,
 		holder: V2QuestionnaireEditLockHolder,
@@ -100,7 +123,9 @@ export class V2QuestionnaireEditLockService {
 			lockedByUserId: holder.userId ?? null,
 			expiresAt,
 		});
-		const dto = await this.persistLock(entity);
+		const dto = existing
+			? await this.persistLock(entity)
+			: await this.insertLock(entity, holder);
 		if (socketId) this.trackSocket(socketId, questionnaireId);
 		return dto;
 	}
@@ -184,16 +209,80 @@ export class V2QuestionnaireEditLockService {
 			return dto;
 		} catch (error) {
 			if (!isPostgresForeignKeyViolation(error)) throw error;
-			const seen = await this.questionnaireRepository.findOne({
-				where: { id: entity.questionnaireId },
-				select: ["id"],
-			});
-			this.logger.warn(
-				`edit-lock INSERT FK miss questionnaireId=${entity.questionnaireId} typeormSeesRow=${Boolean(seen)} — occupancy in-memory`,
-			);
-			this.fallbackLocks.set(entity.questionnaireId, dto);
-			return dto;
+			return this.storeFallbackLock(entity.questionnaireId, dto);
 		}
+	}
+
+	/**
+	 * Новый lock — INSERT, не TypeORM save (save по PK перезапишет чужой ряд
+	 * при гонке двух join'ов).
+	 */
+	private async insertLock(
+		entity: V2QuestionnaireEditLockEntity,
+		holder: V2QuestionnaireEditLockHolder,
+	): Promise<V2QuestionnaireEditLockDto> {
+		const dto = this.toDto(entity);
+		try {
+			await this.lockRepository.insert(entity);
+			this.fallbackLocks.delete(entity.questionnaireId);
+			return dto;
+		} catch (error) {
+			if (isPostgresUniqueViolation(error)) {
+				const current = await this.findActiveLock(entity.questionnaireId);
+				if (current && !this.isSameHolder(current, holder)) {
+					throw new ConflictException({
+						message: "Анкета сейчас редактируется другим пользователем",
+						reason: "lock",
+						lock: current,
+					});
+				}
+				if (current) return current;
+				throw error;
+			}
+			if (!isPostgresForeignKeyViolation(error)) throw error;
+			const existingFallback = this.fallbackLocks.get(entity.questionnaireId);
+			if (
+				existingFallback &&
+				Date.parse(existingFallback.expiresAt) > Date.now() &&
+				!this.isSameHolder(existingFallback, holder)
+			) {
+				throw new ConflictException({
+					message: "Анкета сейчас редактируется другим пользователем",
+					reason: "lock",
+					lock: existingFallback,
+				});
+			}
+			return this.storeFallbackLock(entity.questionnaireId, dto, holder);
+		}
+	}
+
+	private async storeFallbackLock(
+		questionnaireId: string,
+		dto: V2QuestionnaireEditLockDto,
+		holder?: V2QuestionnaireEditLockHolder,
+	): Promise<V2QuestionnaireEditLockDto> {
+		const seen = await this.questionnaireRepository.findOne({
+			where: { id: questionnaireId },
+			select: ["id"],
+		});
+		this.logger.warn(
+			`edit-lock INSERT FK miss questionnaireId=${questionnaireId} typeormSeesRow=${Boolean(seen)} — occupancy in-memory`,
+		);
+		const existing = this.fallbackLocks.get(questionnaireId);
+		if (
+			holder &&
+			existing &&
+			Date.parse(existing.expiresAt) > Date.now() &&
+			!this.isSameHolder(existing, holder)
+		) {
+			throw new ConflictException({
+				message: "Анкета сейчас редактируется другим пользователем",
+				reason: "lock",
+				lock: existing,
+			});
+		}
+		this.fallbackLocks.set(questionnaireId, dto);
+		return dto;
 	}
 
 	private async deleteLock(questionnaireId: string): Promise<void> {
@@ -226,8 +315,6 @@ export class V2QuestionnaireEditLockService {
 		row: LockHolderRow,
 		holder: V2QuestionnaireEditLockHolder,
 	): boolean {
-		const label = holder.label.trim();
-		if (label && row.lockedByLabel === label) return true;
 		if (
 			holder.userId &&
 			row.lockedByUserId &&
@@ -235,7 +322,11 @@ export class V2QuestionnaireEditLockService {
 		) {
 			return true;
 		}
-		return false;
+		if (holder.userId && row.lockedByUserId) {
+			return false;
+		}
+		const label = holder.label.trim();
+		return Boolean(label && row.lockedByLabel === label);
 	}
 
 	private async purgeExpired() {

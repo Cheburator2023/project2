@@ -7,6 +7,7 @@ import type { KanbanBoardTaskRecord } from "@smart-anketa/api-contract";
 import {
 	applyKanbanBoardAssigneeHandoff,
 	formatKanbanTaskKey,
+	mergeKanbanBoardSubtaskImages,
 	normalizeKanbanBoardTaskContent,
 } from "@smart-anketa/api-contract";
 import { KanbanBoardTaskEntity } from "../entities/kanban-board-task.entity";
@@ -216,6 +217,10 @@ export class KanbanBoardService {
 							...(task.content.images !== undefined
 								? { images: task.content.images }
 								: { images: prev.content.images }),
+							subtasks: mergeKanbanBoardSubtaskImages(
+								task.content.subtasks,
+								prev.content.subtasks,
+							),
 							...(task.content.currentAssignee === "" ||
 							task.content.currentAssignee === null
 								? { currentAssignee: undefined }

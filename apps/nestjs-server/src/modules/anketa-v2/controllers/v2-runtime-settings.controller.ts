@@ -161,7 +161,7 @@ export class V2RuntimeSettingsController {
 	@Get("dadm-program-manager")
 	@ApiOperation({
 		summary:
-			"Feature flag: функционал менеджера программ ДАДМ (default OFF)",
+			"Feature flag: функционал менеджера программ ДАДМ (default ON)",
 	})
 	async getDadmProgramManager(): Promise<V2DadmProgramManagerSettingDto> {
 		return this.settings.getDadmProgramManagerSetting();
@@ -185,7 +185,7 @@ export class V2RuntimeSettingsController {
 	@DomainRoles("appadmin", "sacfg")
 	@ApiOperation({
 		summary:
-			"Сбросить override — снова брать DADM_PROGRAM_MANAGER_ENABLED / default OFF",
+			"Сбросить override — снова брать DADM_PROGRAM_MANAGER_ENABLED / default ON",
 	})
 	async clearDadmProgramManagerOverride(
 		@CurrentUser() user?: { preferred_username?: string; username?: string },

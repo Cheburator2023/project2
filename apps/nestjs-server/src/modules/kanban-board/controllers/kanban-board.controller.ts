@@ -854,6 +854,7 @@ export class KanbanBoardController {
 			width?: string;
 			height?: string;
 			mimeType?: string;
+			subtaskId?: string;
 		},
 	): Promise<KanbanBoardTaskImageDto> {
 		const full = files?.full?.[0];
@@ -870,6 +871,7 @@ export class KanbanBoardController {
 			height: Number(body.height),
 			full: full.buffer,
 			thumb: thumb.buffer,
+			subtaskId: body.subtaskId,
 		});
 	}
 

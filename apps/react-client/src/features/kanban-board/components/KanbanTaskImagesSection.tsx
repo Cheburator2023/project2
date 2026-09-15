@@ -33,11 +33,12 @@ type Props = {
 	onOpenLightbox?: (imageId: string) => void;
 };
 
-function KanbanTaskImageTile({
+export function KanbanTaskImageTile({
 	taskId,
 	image,
 	disabled,
 	compact,
+	showDelete,
 	onPreview,
 	onDelete,
 }: {
@@ -45,6 +46,7 @@ function KanbanTaskImageTile({
 	image: KanbanBoardTaskImageRef;
 	disabled?: boolean;
 	compact?: boolean;
+	showDelete?: boolean;
 	onPreview: () => void;
 	onDelete: () => void;
 }) {
@@ -71,6 +73,7 @@ function KanbanTaskImageTile({
 	}, [taskId, image.id]);
 
 	const size = compact ? 40 : 96;
+	const canDelete = showDelete ?? !compact;
 
 	return (
 		<Box
@@ -86,15 +89,29 @@ function KanbanTaskImageTile({
 				bgcolor: "action.hover",
 				cursor: "pointer",
 			}}
+			role="button"
+			tabIndex={0}
 			onClick={onPreview}
+			onKeyDown={(event) => {
+				if (event.key === "Enter" || event.key === " ") {
+					event.preventDefault();
+					onPreview();
+				}
+			}}
 			title={image.name}
+			aria-label={`Открыть изображение ${image.name}`}
 		>
 			{thumbUrl ? (
 				<Box
 					component="img"
 					src={thumbUrl}
 					alt={image.name}
-					sx={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+					sx={{
+						width: "100%",
+						height: "100%",
+						objectFit: "cover",
+						display: "block",
+					}}
 				/>
 			) : loadError ? (
 				<Flex alignItems="center" justifyContent="center" height="100%">
@@ -105,7 +122,7 @@ function KanbanTaskImageTile({
 					<CircularProgress size={compact ? 16 : 22} />
 				</Flex>
 			)}
-			{!compact && !disabled ? (
+			{canDelete && !disabled ? (
 				<IconButton
 					size="small"
 					aria-label="Удалить изображение"
@@ -131,7 +148,7 @@ function KanbanTaskImageTile({
 	);
 }
 
-function KanbanTaskImageLightbox({
+export function KanbanTaskImageLightbox({
 	taskId,
 	image,
 	open,
@@ -188,16 +205,6 @@ function KanbanTaskImageLightbox({
 			}}
 		>
 			<Flex flexDirection="column" gap={8} alignItems="flex-end">
-				<IconButton
-					onClick={onClose}
-					aria-label="Закрыть"
-					title="Закрыть"
-					sx={{
-						bgcolor: (theme) => alpha(theme.palette.background.paper, 0.9),
-					}}
-				>
-					<CloseIcon />
-				</IconButton>
 				<Box
 					sx={{
 						maxWidth: "min(96vw, 1400px)",
@@ -266,8 +273,7 @@ export function KanbanTaskImagesSection({
 	const uploadMutation = useUploadKanbanBoardTaskImage();
 	const deleteMutation = useDeleteKanbanBoardTaskImage();
 
-	const lightboxImage =
-		images.find((item) => item.id === lightboxId) ?? null;
+	const lightboxImage = images.find((item) => item.id === lightboxId) ?? null;
 
 	const processFiles = useCallback(
 		async (files: FileList | File[]) => {
@@ -428,20 +434,32 @@ export function KanbanTaskImagesSection({
 			{images.length ? (
 				<Flex gap={8} wrap="wrap">
 					{images.map((image) => (
-						<Flex key={image.id} flexDirection="column" gap={4} alignItems="center">
+						<Flex
+							key={image.id}
+							flexDirection="column"
+							gap={4}
+							alignItems="center"
+						>
 							<KanbanTaskImageTile
 								taskId={taskId}
 								image={image}
 								disabled={disabled || deleteMutation.isPending}
 								onPreview={() => openLightbox(image.id)}
 								onDelete={() => {
-									void deleteMutation.mutateAsync({ taskId, imageId: image.id });
+									void deleteMutation.mutateAsync({
+										taskId,
+										imageId: image.id,
+									});
 								}}
 							/>
 							<Typography
 								variant="caption"
 								color="text.secondary"
-								sx={{ maxWidth: 96, textAlign: "center", wordBreak: "break-word" }}
+								sx={{
+									maxWidth: 96,
+									textAlign: "center",
+									wordBreak: "break-word",
+								}}
 							>
 								{prettyBytes(image.fullByteSize)}
 							</Typography>

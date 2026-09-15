@@ -213,10 +213,10 @@ export const useResetV2DadmProgramManagerSetting = () => {
 	});
 };
 
-/** Convenience: default OFF until settings loaded. */
+/** Convenience: default ON until settings loaded. */
 export function useDadmProgramManagerFeature(): boolean {
 	const { data } = useV2DadmProgramManagerSetting();
-	return data?.enabled === true;
+	return data?.enabled !== false;
 }
 
 export const useV2EditLockHardDisableSetting = () =>

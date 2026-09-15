@@ -40,6 +40,17 @@ function createService() {
 			rows.set(entity.questionnaireId, entity);
 			return entity;
 		}),
+		insert: jest.fn(async (entity: V2QuestionnaireEditLockEntity) => {
+			if (rows.has(entity.questionnaireId)) {
+				throw new QueryFailedError(
+					"INSERT",
+					[],
+					Object.assign(new Error("unique"), { code: "23505" }),
+				);
+			}
+			rows.set(entity.questionnaireId, entity);
+			return { identifiers: [{ questionnaireId: entity.questionnaireId }] };
+		}),
 		delete: jest.fn(async ({ questionnaireId }: { questionnaireId: string }) => {
 			rows.delete(questionnaireId);
 			return { affected: 1 };
@@ -143,7 +154,7 @@ describe("V2QuestionnaireEditLockService socket occupancy", () => {
 
 	it("still broadcasts occupancy when lock INSERT hits FK of a different v2_questionnaire table", async () => {
 		const { service, lockRepository } = createService();
-		lockRepository.save.mockRejectedValue(
+		lockRepository.insert.mockRejectedValue(
 			new QueryFailedError(
 				"INSERT",
 				[],
@@ -164,5 +175,66 @@ describe("V2QuestionnaireEditLockService socket occupancy", () => {
 				lockedByLabel: "test_ds_lead",
 			}),
 		]);
+	});
+
+	it("rejects a second user when occupancy lives in the FK fallback", async () => {
+		const { service, lockRepository } = createService();
+		lockRepository.insert.mockRejectedValue(
+			new QueryFailedError(
+				"INSERT",
+				[],
+				Object.assign(new Error("fk"), { code: "23503" }),
+			),
+		);
+
+		await service.acquire(Q_ID, LEAD, "socket-lead");
+		await expect(service.acquire(Q_ID, DS, "socket-ds")).rejects.toBeInstanceOf(
+			ConflictException,
+		);
+		await expect(service.listActive()).resolves.toEqual([
+			expect.objectContaining({
+				questionnaireId: Q_ID,
+				lockedByLabel: "test_ds_lead",
+			}),
+		]);
+	});
+
+	it("does not let a racing second user overwrite the first lock via TypeORM save", async () => {
+		const { service, rows, lockRepository } = createService();
+		await service.acquire(Q_ID, LEAD, "socket-lead");
+		lockRepository.findOne.mockResolvedValueOnce(null);
+		await expect(service.acquire(Q_ID, DS, "socket-ds")).rejects.toBeInstanceOf(
+			ConflictException,
+		);
+		expect(rows.get(Q_ID)?.lockedByLabel).toBe("test_ds_lead");
+	});
+
+	it("treats different userIds as different holders even if labels match", async () => {
+		const { service } = createService();
+		await service.acquire(
+			Q_ID,
+			{ label: "Пользователь", userId: "user-a" },
+			"socket-a",
+		);
+		await expect(
+			service.acquire(
+				Q_ID,
+				{ label: "Пользователь", userId: "user-b" },
+				"socket-b",
+			),
+		).rejects.toBeInstanceOf(ConflictException);
+	});
+
+	it("assertMutableBy allows holder and rejects foreign writer", async () => {
+		const { service } = createService();
+		await service.acquire(Q_ID, LEAD, "socket-lead");
+
+		await expect(service.assertMutableBy(Q_ID, LEAD)).resolves.toBeUndefined();
+		await expect(service.assertMutableBy(Q_ID, DS)).rejects.toBeInstanceOf(
+			ConflictException,
+		);
+		await expect(
+			service.assertMutableBy(OTHER_ID, DS),
+		).resolves.toBeUndefined();
 	});
 });

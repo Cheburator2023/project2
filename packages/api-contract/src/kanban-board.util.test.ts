@@ -22,6 +22,8 @@ import {
 	expandKanbanBoardReleasesLanes,
 	moveKanbanBoardCardToColumn,
 	normalizeKanbanBoardReleaseImageVersions,
+	applyKanbanBoardStoredImagesToContent,
+	mergeKanbanBoardSubtaskImages,
 	normalizeKanbanBoardSubtasks,
 	normalizeKanbanBoardTaskContent,
 	parseKanbanBoardReleasesLaneId,
@@ -286,6 +288,108 @@ describe("kanban board subtasks", () => {
 		]);
 		expect(normalized).toEqual([
 			{ id: "a", text: "Check regression", status: "qa" },
+		]);
+	});
+
+	it("keeps subtask images and does not copy them onto the task gallery", () => {
+		const image = {
+			id: "img-1",
+			name: "shot.png",
+			width: 100,
+			height: 80,
+			fullByteSize: 12,
+			thumbByteSize: 4,
+			createdAt: "2026-09-15T00:00:00.000Z",
+		};
+		const normalized = normalizeKanbanBoardTaskContent({
+			title: "Task",
+			images: [image],
+			subtasks: [
+				{
+					id: "a",
+					text: "With photo",
+					status: "next_up",
+					images: [image],
+				},
+			],
+		});
+		expect(normalized.subtasks).toEqual([
+			{
+				id: "a",
+				text: "With photo",
+				status: "next_up",
+				images: [image],
+			},
+		]);
+		expect(normalized.images).toBeUndefined();
+	});
+
+	it("keeps stored blobs on the subtask that owns them", () => {
+		const taskImage = {
+			id: "img-task",
+			name: "cover.png",
+			width: 10,
+			height: 10,
+			fullByteSize: 8,
+			thumbByteSize: 2,
+			createdAt: "2026-09-15T00:00:00.000Z",
+		};
+		const subtaskImage = {
+			id: "img-sub",
+			name: "step.png",
+			width: 20,
+			height: 20,
+			fullByteSize: 16,
+			thumbByteSize: 4,
+			createdAt: "2026-09-15T00:00:00.000Z",
+		};
+		const next = applyKanbanBoardStoredImagesToContent(
+			{
+				title: "Task",
+				subtasks: [
+					{
+						id: "a",
+						text: "Step",
+						status: "next_up",
+						images: [subtaskImage],
+					},
+				],
+			},
+			[taskImage, subtaskImage],
+		);
+		expect(next.images).toEqual([taskImage]);
+		expect(next.subtasks?.[0]?.images).toEqual([subtaskImage]);
+	});
+
+	it("keeps previous subtask images when a save omits them", () => {
+		const image = {
+			id: "img-sub",
+			name: "step.png",
+			width: 20,
+			height: 20,
+			fullByteSize: 16,
+			thumbByteSize: 4,
+			createdAt: "2026-09-15T00:00:00.000Z",
+		};
+		expect(
+			mergeKanbanBoardSubtaskImages(
+				[{ id: "a", text: "Step", status: "next_up" }],
+				[
+					{
+						id: "a",
+						text: "Step",
+						status: "next_up",
+						images: [image],
+					},
+				],
+			),
+		).toEqual([
+			{
+				id: "a",
+				text: "Step",
+				status: "next_up",
+				images: [image],
+			},
 		]);
 	});
 });
