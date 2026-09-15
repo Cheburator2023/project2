@@ -30,6 +30,7 @@ import {
 	reportServerReachable,
 	reportServerUnreachable,
 } from "@react-client/common/serverStatus/serverNoticesStore";
+import { isServerNoticesEnabled } from "@react-client/common/serverStatus/serverNoticesFeatureFlag";
 
 /** Базовый таймаут для GET и лёгких запросов */
 export const API_DEFAULT_TIMEOUT_MS = 63_000;
@@ -129,7 +130,9 @@ axiosInstance.interceptors.request.use(
 
 axiosInstance.interceptors.response.use(
 	(response: AxiosResponse) => {
-		reportServerReachable();
+		if (isServerNoticesEnabled()) {
+			reportServerReachable();
+		}
 		const method = response.config.method?.toLowerCase();
 		if (method && !["get", "head", "options"].includes(method)) {
 			const url = response.config.url;
@@ -146,7 +149,7 @@ axiosInstance.interceptors.response.use(
 		return response;
 	},
 	async (error: AxiosError) => {
-		if (isServerUnreachableError(error)) {
+		if (isServerNoticesEnabled() && isServerUnreachableError(error)) {
 			reportServerUnreachable(describeServerUnreachable(error));
 		}
 		const originalRequest = error.config as RetriableAxiosConfig | undefined;
