@@ -9,6 +9,7 @@ import {
 	UNCERTAINTY_MODAL_UI_BRANCH,
 	makeUncertaintyModalField,
 } from "./fieldTypePresets";
+import { isRelationsGraphEnabled } from "./relationsGraphFeatureFlag";
 
 /** Цвета чипов арх. компонентов в конструкторе (как в dev-подсветке анкеты). */
 /** Подсветка скрытых полей на холсте конструктора. */
@@ -75,8 +76,11 @@ export const CALCULATION_PANEL_ID = "calculation";
 export const PREVIEW_PANEL_ID = "preview";
 export const ISSUES_PANEL_ID = "issues";
 
-/** Вкладки дока; первая — главная (конструктор). Дерево схемы — в палитре/холсте конструктора. */
-export const DOCK_PANEL_HEADINGS = [
+/**
+ * Полный перечень вкладок дока (включая скрываемую «Граф связей») —
+ * источник типа вкладок, чтобы типы не зависели от значения feature-флага.
+ */
+export const ALL_DOCK_PANEL_HEADINGS = [
 	[MAIN_DOCK_PANEL_ID, "Конструктор"],
 	["json", "Редактор JSON"],
 	["logic", "Логика"],
@@ -84,6 +88,19 @@ export const DOCK_PANEL_HEADINGS = [
 	[PREVIEW_PANEL_ID, "Превью и калькуляция"],
 	[RELATIONS_PANEL_ID, "Граф связей"],
 ] as const;
+
+export type SchemaEditorDockPanelId =
+	(typeof ALL_DOCK_PANEL_HEADINGS)[number][0];
+
+/**
+ * Вкладки дока для UI; первая — главная (конструктор). Дерево схемы — в палитре/холсте конструктора.
+ * «Граф связей» скрыта по умолчанию (PRJ-COMMON-69), включается ENABLE_RELATIONS_GRAPH=true при сборке.
+ */
+export const DOCK_PANEL_HEADINGS: ReadonlyArray<
+	readonly [SchemaEditorDockPanelId, string]
+> = isRelationsGraphEnabled()
+	? ALL_DOCK_PANEL_HEADINGS
+	: ALL_DOCK_PANEL_HEADINGS.filter(([id]) => id !== RELATIONS_PANEL_ID);
 
 /** @deprecated Используйте {@link DOCK_PANEL_HEADINGS}. */
 export const TAB_HEADINGS = DOCK_PANEL_HEADINGS;
