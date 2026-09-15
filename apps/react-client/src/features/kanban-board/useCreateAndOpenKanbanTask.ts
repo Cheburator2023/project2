@@ -6,7 +6,10 @@ import {
 	type KanbanBoardReturnLocationState,
 } from "@react-client/features/kanban-board/kanban-task-paths";
 import { useTrackerEditIdentity } from "@react-client/features/tracker/hooks/useTrackerEditIdentity";
-import { KANBAN_BOARD_HEAP_BOARD_ID } from "@smart-anketa/api-contract";
+import {
+	KANBAN_BOARD_DEFAULT_TASK_TYPE_ID,
+	KANBAN_BOARD_HEAP_BOARD_ID,
+} from "@smart-anketa/api-contract";
 import { useCallback } from "react";
 import { useNavigate } from "react-router";
 
@@ -28,7 +31,10 @@ export function useCreateAndOpenKanbanTask() {
 			const created = await mutateAsync({
 				boardId: options?.boardId || KANBAN_BOARD_HEAP_BOARD_ID,
 				parentId: options?.parentId || "todo",
-				content: { title: KANBAN_NEW_TASK_TITLE },
+				content: {
+					title: KANBAN_NEW_TASK_TITLE,
+					taskType: KANBAN_BOARD_DEFAULT_TASK_TYPE_ID,
+				},
 				createdBy: createdBy.trim() || null,
 				...(options?.releaseIds ? { releaseIds: options.releaseIds } : {}),
 			});

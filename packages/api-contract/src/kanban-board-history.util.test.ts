@@ -73,6 +73,35 @@ describe("kanban-board-history.util", () => {
 		]);
 	});
 
+	it("diffs related tasks as Связанные задачи", () => {
+		const before = kanbanBoardTaskHistorySnapshot({
+			parentId: "backlog",
+			position: 0,
+			boardId: "board-1",
+			content: {
+				title: "Задача",
+				relatedTaskIds: ["task-a"],
+			},
+		});
+		const after = kanbanBoardTaskHistorySnapshot({
+			parentId: "backlog",
+			position: 0,
+			boardId: "board-1",
+			content: {
+				title: "Задача",
+				relatedTaskIds: ["task-a", "task-b"],
+			},
+		});
+		const changes = diffKanbanTaskChanges(before, after);
+		expect(changes).toEqual([
+			expect.objectContaining({
+				label: "Связанные задачи",
+				from: "task-a",
+				to: "task-a, task-b",
+			}),
+		]);
+	});
+
 	it("diffs createdBy as Назначил", () => {
 		const before = kanbanBoardTaskHistorySnapshot({
 			parentId: "backlog",

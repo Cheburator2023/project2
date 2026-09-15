@@ -23,6 +23,7 @@ import {
 	KANBAN_BOARD_RELEASES_COLUMN_TITLE,
 	KANBAN_BOARD_RELEASES_MIN_LANE_CARDS,
 	KANBAN_BOARD_RELEASES_UNASSIGNED_LANE_TITLE,
+	KANBAN_BOARD_RELATED_TASKS_MAX,
 	KANBAN_BOARD_STANDS,
 	KANBAN_BOARD_STATUSES,
 	KANBAN_BOARD_SUBTASK_STATUSES,
@@ -833,7 +834,53 @@ export function normalizeKanbanBoardTaskContent(
 	if (roleTotal !== undefined) {
 		next.estimatePd = roleTotal;
 	}
+	next.relatedTaskIds = normalizeKanbanBoardRelatedTaskIds(next.relatedTaskIds);
 	return next;
+}
+
+export function normalizeKanbanBoardRelatedTaskIds(
+	ids: unknown,
+	options?: { excludeId?: string },
+): string[] | undefined {
+	if (!Array.isArray(ids)) return undefined;
+	const seen = new Set<string>();
+	const out: string[] = [];
+	for (const raw of ids) {
+		if (typeof raw !== "string") continue;
+		const id = raw.trim();
+		if (!id) continue;
+		if (options?.excludeId && id === options.excludeId) continue;
+		if (seen.has(id)) continue;
+		seen.add(id);
+		out.push(id);
+		if (out.length >= KANBAN_BOARD_RELATED_TASKS_MAX) break;
+	}
+	return out;
+}
+
+/** Если поле не пришло в payload — оставляем прошлые связи (persist доски не затирает). */
+export function pickKanbanBoardRelatedTaskIds(
+	incoming: Partial<KanbanBoardTaskContent>,
+	previous?: KanbanBoardTaskContent,
+): string[] | undefined {
+	if (Object.hasOwn(incoming, "relatedTaskIds")) {
+		return incoming.relatedTaskIds;
+	}
+	return previous?.relatedTaskIds;
+}
+
+export function kanbanBoardRelatedTaskIdsDiff(
+	previous: unknown,
+	next: unknown,
+): { added: string[]; removed: string[] } {
+	const prev = normalizeKanbanBoardRelatedTaskIds(previous) ?? [];
+	const nxt = normalizeKanbanBoardRelatedTaskIds(next) ?? [];
+	const prevSet = new Set(prev);
+	const nextSet = new Set(nxt);
+	return {
+		added: nxt.filter((id) => !prevSet.has(id)),
+		removed: prev.filter((id) => !nextSet.has(id)),
+	};
 }
 
 type AssigneeHandoffFields = Pick<

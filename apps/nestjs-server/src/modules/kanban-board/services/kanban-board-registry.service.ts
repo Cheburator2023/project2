@@ -32,12 +32,16 @@ import {
 	kanbanBoardTaskReleasesTitle,
 	kanbanBoardTaskTypeTitle,
 	kanbanBoardWorkTypeTitle,
+	KANBAN_BOARD_DEFAULT_TASK_TYPE_ID,
 	isKanbanBoardAssigneeRoleId,
 	kanbanBoardColumnTitleLengthError,
 	kanbanBoardTaskContentLengthErrorMessage,
 	applyKanbanBoardAssigneeHandoff,
 	mergeKanbanBoardSubtaskImages,
 	normalizeKanbanBoardTaskContent,
+	normalizeKanbanBoardRelatedTaskIds,
+	pickKanbanBoardRelatedTaskIds,
+	kanbanBoardRelatedTaskIdsDiff,
 	normalizeTrackerCode,
 	formatKanbanBoardKey,
 	formatKanbanTaskKey,
@@ -1672,12 +1676,19 @@ export class KanbanBoardRegistryService {
 				},
 			}));
 
-		const content = await this.validateTaskContent(dto.content);
+		const taskId = ulid();
+		const content = await this.validateTaskContent(
+			{
+				...dto.content,
+				taskType: dto.content.taskType ?? KANBAN_BOARD_DEFAULT_TASK_TYPE_ID,
+			},
+			{ taskId },
+		);
 		const taskNumber = await this.allocateTaskNumber(board.projectId);
 		const now = new Date().toISOString();
 
 		const entity = this.taskRepository.create({
-			id: ulid(),
+			id: taskId,
 			boardId: dto.boardId,
 			projectId: board.projectId,
 			taskNumber,
@@ -1708,6 +1719,12 @@ export class KanbanBoardRegistryService {
 			createdBy,
 		});
 		await this.syncTaskReleases(entity.id, dto.releaseIds);
+		await this.syncRelatedTaskLinks(
+			entity.id,
+			undefined,
+			content.relatedTaskIds,
+			createdBy,
+		);
 		const [created] = await this.mapTasksToRegistry([entity]);
 		if (!created) throw new NotFoundException("Задача не найдена");
 		return created;
@@ -1743,6 +1760,7 @@ export class KanbanBoardRegistryService {
 		);
 
 		const before = this.historyService.snapshotFromTask(task);
+		const previousRelated = task.content.relatedTaskIds;
 
 		if (dto.boardId !== undefined) {
 			const board = await this.boardRepository.findOne({
@@ -1779,11 +1797,16 @@ export class KanbanBoardRegistryService {
 					dto.content.subtasks,
 					task.content.subtasks,
 				),
+				relatedTaskIds: pickKanbanBoardRelatedTaskIds(
+					dto.content,
+					task.content,
+				),
 			};
 			task.content = applyKanbanBoardAssigneeHandoff(
 				previousContent,
 				await this.validateTaskContent(
 					normalizeKanbanBoardTaskContent(mergedContent),
+					{ taskId: task.id },
 				),
 				{ pickup },
 			);
@@ -1810,6 +1833,12 @@ export class KanbanBoardRegistryService {
 			createdBy,
 		});
 		await this.syncTaskReleases(task.id, dto.releaseIds);
+		await this.syncRelatedTaskLinks(
+			task.id,
+			previousRelated,
+			task.content.relatedTaskIds,
+			createdBy,
+		);
 		const [updated] = await this.mapTasksToRegistry([task]);
 		if (!updated) throw new NotFoundException("Задача не найдена");
 		return updated;
@@ -2799,6 +2828,7 @@ export class KanbanBoardRegistryService {
 
 	private async validateTaskContent(
 		content: KanbanBoardTaskContent,
+		options?: { taskId?: string },
 	): Promise<KanbanBoardTaskContent> {
 		const lengthError = kanbanBoardTaskContentLengthErrorMessage(content);
 		if (lengthError) {
@@ -2818,12 +2848,80 @@ export class KanbanBoardRegistryService {
 			assignees.push(currentAssignee);
 		}
 		const resolvedCurrent = currentAssignee || assignees[0];
+		let relatedTaskIds = normalizeKanbanBoardRelatedTaskIds(
+			content.relatedTaskIds,
+			{ excludeId: options?.taskId },
+		);
+		if (relatedTaskIds?.length) {
+			const found = await this.taskRepository.find({
+				where: { id: In(relatedTaskIds), deletedAt: IsNull() },
+				select: ["id"],
+			});
+			const foundIds = new Set(found.map((row) => row.id));
+			relatedTaskIds = normalizeKanbanBoardRelatedTaskIds(
+				relatedTaskIds.filter((id) => foundIds.has(id)),
+			);
+		}
 		const { assigneeRole: _legacyRole, ...rest } = content;
 		return {
 			...rest,
 			assignees: assignees.length ? assignees : undefined,
 			currentAssignee: resolvedCurrent || undefined,
+			relatedTaskIds,
 		};
+	}
+
+	private async syncRelatedTaskLinks(
+		taskId: string,
+		previousIds: string[] | undefined,
+		nextIds: string[] | undefined,
+		createdBy?: string | null,
+	): Promise<void> {
+		const { added, removed } = kanbanBoardRelatedTaskIdsDiff(
+			previousIds,
+			nextIds,
+		);
+		const counterpartIds = [...added, ...removed];
+		if (!counterpartIds.length) return;
+
+		const counterparts = await this.taskRepository.find({
+			where: { id: In(counterpartIds), deletedAt: IsNull() },
+			relations: { board: { project: true } },
+		});
+		const addedSet = new Set(added);
+
+		for (const other of counterparts) {
+			const before = this.historyService.snapshotFromTask(other);
+			const current =
+				normalizeKanbanBoardRelatedTaskIds(other.content.relatedTaskIds) ?? [];
+			const nextRelated = addedSet.has(other.id)
+				? normalizeKanbanBoardRelatedTaskIds([...current, taskId])
+				: normalizeKanbanBoardRelatedTaskIds(
+						current.filter((id) => id !== taskId),
+					);
+			const currentSet = new Set(current);
+			const nextList = nextRelated ?? [];
+			const unchanged =
+				currentSet.size === nextList.length &&
+				nextList.every((id) => currentSet.has(id));
+			if (unchanged) continue;
+
+			other.content = normalizeKanbanBoardTaskContent({
+				...other.content,
+				relatedTaskIds: nextRelated,
+			});
+			other.updatedAt = new Date().toISOString();
+			await this.taskRepository.save(other);
+			await this.historyService.logTaskDiff({
+				boardId: other.boardId,
+				taskId: other.id,
+				taskKey: this.historyService.formatTaskKey(other),
+				taskTitle: other.content.title,
+				before,
+				after: this.historyService.snapshotFromTask(other),
+				createdBy,
+			});
+		}
 	}
 
 	private async loadSprintTitleMap(sprintIds: string[]): Promise<Map<string, string>> {

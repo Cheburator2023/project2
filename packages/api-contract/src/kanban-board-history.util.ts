@@ -183,6 +183,17 @@ const CONTENT_FIELDS: ReadonlyArray<{
 		format: formatSubtasks,
 	},
 	{
+		key: "relatedTaskIds",
+		label: "Связанные задачи",
+		format: (value) => {
+			if (!Array.isArray(value) || !value.length) return null;
+			return value
+				.map((item) => (typeof item === "string" ? item.trim() : ""))
+				.filter(Boolean)
+				.join(", ");
+		},
+	},
+	{
 		key: "images",
 		label: "Изображения",
 		format: (value) => {

@@ -100,6 +100,8 @@ export interface KanbanBoardTaskContent {
 	dueDate?: string;
 	/** Родительская задача (ручной ввод) */
 	parentTask?: string;
+	/** Связанные задачи (id), двусторонняя связь */
+	relatedTaskIds?: string[];
 	/** Заказчик (ручной ввод) */
 	customer?: string;
 	/**
@@ -300,6 +302,11 @@ export const KANBAN_BOARD_TASK_TYPES = [
 
 export type KanbanBoardTaskTypeId =
 	(typeof KANBAN_BOARD_TASK_TYPES)[number]["id"];
+
+export const KANBAN_BOARD_DEFAULT_TASK_TYPE_ID: KanbanBoardTaskTypeId = "task";
+
+/** Максимум связанных задач у одной карточки. */
+export const KANBAN_BOARD_RELATED_TASKS_MAX = 50;
 
 export const KANBAN_BOARD_WORK_TYPES = [
 	{ id: "architecture", title: "Архитектурная задача" },

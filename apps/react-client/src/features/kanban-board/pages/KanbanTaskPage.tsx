@@ -25,6 +25,7 @@ import {
 	KANBAN_BOARD_TASK_DESCRIPTION_MAX_LENGTH,
 	KANBAN_BOARD_TASK_TITLE_MAX_LENGTH,
 	KANBAN_BOARD_TASK_TYPES,
+	KANBAN_BOARD_DEFAULT_TASK_TYPE_ID,
 	KANBAN_BOARD_WORK_TYPES,
 	kanbanBoardPriorityColor,
 	kanbanBoardStandColor,
@@ -42,6 +43,7 @@ import {
 	KANBAN_BOARD_HANDOFF_COLOR,
 	normalizeKanbanBoardTaskContent,
 	normalizeKanbanBoardSubtasks,
+	normalizeKanbanBoardRelatedTaskIds,
 	kanbanBoardSubtaskOwnedImageIds,
 	kanbanBoardRoleEstimatesTotal,
 	type KanbanBoardRoleEstimates,
@@ -88,6 +90,7 @@ import {
 } from "@react-client/features/kanban-board/components/KanbanTaskSelectField";
 import { KanbanRoleEstimatesFields } from "@react-client/features/kanban-board/components/KanbanRoleEstimatesFields";
 import { KanbanSubtasksChecklist } from "@react-client/features/kanban-board/components/KanbanSubtasksChecklist";
+import { KanbanRelatedTasksPanel } from "@react-client/features/kanban-board/components/KanbanRelatedTasksPanel";
 import { KanbanTaskImagesSection } from "@react-client/features/kanban-board/components/KanbanTaskImagesSection";
 import { KanbanTaskFilesSection } from "@react-client/features/kanban-board/components/KanbanTaskFilesSection";
 import { KanbanTaskActivitySection } from "@react-client/features/kanban-board/components/KanbanTaskActivitySection";
@@ -255,7 +258,9 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	const [priority, setPriority] = useState("");
 	const [assignees, setAssignees] = useState<string[]>([]);
 	const [currentAssignee, setCurrentAssignee] = useState("");
-	const [taskType, setTaskType] = useState("");
+	const [taskType, setTaskType] = useState(
+		isCreate ? KANBAN_BOARD_DEFAULT_TASK_TYPE_ID : "",
+	);
 	const [workType, setWorkType] = useState("");
 	const [stands, setStands] = useState<string[]>([]);
 	const [systems, setSystems] = useState<string[]>([]);
@@ -274,6 +279,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 	const [streamCustomer, setStreamCustomer] = useState("");
 	const [description, setDescription] = useState("");
 	const [subtasks, setSubtasks] = useState<KanbanBoardSubtaskItem[]>([]);
+	const [relatedTaskIds, setRelatedTaskIds] = useState<string[]>([]);
 	const [createdByName, setCreatedByName] = useState("");
 	const [pendingCreatedBy, setPendingCreatedBy] = useState<string | null>(null);
 
@@ -614,6 +620,9 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 		setStreamCustomer(task.content.streamCustomer ?? "");
 		setDescription(task.content.description ?? "");
 		setSubtasks(normalizeKanbanBoardSubtasks(task.content.subtasks) ?? []);
+		setRelatedTaskIds(
+			normalizeKanbanBoardRelatedTaskIds(task.content.relatedTaskIds) ?? [],
+		);
 		setCreatedByName(task.createdBy ?? "");
 		expectedUpdatedAtRef.current = task.updatedAt;
 		lastSavedKeyRef.current = null;
@@ -688,6 +697,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 			sprintId: sprintId || undefined,
 			streamCustomer: streamCustomer.trim() || undefined,
 			subtasks: subtasks.length ? subtasks : undefined,
+			relatedTaskIds,
 			images: taskImages.length ? taskImages : undefined,
 			files: taskFiles.length ? taskFiles : undefined,
 		});
@@ -719,6 +729,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 				releaseIds,
 				streamCustomer,
 				subtasks,
+				relatedTaskIds,
 			}),
 		[
 			effectiveBoardId,
@@ -744,6 +755,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 			releaseIds,
 			streamCustomer,
 			subtasks,
+			relatedTaskIds,
 		],
 	);
 
@@ -1329,6 +1341,17 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 									onChange={setSubtasks}
 									taskId={!isCreate && taskId ? taskId : undefined}
 									disabled={formLocked}
+								/>
+							</KanbanTaskSectionCard>
+
+							<KanbanTaskSectionCard>
+								<KanbanRelatedTasksPanel
+									relatedTaskIds={relatedTaskIds}
+									onChange={setRelatedTaskIds}
+									tasks={tasksRegistryQuery.data ?? []}
+									currentTaskId={taskId || undefined}
+									disabled={formLocked}
+									loading={tasksRegistryQuery.isLoading}
 								/>
 							</KanbanTaskSectionCard>
 

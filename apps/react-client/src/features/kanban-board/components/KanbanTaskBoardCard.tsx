@@ -215,6 +215,8 @@ export function KanbanTaskBoardCard({
 	const hasBlocker = kanbanBoardTaskHasBlocker(content);
 	const hasHandoff = kanbanBoardTaskHasAssigneeHandoff(content);
 	const handoffTitle = kanbanBoardAssigneeHandoffTitle(content);
+	const typeColor = kanbanBoardTaskTypeColor(content?.taskType);
+	const stripeColor = hasBlocker ? KANBAN_BOARD_BLOCKER_COLOR : typeColor;
 	const tags: Array<{ label: string; color: string; title?: string }> = [];
 	if (hasHandoff) {
 		tags.push({
@@ -322,7 +324,7 @@ export function KanbanTaskBoardCard({
 					top: 0,
 					bottom: 0,
 					width: 3,
-					bgcolor: hasBlocker ? KANBAN_BOARD_BLOCKER_COLOR : columnColor,
+					bgcolor: stripeColor,
 				}}
 			/>
 			<Flex flexDirection="column" gap={8} sx={{ p: 1.25, pl: 1.5 }}>

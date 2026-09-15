@@ -26,6 +26,9 @@ import {
 	mergeKanbanBoardSubtaskImages,
 	normalizeKanbanBoardSubtasks,
 	normalizeKanbanBoardTaskContent,
+	normalizeKanbanBoardRelatedTaskIds,
+	pickKanbanBoardRelatedTaskIds,
+	kanbanBoardRelatedTaskIdsDiff,
 	parseKanbanBoardReleasesLaneId,
 	toBoardData,
 	type KanbanBoardData,
@@ -499,5 +502,44 @@ describe("kanban releases column lanes", () => {
 			"board-1",
 		);
 		expect(rows.find((row) => row.id === "task-1")?.parentId).toBe("demo");
+	});
+
+	it("normalizes related task ids: unique, no self, cap", () => {
+		expect(
+			normalizeKanbanBoardRelatedTaskIds(["  a  ", "a", "", "b", "self"], {
+				excludeId: "self",
+			}),
+		).toEqual(["a", "b"]);
+		expect(
+			normalizeKanbanBoardTaskContent({
+				title: "Task",
+				relatedTaskIds: ["t-2", "t-2", "  "],
+			}).relatedTaskIds,
+		).toEqual(["t-2"]);
+		expect(
+			normalizeKanbanBoardTaskContent({
+				title: "Task",
+				relatedTaskIds: [],
+			}).relatedTaskIds,
+		).toEqual([]);
+	});
+
+	it("picks related ids only when the field is present", () => {
+		const previous: KanbanBoardTaskContent = {
+			title: "Task",
+			relatedTaskIds: ["t-2"],
+		};
+		expect(pickKanbanBoardRelatedTaskIds({ title: "x" }, previous)).toEqual([
+			"t-2",
+		]);
+		expect(
+			pickKanbanBoardRelatedTaskIds({ title: "x", relatedTaskIds: [] }, previous),
+		).toEqual([]);
+		expect(
+			kanbanBoardRelatedTaskIdsDiff(["t-2", "t-3"], ["t-3", "t-4"]),
+		).toEqual({
+			added: ["t-4"],
+			removed: ["t-2"],
+		});
 	});
 });
