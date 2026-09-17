@@ -4,6 +4,8 @@ import {
 	countKanbanBoardBlockers,
 	defaultKanbanBoardColumns,
 	findKanbanBoardCancelledColumnId,
+	findKanbanBoardDoneColumnId,
+	findKanbanBoardReleasesColumnId,
 	fromBoardData,
 	kanbanBoardColumnCanTrashTasks,
 	kanbanBoardDisplayColumnTitle,
@@ -13,7 +15,6 @@ import {
 	kanbanBoardIsReleasesColumn,
 	kanbanBoardReleaseImageVersionsTitle,
 	kanbanBoardReleasesLaneId,
-	kanbanBoardReleasesLaneWidthPx,
 	kanbanBoardRoleEstimatesTotal,
 	kanbanBoardSubtasksProgress,
 	kanbanBoardTaskReleaseLabel,
@@ -39,7 +40,6 @@ import {
 	toBoardData,
 	type KanbanBoardData,
 	type KanbanBoardTaskContent,
-	KANBAN_BOARD_COLUMN_WIDTH_PX,
 	KANBAN_BOARD_RELEASES_COLUMN_TITLE,
 	KANBAN_BOARD_RELEASES_UNASSIGNED_LANE_TITLE,
 } from "@smart-anketa/api-contract";
@@ -120,6 +120,12 @@ describe("kanban board mapping", () => {
 		const board = sampleBoard();
 		expect(findKanbanBoardCancelledColumnId([{ id: "cancelled" }])).toBe(
 			"cancelled",
+		);
+		expect(findKanbanBoardDoneColumnId([{ id: "done", title: "Готово" }])).toBe(
+			"done",
+		);
+		expect(findKanbanBoardDoneColumnId([{ id: "custom", title: "Готово" }])).toBe(
+			"custom",
 		);
 		expect(kanbanBoardIsCancelledColumn({ id: "todo", title: "Отменено" })).toBe(
 			true,
@@ -457,13 +463,6 @@ describe("kanban releases column lanes", () => {
 		);
 	});
 
-	it("widens the group to at least three card columns", () => {
-		expect(kanbanBoardReleasesLaneWidthPx(1)).toBe(KANBAN_BOARD_COLUMN_WIDTH_PX * 3);
-		expect(kanbanBoardReleasesLaneWidthPx(2)).toBe(KANBAN_BOARD_COLUMN_WIDTH_PX * 1.5);
-		expect(kanbanBoardReleasesLaneWidthPx(3)).toBe(KANBAN_BOARD_COLUMN_WIDTH_PX);
-		expect(kanbanBoardReleasesLaneWidthPx(5)).toBe(KANBAN_BOARD_COLUMN_WIDTH_PX);
-	});
-
 	it("splits Релизы by primary release and collapses lanes before persist", () => {
 		const board = sampleBoard();
 		board.demo = { ...board.demo, children: ["task-1"], totalChildrenCount: 1 };
@@ -508,6 +507,51 @@ describe("kanban releases column lanes", () => {
 			"board-1",
 		);
 		expect(rows.find((row) => row.id === "task-1")?.parentId).toBe("demo");
+	});
+
+	it("hides released cancelled and archived lanes on the board", () => {
+		const board = sampleBoard();
+		board.demo = { ...board.demo, children: ["task-1"], totalChildrenCount: 1 };
+		board.todo = { ...board.todo, children: [], totalChildrenCount: 0 };
+		board["task-1"] = {
+			...board["task-1"],
+			parentId: "demo",
+			releases: [{ id: "rel-done", code: "REL-D", name: "Закрытый" }],
+		};
+
+		const expanded = expandKanbanBoardReleasesLanes(board, [
+			{ id: "rel-open", code: "REL-O", name: "Открытый", status: "in_progress" },
+			{ id: "rel-done", code: "REL-D", name: "Закрытый", status: "done" },
+			{ id: "rel-cancel", code: "REL-C", name: "Отмена", status: "cancelled" },
+			{ id: "rel-arch", code: "REL-A", name: "Архив", status: "archived" },
+		]);
+		const unassignedId = kanbanBoardReleasesLaneId("demo", null);
+		const openId = kanbanBoardReleasesLaneId("demo", "rel-open");
+		const doneId = kanbanBoardReleasesLaneId("demo", "rel-done");
+
+		expect(expanded.root.children).toEqual(
+			expect.arrayContaining([unassignedId, openId]),
+		);
+		expect(expanded.root.children).not.toContain(doneId);
+		expect(expanded.root.children).not.toContain(
+			kanbanBoardReleasesLaneId("demo", "rel-cancel"),
+		);
+		expect(expanded.root.children).not.toContain(
+			kanbanBoardReleasesLaneId("demo", "rel-arch"),
+		);
+		expect(expanded[unassignedId]?.children).toEqual(["task-1"]);
+	});
+
+	it("finds the Релизы column by id or title", () => {
+		expect(
+			findKanbanBoardReleasesColumnId([{ id: "demo", title: "Демонстрация" }]),
+		).toBe("demo");
+		expect(
+			findKanbanBoardReleasesColumnId([{ id: "rel", title: "Релизы" }]),
+		).toBe("rel");
+		expect(
+			findKanbanBoardReleasesColumnId([{ id: "todo", title: "Сделать" }]),
+		).toBeUndefined();
 	});
 
 	it("normalizes related task ids: unique, no self, cap", () => {

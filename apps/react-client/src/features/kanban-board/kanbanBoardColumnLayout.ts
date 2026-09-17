@@ -1,20 +1,20 @@
 import {
 	KANBAN_BOARD_COLUMN_WIDTH_PX,
-	kanbanBoardReleasesLaneWidthPx,
 	parseKanbanBoardReleasesLaneId,
 } from "@smart-anketa/api-contract";
 import type { CSSProperties } from "react";
 import type { BoardItem } from "react-kanban-kit";
 
-export { KANBAN_BOARD_COLUMN_WIDTH_PX, kanbanBoardReleasesLaneWidthPx };
+export { KANBAN_BOARD_COLUMN_WIDTH_PX };
 
 export function kanbanBoardColumnWrapperStyle(
-	column: BoardItem,
-	releasesLaneWidthPx: number,
+	_column: BoardItem,
 ): CSSProperties {
-	const isLane = Boolean(parseKanbanBoardReleasesLaneId(column.id));
-	const width = isLane ? releasesLaneWidthPx : KANBAN_BOARD_COLUMN_WIDTH_PX;
-	return { width, minWidth: width, maxWidth: width };
+	return {
+		width: KANBAN_BOARD_COLUMN_WIDTH_PX,
+		minWidth: KANBAN_BOARD_COLUMN_WIDTH_PX,
+		maxWidth: KANBAN_BOARD_COLUMN_WIDTH_PX,
+	};
 }
 
 export function kanbanBoardColumnWrapperClassName(column: BoardItem): string {

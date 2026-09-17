@@ -54,6 +54,7 @@ import type {
 	UpdateKanbanBoardPlanningRequestDto,
 	UpdateKanbanBoardPlanningLayoutRequestDto,
 	UpdateKanbanBoardReleaseRequestDto,
+	CompleteKanbanBoardReleaseRequestDto,
 	UpdateKanbanBoardReleaseThemeRequestDto,
 	AttachKanbanBoardReleaseTasksRequestDto,
 	ReorderKanbanBoardReleaseTasksRequestDto,
@@ -1580,6 +1581,25 @@ export const useUpdateKanbanBoardRelease = () => {
 				data,
 			}),
 		onSuccess: () => invalidatePlanning(queryClient),
+	});
+};
+
+export const useCompleteKanbanBoardRelease = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			id,
+			data,
+		}: {
+			id: string;
+			data?: CompleteKanbanBoardReleaseRequestDto;
+		}) =>
+			apiClient<KanbanBoardReleaseDetailDto>({
+				url: `/kanban-board/releases/${id}/complete`,
+				method: "POST",
+				data: data ?? {},
+			}),
+		onSuccess: (detail) => applyReleaseMutation(queryClient, detail),
 	});
 };
 

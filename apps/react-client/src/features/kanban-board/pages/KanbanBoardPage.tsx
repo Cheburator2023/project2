@@ -31,7 +31,6 @@ import {
 	findKanbanBoardCancelledColumnId,
 	kanbanBoardIsCancelledColumn,
 	kanbanBoardIsDoneColumn,
-	kanbanBoardReleasesLaneWidthPx,
 	kanbanBoardResolveColumnId,
 	collapseKanbanBoardReleasesLanes,
 	expandKanbanBoardReleasesLanes,
@@ -48,6 +47,8 @@ import {
 	parseKanbanBoardTaskEditBlockedError,
 	countKanbanBoardBlockers,
 	countKanbanBoardColumnBlockers,
+	kanbanBoardReleaseCanComplete,
+	KANBAN_BOARD_RELEASE_DONE_STATUS_ID,
 	type KanbanBoardTaskEditBlockedErrorDto,
 } from "@smart-anketa/api-contract";
 import { Kanban, dropHandler } from "react-kanban-kit";
@@ -78,6 +79,7 @@ import {
 	useKanbanBoardColumns,
 	useKanbanBoardConfig,
 	useKanbanBoardReleases,
+	useCompleteKanbanBoardRelease,
 	useCreateKanbanBoardColumn,
 	useDeleteKanbanBoardColumn,
 	useTrashKanbanBoardColumnTasks,
@@ -241,7 +243,11 @@ export function KanbanBoardPage() {
 	const trashColumnTasks = useTrashKanbanBoardColumnTasks();
 	const updateTask = useUpdateKanbanBoardTask();
 	const releasesQuery = useKanbanBoardReleases();
+	const completeRelease = useCompleteKanbanBoardRelease();
 	const [trashColumnConfirmId, setTrashColumnConfirmId] = useState<
+		string | null
+	>(null);
+	const [completeReleaseConfirmId, setCompleteReleaseConfirmId] = useState<
 		string | null
 	>(null);
 
@@ -519,11 +525,32 @@ export function KanbanBoardPage() {
 		setTrashColumnConfirmId(null);
 	}, [resolvedBoardId, trashColumnConfirmId, trashColumnTasks]);
 
+	const completeReleaseConfirm = useMemo(
+		() =>
+			releasesQuery.data?.find((item) => item.id === completeReleaseConfirmId),
+		[completeReleaseConfirmId, releasesQuery.data],
+	);
+
+	const confirmCompleteRelease = useCallback(async () => {
+		if (!completeReleaseConfirmId) return;
+		try {
+			await completeRelease.mutateAsync({
+				id: completeReleaseConfirmId,
+				data: { lockHolderLabel: editLabel || undefined },
+			});
+			toast.success("Релиз завершён, задачи перенесены в «Готово»");
+			setCompleteReleaseConfirmId(null);
+		} catch (error) {
+			toast.error(apiErrorMessage(error));
+		}
+	}, [completeRelease, completeReleaseConfirmId, editLabel]);
+
 	const isColumnBusy =
 		createColumn.isPending ||
 		updateColumn.isPending ||
 		deleteColumn.isPending ||
-		trashColumnTasks.isPending;
+		trashColumnTasks.isPending ||
+		completeRelease.isPending;
 	const isBoardBusy = !isReady || !board || isColumnBusy || isCreatingTask;
 	const isSavingBoard = saveMutation.isPending || updateTask.isPending;
 
@@ -560,19 +587,6 @@ export function KanbanBoardPage() {
 		releasesQuery.data,
 		viewFiltered,
 	]);
-
-	const releasesLaneCount = useMemo(
-		() =>
-			viewBoard
-				? viewBoard.root.children.filter((id) =>
-						parseKanbanBoardReleasesLaneId(id),
-					).length
-				: 1,
-		[viewBoard],
-	);
-	const releasesLaneWidthPx = kanbanBoardReleasesLaneWidthPx(
-		releasesLaneCount,
-	);
 
 	const totalCardCount = useMemo(
 		() => (board ? countKanbanBoardCards(board) : 0),
@@ -611,25 +625,53 @@ export function KanbanBoardPage() {
 	}, [assigneesQuery.data, tasksQuery.data]);
 
 	const renderColumnHeader = useCallback(
-		(column: BoardItem) => (
-			<KanbanColumnHeader
-				column={column}
-				disabled={isBoardBusy}
-				onRename={handleRenameColumn}
-				onDelete={handleDeleteColumn}
-				onAddTask={(columnId) => void openCreateTask(columnId)}
-				onTrashAll={setTrashColumnConfirmId}
-				isTrashing={trashColumnTasks.isPending}
-				blockerCount={
-					viewBoard ? countKanbanBoardColumnBlockers(viewBoard, column.id) : 0
-				}
-			/>
-		),
+		(column: BoardItem) => {
+			const lane = parseKanbanBoardReleasesLaneId(column.id);
+			const release = lane?.releaseId
+				? releasesQuery.data?.find((item) => item.id === lane.releaseId)
+				: undefined;
+			const canComplete = Boolean(
+				release &&
+					kanbanBoardReleaseCanComplete(release.status) &&
+					(release.status !== KANBAN_BOARD_RELEASE_DONE_STATUS_ID ||
+						column.totalChildrenCount > 0),
+			);
+			const completeTitle = !release
+				? undefined
+				: release.status === "cancelled" || release.status === "archived"
+					? "Нельзя завершить отменённый или архивный релиз"
+					: release.status === KANBAN_BOARD_RELEASE_DONE_STATUS_ID &&
+							column.totalChildrenCount === 0
+						? "Релиз уже выпущен"
+						: "Завершить релиз и перенести задачи в «Готово»";
+			return (
+				<KanbanColumnHeader
+					column={column}
+					disabled={isBoardBusy}
+					onRename={handleRenameColumn}
+					onDelete={handleDeleteColumn}
+					onAddTask={(columnId) => void openCreateTask(columnId)}
+					onTrashAll={setTrashColumnConfirmId}
+					isTrashing={trashColumnTasks.isPending}
+					onCompleteRelease={
+						release ? () => setCompleteReleaseConfirmId(release.id) : undefined
+					}
+					canCompleteRelease={canComplete}
+					isCompletingRelease={completeRelease.isPending}
+					completeReleaseTitle={completeTitle}
+					blockerCount={
+						viewBoard ? countKanbanBoardColumnBlockers(viewBoard, column.id) : 0
+					}
+				/>
+			);
+		},
 		[
+			completeRelease.isPending,
 			handleDeleteColumn,
 			handleRenameColumn,
 			isBoardBusy,
 			openCreateTask,
+			releasesQuery.data,
 			trashColumnTasks.isPending,
 			viewBoard,
 		],
@@ -654,9 +696,8 @@ export function KanbanBoardPage() {
 	}, []);
 
 	const columnWrapperStyle = useCallback(
-		(column: BoardItem) =>
-			kanbanBoardColumnWrapperStyle(column, releasesLaneWidthPx),
-		[releasesLaneWidthPx],
+		(column: BoardItem) => kanbanBoardColumnWrapperStyle(column),
+		[],
 	);
 
 	const handleCardClick = useCallback(
@@ -1207,6 +1248,37 @@ export function KanbanBoardPage() {
 						onClick={() => void confirmTrashColumnTasks()}
 					>
 						В корзину
+					</Button>
+				</DialogActions>
+			</Dialog>
+			<Dialog
+				open={Boolean(completeReleaseConfirmId)}
+				onClose={() => setCompleteReleaseConfirmId(null)}
+				maxWidth="xs"
+				fullWidth
+			>
+				<DialogTitle>Завершить релиз?</DialogTitle>
+				<DialogContent>
+					<DialogContentText>
+						Релиз «
+						{completeReleaseConfirm
+							? `${completeReleaseConfirm.code} · ${completeReleaseConfirm.name}`
+							: completeReleaseConfirmId}
+						» получит статус «Выпущен». Все его задачи будут перенесены в
+						колонку «Готово».
+					</DialogContentText>
+				</DialogContent>
+				<DialogActions>
+					<Button onClick={() => setCompleteReleaseConfirmId(null)}>
+						Отмена
+					</Button>
+					<Button
+						variant="contained"
+						color="success"
+						disabled={completeRelease.isPending}
+						onClick={() => void confirmCompleteRelease()}
+					>
+						Завершить
 					</Button>
 				</DialogActions>
 			</Dialog>

@@ -13,7 +13,6 @@ import {
 	defaultKanbanBoardColumns,
 	type KanbanBoardTaskReleaseRefDto,
 	KANBAN_BOARD_ASSIGNEE_ROLES,
-	KANBAN_BOARD_COLUMN_WIDTH_PX,
 	KANBAN_BOARD_DEFAULT_SPRINT_CAPACITY_PD,
 	KANBAN_BOARD_CANCELLED_COLUMN_ID,
 	KANBAN_BOARD_DONE_COLUMN_ID,
@@ -21,7 +20,6 @@ import {
 	KANBAN_BOARD_LEGACY_COLUMN_ID_MAP,
 	KANBAN_BOARD_RELEASES_COLUMN_ID,
 	KANBAN_BOARD_RELEASES_COLUMN_TITLE,
-	KANBAN_BOARD_RELEASES_MIN_LANE_CARDS,
 	KANBAN_BOARD_RELEASES_UNASSIGNED_LANE_TITLE,
 	KANBAN_BOARD_RELATED_TASKS_MAX,
 	KANBAN_BOARD_DEFAULT_RELATION_TYPE_ID,
@@ -38,6 +36,7 @@ import {
 	kanbanBoardSystemTitle,
 	kanbanBoardTaskHasBlocker,
 	kanbanBoardTaskReleaseLabel,
+	kanbanBoardReleaseVisibleOnBoard,
 } from "./kanban-board.types";
 
 export function kanbanBoardIsDoneColumn(column: {
@@ -111,14 +110,6 @@ export function kanbanBoardResolveColumnId(id: string): string {
 	return parseKanbanBoardReleasesLaneId(id)?.columnId ?? id;
 }
 
-export function kanbanBoardReleasesLaneWidthPx(laneCount: number): number {
-	const n = Math.max(1, laneCount);
-	const groupWidth =
-		KANBAN_BOARD_COLUMN_WIDTH_PX *
-		Math.max(KANBAN_BOARD_RELEASES_MIN_LANE_CARDS, n);
-	return Math.floor(groupWidth / n);
-}
-
 /** Массово в корзину — только терминальные колонки «Готово» и «Отменено». */
 export function kanbanBoardColumnCanTrashTasks(column: {
 	id: string;
@@ -137,6 +128,26 @@ export function findKanbanBoardCancelledColumnId(
 	);
 	if (byId) return byId.id;
 	return columns.find((column) => kanbanBoardIsCancelledColumn(column))?.id;
+}
+
+export function findKanbanBoardDoneColumnId(
+	columns: ReadonlyArray<{ id: string; title?: string | null }>,
+): string | undefined {
+	const byId = columns.find(
+		(column) => column.id === KANBAN_BOARD_DONE_COLUMN_ID,
+	);
+	if (byId) return byId.id;
+	return columns.find((column) => kanbanBoardIsDoneColumn(column))?.id;
+}
+
+export function findKanbanBoardReleasesColumnId(
+	columns: ReadonlyArray<{ id: string; title?: string | null }>,
+): string | undefined {
+	const byId = columns.find(
+		(column) => column.id === KANBAN_BOARD_RELEASES_COLUMN_ID,
+	);
+	if (byId) return byId.id;
+	return columns.find((column) => kanbanBoardIsReleasesColumn(column))?.id;
 }
 
 /** Переносит карточку в колонку (в конец). Колонка должна уже быть в `board`. */
@@ -273,7 +284,9 @@ export function normalizeKanbanBoardData(board: KanbanBoardData): KanbanBoardDat
 export function expandKanbanBoardReleasesLanes(
 	board: KanbanBoardData,
 	releases: ReadonlyArray<
-		Pick<KanbanBoardTaskReleaseRefDto, "id" | "code" | "name">
+		Pick<KanbanBoardTaskReleaseRefDto, "id" | "code" | "name"> & {
+			status?: string;
+		}
 	>,
 ): KanbanBoardData {
 	const columnId = board.root.children.find((id) =>
@@ -283,10 +296,13 @@ export function expandKanbanBoardReleasesLanes(
 	const column = board[columnId];
 	if (!column) return board;
 
-	const sortedReleases = [...releases].sort(
-		(a, b) =>
-			a.code.localeCompare(b.code, "ru") || a.name.localeCompare(b.name, "ru"),
-	);
+	const sortedReleases = [...releases]
+		.filter((release) => kanbanBoardReleaseVisibleOnBoard(release.status))
+		.sort(
+			(a, b) =>
+				a.code.localeCompare(b.code, "ru") ||
+				a.name.localeCompare(b.name, "ru"),
+		);
 	const lanes = [
 		{
 			id: kanbanBoardReleasesLaneId(columnId, null),

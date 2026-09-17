@@ -273,7 +273,6 @@ export const KANBAN_BOARD_RELEASES_COLUMN_ID = "demo" as const;
 export const KANBAN_BOARD_RELEASES_COLUMN_TITLE = "Релизы" as const;
 export const KANBAN_BOARD_RELEASES_UNASSIGNED_LANE_TITLE = "Без релиза" as const;
 export const KANBAN_BOARD_COLUMN_WIDTH_PX = 320;
-export const KANBAN_BOARD_RELEASES_MIN_LANE_CARDS = 3;
 
 export const KANBAN_BOARD_PRIORITIES = [
 	{ id: "high", title: "Высокий" },
@@ -1179,14 +1178,20 @@ export interface KanbanBoardHistoryOverviewDto {
 }
 
 export const KANBAN_BOARD_RELEASE_STATUSES = [
-	{ id: "draft", title: "Черновик" },
-	{ id: "planned", title: "Запланирован" },
-	{ id: "in_progress", title: "В работе" },
-	{ id: "done", title: "Готов" },
+	{ id: "draft", title: "Черновик", color: "#64748b" },
+	{ id: "planned", title: "Запланирован", color: "#2563eb" },
+	{ id: "in_progress", title: "В работе", color: "#ca8a04" },
+	{ id: "ready", title: "Готов к выпуску", color: "#0891b2" },
+	{ id: "done", title: "Выпущен", color: "#16a34a" },
+	{ id: "cancelled", title: "Отменён", color: "#dc2626" },
+	{ id: "archived", title: "Архив", color: "#94a3b8" },
 ] as const;
 
 export type KanbanBoardReleaseStatusId =
 	(typeof KANBAN_BOARD_RELEASE_STATUSES)[number]["id"];
+
+export const KANBAN_BOARD_RELEASE_DONE_STATUS_ID: KanbanBoardReleaseStatusId =
+	"done";
 
 export const KANBAN_BOARD_RELEASE_THEME_COLORS = [
 	"#2563eb",
@@ -1212,6 +1217,31 @@ export function kanbanBoardReleaseStatusTitle(
 		KANBAN_BOARD_RELEASE_STATUSES.find((item) => item.id === id)?.title ??
 		id ??
 		""
+	);
+}
+
+export function kanbanBoardReleaseStatusColor(
+	id?: KanbanBoardReleaseStatusId | string,
+): string {
+	return (
+		KANBAN_BOARD_RELEASE_STATUSES.find((item) => item.id === id)?.color ??
+		"#64748b"
+	);
+}
+
+/** Завершить можно любой незакрытый релиз (не отменён и не в архиве). */
+export function kanbanBoardReleaseCanComplete(
+	status?: KanbanBoardReleaseStatusId | string,
+): boolean {
+	return status !== "cancelled" && status !== "archived";
+}
+
+/** На доске остаются только незакрытые релизы. */
+export function kanbanBoardReleaseVisibleOnBoard(
+	status?: KanbanBoardReleaseStatusId | string,
+): boolean {
+	return (
+		status !== "done" && status !== "cancelled" && status !== "archived"
 	);
 }
 
@@ -1418,6 +1448,10 @@ export interface UpdateKanbanBoardReleaseRequestDto {
 	startDate?: string | null;
 	endDate?: string | null;
 	imageVersions?: KanbanBoardReleaseImageVersions;
+}
+
+export interface CompleteKanbanBoardReleaseRequestDto {
+	lockHolderLabel?: string;
 }
 
 export interface AttachKanbanBoardPlanningReleaseRequestDto {

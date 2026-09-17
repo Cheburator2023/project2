@@ -1,4 +1,5 @@
 import type { ColDef, ICellRendererParams } from "ag-grid-community";
+import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import {
 	useCreateKanbanBoardRelease,
 	useDeleteKanbanBoardRelease,
@@ -8,10 +9,10 @@ import {
 	useKanbanBoardSupersprints,
 	useUpdateKanbanBoardRelease,
 } from "@react-client/common/api/queries/kanban-board";
-import {
-	TrackerRegistryChip,
-	TrackerRegistryChipCell,
-} from "@react-client/features/tracker/components/TrackerRegistryChipCell";
+import { toast } from "@react-client/common/toasts";
+import { Flex } from "@react-client/common/primitives/Flex";
+import { TrackerRegistryChipCell } from "@react-client/features/tracker/components/TrackerRegistryChipCell";
+import { TrackerReleaseStatusSelect } from "@react-client/features/tracker/components/TrackerReleaseStatusSelect";
 import { TrackerRegistryPage } from "@react-client/features/tracker/components/TrackerRegistryPage";
 import type { TrackerFormField } from "@react-client/features/tracker/components/TrackerFormDialog";
 import { trackerDateFormatter } from "@react-client/features/tracker/components/TrackerRegistryGrid";
@@ -94,15 +95,31 @@ export function TrackerReleasesPage() {
 			{
 				colId: "status",
 				headerName: "Статус",
-				width: 140,
+				width: 200,
 				valueGetter: (params) =>
 					kanbanBoardReleaseStatusTitle(params.data?.status),
 				cellRenderer: (params: ICellRendererParams<KanbanBoardReleaseDto>) =>
 					params.data ? (
 						<TrackerRegistryChipCell>
-							<TrackerRegistryChip
-								label={kanbanBoardReleaseStatusTitle(params.data.status)}
-							/>
+							<Flex
+								width="100%"
+								minWidth={0}
+								onClick={(event) => event.stopPropagation()}
+								onDoubleClick={(event) => event.stopPropagation()}
+								onMouseDown={(event) => event.stopPropagation()}
+							>
+								<TrackerReleaseStatusSelect
+									value={params.data.status}
+									disabled={updateRelease.isPending}
+									onChange={(status) => {
+										const row = params.data;
+										if (!row || status === row.status) return;
+										void updateRelease
+											.mutateAsync({ id: row.id, data: { status } })
+											.catch((error) => toast.error(apiErrorMessage(error)));
+									}}
+								/>
+							</Flex>
 						</TrackerRegistryChipCell>
 					) : null,
 			},
@@ -137,7 +154,7 @@ export function TrackerReleasesPage() {
 				valueFormatter: (params) => trackerDateFormatter(params.value),
 			},
 		],
-		[],
+		[updateRelease],
 	);
 
 	const formFields = useMemo<TrackerFormField[]>(

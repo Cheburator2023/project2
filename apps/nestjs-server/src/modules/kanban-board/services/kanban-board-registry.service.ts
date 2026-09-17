@@ -18,6 +18,8 @@ import {
 	kanbanBoardEffectiveSprintCapacityPd,
 	kanbanBoardIsDoneColumn,
 	kanbanBoardIsCancelledColumn,
+	findKanbanBoardReleasesColumnId,
+	kanbanBoardReleaseVisibleOnBoard,
 	kanbanBoardColumnCanTrashTasks,
 	kanbanBoardDisplayColumnTitle,
 	kanbanBoardPriorityTitle,
@@ -1846,6 +1848,51 @@ export class KanbanBoardRegistryService {
 		return updated;
 	}
 
+	async moveTasksToReleasesColumn(
+		taskIds: string[],
+		editor?: { createdBy?: string | null; lockHolderLabel?: string },
+	): Promise<void> {
+		const uniqueIds = [
+			...new Set(taskIds.map((id) => id.trim()).filter(Boolean)),
+		];
+		if (!uniqueIds.length) return;
+
+		const tasks = await this.taskRepository.find({
+			where: { id: In(uniqueIds), deletedAt: IsNull() },
+		});
+		if (!tasks.length) return;
+
+		const boardIds = [...new Set(tasks.map((task) => task.boardId))];
+		const columns = await this.columnRepository.find({
+			where: { boardId: In(boardIds) },
+		});
+		const columnsByBoard = new Map<string, typeof columns>();
+		for (const column of columns) {
+			const list = columnsByBoard.get(column.boardId) ?? [];
+			list.push(column);
+			columnsByBoard.set(column.boardId, list);
+		}
+
+		for (const task of tasks) {
+			const boardColumns = columnsByBoard.get(task.boardId) ?? [];
+			const current = boardColumns.find(
+				(column) => column.id === task.parentId,
+			);
+			if (current && kanbanBoardIsCancelledColumn(current)) continue;
+			const releasesId = findKanbanBoardReleasesColumnId(boardColumns);
+			if (!releasesId || task.parentId === releasesId) continue;
+			await this.updateTask(
+				task.id,
+				{
+					parentId: releasesId,
+					lockHolderLabel: editor?.lockHolderLabel,
+					forceOverwrite: true,
+				},
+				editor?.createdBy,
+			);
+		}
+	}
+
 	async trashTask(id: string, createdBy?: string | null): Promise<void> {
 		const task = await this.taskRepository.findOne({
 			where: { id, deletedAt: IsNull() },
@@ -2565,13 +2612,13 @@ export class KanbanBoardRegistryService {
 		const uniqueIds = [
 			...new Set(releaseIds.map((id) => id.trim()).filter(Boolean)),
 		];
-		if (uniqueIds.length) {
-			const found = await this.releaseRepository.find({
-				where: { id: In(uniqueIds) },
-			});
-			if (found.length !== uniqueIds.length) {
-				throw new BadRequestException("Некоторые релизы не найдены");
-			}
+		const found = uniqueIds.length
+			? await this.releaseRepository.find({
+					where: { id: In(uniqueIds) },
+				})
+			: [];
+		if (uniqueIds.length && found.length !== uniqueIds.length) {
+			throw new BadRequestException("Некоторые релизы не найдены");
 		}
 
 		const existing = await this.membershipRepository.find({
@@ -2584,6 +2631,7 @@ export class KanbanBoardRegistryService {
 			await this.membershipRepository.remove(toRemove);
 		}
 
+		let addedOpenRelease = false;
 		for (const releaseId of uniqueIds) {
 			if (existingIds.has(releaseId)) continue;
 			const position = await this.nextReleaseMembershipPosition(releaseId);
@@ -2595,6 +2643,13 @@ export class KanbanBoardRegistryService {
 					position,
 				}),
 			);
+			const release = found.find((item) => item.id === releaseId);
+			if (release && kanbanBoardReleaseVisibleOnBoard(release.status)) {
+				addedOpenRelease = true;
+			}
+		}
+		if (addedOpenRelease) {
+			await this.moveTasksToReleasesColumn([taskId]);
 		}
 	}
 

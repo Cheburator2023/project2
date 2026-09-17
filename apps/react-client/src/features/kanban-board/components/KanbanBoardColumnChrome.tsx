@@ -1,4 +1,5 @@
 import AddIcon from "@mui/icons-material/Add";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 import Box from "@mui/material/Box";
@@ -56,6 +57,10 @@ export function KanbanColumnHeader({
 	onAddTask,
 	onTrashAll,
 	isTrashing,
+	onCompleteRelease,
+	isCompletingRelease,
+	canCompleteRelease = false,
+	completeReleaseTitle,
 	blockerCount = 0,
 }: {
 	column: BoardItem;
@@ -65,6 +70,10 @@ export function KanbanColumnHeader({
 	onAddTask?: (columnId: string) => void;
 	onTrashAll?: (columnId: string) => void;
 	isTrashing?: boolean;
+	onCompleteRelease?: () => void;
+	isCompletingRelease?: boolean;
+	canCompleteRelease?: boolean;
+	completeReleaseTitle?: string;
 	blockerCount?: number;
 }) {
 	const color = getKanbanColumnColor(column);
@@ -158,7 +167,9 @@ export function KanbanColumnHeader({
 							cursor: disabled || locked ? "default" : "text",
 						}}
 					>
-						{locked ? `${KANBAN_BOARD_RELEASES_COLUMN_TITLE} · ${column.title}` : column.title}
+						{locked
+							? `${KANBAN_BOARD_RELEASES_COLUMN_TITLE} · ${column.title}`
+							: column.title}
 					</Typography>
 				)}
 				{canTrashAll ? (
@@ -171,6 +182,21 @@ export function KanbanColumnHeader({
 						sx={{ color: "text.secondary" }}
 					>
 						<DeleteSweepIcon fontSize="small" />
+					</IconButton>
+				) : null}
+				{onCompleteRelease ? (
+					<IconButton
+						size="small"
+						disabled={disabled || isCompletingRelease || !canCompleteRelease}
+						onClick={onCompleteRelease}
+						title={completeReleaseTitle ?? "Завершить релиз"}
+						aria-label={completeReleaseTitle ?? "Завершить релиз"}
+						data-test-id="kanban-release-lane-complete"
+						sx={{
+							color: canCompleteRelease ? "success.main" : "text.disabled",
+						}}
+					>
+						<CheckCircleOutlineIcon fontSize="small" />
 					</IconButton>
 				) : null}
 				{locked ? null : (

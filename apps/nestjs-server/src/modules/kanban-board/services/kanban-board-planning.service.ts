@@ -8,7 +8,11 @@ import { In, IsNull, Not, Repository } from "typeorm";
 import { ulid } from "ulid";
 import {
 	findKanbanBoardColumnByStatusTitle,
+	findKanbanBoardDoneColumnId,
 	isKanbanBoardReleaseStatusId,
+	kanbanBoardIsCancelledColumn,
+	kanbanBoardReleaseVisibleOnBoard,
+	KANBAN_BOARD_RELEASE_DONE_STATUS_ID,
 	nextKanbanBoardReleaseThemeColor,
 	normalizeTrackerCode,
 	type AttachKanbanBoardPlanningReleaseRequestDto,
@@ -322,6 +326,72 @@ export class KanbanBoardPlanningService {
 		return this.toReleaseDtoWithCounts(release);
 	}
 
+	async completeRelease(
+		id: string,
+		editor?: { createdBy?: string | null; lockHolderLabel?: string },
+	): Promise<KanbanBoardReleaseDetailDto> {
+		const release = await this.requireRelease(id);
+		if (release.status === "cancelled" || release.status === "archived") {
+			throw new BadRequestException(
+				"Нельзя завершить отменённый или архивный релиз",
+			);
+		}
+
+		const memberships = await this.membershipRepository.find({
+			where: { releaseId: id },
+		});
+		const taskIds = memberships.map((item) => item.taskId);
+		const tasks = taskIds.length
+			? await this.taskRepository.find({
+					where: { id: In(taskIds), deletedAt: IsNull() },
+				})
+			: [];
+		const boardIds = [...new Set(tasks.map((task) => task.boardId))];
+		const columns = boardIds.length
+			? await this.columnRepository.find({
+					where: { boardId: In(boardIds) },
+				})
+			: [];
+		const columnsByBoard = new Map<string, typeof columns>();
+		for (const column of columns) {
+			const list = columnsByBoard.get(column.boardId) ?? [];
+			list.push(column);
+			columnsByBoard.set(column.boardId, list);
+		}
+
+		const toMove: typeof tasks = [];
+		for (const task of tasks) {
+			const boardColumns = columnsByBoard.get(task.boardId) ?? [];
+			const current = boardColumns.find(
+				(column) => column.id === task.parentId,
+			);
+			if (current && kanbanBoardIsCancelledColumn(current)) continue;
+			const doneId = findKanbanBoardDoneColumnId(boardColumns);
+			if (!doneId) {
+				throw new BadRequestException(
+					"На доске задачи нет колонки «Готово» — завершить релиз нельзя",
+				);
+			}
+			if (task.parentId !== doneId) toMove.push(task);
+		}
+
+		for (const task of toMove) {
+			const boardColumns = columnsByBoard.get(task.boardId) ?? [];
+			const doneId = findKanbanBoardDoneColumnId(boardColumns);
+			if (!doneId || task.parentId === doneId) continue;
+			const update: UpdateKanbanBoardTaskRequestDto = {
+				parentId: doneId,
+				lockHolderLabel: editor?.lockHolderLabel,
+				forceOverwrite: true,
+			};
+			await this.registryService.updateTask(task.id, update, editor?.createdBy);
+		}
+
+		release.status = KANBAN_BOARD_RELEASE_DONE_STATUS_ID;
+		await this.releaseRepository.save(release);
+		return this.findReleaseById(release.id);
+	}
+
 	async createTheme(
 		planningId: string,
 		dto: CreateKanbanBoardReleaseThemeRequestDto,
@@ -444,6 +514,9 @@ export class KanbanBoardPlanningService {
 			}),
 		);
 		await this.membershipRepository.save(rows);
+		if (kanbanBoardReleaseVisibleOnBoard(release.status)) {
+			await this.registryService.moveTasksToReleasesColumn(incoming);
+		}
 		return this.findReleaseById(releaseId);
 	}
 
@@ -681,6 +754,9 @@ export class KanbanBoardPlanningService {
 					position,
 				}),
 			);
+		}
+		if (kanbanBoardReleaseVisibleOnBoard(target.status)) {
+			await this.registryService.moveTasksToReleasesColumn([taskId]);
 		}
 		return this.findPlanningById(source.planningId);
 	}

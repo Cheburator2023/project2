@@ -4,7 +4,13 @@ import CircularProgress from "@mui/material/CircularProgress";
 import { Header } from "@react-client/common/navigation/organisms/Header";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
-import { useKanbanBoardRelease } from "@react-client/common/api/queries/kanban-board";
+import {
+	useKanbanBoardRelease,
+	useUpdateKanbanBoardRelease,
+} from "@react-client/common/api/queries/kanban-board";
+import { toast } from "@react-client/common/toasts";
+import { TrackerReleaseStatusSelect } from "@react-client/features/tracker/components/TrackerReleaseStatusSelect";
+import { isKanbanBoardReleaseStatusId } from "@smart-anketa/api-contract";
 import { trackerPlanningPath } from "@react-client/features/kanban-board/kanban-task-paths";
 import { ReleaseDockLayout } from "@react-client/features/tracker/releases/ReleaseDockLayout";
 import { ReleaseWorkspaceProvider } from "@react-client/features/tracker/releases/ReleaseWorkspaceContext";
@@ -15,6 +21,7 @@ export function TrackerReleasePage() {
 	const navigate = useNavigate();
 	const { releaseId = "" } = useParams();
 	const { data, isLoading, error } = useKanbanBoardRelease(releaseId);
+	const updateRelease = useUpdateKanbanBoardRelease();
 
 	if (isLoading) {
 		return (
@@ -46,6 +53,20 @@ export function TrackerReleasePage() {
 					title={`${data.code} · ${data.name}`}
 					backTo={commonRoutes.trackerReleases.rootPath}
 				>
+					<Flex sx={{ width: 220 }} flexShrink={0}>
+						<TrackerReleaseStatusSelect
+							label="Статус"
+							value={data.status}
+							disabled={updateRelease.isPending}
+							onChange={(status) => {
+								if (status === data.status) return;
+								if (!isKanbanBoardReleaseStatusId(status)) return;
+								void updateRelease
+									.mutateAsync({ id: data.id, data: { status } })
+									.catch((err) => toast.error(apiErrorMessage(err)));
+							}}
+						/>
+					</Flex>
 					{data.planningId ? (
 						<Button
 							size="small"

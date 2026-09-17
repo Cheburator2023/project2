@@ -54,6 +54,7 @@ import type {
 	UpdateKanbanBoardPlanningRequestDto,
 	UpdateKanbanBoardPlanningLayoutRequestDto,
 	UpdateKanbanBoardReleaseRequestDto,
+	CompleteKanbanBoardReleaseRequestDto,
 	UpdateKanbanBoardReleaseThemeRequestDto,
 	AttachKanbanBoardReleaseTasksRequestDto,
 	ReorderKanbanBoardReleaseTasksRequestDto,
@@ -402,6 +403,18 @@ export class KanbanBoardController {
 		@Body() dto: UpdateKanbanBoardReleaseRequestDto,
 	): Promise<KanbanBoardReleaseDto> {
 		return this.planningService.updateRelease(id, dto);
+	}
+
+	@Post("releases/:id/complete")
+	async completeRelease(
+		@Param("id") id: string,
+		@Body() dto: CompleteKanbanBoardReleaseRequestDto,
+		@CurrentUser() user: Record<string, unknown> | undefined,
+	): Promise<KanbanBoardReleaseDetailDto> {
+		return this.planningService.completeRelease(id, {
+			createdBy: kanbanAuditUserId(user),
+			lockHolderLabel: dto?.lockHolderLabel,
+		});
 	}
 
 	@Delete("releases/:id")

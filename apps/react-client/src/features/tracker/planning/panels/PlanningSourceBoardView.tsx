@@ -15,7 +15,6 @@ import {
 	normalizeTrackerCode,
 	toBoardData,
 	expandKanbanBoardReleasesLanes,
-	kanbanBoardReleasesLaneWidthPx,
 	KANBAN_BOARD_RELEASES_COLUMN_TITLE,
 	parseKanbanBoardReleasesLaneId,
 	countKanbanBoardBlockers,
@@ -150,18 +149,6 @@ export function ReleaseSourceBoardPicker({
 			releasesQuery.data ?? [],
 		);
 	}, [columnsQuery.data, releasesQuery.data, tasksQuery.data]);
-	const releasesLaneCount = useMemo(
-		() =>
-			boardData
-				? boardData.root.children.filter((id) =>
-						parseKanbanBoardReleasesLaneId(id),
-					).length
-				: 1,
-		[boardData],
-	);
-	const releasesLaneWidthPx = kanbanBoardReleasesLaneWidthPx(
-		releasesLaneCount,
-	);
 	const sourceBoardBlockerCount = boardData
 		? countKanbanBoardBlockers(boardData)
 		: 0;
@@ -233,9 +220,8 @@ export function ReleaseSourceBoardPicker({
 		};
 	}, []);
 	const columnWrapperStyle = useCallback(
-		(column: BoardItem) =>
-			kanbanBoardColumnWrapperStyle(column, releasesLaneWidthPx),
-		[releasesLaneWidthPx],
+		(column: BoardItem) => kanbanBoardColumnWrapperStyle(column),
+		[],
 	);
 
 	const unattachedOnBoard = (tasksQuery.data ?? []).filter(
