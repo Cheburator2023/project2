@@ -1,5 +1,16 @@
 # Semantic Versioning Changelog
 
+# [1.68.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.67.0...v1.68.0) (2026-09-17)
+
+
+### Features
+
+* add release detail retrieval and enhance Kanban board functionality ([a6fa75a](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/a6fa75a6f62afe01fab15cafb7b479adaf9b57a3))
+* add subtask image management and enhance Kanban board functionality ([a611ddc](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/a611ddcabb82d65be3a6a7f6bf2982382e75e39b))
+* implement related task management in Kanban board ([2e5f125](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/2e5f125817619d4174f3f689f1434700e4b9b2fe))
+* управление графом связей через feature flag сборки ([af19a96](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/af19a965bed6e31ca4d40f2e1be908a58814ec8d))
+* управление уведомлениями через feature flag сборки ([3301f19](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/3301f195be2ff969ed2c9932035927c882717689))
+
 # [1.67.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.66.0...v1.67.0) (2026-09-11)
 
 
