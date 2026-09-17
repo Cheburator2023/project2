@@ -26,15 +26,12 @@ export function kanbanBoardColumnWrapperClassName(column: BoardItem): string {
 export const kanbanBoardRkkBoardSx = {
 	"& .rkk-board": {
 		overflow: "visible",
-		height: "auto",
-		minHeight: "100%",
+		height: "100%",
 		width: "max-content",
 		minWidth: "100%",
-		alignItems: "flex-start",
 	},
 	"& .rkk-column-outer": {
-		height: "auto",
-		alignSelf: "stretch",
+		height: "100%",
 		boxSizing: "border-box",
 	},
 	"& .rkk-column-outer.kanban-releases-lane": {
@@ -42,29 +39,24 @@ export const kanbanBoardRkkBoardSx = {
 		borderColor: "divider",
 	},
 	"& .rkk-column-outer .rkk-column": {
-		height: "auto",
-		minHeight: "100%",
-		overflow: "visible !important",
+		height: "100%",
+		minHeight: 0,
 		borderRadius: "4px",
 		width: "100%",
 	},
 	"& .rkk-column-outer .rkk-column-wrapper": {
-		maxHeight: "none",
-		overflow: "visible",
+		flex: 1,
+		minHeight: 0,
+		overflow: "hidden",
 	},
 	"& .rkk-column-content": {
-		height: "auto",
-		flex: "none",
-		minHeight: "unset",
-		overflow: "visible",
+		flex: 1,
+		height: 0,
+		minHeight: 0,
 	},
 	"& .rkk-column-content-list": {
-		height: "auto",
-		overflow: "visible !important",
-		overflowX: "visible !important",
-		overflowY: "visible !important",
-	},
-	"& .rkk-card-shadow-container": {
-		overflow: "visible",
+		height: "100%",
+		overflowX: "hidden",
+		overflowY: "auto",
 	},
 } as const;

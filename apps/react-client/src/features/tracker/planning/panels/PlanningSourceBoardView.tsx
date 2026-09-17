@@ -314,8 +314,7 @@ export function ReleaseSourceBoardPicker({
 					<Kanban
 						dataSource={boardData as BoardData}
 						rootStyle={{
-							height: "auto",
-							minHeight: "100%",
+							height: "100%",
 							width: "max-content",
 							minWidth: "100%",
 						}}
