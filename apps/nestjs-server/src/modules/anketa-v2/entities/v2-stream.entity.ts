@@ -8,8 +8,8 @@ import {
 } from "typeorm";
 
 /**
- * Реестр стрим-исполнителей (конструктор / runtime / filter).
- * Не связан со справочником формы `v2.generalInfo.implementationStream`.
+ * Реестр стримов (конструктор / runtime / filter / срезы формы).
+ * Поля анкеты `implementationStream` и «Поддерживающие стримы» — фильтры этого каталога.
  */
 @Entity({ name: "v2_stream" })
 export class V2StreamEntity {
@@ -29,7 +29,7 @@ export class V2StreamEntity {
 	@Column({ name: "is_active", type: "boolean", nullable: false, default: true })
 	isActive: boolean;
 
-	/** Метаданные каталога: dbNames, keycloakAliases, isModelStream, … */
+	/** Метаданные каталога: dbNames, kind, isExecutor, keycloakAliases, … */
 	@Column({ type: "jsonb", nullable: true })
 	payload: Record<string, unknown> | null;
 

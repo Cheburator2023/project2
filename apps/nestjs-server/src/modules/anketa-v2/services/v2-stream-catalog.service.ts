@@ -7,8 +7,12 @@ import {
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import {
+	V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE,
+	V2_SUPPORTING_STREAMS_DICTIONARY_CODE,
 	buildFactoryImplementationStreamCatalog,
 	buildStreamFilterAliasMap,
+	catalogExecutorEntries,
+	catalogSupportingEntries,
 	isFactoryProtectedStreamCode,
 	isValidImplementationStreamCodeFormat,
 	normalizeImplementationStreamCatalogEntry,
@@ -16,6 +20,8 @@ import {
 	type V2ImplementationStreamCatalogEntry,
 } from "@smart-anketa/api-contract";
 import { Repository } from "typeorm";
+import { V2DictionaryEntity } from "../entities/v2-dictionary.entity";
+import { V2DictionaryItemEntity } from "../entities/v2-dictionary-item.entity";
 import { V2StreamEntity } from "../entities/v2-stream.entity";
 
 export type V2StreamWriteInput = {
@@ -34,12 +40,17 @@ export class V2StreamCatalogService {
 	constructor(
 		@InjectRepository(V2StreamEntity)
 		private readonly streamRepository: Repository<V2StreamEntity>,
+		@InjectRepository(V2DictionaryEntity)
+		private readonly dictionaryRepository: Repository<V2DictionaryEntity>,
+		@InjectRepository(V2DictionaryItemEntity)
+		private readonly dictionaryItemRepository: Repository<V2DictionaryItemEntity>,
 	) {}
 
 	async runStartupSeed(): Promise<void> {
 		try {
 			await this.ensureFactoryStreams();
 			await this.refresh();
+			await this.syncFormDictionariesFromCatalog();
 		} catch (error) {
 			this.logger.warn(
 				`Не удалось загрузить каталог стримов при старте: ${
@@ -147,6 +158,8 @@ export class V2StreamCatalogService {
 				keycloakAliases: entry.payload.keycloakAliases,
 				isModelStream: entry.payload.isModelStream,
 				isUmbrellaStream: entry.payload.isUmbrellaStream,
+				isExecutor: entry.payload.isExecutor,
+				kind: entry.payload.kind,
 				v1Labels: entry.payload.v1Labels,
 				payload: entry.payload,
 			};
@@ -182,6 +195,7 @@ export class V2StreamCatalogService {
 			}),
 		);
 		this.invalidate();
+		await this.syncFormDictionariesFromCatalog();
 		return saved;
 	}
 
@@ -207,6 +221,7 @@ export class V2StreamCatalogService {
 		row.payload = payload as unknown as Record<string, unknown>;
 		const saved = await this.streamRepository.save(row);
 		this.invalidate();
+		await this.syncFormDictionariesFromCatalog();
 		return saved;
 	}
 
@@ -220,5 +235,76 @@ export class V2StreamCatalogService {
 		}
 		await this.streamRepository.remove(row);
 		this.invalidate();
+		await this.syncFormDictionariesFromCatalog();
+	}
+
+	/**
+	 * implementationStream = isExecutor; method.16 = kind=supporting.
+	 */
+	async syncFormDictionariesFromCatalog(): Promise<void> {
+		const catalog = await this.getCatalog({
+			activeOnly: false,
+			forceRefresh: true,
+		});
+		await this.replaceDictionaryItems(
+			V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE,
+			catalogExecutorEntries(catalog),
+		);
+		await this.replaceDictionaryItems(
+			V2_SUPPORTING_STREAMS_DICTIONARY_CODE,
+			catalogSupportingEntries(catalog),
+		);
+	}
+
+	private async replaceDictionaryItems(
+		dictionaryCode: string,
+		entries: V2ImplementationStreamCatalogEntry[],
+	): Promise<void> {
+		const dictionary = await this.dictionaryRepository.findOne({
+			where: { code: dictionaryCode },
+		});
+		if (!dictionary) return;
+		const existing = await this.dictionaryItemRepository.find({
+			where: { dictionaryId: dictionary.id },
+			order: { order: "ASC" },
+		});
+		const existingByCode = new Map(existing.map((item) => [item.code, item]));
+		const expectedCodes = new Set(entries.map((entry) => entry.code));
+		for (const [index, entry] of entries.entries()) {
+			const current = existingByCode.get(entry.code);
+			const payload = { storeCode: true };
+			if (!current) {
+				await this.dictionaryItemRepository.save(
+					this.dictionaryItemRepository.create({
+						dictionaryId: dictionary.id,
+						code: entry.code,
+						label: entry.label,
+						order: index,
+						isActive: true,
+						parentCode: null,
+						payload,
+					}),
+				);
+				continue;
+			}
+			if (
+				current.label !== entry.label ||
+				current.order !== index ||
+				!current.isActive ||
+				current.parentCode !== null ||
+				JSON.stringify(current.payload) !== JSON.stringify(payload)
+			) {
+				current.label = entry.label;
+				current.order = index;
+				current.isActive = true;
+				current.parentCode = null;
+				current.payload = payload;
+				await this.dictionaryItemRepository.save(current);
+			}
+		}
+		const stale = existing.filter((item) => !expectedCodes.has(item.code));
+		if (stale.length > 0) {
+			await this.dictionaryItemRepository.remove(stale);
+		}
 	}
 }

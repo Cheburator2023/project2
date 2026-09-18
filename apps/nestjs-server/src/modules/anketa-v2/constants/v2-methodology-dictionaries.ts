@@ -1,5 +1,9 @@
 import { V2_FACTORY_TYPICAL_WORKS_SNAPSHOT } from "../constants/v2-factory-typical-works-catalog";
 import type { V2DefaultDictionaryDef } from "../utils/v2-schema-dictionary.util";
+import {
+	V2_SUPPORTING_STREAMS_DICTIONARY_CODE,
+	buildFactorySupportingStreamDictionaryItems,
+} from "@smart-anketa/api-contract";
 
 /**
  * Методологические справочники (веса, классы, виды контроля и т.д.)
@@ -31,17 +35,28 @@ export const V2_METHODOLOGY_DICTIONARIES: V2DefaultDictionaryDef[] =
 		.filter((d) => d.values.length > 0)
 		.map((d) => {
 			const seen = new Set<string>();
+			const code = dictCode(d.id, d.name);
+			if (code === V2_SUPPORTING_STREAMS_DICTIONARY_CODE) {
+				return {
+					code,
+					name: d.name,
+					category: d.category?.trim() || "Организационный",
+					description:
+						"Срез каталога стримов (v2_stream, kind=supporting). Source of truth — реестр стримов.",
+					items: buildFactorySupportingStreamDictionaryItems(),
+				};
+			}
 			return {
-				code: dictCode(d.id, d.name),
+				code,
 				name: d.name,
 				category: d.category?.trim() || "Методология",
 				description: d.comments?.trim() || null,
 				items: d.values.map((v, i) => {
-					let code = itemCode(v.label, i);
-					while (seen.has(code)) code = `${code}_${i}`;
-					seen.add(code);
+					let item = itemCode(v.label, i);
+					while (seen.has(item)) item = `${item}_${i}`;
+					seen.add(item);
 					return {
-						code,
+						code: item,
 						label: v.label,
 						order: i,
 						payload: { coeff: v.coeff, coeffRaw: v.coeffRaw, raw: v.raw },

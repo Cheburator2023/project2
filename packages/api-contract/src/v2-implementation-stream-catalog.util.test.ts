@@ -3,8 +3,11 @@ import { V2_IMPLEMENTATION_STREAM } from "./v2-implementation-streams.util";
 import {
 	buildFactoryAnketaFormStreamDictionaryItems,
 	buildFactoryImplementationStreamCatalog,
+	buildFactorySupportingStreamDictionaryItems,
 	buildStreamFilterAliasMap,
 	catalogEnumPair,
+	catalogExecutorEntries,
+	catalogSupportingEntries,
 	findImplementationStreamCatalogEntry,
 	isValidImplementationStreamCodeFormat,
 	parseImplementationStreamPayload,
@@ -30,6 +33,8 @@ describe("v2-implementation-stream-catalog.util", () => {
 			(entry) => entry.code === V2_IMPLEMENTATION_STREAM.KMBKCB,
 		);
 		expect(kmb?.payload.isModelStream).toBe(true);
+		expect(kmb?.payload.kind).toBe("model");
+		expect(kmb?.payload.isExecutor).toBe(true);
 		expect(kmb?.payload.isUmbrellaStream).toBe(false);
 		expect(kmb?.payload.dbNames).toEqual(
 			expect.arrayContaining(["Разработка моделей КМБ и КСБ"]),
@@ -39,15 +44,43 @@ describe("v2-implementation-stream-catalog.util", () => {
 			(entry) => entry.code === V2_IMPLEMENTATION_STREAM.IDSRC,
 		);
 		expect(idsrc?.payload.isModelStream).toBe(false);
+		expect(idsrc?.payload.kind).toBe("supporting");
+		expect(idsrc?.payload.isExecutor).toBe(false);
 		expect(idsrc?.isActive).toBe(true);
+		const dadm = catalog.find(
+			(entry) => entry.code === V2_IMPLEMENTATION_STREAM.DADM,
+		);
+		expect(dadm?.payload.kind).toBe("platform");
+		expect(dadm?.payload.isExecutor).toBe(false);
 	});
 
-	it("form dictionary seed has only five model streams", () => {
+	it("form dictionary seed has executor streams (five model factory streams)", () => {
 		const items = buildFactoryAnketaFormStreamDictionaryItems();
 		expect(items.map((item) => item.code)).toEqual([
 			...V2_MODEL_IMPLEMENTATION_STREAM_CODES,
 		]);
 		expect(items.every((item) => item.payload.storeCode === true)).toBe(true);
+		const executors = catalogExecutorEntries(
+			buildFactoryImplementationStreamCatalog(),
+		);
+		expect(executors.every((entry) => entry.payload.isExecutor)).toBe(true);
+	});
+
+	it("supporting dictionary seed matches method.16 stream slice", () => {
+		const items = buildFactorySupportingStreamDictionaryItems();
+		expect(items.map((item) => item.code)).toEqual([
+			V2_IMPLEMENTATION_STREAM.IDSRC,
+			V2_IMPLEMENTATION_STREAM.MDLCTL,
+			V2_IMPLEMENTATION_STREAM.PIRM,
+			V2_IMPLEMENTATION_STREAM.STRDAT,
+			V2_IMPLEMENTATION_STREAM.DIGAGT,
+		]);
+		const supporting = catalogSupportingEntries(
+			buildFactoryImplementationStreamCatalog(),
+		);
+		expect(supporting.map((entry) => entry.code)).toEqual(
+			items.map((item) => item.code),
+		);
 	});
 
 	it("catalog enum pair excludes umbrella and inactive", () => {
@@ -65,6 +98,8 @@ describe("v2-implementation-stream-catalog.util", () => {
 		expect(payload.storeCode).toBe(true);
 		expect(payload.dbNames).toEqual(["Новый стрим"]);
 		expect(payload.isModelStream).toBe(true);
+		expect(payload.kind).toBe("model");
+		expect(payload.isExecutor).toBe(true);
 		expect(payload.isUmbrellaStream).toBe(false);
 		expect(payload.keycloakAliases).toEqual(["Dept A"]);
 	});
@@ -76,6 +111,8 @@ describe("v2-implementation-stream-catalog.util", () => {
 		);
 		expect(payload.isUmbrellaStream).toBe(true);
 		expect(payload.isModelStream).toBe(false);
+		expect(payload.kind).toBe("model");
+		expect(payload.isExecutor).toBe(false);
 	});
 
 	it("parses empty dbNames with code as canonical assignment name", () => {

@@ -1,14 +1,16 @@
 /**
- * Каталог стрим-исполнителей (таблица `v2_stream` / factory fallback).
- * Справочник формы `v2.generalInfo.implementationStream` — отдельно (только enum анкеты).
+ * Каталог стримов (таблица `v2_stream` / factory fallback).
+ * Поля формы — срезы: isExecutor → implementationStream, kind=supporting → method.16.
  */
 import {
 	V2_IMPLEMENTATION_STREAM,
 	V2_IMPLEMENTATION_STREAM_CODES,
-	V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE,
 	V2_IMPLEMENTATION_STREAM_LABELS,
+	V2_STREAM_KIND,
 	isV2ImplementationStreamCode,
+	isV2StreamKind,
 	type V2ImplementationStreamCode,
+	type V2StreamKind,
 } from "./v2-implementation-streams.util";
 import {
 	V2_MODEL_IMPLEMENTATION_STREAM_CODES,
@@ -16,7 +18,28 @@ import {
 	V2_MODEL_STREAM_UMBRELLA_CODE,
 } from "./v2-model-stream-typical-works.constants";
 
-export { V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE };
+export {
+	V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE,
+	V2_STREAM_KIND,
+	V2_STREAM_KIND_LABELS,
+	V2_STREAM_KINDS,
+	V2_SUPPORTING_STREAMS_DICTIONARY_CODE,
+	isStreamDerivedDictionaryCode,
+	isV2StreamKind,
+	type V2StreamKind,
+} from "./v2-implementation-streams.util";
+
+const V2_SUPPORTING_IMPLEMENTATION_STREAM_CODES = [
+	V2_IMPLEMENTATION_STREAM.IDSRC,
+	V2_IMPLEMENTATION_STREAM.MDLCTL,
+	V2_IMPLEMENTATION_STREAM.PIRM,
+	V2_IMPLEMENTATION_STREAM.STRDAT,
+	V2_IMPLEMENTATION_STREAM.DIGAGT,
+] as const;
+
+const V2_PLATFORM_IMPLEMENTATION_STREAM_CODES = [
+	V2_IMPLEMENTATION_STREAM.DADM,
+] as const;
 
 /** Payload элемента реестра стримов (`v2_stream`). */
 export type V2ImplementationStreamPayload = {
@@ -30,7 +53,7 @@ export type V2ImplementationStreamPayload = {
 	keycloakAliases: string[];
 	/**
 	 * Дочерний стрим зонтичной группы (общий каталог типовых работ).
-	 * Для заводской модели — входит в umbrella «Модельный стрим».
+	 * Совпадает с kind=model (кроме зонтика).
 	 */
 	isModelStream: boolean;
 	/**
@@ -39,6 +62,13 @@ export type V2ImplementationStreamPayload = {
 	isUmbrellaStream: boolean;
 	/** v1 streamExecutor aliases для фильтра реестра. */
 	v1Labels: string[];
+	/**
+	 * Показывать в поле анкеты «Стрим-исполнитель»
+	 * (`v2.generalInfo.implementationStream`).
+	 */
+	isExecutor: boolean;
+	/** Вид стрима: модельный / поддерживающий / платформенный. */
+	kind: V2StreamKind;
 };
 
 export type V2ImplementationStreamCatalogEntry = {
@@ -133,15 +163,44 @@ function asStringArray(value: unknown): string[] {
 	return result;
 }
 
+export function inferFactoryStreamKind(
+	code: string,
+	options?: { isUmbrellaStream?: boolean; isModelStream?: boolean },
+): V2StreamKind {
+	if (options?.isUmbrellaStream || code === V2_MODEL_STREAM_UMBRELLA_CODE) {
+		return V2_STREAM_KIND.MODEL;
+	}
+	if (
+		options?.isModelStream === true ||
+		(V2_MODEL_IMPLEMENTATION_STREAM_CODES as readonly string[]).includes(code)
+	) {
+		return V2_STREAM_KIND.MODEL;
+	}
+	if (
+		(V2_PLATFORM_IMPLEMENTATION_STREAM_CODES as readonly string[]).includes(
+			code,
+		)
+	) {
+		return V2_STREAM_KIND.PLATFORM;
+	}
+	if (
+		(V2_SUPPORTING_IMPLEMENTATION_STREAM_CODES as readonly string[]).includes(
+			code,
+		)
+	) {
+		return V2_STREAM_KIND.SUPPORTING;
+	}
+	return V2_STREAM_KIND.SUPPORTING;
+}
+
 export function buildFactoryImplementationStreamPayload(
 	code: V2ImplementationStreamCode,
 ): V2ImplementationStreamPayload {
 	const label = V2_IMPLEMENTATION_STREAM_LABELS[code];
 	const dbNames = [...(FACTORY_DB_NAMES[code] ?? [])];
 	if (label && !dbNames.includes(label)) dbNames.unshift(label);
-	const isModelStream = (
-		V2_MODEL_IMPLEMENTATION_STREAM_CODES as readonly string[]
-	).includes(code);
+	const kind = inferFactoryStreamKind(code);
+	const isModelStream = kind === V2_STREAM_KIND.MODEL;
 	return {
 		storeCode: true,
 		fieldPointer: FIELD_POINTER,
@@ -151,6 +210,8 @@ export function buildFactoryImplementationStreamPayload(
 		isModelStream,
 		isUmbrellaStream: false,
 		v1Labels: [...(FACTORY_V1_LABELS[code] ?? [])],
+		kind,
+		isExecutor: isModelStream,
 	};
 }
 
@@ -171,6 +232,8 @@ export function buildFactoryModelUmbrellaStreamCatalogEntry(): V2ImplementationS
 			isModelStream: false,
 			isUmbrellaStream: true,
 			v1Labels: [],
+			kind: V2_STREAM_KIND.MODEL,
+			isExecutor: false,
 		},
 	};
 }
@@ -207,6 +270,17 @@ export function parseImplementationStreamPayload(
 	const isUmbrellaStream =
 		record.isUmbrellaStream === true ||
 		code === V2_MODEL_STREAM_UMBRELLA_CODE;
+	const kind = isV2StreamKind(record.kind)
+		? record.kind
+		: inferFactoryStreamKind(code, {
+				isUmbrellaStream,
+				isModelStream: record.isModelStream === true,
+			});
+	const isModelStream = !isUmbrellaStream && kind === V2_STREAM_KIND.MODEL;
+	const isExecutor =
+		typeof record.isExecutor === "boolean"
+			? record.isExecutor
+			: isModelStream;
 	return {
 		storeCode: true,
 		fieldPointer:
@@ -216,9 +290,11 @@ export function parseImplementationStreamPayload(
 		dbNames,
 		legacyLabels: asStringArray(record.legacyLabels),
 		keycloakAliases: asStringArray(record.keycloakAliases),
-		isModelStream: !isUmbrellaStream && record.isModelStream === true,
+		isModelStream,
 		isUmbrellaStream,
 		v1Labels: asStringArray(record.v1Labels),
+		kind: isUmbrellaStream ? V2_STREAM_KIND.MODEL : kind,
+		isExecutor: isUmbrellaStream ? false : isExecutor,
 	};
 }
 
@@ -395,17 +471,72 @@ export function catalogEnumPair(
 	};
 }
 
-/** Заводские items словаря формы: только 5 модельных стримов (1:1 с select анкеты). */
+function catalogFormSlice(
+	catalog: readonly V2ImplementationStreamCatalogEntry[],
+	include: (entry: V2ImplementationStreamCatalogEntry) => boolean,
+): V2ImplementationStreamCatalogEntry[] {
+	return catalog
+		.filter(
+			(entry) =>
+				entry.isActive && !entry.payload.isUmbrellaStream && include(entry),
+		)
+		.slice()
+		.sort((a, b) => a.order - b.order || a.label.localeCompare(b.label, "ru"));
+}
+
+/** Стримы для поля «Стрим-исполнитель». */
+export function catalogExecutorEntries(
+	catalog: readonly V2ImplementationStreamCatalogEntry[],
+): V2ImplementationStreamCatalogEntry[] {
+	return catalogFormSlice(catalog, (entry) => entry.payload.isExecutor);
+}
+
+/** Стримы для справочника «Поддерживающие стримы». */
+export function catalogSupportingEntries(
+	catalog: readonly V2ImplementationStreamCatalogEntry[],
+): V2ImplementationStreamCatalogEntry[] {
+	return catalogFormSlice(
+		catalog,
+		(entry) => entry.payload.kind === V2_STREAM_KIND.SUPPORTING,
+	);
+}
+
+function catalogEntriesToDictionaryItems(
+	entries: readonly V2ImplementationStreamCatalogEntry[],
+): Array<{
+	code: string;
+	label: string;
+	order: number;
+	payload: { storeCode: true };
+}> {
+	return entries.map((entry, order) => ({
+		code: entry.code,
+		label: entry.label,
+		order,
+		payload: { storeCode: true as const },
+	}));
+}
+
+/** Заводские items словаря формы: стримы с isExecutor. */
 export function buildFactoryAnketaFormStreamDictionaryItems(): Array<{
 	code: string;
 	label: string;
 	order: number;
 	payload: { storeCode: true };
 }> {
-	return V2_MODEL_IMPLEMENTATION_STREAM_CODES.map((code, order) => ({
-		code,
-		label: V2_IMPLEMENTATION_STREAM_LABELS[code],
-		order,
-		payload: { storeCode: true as const },
-	}));
+	return catalogEntriesToDictionaryItems(
+		catalogExecutorEntries(buildFactoryImplementationStreamCatalog()),
+	);
+}
+
+/** Заводские items справочника «Поддерживающие стримы». */
+export function buildFactorySupportingStreamDictionaryItems(): Array<{
+	code: string;
+	label: string;
+	order: number;
+	payload: { storeCode: true };
+}> {
+	return catalogEntriesToDictionaryItems(
+		catalogSupportingEntries(buildFactoryImplementationStreamCatalog()),
+	);
 }

@@ -3,6 +3,10 @@ import { V2_FACTORY_TYPICAL_WORKS_SNAPSHOT } from "../../../../src/modules/anket
 import { V2DictionarySeedService } from "../../../../src/modules/anketa-v2/services/v2-dictionary-seed.service";
 import { V2TypicalWorkParamCatalogService } from "../../../../src/modules/anketa-v2/services/v2-typical-work-param-catalog.service";
 import { slugParamCode } from "../../../../src/modules/anketa-v2/utils/v2-typical-work-catalog.util";
+import {
+	V2_IMPLEMENTATION_STREAM,
+	V2_SUPPORTING_STREAMS_DICTIONARY_CODE,
+} from "@smart-anketa/api-contract";
 
 describe("factory dictionary reconciliation", () => {
 	it("replaces stale schema dictionary items with the repaired factory values", async () => {
@@ -109,5 +113,18 @@ describe("factory dictionary reconciliation", () => {
 			),
 		);
 		expect(valueRepository.remove).toHaveBeenCalledWith([stale]);
+	});
+
+	it("merges supporting streams dictionary from v2_stream codes", () => {
+		const supporting = V2_ALL_DEFAULT_DICTIONARIES.find(
+			(item) => item.code === V2_SUPPORTING_STREAMS_DICTIONARY_CODE,
+		);
+		expect(supporting?.items.map((item) => item.code)).toEqual([
+			V2_IMPLEMENTATION_STREAM.IDSRC,
+			V2_IMPLEMENTATION_STREAM.MDLCTL,
+			V2_IMPLEMENTATION_STREAM.PIRM,
+			V2_IMPLEMENTATION_STREAM.STRDAT,
+			V2_IMPLEMENTATION_STREAM.DIGAGT,
+		]);
 	});
 });

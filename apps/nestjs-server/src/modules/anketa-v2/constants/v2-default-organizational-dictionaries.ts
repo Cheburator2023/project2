@@ -187,7 +187,7 @@ export const V2_ORGANIZATIONAL_DICTIONARIES: V2DefaultDictionaryDef[] = [
 		name: "Стрим-исполнитель",
 		category: "Организационный",
 		description:
-			"Справочник формы /generalInfo/implementationStream (в formData — код). 1:1 с select анкеты — только активные элементы. Полный каталог стримов (конструктор/runtime) — таблица v2_stream, UI /admin/streams, API GET /v2/streams.",
+			"Срез каталога стримов (v2_stream, isExecutor=true) для поля /generalInfo/implementationStream. Source of truth — реестр стримов, UI /admin/streams.",
 		fieldPointer: "/generalInfo/implementationStream",
 		items: buildFactoryAnketaFormStreamDictionaryItems(),
 	},

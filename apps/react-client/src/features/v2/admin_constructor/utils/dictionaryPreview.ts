@@ -1,4 +1,5 @@
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
+import { isStreamDerivedDictionaryCode } from "@smart-anketa/api-contract";
 
 import { resolveSchemaNodeType } from "../schemaEditor/propertiesFieldKind";
 import { pointerSegments } from "./schemaPaths";
@@ -28,7 +29,7 @@ export function parseDictionaryJsonToEnumPair(
 				: "";
 	/** Для этих справочников в formData хранится code, а не label. */
 	const storeCode =
-		resolvedCode === "v2.generalInfo.implementationStream" ||
+		isStreamDerivedDictionaryCode(resolvedCode) ||
 		items.some((it) => {
 			if (!it || typeof it !== "object") return false;
 			const payload = (it as Record<string, unknown>).payload;

@@ -4,6 +4,8 @@ import {
 	normalizeImplementationStreamCatalogEntry,
 	type V2ImplementationStreamCatalogEntry,
 	type V2ImplementationStreamPayload,
+	type V2StreamKind,
+	V2_STREAM_KIND,
 } from "@smart-anketa/api-contract";
 import { apiClient } from "../helpers/apiClient";
 
@@ -18,6 +20,8 @@ export type V2StreamCatalogRow = {
 	keycloakAliases: string[];
 	isModelStream: boolean;
 	isUmbrellaStream: boolean;
+	isExecutor: boolean;
+	kind: V2StreamKind;
 	v1Labels: string[];
 	payload: V2ImplementationStreamPayload;
 };
@@ -122,6 +126,8 @@ export type StreamRegistryItemInput = {
 	v1Labels: string;
 	isModelStream: boolean;
 	isUmbrellaStream: boolean;
+	isExecutor: boolean;
+	kind: V2StreamKind;
 };
 
 function splitCsv(value: string): string[] {
@@ -146,8 +152,11 @@ export function buildStreamItemPayload(
 			legacyLabels: splitCsv(input.legacyLabels),
 			keycloakAliases: splitCsv(input.keycloakAliases),
 			v1Labels: splitCsv(input.v1Labels),
-			isModelStream: isUmbrellaStream ? false : input.isModelStream,
+			isModelStream:
+				!isUmbrellaStream && input.kind === V2_STREAM_KIND.MODEL,
 			isUmbrellaStream,
+			isExecutor: isUmbrellaStream ? false : input.isExecutor,
+			kind: isUmbrellaStream ? V2_STREAM_KIND.MODEL : input.kind,
 		},
 	});
 	if (!entry) {

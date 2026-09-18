@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
+import { isStreamDerivedDictionaryCode } from "@smart-anketa/api-contract";
 import { Repository } from "typeorm";
 import { V2_ALL_DEFAULT_DICTIONARIES } from "../constants/v2-default-dictionary-codes";
 import { isV2DefaultDictionaryCode } from "../constants/v2-default-dictionary-codes";
@@ -40,12 +41,13 @@ export class V2DictionarySeedService {
 
 	/**
 	 * Приводит items заводских справочников к factory bundle.
-	 * В т.ч. `implementationStream` — 1:1 с формой (только 5 модельных);
-	 * полный каталог стримов живёт в таблице `v2_stream`, не здесь.
+	 * Срезы стримов (implementationStream / поддерживающие) наполняет
+	 * `V2StreamCatalogService` из таблицы `v2_stream`.
 	 */
 	async syncDefaultDictionaryItems(): Promise<void> {
 		let updated = 0;
 		for (const def of V2_ALL_DEFAULT_DICTIONARIES) {
+			if (isStreamDerivedDictionaryCode(def.code)) continue;
 			const dictionary = await this.dictionaryRepository.findOne({
 				where: { code: def.code },
 			});

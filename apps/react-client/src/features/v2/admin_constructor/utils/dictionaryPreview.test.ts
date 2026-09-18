@@ -170,4 +170,24 @@ describe("parseDictionaryJsonToEnumPair", () => {
 			enumNames: ["Моделирование РБ", "Моделирование RnD"],
 		});
 	});
+
+	it("stores codes for supporting streams dictionary", () => {
+		expect(
+			parseDictionaryJsonToEnumPair(
+				{
+					items: [
+						{
+							code: "idsrc",
+							label: "Источники данных",
+							payload: { storeCode: true },
+						},
+					],
+				},
+				"v2.method.16.поддерживающие_стримы",
+			),
+		).toEqual({
+			enums: ["idsrc"],
+			enumNames: ["Источники данных"],
+		});
+	});
 });

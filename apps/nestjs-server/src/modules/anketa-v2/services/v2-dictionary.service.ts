@@ -8,12 +8,14 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { In, Repository } from "typeorm";
 import {
 	V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE,
+	isStreamDerivedDictionaryCode,
 	isValidImplementationStreamCodeFormat,
 	isV2ImplementationStreamCode,
 } from "@smart-anketa/api-contract";
 import { V2DictionaryEntity } from "../entities/v2-dictionary.entity";
 import { V2DictionaryItemEntity } from "../entities/v2-dictionary-item.entity";
 import { V2TemplateVersionEntity } from "../entities/v2-template-version.entity";
+import { V2StreamCatalogService } from "./v2-stream-catalog.service";
 import {
 	findV2DefaultDictionaryDef,
 	isV2DefaultDictionaryCode,
@@ -50,6 +52,7 @@ export class V2DictionaryService {
 		private readonly itemRepository: Repository<V2DictionaryItemEntity>,
 		@InjectRepository(V2TemplateVersionEntity)
 		private readonly versionRepository: Repository<V2TemplateVersionEntity>,
+		private readonly streamCatalog: V2StreamCatalogService,
 	) {}
 
 	async findAll(): Promise<V2DictionaryEntity[]> {
@@ -187,6 +190,15 @@ export class V2DictionaryService {
 			throw new NotFoundException(
 				`Заводское определение для кода ${dictionary.code} не найдено`,
 			);
+		}
+
+		if (isStreamDerivedDictionaryCode(dictionary.code)) {
+			dictionary.name = def.name;
+			dictionary.category = def.category;
+			dictionary.description = def.description;
+			await this.dictionaryRepository.save(dictionary);
+			await this.streamCatalog.syncFormDictionariesFromCatalog();
+			return this.findOne(id);
 		}
 
 		await this.itemRepository.delete({ dictionaryId: id });

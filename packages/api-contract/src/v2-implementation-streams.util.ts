@@ -52,6 +52,45 @@ export const V2_IMPLEMENTATION_STREAM_LABELS: Record<
 export const V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE =
 	"v2.generalInfo.implementationStream";
 
+/** Справочник формы / методологии «Поддерживающие стримы» — срез каталога `v2_stream`. */
+export const V2_SUPPORTING_STREAMS_DICTIONARY_CODE =
+	"v2.method.16.поддерживающие_стримы";
+
+export const V2_STREAM_KIND = {
+	MODEL: "model",
+	SUPPORTING: "supporting",
+	PLATFORM: "platform",
+} as const;
+
+export type V2StreamKind = (typeof V2_STREAM_KIND)[keyof typeof V2_STREAM_KIND];
+
+export const V2_STREAM_KIND_LABELS: Record<V2StreamKind, string> = {
+	[V2_STREAM_KIND.MODEL]: "Модельный",
+	[V2_STREAM_KIND.SUPPORTING]: "Поддерживающий",
+	[V2_STREAM_KIND.PLATFORM]: "Платформенный",
+};
+
+export const V2_STREAM_KINDS = [
+	V2_STREAM_KIND.MODEL,
+	V2_STREAM_KIND.SUPPORTING,
+	V2_STREAM_KIND.PLATFORM,
+] as const;
+
+export function isV2StreamKind(value: unknown): value is V2StreamKind {
+	return (
+		typeof value === "string" &&
+		(V2_STREAM_KINDS as readonly string[]).includes(value)
+	);
+}
+
+/** Справочники формы, которые наполняются из `v2_stream`, а не из factory-items. */
+export function isStreamDerivedDictionaryCode(code: string): boolean {
+	return (
+		code === V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE ||
+		code === V2_SUPPORTING_STREAMS_DICTIONARY_CODE
+	);
+}
+
 export function isV2ImplementationStreamCode(
 	value: string,
 ): value is V2ImplementationStreamCode {

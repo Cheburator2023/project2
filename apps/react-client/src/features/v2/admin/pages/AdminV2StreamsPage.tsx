@@ -6,6 +6,7 @@ import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import FormControlLabel from "@mui/material/FormControlLabel";
+import MenuItem from "@mui/material/MenuItem";
 import Switch from "@mui/material/Switch";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
@@ -32,6 +33,10 @@ import { toast } from "@react-client/common/toasts";
 import {
 	isFactoryProtectedStreamCode,
 	parseImplementationStreamPayload,
+	V2_STREAM_KIND,
+	V2_STREAM_KIND_LABELS,
+	V2_STREAM_KINDS,
+	type V2StreamKind,
 } from "@smart-anketa/api-contract";
 import {
 	agGridCustomMUITheme,
@@ -59,6 +64,7 @@ type StreamRow = V2StreamCatalogRow & {
 	originLabel: string;
 	activeLabel: string;
 	kindLabel: string;
+	executorLabel: string;
 	dbNamesDisplay: string;
 };
 
@@ -73,15 +79,16 @@ const emptyForm = (): StreamRegistryItemInput => ({
 	v1Labels: "",
 	isModelStream: false,
 	isUmbrellaStream: false,
+	isExecutor: false,
+	kind: V2_STREAM_KIND.SUPPORTING,
 });
 
 function streamKindLabel(payload: {
 	isUmbrellaStream: boolean;
-	isModelStream: boolean;
+	kind: V2StreamKind;
 }): string {
 	if (payload.isUmbrellaStream) return "Зонтичный";
-	if (payload.isModelStream) return "Дочерний модельный";
-	return "Обычный";
+	return V2_STREAM_KIND_LABELS[payload.kind];
 }
 
 function itemToForm(item: V2StreamCatalogRow): StreamRegistryItemInput {
@@ -100,6 +107,8 @@ function itemToForm(item: V2StreamCatalogRow): StreamRegistryItemInput {
 		v1Labels: payload.v1Labels.join(", "),
 		isModelStream: payload.isModelStream,
 		isUmbrellaStream: payload.isUmbrellaStream,
+		isExecutor: payload.isExecutor,
+		kind: payload.kind,
 	};
 }
 
@@ -132,6 +141,7 @@ export function AdminV2StreamsPage() {
 					originLabel: isFactory ? "Из поставки" : "Добавлен вручную",
 					activeLabel: item.isActive ? "Да" : "Нет",
 					kindLabel: streamKindLabel(payload),
+					executorLabel: payload.isExecutor ? "Да" : "Нет",
 					dbNamesDisplay: payload.dbNames.join(", "),
 				};
 			}),
@@ -144,10 +154,17 @@ export function AdminV2StreamsPage() {
 			{ field: "label", headerName: "Подпись", flex: 1.4, minWidth: 180 },
 			{
 				field: "kindLabel",
-				headerName: "Тип",
+				headerName: "Вид",
 				width: 160,
 				headerTooltip:
-					"Зонтичный — общий каталог типовых работ для группы дочерних. Дочерний модельный — входит в зонтик «Модельный стрим». Обычный — самостоятельный стрим-исполнитель.",
+					"Модельный, поддерживающий или платформенный. Зонтичный — общий каталог типовых работ.",
+			},
+			{
+				field: "executorLabel",
+				headerName: "Исполнитель",
+				width: 130,
+				headerTooltip:
+					"Да — стрим в поле анкеты «Общая информация → Стрим-исполнитель».",
 			},
 			{
 				field: "originLabel",
@@ -265,10 +282,10 @@ export function AdminV2StreamsPage() {
 			<Card padding="12px" height="100%" overflow="hidden">
 				<Flex flexDirection="column" gap={8} height="100%" minHeight="0">
 					<Typography variant="body2" color="text.secondary">
-						Каталог для конструктора, runtime и фильтров. Поле анкеты
-						«Стрим-исполнитель» берётся из отдельного справочника формы (только
-						то, что там активно). <strong>Зонтичный</strong> — общий каталог
-						типовых работ (заводской <code>mdls</code>).
+						Единый каталог стримов. Поле «Стрим-исполнитель» берёт стримы с
+						признаком исполнителя; справочник «Поддерживающие стримы» —
+						стримы вида «поддерживающий». <strong>Зонтичный</strong> — общий
+						каталог типовых работ (заводской <code>mdls</code>).
 					</Typography>
 					{isError ? (
 						<Alert severity="error">Не удалось загрузить реестр стримов</Alert>
@@ -426,6 +443,40 @@ export function AdminV2StreamsPage() {
 							}
 							label="В списках (конструктор / runtime)"
 						/>
+						<TextField
+							select
+							size="small"
+							label="Вид"
+							value={form.kind}
+							disabled={pending || form.isUmbrellaStream}
+							onChange={(e) => {
+								const kind = e.target.value as V2StreamKind;
+								setForm((prev) => ({
+									...prev,
+									kind,
+									isModelStream: kind === V2_STREAM_KIND.MODEL,
+								}));
+							}}
+							helperText="Модельный / поддерживающий / платформенный"
+						>
+							{V2_STREAM_KINDS.map((kind) => (
+								<MenuItem key={kind} value={kind}>
+									{V2_STREAM_KIND_LABELS[kind]}
+								</MenuItem>
+							))}
+						</TextField>
+						<FormControlLabel
+							control={
+								<Switch
+									checked={form.isExecutor}
+									disabled={pending || form.isUmbrellaStream}
+									onChange={(_, checked) =>
+										setForm((prev) => ({ ...prev, isExecutor: checked }))
+									}
+								/>
+							}
+							label="Исполнитель (поле «Стрим-исполнитель»)"
+						/>
 						<FormControlLabel
 							control={
 								<Switch
@@ -435,7 +486,11 @@ export function AdminV2StreamsPage() {
 										setForm((prev) => ({
 											...prev,
 											isUmbrellaStream: checked,
-											isModelStream: checked ? false : prev.isModelStream,
+											isModelStream: checked
+												? false
+												: prev.kind === V2_STREAM_KIND.MODEL,
+											isExecutor: checked ? false : prev.isExecutor,
+											kind: checked ? V2_STREAM_KIND.MODEL : prev.kind,
 										}))
 									}
 								/>
@@ -446,24 +501,6 @@ export function AdminV2StreamsPage() {
 							Зонтик — общий каталог типовых работ для нескольких дочерних
 							стримов.
 						</Typography>
-						<FormControlLabel
-							control={
-								<Switch
-									checked={form.isModelStream}
-									disabled={pending || form.isUmbrellaStream}
-									onChange={(_, checked) =>
-										setForm((prev) => ({
-											...prev,
-											isModelStream: checked,
-											isUmbrellaStream: checked
-												? false
-												: prev.isUmbrellaStream,
-										}))
-									}
-								/>
-							}
-							label="Дочерний модельный стрим"
-						/>
 					</Flex>
 				</DialogContent>
 				<DialogActions>
