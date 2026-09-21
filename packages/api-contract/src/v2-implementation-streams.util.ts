@@ -52,7 +52,7 @@ export const V2_IMPLEMENTATION_STREAM_LABELS: Record<
 export const V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE =
 	"v2.generalInfo.implementationStream";
 
-/** Справочник формы / методологии «Поддерживающие стримы» — срез каталога `v2_stream`. */
+/** Legacy-код объединённого справочника «Поддерживающие стримы» (удаляется при seed). */
 export const V2_SUPPORTING_STREAMS_DICTIONARY_CODE =
 	"v2.method.16.поддерживающие_стримы";
 
@@ -83,12 +83,9 @@ export function isV2StreamKind(value: unknown): value is V2StreamKind {
 	);
 }
 
-/** Справочники формы, которые наполняются из `v2_stream`, а не из factory-items. */
+/** Справочник формы, который наполняется из `v2_stream`. */
 export function isStreamDerivedDictionaryCode(code: string): boolean {
-	return (
-		code === V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE ||
-		code === V2_SUPPORTING_STREAMS_DICTIONARY_CODE
-	);
+	return code === V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE;
 }
 
 export function isV2ImplementationStreamCode(

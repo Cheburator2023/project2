@@ -8,8 +8,8 @@ import {
 } from "typeorm";
 
 /**
- * Реестр стримов (конструктор / runtime / filter / срезы формы).
- * Поля анкеты `implementationStream` и «Поддерживающие стримы» — фильтры этого каталога.
+ * Реестр стримов (конструктор / runtime / filter / справочник формы).
+ * Поле анкеты `implementationStream` — срез каталога по isExecutor.
  */
 @Entity({ name: "v2_stream" })
 export class V2StreamEntity {

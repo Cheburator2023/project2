@@ -282,9 +282,9 @@ export function AdminV2StreamsPage() {
 			<Card padding="12px" height="100%" overflow="hidden">
 				<Flex flexDirection="column" gap={8} height="100%" minHeight="0">
 					<Typography variant="body2" color="text.secondary">
-						Единый каталог стримов. Поле «Стрим-исполнитель» берёт стримы с
-						признаком исполнителя; справочник «Поддерживающие стримы» —
-						стримы вида «поддерживающий». <strong>Зонтичный</strong> — общий
+						Единый каталог стримов. Справочник «Стримы» содержит все активные
+						стримы; поле «Стрим-исполнитель» показывает только тех, у кого
+						включён признак исполнителя. <strong>Зонтичный</strong> — общий
 						каталог типовых работ (заводской <code>mdls</code>).
 					</Typography>
 					{isError ? (

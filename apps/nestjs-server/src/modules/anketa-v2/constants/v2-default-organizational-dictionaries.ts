@@ -184,10 +184,10 @@ export const V2_ORGANIZATIONAL_DICTIONARIES: V2DefaultDictionaryDef[] = [
 	},
 	{
 		code: V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE,
-		name: "Стрим-исполнитель",
+		name: "Стримы",
 		category: "Организационный",
 		description:
-			"Срез каталога стримов (v2_stream, isExecutor=true) для поля /generalInfo/implementationStream. Source of truth — реестр стримов, UI /admin/streams.",
+			"Единый справочник стримов (v2_stream). Поле «Стрим-исполнитель» показывает items с isExecutor=true. Source of truth — реестр стримов, UI /admin/streams.",
 		fieldPointer: "/generalInfo/implementationStream",
 		items: buildFactoryAnketaFormStreamDictionaryItems(),
 	},

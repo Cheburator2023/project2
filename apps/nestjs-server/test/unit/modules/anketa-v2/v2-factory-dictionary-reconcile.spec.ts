@@ -5,6 +5,7 @@ import { V2TypicalWorkParamCatalogService } from "../../../../src/modules/anketa
 import { slugParamCode } from "../../../../src/modules/anketa-v2/utils/v2-typical-work-catalog.util";
 import {
 	V2_IMPLEMENTATION_STREAM,
+	V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE,
 	V2_SUPPORTING_STREAMS_DICTIONARY_CODE,
 } from "@smart-anketa/api-contract";
 
@@ -115,16 +116,22 @@ describe("factory dictionary reconciliation", () => {
 		expect(valueRepository.remove).toHaveBeenCalledWith([stale]);
 	});
 
-	it("merges supporting streams dictionary from v2_stream codes", () => {
-		const supporting = V2_ALL_DEFAULT_DICTIONARIES.find(
-			(item) => item.code === V2_SUPPORTING_STREAMS_DICTIONARY_CODE,
+	it("keeps a single streams dictionary instead of method.16", () => {
+		expect(
+			V2_ALL_DEFAULT_DICTIONARIES.some(
+				(item) => item.code === V2_SUPPORTING_STREAMS_DICTIONARY_CODE,
+			),
+		).toBe(false);
+		const streams = V2_ALL_DEFAULT_DICTIONARIES.find(
+			(item) => item.code === V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE,
 		);
-		expect(supporting?.items.map((item) => item.code)).toEqual([
-			V2_IMPLEMENTATION_STREAM.IDSRC,
-			V2_IMPLEMENTATION_STREAM.MDLCTL,
-			V2_IMPLEMENTATION_STREAM.PIRM,
-			V2_IMPLEMENTATION_STREAM.STRDAT,
-			V2_IMPLEMENTATION_STREAM.DIGAGT,
-		]);
+		expect(streams?.name).toBe("Стримы");
+		expect(streams?.items.map((item) => item.code)).toEqual(
+			expect.arrayContaining([
+				V2_IMPLEMENTATION_STREAM.RB,
+				V2_IMPLEMENTATION_STREAM.IDSRC,
+				V2_IMPLEMENTATION_STREAM.DADM,
+			]),
+		);
 	});
 });

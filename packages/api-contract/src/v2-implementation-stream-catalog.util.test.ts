@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { V2_IMPLEMENTATION_STREAM } from "./v2-implementation-streams.util";
+import {
+	V2_IMPLEMENTATION_STREAM,
+	V2_IMPLEMENTATION_STREAM_CODES,
+} from "./v2-implementation-streams.util";
 import {
 	buildFactoryAnketaFormStreamDictionaryItems,
 	buildFactoryImplementationStreamCatalog,
-	buildFactorySupportingStreamDictionaryItems,
 	buildStreamFilterAliasMap,
 	catalogEnumPair,
 	catalogExecutorEntries,
-	catalogSupportingEntries,
 	findImplementationStreamCatalogEntry,
 	isValidImplementationStreamCodeFormat,
 	parseImplementationStreamPayload,
@@ -54,33 +55,28 @@ describe("v2-implementation-stream-catalog.util", () => {
 		expect(dadm?.payload.isExecutor).toBe(false);
 	});
 
-	it("form dictionary seed has executor streams (five model factory streams)", () => {
+	it("form dictionary seed has all active non-umbrella streams with flags", () => {
 		const items = buildFactoryAnketaFormStreamDictionaryItems();
 		expect(items.map((item) => item.code)).toEqual([
-			...V2_MODEL_IMPLEMENTATION_STREAM_CODES,
+			...V2_IMPLEMENTATION_STREAM_CODES,
 		]);
-		expect(items.every((item) => item.payload.storeCode === true)).toBe(true);
+		expect(
+			items.find((item) => item.code === V2_IMPLEMENTATION_STREAM.RB)?.payload,
+		).toEqual({ storeCode: true, isExecutor: true, kind: "model" });
+		expect(
+			items.find((item) => item.code === V2_IMPLEMENTATION_STREAM.IDSRC)
+				?.payload,
+		).toEqual({ storeCode: true, isExecutor: false, kind: "supporting" });
+		expect(
+			items.find((item) => item.code === V2_IMPLEMENTATION_STREAM.DADM)
+				?.payload,
+		).toEqual({ storeCode: true, isExecutor: false, kind: "platform" });
 		const executors = catalogExecutorEntries(
 			buildFactoryImplementationStreamCatalog(),
 		);
-		expect(executors.every((entry) => entry.payload.isExecutor)).toBe(true);
-	});
-
-	it("supporting dictionary seed matches method.16 stream slice", () => {
-		const items = buildFactorySupportingStreamDictionaryItems();
-		expect(items.map((item) => item.code)).toEqual([
-			V2_IMPLEMENTATION_STREAM.IDSRC,
-			V2_IMPLEMENTATION_STREAM.MDLCTL,
-			V2_IMPLEMENTATION_STREAM.PIRM,
-			V2_IMPLEMENTATION_STREAM.STRDAT,
-			V2_IMPLEMENTATION_STREAM.DIGAGT,
+		expect(executors.map((entry) => entry.code)).toEqual([
+			...V2_MODEL_IMPLEMENTATION_STREAM_CODES,
 		]);
-		const supporting = catalogSupportingEntries(
-			buildFactoryImplementationStreamCatalog(),
-		);
-		expect(supporting.map((entry) => entry.code)).toEqual(
-			items.map((item) => item.code),
-		);
 	});
 
 	it("catalog enum pair excludes umbrella and inactive", () => {

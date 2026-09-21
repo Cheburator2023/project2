@@ -1,9 +1,6 @@
 import { V2_FACTORY_TYPICAL_WORKS_SNAPSHOT } from "../constants/v2-factory-typical-works-catalog";
 import type { V2DefaultDictionaryDef } from "../utils/v2-schema-dictionary.util";
-import {
-	V2_SUPPORTING_STREAMS_DICTIONARY_CODE,
-	buildFactorySupportingStreamDictionaryItems,
-} from "@smart-anketa/api-contract";
+import { V2_SUPPORTING_STREAMS_DICTIONARY_CODE } from "@smart-anketa/api-contract";
 
 /**
  * Методологические справочники (веса, классы, виды контроля и т.д.)
@@ -33,19 +30,12 @@ function itemCode(label: string, index: number): string {
 export const V2_METHODOLOGY_DICTIONARIES: V2DefaultDictionaryDef[] =
 	V2_FACTORY_TYPICAL_WORKS_SNAPSHOT.dictionaries
 		.filter((d) => d.values.length > 0)
+		.filter(
+			(d) => dictCode(d.id, d.name) !== V2_SUPPORTING_STREAMS_DICTIONARY_CODE,
+		)
 		.map((d) => {
 			const seen = new Set<string>();
 			const code = dictCode(d.id, d.name);
-			if (code === V2_SUPPORTING_STREAMS_DICTIONARY_CODE) {
-				return {
-					code,
-					name: d.name,
-					category: d.category?.trim() || "Организационный",
-					description:
-						"Срез каталога стримов (v2_stream, kind=supporting). Source of truth — реестр стримов.",
-					items: buildFactorySupportingStreamDictionaryItems(),
-				};
-			}
 			return {
 				code,
 				name: d.name,

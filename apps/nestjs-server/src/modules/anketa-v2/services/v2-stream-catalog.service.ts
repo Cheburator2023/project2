@@ -8,11 +8,9 @@ import {
 import { InjectRepository } from "@nestjs/typeorm";
 import {
 	V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE,
-	V2_SUPPORTING_STREAMS_DICTIONARY_CODE,
 	buildFactoryImplementationStreamCatalog,
 	buildStreamFilterAliasMap,
-	catalogExecutorEntries,
-	catalogSupportingEntries,
+	catalogFormDictionaryEntries,
 	isFactoryProtectedStreamCode,
 	isValidImplementationStreamCodeFormat,
 	normalizeImplementationStreamCatalogEntry,
@@ -239,7 +237,8 @@ export class V2StreamCatalogService {
 	}
 
 	/**
-	 * implementationStream = isExecutor; method.16 = kind=supporting.
+	 * Единый справочник формы = все активные незонтичные стримы.
+	 * Поле «Стрим-исполнитель» фильтрует isExecutor на клиенте.
 	 */
 	async syncFormDictionariesFromCatalog(): Promise<void> {
 		const catalog = await this.getCatalog({
@@ -248,11 +247,7 @@ export class V2StreamCatalogService {
 		});
 		await this.replaceDictionaryItems(
 			V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE,
-			catalogExecutorEntries(catalog),
-		);
-		await this.replaceDictionaryItems(
-			V2_SUPPORTING_STREAMS_DICTIONARY_CODE,
-			catalogSupportingEntries(catalog),
+			catalogFormDictionaryEntries(catalog),
 		);
 	}
 
@@ -272,7 +267,11 @@ export class V2StreamCatalogService {
 		const expectedCodes = new Set(entries.map((entry) => entry.code));
 		for (const [index, entry] of entries.entries()) {
 			const current = existingByCode.get(entry.code);
-			const payload = { storeCode: true };
+			const payload = {
+				storeCode: true,
+				isExecutor: entry.payload.isExecutor,
+				kind: entry.payload.kind,
+			};
 			if (!current) {
 				await this.dictionaryItemRepository.save(
 					this.dictionaryItemRepository.create({

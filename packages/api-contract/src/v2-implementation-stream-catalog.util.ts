@@ -1,6 +1,7 @@
 /**
  * Каталог стримов (таблица `v2_stream` / factory fallback).
- * Поля формы — срезы: isExecutor → implementationStream, kind=supporting → method.16.
+ * Справочник формы `v2.generalInfo.implementationStream` — все активные стримы;
+ * поле «Стрим-исполнитель» фильтрует items с isExecutor.
  */
 import {
 	V2_IMPLEMENTATION_STREAM,
@@ -491,52 +492,41 @@ export function catalogExecutorEntries(
 	return catalogFormSlice(catalog, (entry) => entry.payload.isExecutor);
 }
 
-/** Стримы для справочника «Поддерживающие стримы». */
-export function catalogSupportingEntries(
-	catalog: readonly V2ImplementationStreamCatalogEntry[],
-): V2ImplementationStreamCatalogEntry[] {
-	return catalogFormSlice(
-		catalog,
-		(entry) => entry.payload.kind === V2_STREAM_KIND.SUPPORTING,
-	);
-}
-
 function catalogEntriesToDictionaryItems(
 	entries: readonly V2ImplementationStreamCatalogEntry[],
 ): Array<{
 	code: string;
 	label: string;
 	order: number;
-	payload: { storeCode: true };
+	payload: { storeCode: true; isExecutor: boolean; kind: V2StreamKind };
 }> {
 	return entries.map((entry, order) => ({
 		code: entry.code,
 		label: entry.label,
 		order,
-		payload: { storeCode: true as const },
+		payload: {
+			storeCode: true as const,
+			isExecutor: entry.payload.isExecutor,
+			kind: entry.payload.kind,
+		},
 	}));
 }
 
-/** Заводские items словаря формы: стримы с isExecutor. */
+/** Все активные стримы единого справочника формы (без зонтика). */
+export function catalogFormDictionaryEntries(
+	catalog: readonly V2ImplementationStreamCatalogEntry[],
+): V2ImplementationStreamCatalogEntry[] {
+	return catalogFormSlice(catalog, () => true);
+}
+
+/** Заводские items единого справочника стримов. */
 export function buildFactoryAnketaFormStreamDictionaryItems(): Array<{
 	code: string;
 	label: string;
 	order: number;
-	payload: { storeCode: true };
+	payload: { storeCode: true; isExecutor: boolean; kind: V2StreamKind };
 }> {
 	return catalogEntriesToDictionaryItems(
-		catalogExecutorEntries(buildFactoryImplementationStreamCatalog()),
-	);
-}
-
-/** Заводские items справочника «Поддерживающие стримы». */
-export function buildFactorySupportingStreamDictionaryItems(): Array<{
-	code: string;
-	label: string;
-	order: number;
-	payload: { storeCode: true };
-}> {
-	return catalogEntriesToDictionaryItems(
-		catalogSupportingEntries(buildFactoryImplementationStreamCatalog()),
+		catalogFormDictionaryEntries(buildFactoryImplementationStreamCatalog()),
 	);
 }

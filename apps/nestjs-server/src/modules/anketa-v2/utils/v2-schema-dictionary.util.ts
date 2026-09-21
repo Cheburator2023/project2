@@ -450,3 +450,40 @@ export function collectDictionaryCodesFromUiSchema(uiSchema: unknown): string[] 
 	walk(uiSchema);
 	return [...out].sort();
 }
+
+/** Подменяет `ui:options.dictionaryCode` во всём дереве uiSchema. */
+export function retargetDictionaryCodeInUiSchema(
+	uiSchema: unknown,
+	fromCode: string,
+	toCode: string,
+): { next: unknown; changed: boolean } {
+	if (!fromCode || fromCode === toCode) {
+		return { next: uiSchema, changed: false };
+	}
+	const next = structuredClone(uiSchema);
+	const changed = retargetDictionaryCodeInTree(next, fromCode, toCode);
+	return { next, changed };
+}
+
+function retargetDictionaryCodeInTree(
+	node: unknown,
+	fromCode: string,
+	toCode: string,
+): boolean {
+	if (!node || typeof node !== "object" || Array.isArray(node)) return false;
+	const rec = node as Record<string, unknown>;
+	let changed = false;
+	const opts = rec["ui:options"];
+	if (opts && typeof opts === "object" && !Array.isArray(opts)) {
+		const opt = opts as Record<string, unknown>;
+		if (typeof opt.dictionaryCode === "string" && opt.dictionaryCode.trim() === fromCode) {
+			opt.dictionaryCode = toCode;
+			changed = true;
+		}
+	}
+	for (const [key, value] of Object.entries(rec)) {
+		if (key.startsWith("ui:") && key !== "ui:options") continue;
+		if (retargetDictionaryCodeInTree(value, fromCode, toCode)) changed = true;
+	}
+	return changed;
+}

@@ -1,5 +1,8 @@
 import type { RJSFSchema, UiSchema } from "@rjsf/utils";
-import { isStreamDerivedDictionaryCode } from "@smart-anketa/api-contract";
+import {
+	V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE,
+	isStreamDerivedDictionaryCode,
+} from "@smart-anketa/api-contract";
 
 import { resolveSchemaNodeType } from "../schemaEditor/propertiesFieldKind";
 import { pointerSegments } from "./schemaPaths";
@@ -51,6 +54,15 @@ export function parseDictionaryJsonToEnumPair(
 		const label = row.label;
 		const displayLabel =
 			typeof label === "string" && label.trim() ? label.trim() : code.trim();
+		if (
+			resolvedCode === V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE &&
+			row.payload &&
+			typeof row.payload === "object" &&
+			!Array.isArray(row.payload) &&
+			(row.payload as Record<string, unknown>).isExecutor === false
+		) {
+			continue;
+		}
 		if (storeCode) {
 			enums.push(code.trim());
 			enumNames.push(displayLabel);

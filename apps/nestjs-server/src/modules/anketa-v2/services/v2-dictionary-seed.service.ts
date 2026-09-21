@@ -1,6 +1,11 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { isStreamDerivedDictionaryCode } from "@smart-anketa/api-contract";
+import type { V2DictionariesSnapshotDto } from "@smart-anketa/api-contract";
+import {
+	V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE,
+	V2_SUPPORTING_STREAMS_DICTIONARY_CODE,
+	isStreamDerivedDictionaryCode,
+} from "@smart-anketa/api-contract";
 import { Repository } from "typeorm";
 import { V2_ALL_DEFAULT_DICTIONARIES } from "../constants/v2-default-dictionary-codes";
 import { isV2DefaultDictionaryCode } from "../constants/v2-default-dictionary-codes";
@@ -16,7 +21,10 @@ import {
 import { V2DictionaryItemEntity } from "../entities/v2-dictionary-item.entity";
 import { V2DictionaryEntity } from "../entities/v2-dictionary.entity";
 import { V2TemplateVersionEntity } from "../entities/v2-template-version.entity";
-import { collectAllDictionaryCodesInUse } from "../utils/v2-schema-dictionary.util";
+import {
+	collectAllDictionaryCodesInUse,
+	retargetDictionaryCodeInUiSchema,
+} from "../utils/v2-schema-dictionary.util";
 
 @Injectable()
 export class V2DictionarySeedService {
@@ -32,6 +40,7 @@ export class V2DictionarySeedService {
 	) {}
 
 	async runStartupSeed(): Promise<void> {
+		await this.mergeSupportingStreamsDictionaryIntoImplementationStream();
 		await this.removeSupersededDuplicates();
 		await this.removeObsoleteFactoryDictionaries();
 		await this.ensureDefaultDictionaries();
@@ -41,8 +50,7 @@ export class V2DictionarySeedService {
 
 	/**
 	 * Приводит items заводских справочников к factory bundle.
-	 * Срезы стримов (implementationStream / поддерживающие) наполняет
-	 * `V2StreamCatalogService` из таблицы `v2_stream`.
+	 * Справочник стримов наполняет `V2StreamCatalogService` из `v2_stream`.
 	 */
 	async syncDefaultDictionaryItems(): Promise<void> {
 		let updated = 0;
@@ -255,4 +263,79 @@ export class V2DictionarySeedService {
 			);
 		}
 	}
+
+	/**
+	 * Старый методологический справочник method.16 → единый «Стримы».
+	 * Перепривязывает uiSchema и удаляет дубль из списка.
+	 */
+	async mergeSupportingStreamsDictionaryIntoImplementationStream(): Promise<void> {
+		const from = V2_SUPPORTING_STREAMS_DICTIONARY_CODE;
+		const to = V2_IMPLEMENTATION_STREAM_DICTIONARY_CODE;
+		const versions = await this.versionRepository.find({
+			select: ["id", "uiSchema", "dictionariesSnapshot"],
+		});
+		let retargeted = 0;
+		for (const version of versions) {
+			const uiResult = retargetDictionaryCodeInUiSchema(
+				version.uiSchema,
+				from,
+				to,
+			);
+			const snapshotResult = retargetReferencedDictionaryCode(
+				version.dictionariesSnapshot,
+				from,
+				to,
+			);
+			if (!uiResult.changed && !snapshotResult.changed) continue;
+			const patch: Record<string, unknown> = {};
+			if (uiResult.changed) {
+				patch.uiSchema = uiResult.next;
+			}
+			if (snapshotResult.changed) {
+				patch.dictionariesSnapshot = snapshotResult.next;
+			}
+			await this.versionRepository.update(
+				{ id: version.id },
+				patch as never,
+			);
+			retargeted++;
+		}
+
+		const dictionary = await this.dictionaryRepository.findOne({
+			where: { code: from },
+		});
+		if (dictionary) {
+			await this.itemRepository.delete({ dictionaryId: dictionary.id });
+			await this.dictionaryRepository.remove(dictionary);
+			this.logger.log(
+				`Справочник ${from} объединён в ${to}` +
+					(retargeted > 0 ? ` (шаблонов: ${retargeted})` : ""),
+			);
+			return;
+		}
+		if (retargeted > 0) {
+			this.logger.log(
+				`Привязки ${from} переведены на ${to}: ${retargeted} шаблонов`,
+			);
+		}
+	}
+}
+
+function retargetReferencedDictionaryCode(
+	snapshot: V2DictionariesSnapshotDto | null | undefined,
+	fromCode: string,
+	toCode: string,
+): { next: V2DictionariesSnapshotDto | null; changed: boolean } {
+	if (!snapshot?.referencedDictionaryCodes?.includes(fromCode)) {
+		return { next: snapshot ?? null, changed: false };
+	}
+	const nextCodes: string[] = [];
+	for (const code of snapshot.referencedDictionaryCodes) {
+		const mapped = code === fromCode ? toCode : code;
+		if (!nextCodes.includes(mapped)) nextCodes.push(mapped);
+	}
+	return {
+		next: { ...snapshot, referencedDictionaryCodes: nextCodes },
+		changed: true,
+	};
 }

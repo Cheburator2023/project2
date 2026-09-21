@@ -171,23 +171,41 @@ describe("parseDictionaryJsonToEnumPair", () => {
 		});
 	});
 
-	it("stores codes for supporting streams dictionary", () => {
+	it("hides non-executor streams from the implementationStream form field", () => {
 		expect(
 			parseDictionaryJsonToEnumPair(
 				{
 					items: [
 						{
+							code: "rb",
+							label: "Моделирование РБ",
+							payload: { storeCode: true, isExecutor: true, kind: "model" },
+						},
+						{
 							code: "idsrc",
 							label: "Источники данных",
-							payload: { storeCode: true },
+							payload: {
+								storeCode: true,
+								isExecutor: false,
+								kind: "supporting",
+							},
+						},
+						{
+							code: "dadm",
+							label: "ДАДМ",
+							payload: {
+								storeCode: true,
+								isExecutor: false,
+								kind: "platform",
+							},
 						},
 					],
 				},
-				"v2.method.16.поддерживающие_стримы",
+				"v2.generalInfo.implementationStream",
 			),
 		).toEqual({
-			enums: ["idsrc"],
-			enumNames: ["Источники данных"],
+			enums: ["rb"],
+			enumNames: ["Моделирование РБ"],
 		});
 	});
 });

@@ -3,6 +3,7 @@ import {
 	buildDefaultDictionariesFromJsonSchema,
 	buildDictionariesFromUiSchemaReferences,
 	collectDictionaryBindingsFromUiSchema,
+	retargetDictionaryCodeInUiSchema,
 	schemaDictionaryItemCode,
 	V2_DICTIONARY_ITEM_CODE_MAX_LEN,
 } from "../../../../src/modules/anketa-v2/utils/v2-schema-dictionary.util";
@@ -77,6 +78,27 @@ describe("v2-schema-dictionary.util", () => {
 		expect(confidential?.fieldPointer).toBe(
 			"/detailInfo/sourceSystems/items/field_AKLVuyFy",
 		);
+	});
+
+	it("retargetDictionaryCodeInUiSchema rewrites nested dictionaryCode", () => {
+		const { next, changed } = retargetDictionaryCodeInUiSchema(
+			{
+				generalInfo: {
+					"ui:options": {
+						dictionaryCode: "v2.method.16.поддерживающие_стримы",
+					},
+				},
+			},
+			"v2.method.16.поддерживающие_стримы",
+			"v2.generalInfo.implementationStream",
+		);
+		expect(changed).toBe(true);
+		expect(
+			(
+				(next as { generalInfo: { "ui:options": { dictionaryCode: string } } })
+					.generalInfo["ui:options"].dictionaryCode
+			),
+		).toBe("v2.generalInfo.implementationStream");
 	});
 
 	it("uses the approved values for every factory field named Сложность реализации", () => {
