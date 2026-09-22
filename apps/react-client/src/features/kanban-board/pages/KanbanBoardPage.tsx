@@ -801,9 +801,7 @@ export function KanbanBoardPage() {
 		return <Alert severity="warning">Доска «{boardKey}» не найдена</Alert>;
 	}
 
-	const boardSubtitle = boardMeta
-		? `${boardMeta.boardKey} · ${boardMeta.name} · стенд ${standId ?? "…"}`
-		: `${boardKey} · стенд ${standId ?? "…"}`;
+	const boardTitle = boardMeta?.name?.trim() || boardKey;
 
 	return (
 		<Flex
@@ -817,13 +815,7 @@ export function KanbanBoardPage() {
 			data-test-id="kanban-board-page"
 			onContextMenu={handleBoardContextMenu}
 		>
-			<Header
-				leadingAccessory={
-					<Typography variant="body2" color="text.secondary" noWrap>
-						{boardSubtitle}
-					</Typography>
-				}
-			>
+			<Header title={boardTitle}>
 				<Flex gap={6} wrap="wrap" alignItems="center">
 					<TextField
 						size="small"
