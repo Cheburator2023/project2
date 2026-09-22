@@ -8,6 +8,7 @@ import {
 	isAnketaFormPathLocked,
 	isAnketaGloballyLocked,
 	resetFilledWorkflowForWorksPath,
+	withApprovedWorkflowGlobalStatus,
 } from "./v2-anketa-workflow.util";
 import { collectRequiredWorkflowTargets } from "./v2-anketa-section-ui.util";
 
@@ -157,5 +158,40 @@ describe("collectRequiredWorkflowTargets / allRequiredSectionsCompleted", () => 
 		expect(completeGlobalQuestionnaire(workflow, targets).globalStatus).toBe(
 			"Заполнено",
 		);
+	});
+});
+
+describe("withApprovedWorkflowGlobalStatus", () => {
+	it("adds «Утверждена» to a legacy globalStatus enum", () => {
+		const schema = {
+			type: "object",
+			properties: {
+				workflow: {
+					type: "object",
+					properties: {
+						globalStatus: {
+							type: "string",
+							enum: ["Черновик", "Заполнено"],
+							default: "Черновик",
+						},
+					},
+				},
+			},
+		};
+		const next = withApprovedWorkflowGlobalStatus(schema);
+		expect(
+			(
+				next.properties as {
+					workflow: {
+						properties: { globalStatus: { enum: string[] } };
+					};
+				}
+			).workflow.properties.globalStatus.enum,
+		).toEqual(["Черновик", "Заполнено", "Утверждена"]);
+		expect(
+			(
+				schema.properties.workflow.properties.globalStatus.enum as string[]
+			).includes("Утверждена"),
+		).toBe(false);
 	});
 });

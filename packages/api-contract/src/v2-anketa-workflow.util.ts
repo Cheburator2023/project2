@@ -312,6 +312,59 @@ export const V2_ANKETA_MAIN_SECTION_TITLES: Record<V2AnketaMainSectionId, string
 		streamModelControl: "Стрим «Контроль моделей»",
 	};
 
+/**
+ * Старые схемы знают только «Черновик» / «Заполнено».
+ * «Утверждена» иначе не входит в enum, и RJSF подменяет её default «Черновик».
+ */
+export function withApprovedWorkflowGlobalStatus(
+	schema: Record<string, unknown>,
+): Record<string, unknown> {
+	const properties = schema.properties;
+	if (!properties || typeof properties !== "object" || Array.isArray(properties)) {
+		return schema;
+	}
+	const workflow = (properties as Record<string, unknown>).workflow;
+	if (!workflow || typeof workflow !== "object" || Array.isArray(workflow)) {
+		return schema;
+	}
+	const workflowProps = (workflow as Record<string, unknown>).properties;
+	if (
+		!workflowProps ||
+		typeof workflowProps !== "object" ||
+		Array.isArray(workflowProps)
+	) {
+		return schema;
+	}
+	const globalStatus = (workflowProps as Record<string, unknown>).globalStatus;
+	if (
+		!globalStatus ||
+		typeof globalStatus !== "object" ||
+		Array.isArray(globalStatus)
+	) {
+		return schema;
+	}
+	const enumValues = (globalStatus as Record<string, unknown>).enum;
+	if (!Array.isArray(enumValues) || enumValues.includes("Утверждена")) {
+		return schema;
+	}
+	return {
+		...schema,
+		properties: {
+			...(properties as Record<string, unknown>),
+			workflow: {
+				...(workflow as Record<string, unknown>),
+				properties: {
+					...(workflowProps as Record<string, unknown>),
+					globalStatus: {
+						...(globalStatus as Record<string, unknown>),
+						enum: [...enumValues, "Утверждена"],
+					},
+				},
+			},
+		},
+	};
+}
+
 export const V2_ANKETA_SECTION_STATUS_CHIP_COLOR: Record<
 	V2AnketaSectionStatus,
 	"default" | "warning" | "success"

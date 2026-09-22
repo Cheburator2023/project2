@@ -49,16 +49,8 @@ export const AnketaNewVersionPageV2 = () => {
 
 	const suggestedVersionCalcName = useMemo(() => {
 		if (!formPackage) return "Анкета";
-		const currentVersion = Number.parseInt(
-			formPackage.questionnaire.version,
-			10,
-		);
-		const nextVersion = Number.isFinite(currentVersion)
-			? currentVersion + 1
-			: 1;
 		return buildQuestionnaireVersionCalcName(
 			formPackage.questionnaire.calcName,
-			nextVersion,
 		);
 	}, [formPackage]);
 
