@@ -346,19 +346,58 @@ export const Toast = ({
 		>
 			<Alert
 				sx={[
-					{
+					(theme) => ({
 						width: "100%",
 						alignItems: "center",
-						"& .MuiAlert-message": { py: 1, pr: 1, minWidth: 0 },
-						"& .MuiAlert-action": {
-							pl: 0,
-							py: 1,
+						py: 0.75,
+						px: 1,
+						...(severity === "warning"
+							? {
+									backgroundColor: "hsl(46, 100%, 92%)",
+									color: "hsl(32, 40%, 18%)",
+									...theme.applyStyles("dark", {
+										backgroundColor: "hsl(40, 28%, 16%)",
+										color: "hsl(46, 90%, 88%)",
+									}),
+								}
+							: {}),
+						"& .MuiAlert-message": {
+							py: 0.5,
 							pr: 1,
-							alignItems: "center",
-							mr: 0,
+							minWidth: 0,
+							flex: "1 1 auto",
+							fontSize: "0.8125rem",
+							lineHeight: 1.4,
 						},
-						"& .MuiAlert-icon": { py: 1, alignSelf: "flex-start" },
-					},
+						"& .MuiAlertTitle": {
+							mb: 0,
+							fontSize: "inherit",
+							fontWeight: 500,
+							lineHeight: 1.4,
+						},
+						"& .MuiAlert-action": {
+							flexShrink: 0,
+							alignItems: "center",
+							pl: 0.5,
+							pr: 0.5,
+							py: 0.5,
+							mr: 0,
+							ml: "auto",
+						},
+						"& .MuiAlert-icon": {
+							py: 0.5,
+							alignSelf: "center",
+							mr: 0.5,
+							...(severity === "warning"
+								? {
+										color: "hsl(36, 88%, 36%)",
+										...theme.applyStyles("dark", {
+											color: "hsl(46, 90%, 68%)",
+										}),
+									}
+								: {}),
+						},
+					}),
 					...formatSx(toastDefaults?.alertSx),
 				]}
 				severity={severity}

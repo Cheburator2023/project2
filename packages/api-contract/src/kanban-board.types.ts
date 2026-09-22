@@ -258,6 +258,8 @@ export const KANBAN_BOARD_TASK_FILE_ALLOWED_MIME = [
 	"application/vnd.oasis.opendocument.presentation",
 	"application/rtf",
 	"text/plain",
+	"text/markdown",
+	"text/x-markdown",
 	"text/csv",
 	"application/csv",
 	"application/vnd.ms-excel.sheet.macroenabled.12",

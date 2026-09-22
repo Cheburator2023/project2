@@ -106,7 +106,7 @@ export class KanbanBoardTaskFileService {
 		);
 		if (!isAllowedKanbanBoardTaskFile(mimeType, payload.originalName)) {
 			throw new BadRequestException(
-				"Допустимы PDF, Word, Excel, PowerPoint, OpenDocument, RTF, TXT, CSV",
+				"Допустимы PDF, Word, Excel, PowerPoint, OpenDocument, RTF, TXT, CSV, MD",
 			);
 		}
 		const data = Buffer.isBuffer(payload.data)

@@ -27,7 +27,7 @@ import {
 } from "react";
 
 const OFFICE_ACCEPT =
-	".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.rtf,.txt,.csv,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,text/csv";
+	".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.rtf,.txt,.md,.csv,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,text/markdown,text/csv";
 
 type Props = {
 	taskId: string;
@@ -148,7 +148,7 @@ export function KanbanTaskFilesSection({ taskId, files, disabled }: Props) {
 							: "Перетащите документы сюда или нажмите для выбора"}
 					</Typography>
 					<Typography variant="caption" color="text.secondary">
-						PDF, Word, Excel, PowerPoint, ODF, RTF, TXT, CSV · до 15 МБ · без
+						PDF, Word, Excel, PowerPoint, ODF, RTF, TXT, MD, CSV · до 15 МБ · без
 						превью, только скачивание
 					</Typography>
 				</Flex>

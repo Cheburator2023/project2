@@ -13,6 +13,8 @@ import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
 import Collapse from "@mui/material/Collapse";
 import Dialog from "@mui/material/Dialog";
+import Divider from "@mui/material/Divider";
+import ListSubheader from "@mui/material/ListSubheader";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
@@ -21,7 +23,6 @@ import IconButton from "@mui/material/IconButton";
 import InputAdornment from "@mui/material/InputAdornment";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
-import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -30,6 +31,7 @@ import {
 	normalizeKanbanBoardData,
 	toBoardData,
 	findKanbanBoardCancelledColumnId,
+	kanbanBoardDisplayColumnTitle,
 	kanbanBoardIsCancelledColumn,
 	kanbanBoardIsDoneColumn,
 	kanbanBoardResolveColumnId,
@@ -755,6 +757,26 @@ export function KanbanBoardPage() {
 		[],
 	);
 
+	const moveCardToColumnFromMenu = useCallback(
+		(columnId: string) => {
+			if (!cardContextMenu || !board || isSavingBoard) {
+				setCardContextMenu(null);
+				return;
+			}
+			const { cardId, parentId } = cardContextMenu;
+			setCardContextMenu(null);
+			if (kanbanBoardResolveColumnId(parentId) === columnId) return;
+			if (!board[columnId] || !board[cardId]) {
+				toast.error("Колонка ещё не появилась — обновите доску");
+				return;
+			}
+			const moved = moveKanbanBoardCardToColumn(board, cardId, columnId);
+			if (!moved || moved === board) return;
+			void persistBoard(moved).catch(() => undefined);
+		},
+		[board, cardContextMenu, isSavingBoard, persistBoard],
+	);
+
 	const cancelCardFromMenu = useCallback(() => {
 		if (!cardContextMenu || !board || isSavingBoard) {
 			setCardContextMenu(null);
@@ -792,6 +814,100 @@ export function KanbanBoardPage() {
 		void persistBoard(moved).catch(() => undefined);
 	}, [board, cardContextMenu, columnsQuery.data, isSavingBoard, persistBoard]);
 
+	useEffect(() => {
+		const id = "kanban-board-import-error";
+		if (!importError) {
+			toast.dismiss(id);
+			return;
+		}
+		toast.error(importError, { id, duration: Number.POSITIVE_INFINITY });
+		return () => {
+			toast.dismiss(id);
+		};
+	}, [importError]);
+
+	useEffect(() => {
+		const id = "kanban-board-remote-stale";
+		if (!remoteStale) {
+			toast.dismiss(id);
+			return;
+		}
+		toast.info(
+			"Доска изменилась на сервере. Обновите данные перед сохранением.",
+			{
+				id,
+				duration: Number.POSITIVE_INFINITY,
+				action: {
+					label: "Обновить",
+					onClick: () => {
+						void refreshBoardFromServer();
+					},
+				},
+			},
+		);
+		return () => {
+			toast.dismiss(id);
+		};
+	}, [refreshBoardFromServer, remoteStale]);
+
+	useEffect(() => {
+		const notices = [
+			{
+				id: "kanban-board-tasks-error",
+				message: tasksQuery.isError ? "Не удалось загрузить задачи" : null,
+			},
+			{
+				id: "kanban-board-save-error",
+				message:
+					saveMutation.isError && !editBlocked
+						? "Не удалось сохранить изменения"
+						: null,
+			},
+			{
+				id: "kanban-board-columns-error",
+				message: columnsQuery.isError ? "Не удалось загрузить колонки" : null,
+			},
+			{
+				id: "kanban-board-create-column-error",
+				message: createColumn.isError ? "Не удалось добавить колонку" : null,
+			},
+			{
+				id: "kanban-board-rename-column-error",
+				message: updateColumn.isError
+					? "Не удалось переименовать колонку"
+					: null,
+			},
+			{
+				id: "kanban-board-delete-column-error",
+				message: deleteColumn.isError
+					? apiErrorMessage(deleteColumn.error)
+					: null,
+			},
+		];
+		for (const notice of notices) {
+			if (!notice.message) {
+				toast.dismiss(notice.id);
+				continue;
+			}
+			toast.error(notice.message, {
+				id: notice.id,
+				duration: Number.POSITIVE_INFINITY,
+			});
+		}
+		return () => {
+			for (const notice of notices) toast.dismiss(notice.id);
+		};
+	}, [
+		columnsQuery.isError,
+		createColumn.isError,
+		deleteColumn.error,
+		deleteColumn.isError,
+		editBlocked,
+		saveMutation.isError,
+		tasksQuery.isError,
+		updateColumn.isError,
+	]);
+
 	if (boardsQuery.isLoading) {
 		return <Alert severity="info">Загрузка доски…</Alert>;
 	}
@@ -806,6 +922,12 @@ export function KanbanBoardPage() {
 	}
 
 	const boardTitle = boardMeta?.name?.trim() || boardKey;
+	const statusColumns = [...(columnsQuery.data ?? [])].sort(
+		(a, b) => a.sortOrder - b.sortOrder || a.title.localeCompare(b.title, "ru"),
+	);
+	const cardColumnId = cardContextMenu
+		? kanbanBoardResolveColumnId(cardContextMenu.parentId)
+		: null;
 
 	return (
 		<Flex
@@ -965,55 +1087,6 @@ export function KanbanBoardPage() {
 					},
 				}}
 			>
-				{(importError ||
-					remoteStale ||
-					tasksQuery.isError ||
-					(saveMutation.isError && !editBlocked) ||
-					columnsQuery.isError ||
-					createColumn.isError ||
-					updateColumn.isError ||
-					deleteColumn.isError) && (
-					<Stack spacing={2} sx={{ flexShrink: 0, mb: 2 }}>
-						{importError ? <Alert severity="error">{importError}</Alert> : null}
-						{remoteStale ? (
-							<Alert
-								severity="info"
-								action={
-									<Button
-										color="inherit"
-										size="small"
-										onClick={() => void refreshBoardFromServer()}
-									>
-										Обновить
-									</Button>
-								}
-							>
-								Доска изменилась на сервере. Обновите данные перед сохранением.
-							</Alert>
-						) : null}
-						{tasksQuery.isError ? (
-							<Alert severity="error">Не удалось загрузить задачи</Alert>
-						) : null}
-						{saveMutation.isError && !editBlocked ? (
-							<Alert severity="error">Не удалось сохранить изменения</Alert>
-						) : null}
-						{columnsQuery.isError ? (
-							<Alert severity="error">Не удалось загрузить колонки</Alert>
-						) : null}
-						{createColumn.isError ? (
-							<Alert severity="error">Не удалось добавить колонку</Alert>
-						) : null}
-						{updateColumn.isError ? (
-							<Alert severity="error">Не удалось переименовать колонку</Alert>
-						) : null}
-						{deleteColumn.isError ? (
-							<Alert severity="error">
-								{apiErrorMessage(deleteColumn.error)}
-							</Alert>
-						) : null}
-					</Stack>
-				)}
-
 				<Box
 					ref={setScroller}
 					data-test-id="kanban-board-page-content"
@@ -1202,7 +1275,41 @@ export function KanbanBoardPage() {
 						? { top: cardContextMenu.mouseY, left: cardContextMenu.mouseX }
 						: undefined
 				}
+				slotProps={{
+					paper: {
+						sx: { maxHeight: "min(480px, 70vh)", minWidth: 260 },
+					},
+				}}
 			>
+				<ListSubheader
+					sx={{ bgcolor: "background.paper", lineHeight: "32px", fontSize: 12 }}
+				>
+					Переместить в статус
+				</ListSubheader>
+				{statusColumns.map((column) => {
+					const title = kanbanBoardDisplayColumnTitle(column);
+					const isCurrent = column.id === cardColumnId;
+					return (
+						<MenuItem
+							key={column.id}
+							disabled={!cardContextMenu || isSavingBoard || isCurrent}
+							onClick={() => moveCardToColumnFromMenu(column.id)}
+						>
+							<Box
+								sx={{
+									width: 8,
+									height: 8,
+									borderRadius: "50%",
+									bgcolor: column.color || "#94a3b8",
+									mr: 1,
+									flexShrink: 0,
+								}}
+							/>
+							{title}
+						</MenuItem>
+					);
+				})}
+				<Divider />
 				<MenuItem
 					disabled={
 						!cardContextMenu ||

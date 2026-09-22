@@ -24,6 +24,7 @@ const EXT_TO_MIME: Record<string, string> = {
 	".odp": "application/vnd.oasis.opendocument.presentation",
 	".rtf": "application/rtf",
 	".txt": "text/plain",
+	".md": "text/markdown",
 	".csv": "text/csv",
 };
 

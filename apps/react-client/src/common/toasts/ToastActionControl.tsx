@@ -124,7 +124,11 @@ export function ToastActionControl({
 				size="small"
 				variant="outlined"
 				color="inherit"
-				sx={[...formatSx(actionButtonSx), ...formatSx(action.buttonSx)]}
+				sx={[
+					{ whiteSpace: "nowrap", flexShrink: 0 },
+					...formatSx(actionButtonSx),
+					...formatSx(action.buttonSx),
+				]}
 				onClick={handleClick}
 				title={action.title}
 			>
