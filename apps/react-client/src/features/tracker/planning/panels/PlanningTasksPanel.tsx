@@ -22,7 +22,10 @@ import { KanbanTaskFieldChip } from "@react-client/features/kanban-board/compone
 import { TrackerRegistryChipCell } from "@react-client/features/tracker/components/TrackerRegistryChipCell";
 import { TrackerRegistryGrid } from "@react-client/features/tracker/components/TrackerRegistryGrid";
 import { trackerTaskRowTintStyle } from "@react-client/features/tracker/components/TrackerTaskFieldChips";
-import { isPlanningTaskPersistColId } from "@react-client/features/tracker/planning/planningTaskCellEdit";
+import {
+	isPlanningTaskPersistColId,
+	roleEstimateColId,
+} from "@react-client/features/tracker/planning/planningTaskCellEdit";
 import { createPlanningTaskFieldColDefs } from "@react-client/features/tracker/planning/planningTaskFieldColumns";
 import { usePlanningWorkspace } from "@react-client/features/tracker/planning/PlanningWorkspaceContext";
 import { usePlanningTaskGridEdits } from "@react-client/features/tracker/planning/usePlanningTaskGridEdits";
@@ -35,6 +38,7 @@ import {
 	KANBAN_BOARD_RELEASE_THEME_COLORS,
 	nextKanbanBoardReleaseThemeColor,
 	planningTaskGridRowId,
+	KANBAN_BOARD_ROLE_ESTIMATE_FIELDS,
 	kanbanBoardTaskHasBlocker,
 	type KanbanBoardReleaseTaskDto,
 	type PlanningTaskGridRow,
@@ -65,6 +69,46 @@ function planningReleaseChipColor(index: number): string {
 		PLANNING_RELEASE_CHIP_COLORS[index % PLANNING_RELEASE_CHIP_COLORS.length] ??
 		KANBAN_BOARD_RELEASE_CHIP_COLOR
 	);
+}
+
+const PLANNING_TASK_BOARD_CHIP_COLOR = "#0f766e";
+
+const PLANNING_TASK_HIDDEN_COL_IDS = new Set(["taskKey", "assigneeRole"]);
+
+const PLANNING_TASK_LEAD_COL_IDS = [
+	"title",
+	"status",
+	"currentAssignee",
+	"assignees",
+	"stand",
+	"system",
+	"estimatePd",
+	...KANBAN_BOARD_ROLE_ESTIMATE_FIELDS.map((field) =>
+		roleEstimateColId(field.key),
+	),
+];
+
+const PLANNING_TASK_TAIL_COL_IDS = ["project", "board"];
+
+function orderPlanningTaskColumns<T>(columns: ColDef<T>[]): ColDef<T>[] {
+	const byId = new Map(
+		columns
+			.filter(
+				(column) =>
+					column.colId && !PLANNING_TASK_HIDDEN_COL_IDS.has(column.colId),
+			)
+			.map((column) => [column.colId as string, column]),
+	);
+	const take = (ids: string[]) =>
+		ids.flatMap((id) => {
+			const column = byId.get(id);
+			if (!column) return [];
+			byId.delete(id);
+			return [column];
+		});
+	const lead = take(PLANNING_TASK_LEAD_COL_IDS);
+	const tail = take(PLANNING_TASK_TAIL_COL_IDS);
+	return [...lead, ...byId.values(), ...tail];
 }
 
 function collectTaskRows(rows: GridRow[]): TaskRow[] {
@@ -289,10 +333,35 @@ export function PlanningTasksPanel() {
 				);
 			},
 		};
-		const taskCols = createPlanningTaskFieldColDefs<GridRow>({
-			getTask: (row) => (row && isTaskRow(row) ? row.task : undefined),
-			lookups,
-		});
+		const taskCols = orderPlanningTaskColumns(
+			createPlanningTaskFieldColDefs<GridRow>({
+				getTask: (row) => (row && isTaskRow(row) ? row.task : undefined),
+				lookups,
+			}),
+		).map((column) =>
+			column.colId === "system"
+				? { ...column, headerName: "Система / приложение" }
+				: column.colId === "board"
+				? {
+						...column,
+						cellRenderer: (params: ICellRendererParams<GridRow>) => {
+							if (!params.data || !isTaskRow(params.data)) return null;
+							const key = params.data.task.boardKey?.trim();
+							if (!key) return null;
+							return (
+								<TrackerRegistryChipCell>
+									<span title={`Доска: ${key}`}>
+										<KanbanTaskFieldChip
+											label={key}
+											color={PLANNING_TASK_BOARD_CHIP_COLOR}
+										/>
+									</span>
+								</TrackerRegistryChipCell>
+							);
+						},
+					}
+				: column,
+		);
 		const titleIndex = taskCols.findIndex((col) => col.colId === "title");
 		if (titleIndex < 0) return [releaseCol, ...taskCols];
 		return [
@@ -363,7 +432,7 @@ export function PlanningTasksPanel() {
 			</Flex>
 			<Flex flexGrow={1} minHeight="0">
 				<TrackerRegistryGrid<GridRow>
-					gridStateKey="tracker.planning.tasks"
+					gridStateKey="tracker.planning.tasks.v3"
 					rowData={rowData}
 					columnDefs={columnDefs}
 					autoGroupColumnDef={autoGroupColumnDef}
