@@ -20,7 +20,6 @@ import {
 	useRemoveKanbanBoardPlanningRelease,
 	useUpdateKanbanBoardRelease,
 } from "@react-client/common/api/queries/kanban-board";
-import { trackerTaskPath } from "@react-client/features/kanban-board/kanban-task-paths";
 import { TrackerRegistryGrid } from "@react-client/features/tracker/components/TrackerRegistryGrid";
 import { trackerTaskRowTintStyle } from "@react-client/features/tracker/components/TrackerTaskFieldChips";
 import { isPlanningTaskPersistColId } from "@react-client/features/tracker/planning/planningTaskCellEdit";
@@ -45,7 +44,6 @@ import {
 	type PlanningReleaseGridTaskRow,
 } from "@smart-anketa/api-contract";
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router";
 
 type GridRow = PlanningReleaseGridRow<KanbanBoardReleaseTaskDto>;
 type ReleaseRow = PlanningReleaseGridReleaseRow<KanbanBoardReleaseTaskDto>;
@@ -84,8 +82,7 @@ function GroupTitleRenderer(params: ICellRendererParams<GridRow>) {
 }
 
 export function PlanningReleasePanel() {
-	const navigate = useNavigate();
-	const { planning, activeReleaseId, setActiveReleaseId } =
+	const { planning, activeReleaseId, setActiveReleaseId, openTask } =
 		usePlanningWorkspace();
 	const release = planning.releases.find((item) => item.id === activeReleaseId);
 	const { data: sprints = [] } = useKanbanBoardSprints();
@@ -274,7 +271,7 @@ export function PlanningReleasePanel() {
 					}}
 					onRowDoubleClick={(row) => {
 						if (isTaskRow(row)) {
-							navigate(trackerTaskPath(row.task.taskKey));
+							openTask(row.task.taskKey);
 							return;
 						}
 						if (isReleaseRow(row) && row.releaseId) {

@@ -5,6 +5,7 @@ type PlanningWorkspaceContextValue = {
 	planning: KanbanBoardPlanningDetailDto;
 	activeReleaseId: string | null;
 	setActiveReleaseId: (id: string) => void;
+	openTask: (taskKey: string) => void;
 };
 
 const PlanningWorkspaceContext =

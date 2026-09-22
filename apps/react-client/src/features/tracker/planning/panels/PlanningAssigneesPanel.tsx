@@ -107,6 +107,7 @@ export function PlanningAssigneesPanel() {
 					roleTitle: "",
 					taskCount: totals.taskCount,
 					totalPd: totals.totalPd,
+					loadPercent: totals.loadPercent,
 					children: loadRows.map((row) => ({
 						id: `release:${section.id || "none"}:${row.assigneeName}`,
 						rowKind: "assignee" as const,
@@ -154,14 +155,6 @@ export function PlanningAssigneesPanel() {
 				valueGetter: (params) => params.data?.taskCount ?? 0,
 			},
 			{
-				colId: "totalPd",
-				headerName: "Итого, чд",
-				width: 110,
-				type: "numericColumn",
-				valueGetter: (params) => params.data?.totalPd ?? 0,
-				valueFormatter: (params) => formatPd(params.value),
-			},
-			{
 				colId: "capacityPd",
 				headerName: "Ёмкость, чд",
 				width: 120,
@@ -171,15 +164,19 @@ export function PlanningAssigneesPanel() {
 				valueFormatter: (params) => formatPd(params.value, true),
 			},
 			{
-				colId: "loadPercent",
-				headerName: "Загрузка",
-				width: 110,
+				colId: "loadSummary",
+				headerName: "ч/д · %",
+				width: 132,
+				pinned: "right",
 				type: "numericColumn",
-				valueGetter: (params) =>
-					params.data?.rowKind === "assignee"
-						? params.data.loadPercent
-						: undefined,
-				valueFormatter: (params) => formatPercent(params.value),
+				valueGetter: (params) => params.data?.totalPd ?? 0,
+				valueFormatter: (params) => {
+					const row = params.data;
+					if (!row) return "";
+					const pd = formatPd(row.totalPd);
+					if (row.loadPercent == null) return pd;
+					return `${pd} · ${formatPercent(row.loadPercent)}`;
+				},
 			},
 		],
 		[],

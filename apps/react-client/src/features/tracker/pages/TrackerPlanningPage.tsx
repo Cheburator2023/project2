@@ -14,6 +14,8 @@ import {
 } from "@react-client/common/api/queries/kanban-board";
 import { toast } from "@react-client/common/toasts";
 import { PlanningDockLayout } from "@react-client/features/tracker/planning/PlanningDockLayout";
+import { PlanningTaskDialog } from "@react-client/features/tracker/planning/PlanningTaskDialog";
+import { openPlanningTaskFromClick } from "@react-client/features/tracker/planning/planningTaskLink";
 import type { PlanningDockLayoutHandle } from "@react-client/features/tracker/planning/PlanningDockLayout";
 import { PlanningKanbanImportButton } from "@react-client/features/tracker/planning/PlanningKanbanImportButton";
 import { PlanningLayoutPresetDialog } from "@react-client/features/tracker/planning/PlanningLayoutPresetDialog";
@@ -36,6 +38,11 @@ export function TrackerPlanningPage() {
 	const [replacePreset, setReplacePreset] = useState(false);
 	const [panelsAnchor, setPanelsAnchor] = useState<null | HTMLElement>(null);
 	const [isExporting, setIsExporting] = useState(false);
+	const [openTaskKey, setOpenTaskKey] = useState<string | null>(null);
+	const openTask = useCallback((taskKey: string) => {
+		const next = taskKey.trim();
+		if (next) setOpenTaskKey(next);
+	}, []);
 
 	const [layoutChosen, setLayoutChosen] = useState(false);
 	const [selectedReleaseId, setSelectedReleaseId] = useState<string | null>(
@@ -99,9 +106,17 @@ export function TrackerPlanningPage() {
 				planning: data,
 				activeReleaseId,
 				setActiveReleaseId: setSelectedReleaseId,
+				openTask,
 			}}
 		>
-			<Flex flexDirection="column" height="100%" minHeight="0">
+			<Flex
+				flexDirection="column"
+				height="100%"
+				minHeight="0"
+				onClickCapture={(event) =>
+					openPlanningTaskFromClick(event, openTask)
+				}
+			>
 				<Header
 					title={`${data.code} · ${data.name}`}
 					backTo={commonRoutes.trackerPlannings.rootPath}
@@ -159,6 +174,11 @@ export function TrackerPlanningPage() {
 					/>
 				</Flex>
 			</Flex>
+			<PlanningTaskDialog
+				taskKey={openTaskKey}
+				onClose={() => setOpenTaskKey(null)}
+				onOpenTask={openTask}
+			/>
 			<PlanningLayoutPresetDialog
 				open={presetOpen || needsPreset}
 				confirmReplace={replacePreset && !needsPreset}

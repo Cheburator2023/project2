@@ -201,6 +201,10 @@ const toParentTaskOption = (
 
 type Props = {
 	mode?: "create" | "edit";
+	taskKey?: string;
+	onClose?: () => void;
+	onOpenTask?: (taskKey: string) => void;
+	bindRequestClose?: (requestClose: () => void) => void;
 };
 
 function parseColumnParam(
@@ -217,15 +221,22 @@ function parseColumnParam(
 	);
 }
 
-export function KanbanTaskPage({ mode }: Props = {}) {
+export function KanbanTaskPage({
+	mode,
+	taskKey: taskKeyProp,
+	onClose,
+	onOpenTask,
+	bindRequestClose,
+}: Props = {}) {
 	const navigate = useNavigate();
 	const location = useLocation();
 	const queryClient = useQueryClient();
 	const [searchParams] = useSearchParams();
-	const { boardKey: boardKeyParam = "", taskKey = "" } = useParams<{
+	const { boardKey: boardKeyParam = "", taskKey: taskKeyParam = "" } = useParams<{
 		boardKey?: string;
 		taskKey?: string;
 	}>();
+	const taskKey = taskKeyProp || taskKeyParam;
 
 	const isCreate = mode === "create" || isKanbanTaskCreateRoute(taskKey ?? "");
 	const boardKeyFromQuery = searchParams.get("board") ?? "";
@@ -495,11 +506,16 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 		const actual = taskByRefQuery.data?.taskKey?.trim();
 		if (!actual || !taskKey) return;
 		if (normalizeTrackerCode(actual) === normalizeTrackerCode(taskKey)) return;
+		if (onOpenTask) {
+			onOpenTask(actual);
+			return;
+		}
 		navigate(trackerTaskPath(actual), { replace: true, state: location.state });
 	}, [
 		isCreate,
 		location.state,
 		navigate,
+		onOpenTask,
 		taskByRefQuery.data?.taskKey,
 		taskKey,
 	]);
@@ -570,9 +586,17 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 		return "/tracker";
 	}, [boardApiRef, location.state]);
 
+	const closeOrLeave = useCallback(() => {
+		if (onClose) {
+			onClose();
+			return;
+		}
+		navigate(leaveTaskPath);
+	}, [leaveTaskPath, navigate, onClose]);
+
 	const handleIdleTimeout = useCallback(() => {
-		navigate(leaveTaskPath, { replace: true });
-	}, [leaveTaskPath, navigate]);
+		closeOrLeave();
+	}, [closeOrLeave]);
 
 	const { editLabel, foreignLock, isLockedByOther } = useKanbanTaskEditLock(
 		taskId,
@@ -796,6 +820,10 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 				createdBy: createdByName.trim() || null,
 				releaseIds,
 			});
+			if (onOpenTask) {
+				onOpenTask(created.taskKey);
+				return;
+			}
 			navigate(trackerTaskPath(created.taskKey));
 			return;
 		}
@@ -871,8 +899,14 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 				});
 			}
 		}
-		navigate(leaveTaskPath);
-	}, [boardApiRef, isCreate, leaveTaskPath, navigate, queryClient]);
+		closeOrLeave();
+	}, [boardApiRef, closeOrLeave, isCreate, queryClient]);
+
+	useEffect(() => {
+		bindRequestClose?.(() => {
+			void goBackToBoard();
+		});
+	}, [bindRequestClose, goBackToBoard]);
 
 	useEffect(() => {
 		if (isCreate || !task) return;
@@ -1752,7 +1786,7 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 			</Flex>
 			<TrackerIdentityRequiredDialog
 				open={isCreate && !settingsQuery.isLoading && !editLabel.trim()}
-				onCancel={() => navigate(leaveTaskPath)}
+				onCancel={() => closeOrLeave()}
 				onSaved={() => undefined}
 			/>
 			<TrackerTaskConflictDialog

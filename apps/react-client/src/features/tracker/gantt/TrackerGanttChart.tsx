@@ -55,6 +55,7 @@ import { useNavigate } from "react-router";
 type Props = {
 	filters: TrackerGanttFilters;
 	scalePresetId: TrackerGanttScalePresetId;
+	onOpenTask?: (taskKey: string) => void;
 };
 
 type PendingGanttUpdate = {
@@ -64,7 +65,7 @@ type PendingGanttUpdate = {
 	expectedUpdatedAt?: string;
 };
 
-export function TrackerGanttChart({ filters, scalePresetId }: Props) {
+export function TrackerGanttChart({ filters, scalePresetId, onOpenTask }: Props) {
 	const navigate = useNavigate();
 	const { mode } = useColorScheme();
 	const editLabel = useTrackerEditIdentity();
@@ -184,6 +185,10 @@ export function TrackerGanttChart({ filters, scalePresetId }: Props) {
 			if (!canOpenTrackerGanttTask(id)) return;
 			const row = resolveTrackerGanttTaskRow(id);
 			if (!row) return;
+			if (onOpenTask && row.trackerTaskKey) {
+				onOpenTask(row.trackerTaskKey);
+				return;
+			}
 			const path = getTrackerGanttTaskEditPath(row);
 			if (path) navigate(path);
 		};
@@ -245,7 +250,7 @@ export function TrackerGanttChart({ filters, scalePresetId }: Props) {
 			api.detach("select-task");
 			api.detach("update-task");
 		};
-	}, [api, applyGanttUpdate, clearSelection, navigate, taskSelected]);
+	}, [api, applyGanttUpdate, clearSelection, navigate, onOpenTask, taskSelected]);
 
 	const selectedRow = tasks.find((item) => item.id === selectedTaskId) as
 		| (ITask & TrackerGanttTaskMeta)
@@ -258,6 +263,10 @@ export function TrackerGanttChart({ filters, scalePresetId }: Props) {
 
 	const openSelectedTask = () => {
 		if (!selectedRow) return;
+		if (onOpenTask && selectedRow.trackerTaskKey) {
+			onOpenTask(selectedRow.trackerTaskKey);
+			return;
+		}
 		const path = getTrackerGanttTaskEditPath(selectedRow);
 		if (path) navigate(path);
 	};

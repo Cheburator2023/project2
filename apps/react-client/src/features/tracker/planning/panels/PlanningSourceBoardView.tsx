@@ -76,6 +76,7 @@ type Props = {
 	storageKey: string;
 	missingReleaseMessage?: string;
 	planningAssign?: PlanningAssignTarget;
+	onOpenTask?: (taskKey: string) => void;
 };
 
 function sourceBoardStorageKey(planningId: string) {
@@ -83,12 +84,13 @@ function sourceBoardStorageKey(planningId: string) {
 }
 
 export function PlanningSourceBoardView() {
-	const { planning } = usePlanningWorkspace();
+	const { planning, openTask } = usePlanningWorkspace();
 	return (
 		<ReleaseSourceBoardPicker
 			releaseId={null}
 			attachedTaskIds={planning.tasks.map((item) => item.taskId)}
 			storageKey={sourceBoardStorageKey(planning.id)}
+			onOpenTask={openTask}
 			planningAssign={{
 				planningId: planning.id,
 				themes: planning.themes,
@@ -105,6 +107,7 @@ export function ReleaseSourceBoardPicker({
 	storageKey,
 	missingReleaseMessage = "Релиз не выбран",
 	planningAssign,
+	onOpenTask,
 }: Props) {
 	const navigate = useNavigate();
 	const boardsQuery = useKanbanBoardBoards();
@@ -287,12 +290,15 @@ export function ReleaseSourceBoardPicker({
 			const task = tasksQuery.data?.find((item) => item.id === card.id);
 			const boardKeyPrefix = boardMeta?.boardKey;
 			if (task?.taskNumber && boardKeyPrefix) {
-				navigate(
-					trackerTaskPath(formatKanbanTaskKey(boardKeyPrefix, task.taskNumber)),
-				);
+				const taskKey = formatKanbanTaskKey(boardKeyPrefix, task.taskNumber);
+				if (onOpenTask) {
+					onOpenTask(taskKey);
+					return;
+				}
+				navigate(trackerTaskPath(taskKey));
 			}
 		},
-		[boardMeta?.boardKey, navigate, tasksQuery.data],
+		[boardMeta?.boardKey, navigate, onOpenTask, tasksQuery.data],
 	);
 
 	const columnStyle = useCallback((column: BoardItem) => {

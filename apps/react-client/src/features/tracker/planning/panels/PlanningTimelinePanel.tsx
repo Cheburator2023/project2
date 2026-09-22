@@ -6,7 +6,7 @@ import { usePlanningWorkspace } from "@react-client/features/tracker/planning/Pl
 import { useMemo } from "react";
 
 export function PlanningTimelinePanel() {
-	const { planning } = usePlanningWorkspace();
+	const { planning, openTask } = usePlanningWorkspace();
 	const filters = useMemo(() => {
 		const barColorByTaskId: Record<string, string> = {};
 		for (const item of planning.tasks) {
@@ -32,6 +32,7 @@ export function PlanningTimelinePanel() {
 			<TrackerGanttChart
 				filters={filters}
 				scalePresetId={TRACKER_GANTT_SCALE_PRESET_DEFAULT}
+				onOpenTask={openTask}
 			/>
 		</Flex>
 	);

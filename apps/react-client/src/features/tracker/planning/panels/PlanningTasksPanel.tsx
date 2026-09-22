@@ -19,7 +19,6 @@ import {
 	useUpdateKanbanBoardReleaseTheme,
 } from "@react-client/common/api/queries/kanban-board";
 import { KanbanTaskFieldChip } from "@react-client/features/kanban-board/components/KanbanTaskSelectField";
-import { trackerTaskPath } from "@react-client/features/kanban-board/kanban-task-paths";
 import { TrackerRegistryChipCell } from "@react-client/features/tracker/components/TrackerRegistryChipCell";
 import { TrackerRegistryGrid } from "@react-client/features/tracker/components/TrackerRegistryGrid";
 import { trackerTaskRowTintStyle } from "@react-client/features/tracker/components/TrackerTaskFieldChips";
@@ -43,7 +42,6 @@ import {
 	type PlanningTaskGridThemeRow,
 } from "@smart-anketa/api-contract";
 import { useCallback, useMemo, useState } from "react";
-import { useNavigate } from "react-router";
 
 type GridRow = PlanningTaskGridRow<KanbanBoardReleaseTaskDto>;
 type ThemeRow = PlanningTaskGridThemeRow<KanbanBoardReleaseTaskDto>;
@@ -113,8 +111,7 @@ function GroupTitleRenderer(params: ICellRendererParams<GridRow>) {
 }
 
 export function PlanningTasksPanel() {
-	const navigate = useNavigate();
-	const { planning } = usePlanningWorkspace();
+	const { planning, openTask } = usePlanningWorkspace();
 	const createTheme = useCreateKanbanBoardReleaseTheme();
 	const updateTheme = useUpdateKanbanBoardReleaseTheme();
 	const deleteTheme = useDeleteKanbanBoardReleaseTheme();
@@ -390,7 +387,7 @@ export function PlanningTasksPanel() {
 						});
 					}}
 					onRowDoubleClick={(row) => {
-						if (isTaskRow(row)) navigate(trackerTaskPath(row.task.taskKey));
+						if (isTaskRow(row)) openTask(row.task.taskKey);
 					}}
 					onCellValueChanged={(row, field, value, oldValue) => {
 						if (isTaskRow(row) && field === "releaseId") {
