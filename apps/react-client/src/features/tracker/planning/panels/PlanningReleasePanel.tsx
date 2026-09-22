@@ -2,15 +2,19 @@ import Button from "@mui/material/Button";
 import type {
 	ColDef,
 	ICellRendererParams,
+	IRowNode,
 	RowClassParams,
+	RowDragEndEvent,
 } from "ag-grid-community";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { toast } from "@react-client/common/toasts";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import {
 	useAddKanbanBoardPlanningRelease,
+	useAssignKanbanBoardPlanningTasks,
 	useDetachKanbanBoardReleaseTask,
 	useKanbanBoardReleases,
+	useMoveKanbanBoardReleaseTask,
 	useKanbanBoardSprints,
 	useKanbanBoardSupersprints,
 	useRemoveKanbanBoardPlanningRelease,
@@ -30,6 +34,8 @@ import {
 } from "@react-client/features/tracker/planning/panels/PlanningReleaseModals";
 import {
 	buildPlanningReleaseTaskGridRows,
+	kanbanBoardReleaseStatusTitle,
+	kanbanBoardReleaseVisibleOnBoard,
 	kanbanBoardTaskHasBlocker,
 	kanbanBoardTaskReleaseLabel,
 	planningReleaseGridRowId,
@@ -58,6 +64,14 @@ function releaseIdFromRow(row: GridRow | undefined): string | null {
 	return row.releaseId || null;
 }
 
+function releaseIdFromDropNode(
+	node: IRowNode<GridRow> | undefined | null,
+): string | null | undefined {
+	const data = node?.data;
+	if (!data) return undefined;
+	return data.releaseId;
+}
+
 function GroupTitleRenderer(params: ICellRendererParams<GridRow>) {
 	const row = params.data;
 	if (row && isReleaseRow(row)) {
@@ -76,29 +90,52 @@ export function PlanningReleasePanel() {
 	const release = planning.releases.find((item) => item.id === activeReleaseId);
 	const { data: sprints = [] } = useKanbanBoardSprints();
 	const { data: supersprints = [] } = useKanbanBoardSupersprints();
-	const { data: availableReleases = [] } = useKanbanBoardReleases(true);
+	const { data: availableReleases = [], refetch: refetchAvailableReleases } =
+		useKanbanBoardReleases(true);
 	const updateRelease = useUpdateKanbanBoardRelease();
 	const addRelease = useAddKanbanBoardPlanningRelease();
 	const removeRelease = useRemoveKanbanBoardPlanningRelease();
 	const detachTask = useDetachKanbanBoardReleaseTask();
+	const moveTask = useMoveKanbanBoardReleaseTask();
+	const assignTasks = useAssignKanbanBoardPlanningTasks();
 	const { lookups, persistTask, conflictDialog } = usePlanningTaskGridEdits();
 	const [createOpen, setCreateOpen] = useState(false);
 	const [attachOpen, setAttachOpen] = useState(false);
 	const [settingsOpen, setSettingsOpen] = useState(false);
 
+	const openReleases = useMemo(
+		() =>
+			planning.releases.filter((item) =>
+				kanbanBoardReleaseVisibleOnBoard(item.status),
+			),
+		[planning.releases],
+	);
+
 	const attachOptions = useMemo(
 		() =>
 			availableReleases.filter(
 				(item) =>
-					!planning.releases.some((attached) => attached.id === item.id),
+					kanbanBoardReleaseVisibleOnBoard(item.status) &&
+					!openReleases.some((attached) => attached.id === item.id),
 			),
-		[availableReleases, planning.releases],
+		[availableReleases, openReleases],
 	);
 
-	const rowData = useMemo(
-		() => buildPlanningReleaseTaskGridRows(planning.tasks, planning.releases),
-		[planning.releases, planning.tasks],
-	);
+	const rowData = useMemo(() => {
+		const openReleaseIds = new Set(openReleases.map((item) => item.id));
+		const expanded = planning.tasks.flatMap((task) => {
+			const ids = (
+				task.releaseIds?.length
+					? task.releaseIds
+					: task.releaseId
+						? [task.releaseId]
+						: []
+			).filter((id) => openReleaseIds.has(id));
+			if (!ids.length) return [{ ...task, releaseId: "" }];
+			return ids.map((releaseId) => ({ ...task, releaseId }));
+		});
+		return buildPlanningReleaseTaskGridRows(expanded, openReleases);
+	}, [openReleases, planning.tasks]);
 
 	const themeById = useMemo(
 		() => new Map(planning.themes.map((theme) => [theme.id, theme])),
@@ -113,6 +150,7 @@ export function PlanningReleasePanel() {
 			flex: 1.2,
 			sortable: false,
 			editable: false,
+			rowDrag: (params) => Boolean(params.data && isTaskRow(params.data)),
 			valueGetter: (params) => {
 				const row = params.data;
 				if (!row) return "";
@@ -175,7 +213,10 @@ export function PlanningReleasePanel() {
 				</Button>
 				<Button
 					variant="outlined"
-					onClick={() => setAttachOpen(true)}
+					onClick={() => {
+						void refetchAvailableReleases();
+						setAttachOpen(true);
+					}}
 					title="Прикрепить существующий релиз к планированию"
 				>
 					Прикрепить
@@ -205,11 +246,12 @@ export function PlanningReleasePanel() {
 					treeDataChildrenField="children"
 					pagination={false}
 					showRowTintToggle
-					getRowId={(params) =>
-						params.data
-							? planningReleaseGridRowId(params.data)
-							: "planning-release-row"
-					}
+					getRowId={(params) => {
+						const row = params.data;
+						if (!row) return "planning-release-row";
+						if (isReleaseRow(row)) return planningReleaseGridRowId(row);
+						return `task:${row.releaseId}:${row.taskId}`;
+					}}
 					isRowSelectable={(node) => {
 						const row = node.data;
 						if (!row) return false;
@@ -243,6 +285,43 @@ export function PlanningReleasePanel() {
 						if (isTaskRow(row) && field && isPlanningTaskPersistColId(field)) {
 							void persistTask(row.task);
 						}
+					}}
+					onRowDragEnd={(event: RowDragEndEvent<GridRow>) => {
+						const dragged = event.node.data;
+						if (!dragged || !isTaskRow(dragged)) return;
+						const targetReleaseId = releaseIdFromDropNode(event.overNode);
+						if (targetReleaseId === undefined) return;
+						if (dragged.releaseId === targetReleaseId) return;
+						const themeId = dragged.themeId;
+						const taskId = dragged.taskId;
+						const run = async () => {
+							if (!dragged.releaseId && targetReleaseId) {
+								await assignTasks.mutateAsync({
+									planningId: planning.id,
+									data: {
+										taskIds: [taskId],
+										themeId,
+										releaseIds: [targetReleaseId],
+									},
+								});
+								return;
+							}
+							if (dragged.releaseId && !targetReleaseId) {
+								await detachTask.mutateAsync({
+									releaseId: dragged.releaseId,
+									taskId,
+								});
+								return;
+							}
+							if (dragged.releaseId && targetReleaseId) {
+								await moveTask.mutateAsync({
+									releaseId: dragged.releaseId,
+									taskId,
+									data: { targetReleaseId, themeId },
+								});
+							}
+						};
+						void run().catch((error) => toast.error(apiErrorMessage(error)));
 					}}
 					contextActions={[
 						{

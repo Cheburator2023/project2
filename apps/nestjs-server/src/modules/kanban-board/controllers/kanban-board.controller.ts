@@ -57,6 +57,7 @@ import type {
 	CompleteKanbanBoardReleaseRequestDto,
 	UpdateKanbanBoardReleaseThemeRequestDto,
 	AttachKanbanBoardReleaseTasksRequestDto,
+	AssignKanbanBoardPlanningTasksRequestDto,
 	ReorderKanbanBoardReleaseTasksRequestDto,
 	MoveKanbanBoardReleaseTaskRequestDto,
 	MoveKanbanBoardReleaseTaskStatusRequestDto,
@@ -282,6 +283,32 @@ export class KanbanBoardController {
 		return this.planningService.findPlanningById(id);
 	}
 
+	@Get("plannings/:id/export")
+	@ApiResponse({
+		status: HttpStatus.OK,
+		content: {
+			"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+				schema: { type: "string", format: "binary" },
+			},
+		},
+	})
+	async exportPlanning(
+		@Param("id") id: string,
+		@Res() res: Response,
+	): Promise<void> {
+		const buffer = await this.planningService.exportPlanningXlsx(id);
+		const date = new Date().toISOString().slice(0, 10);
+		res.setHeader(
+			"Content-Type",
+			"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+		);
+		res.setHeader(
+			"Content-Disposition",
+			`attachment; filename=tracker-planning-${date}.xlsx`,
+		);
+		res.end(buffer);
+	}
+
 	@Put("plannings/:id")
 	async updatePlanning(
 		@Param("id") id: string,
@@ -364,6 +391,22 @@ export class KanbanBoardController {
 		@Param("themeId") themeId: string,
 	): Promise<void> {
 		return this.planningService.deleteTheme(id, themeId);
+	}
+
+	@Post("plannings/:id/tasks")
+	async assignPlanningTasks(
+		@Param("id") id: string,
+		@Body() dto: AssignKanbanBoardPlanningTasksRequestDto,
+	): Promise<KanbanBoardPlanningDetailDto> {
+		return this.planningService.assignPlanningTasks(id, dto);
+	}
+
+	@Delete("plannings/:id/tasks/:taskId")
+	async detachPlanningTask(
+		@Param("id") id: string,
+		@Param("taskId") taskId: string,
+	): Promise<KanbanBoardPlanningDetailDto> {
+		return this.planningService.detachPlanningTask(id, taskId);
 	}
 
 	@Put("plannings/:id/tasks/reorder")

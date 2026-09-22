@@ -1261,7 +1261,10 @@ export interface KanbanBoardReleaseThemeDto {
 
 export interface KanbanBoardReleaseTaskDto {
 	taskId: string;
+	/** Первый релиз или пусто, если задача только в планировании. */
 	releaseId: string;
+	/** Все релизы планирования, к которым привязана задача. */
+	releaseIds?: string[];
 	themeId: string | null;
 	position: number;
 	task: KanbanBoardTaskRegistryDto;
@@ -1488,6 +1491,13 @@ export interface UpdateKanbanBoardReleaseThemeRequestDto {
 export interface AttachKanbanBoardReleaseTasksRequestDto {
 	taskIds: string[];
 	themeId?: string | null;
+}
+
+/** Добавить задачи в планирование. Группа и релизы необязательны. */
+export interface AssignKanbanBoardPlanningTasksRequestDto {
+	taskIds: string[];
+	themeId?: string | null;
+	releaseIds?: string[];
 }
 
 export interface ReorderKanbanBoardReleaseTasksRequestDto {

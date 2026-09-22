@@ -38,10 +38,6 @@ export function PlanningKanbanImportButton({ planningId, releaseId }: Props) {
 		const file = event.target.files?.[0];
 		event.target.value = "";
 		if (!file) return;
-		if (!releaseId) {
-			toast.error("Сначала создайте релиз");
-			return;
-		}
 
 		setError(null);
 		setResult(null);
@@ -66,11 +62,7 @@ export function PlanningKanbanImportButton({ planningId, releaseId }: Props) {
 				size="small"
 				variant="contained"
 				sx={{ flexShrink: 0, whiteSpace: "nowrap" }}
-				title={
-					releaseId
-						? "Загрузить задачи из Excel (лист канбана с колонкой «доска»)"
-						: "Сначала создайте релиз"
-				}
+				title="Загрузить задачи из Excel (лист канбана с колонкой «доска»)"
 				onClick={() => setOpen(true)}
 			>
 				Импорт из Excel
@@ -84,7 +76,8 @@ export function PlanningKanbanImportButton({ planningId, releaseId }: Props) {
 							Берётся лист с колонками «Название», «Статус», «Текущий
 							исполнитель», «доска» — например «Задачи 4СС.4С_Канбан». Задачи
 							создаются или обновляются на указанных досках и добавляются в
-							текущий релиз.
+							планирование
+							{releaseId ? " и в выбранный релиз" : ""}.
 						</span>
 						<input
 							ref={fileInputRef}
@@ -95,7 +88,7 @@ export function PlanningKanbanImportButton({ planningId, releaseId }: Props) {
 						/>
 						<Button
 							variant="contained"
-							disabled={importMutation.isPending || !releaseId}
+							disabled={importMutation.isPending}
 							onClick={() => fileInputRef.current?.click()}
 						>
 							{importMutation.isPending ? "Импорт…" : "Выбрать файл"}
@@ -104,8 +97,11 @@ export function PlanningKanbanImportButton({ planningId, releaseId }: Props) {
 						{result ? (
 							<Alert severity="success">
 								Лист «{result.sheetName}»: создано {result.createdCount},
-								обновлено {result.updatedCount}, в релиз «{result.releaseName}»
-								добавлено {result.attachedCount}.
+								обновлено {result.updatedCount}
+								{result.releaseName
+									? `, в релиз «${result.releaseName}» добавлено ${result.attachedCount}`
+									: `, в планирование добавлено ${result.attachedCount}`}
+								.
 								{result.boards.length ? (
 									<>
 										{" "}

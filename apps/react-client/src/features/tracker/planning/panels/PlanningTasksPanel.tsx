@@ -13,7 +13,7 @@ import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessag
 import {
 	useCreateKanbanBoardReleaseTheme,
 	useDeleteKanbanBoardReleaseTheme,
-	useDetachKanbanBoardReleaseTask,
+	useDetachKanbanBoardPlanningTask,
 	useMoveKanbanBoardReleaseTask,
 	useReorderKanbanBoardPlanningTasks,
 	useUpdateKanbanBoardReleaseTheme,
@@ -73,6 +73,11 @@ function collectTaskRows(rows: GridRow[]): TaskRow[] {
 	return rows.filter(isTaskRow);
 }
 
+function taskReleaseIds(row: TaskRow): string[] {
+	if (row.releaseIds?.length) return row.releaseIds;
+	return row.releaseId ? [row.releaseId] : [];
+}
+
 function themeIdFromOverNode(
 	node: IRowNode<GridRow> | undefined | null,
 ): string | null | undefined {
@@ -113,7 +118,7 @@ export function PlanningTasksPanel() {
 	const createTheme = useCreateKanbanBoardReleaseTheme();
 	const updateTheme = useUpdateKanbanBoardReleaseTheme();
 	const deleteTheme = useDeleteKanbanBoardReleaseTheme();
-	const detachTask = useDetachKanbanBoardReleaseTask();
+	const detachTask = useDetachKanbanBoardPlanningTask();
 	const reorder = useReorderKanbanBoardPlanningTasks();
 	const moveTask = useMoveKanbanBoardReleaseTask();
 	const { lookups, persistTask, conflictDialog } = usePlanningTaskGridEdits();
@@ -182,7 +187,7 @@ export function PlanningTasksPanel() {
 		try {
 			for (const item of tasks) {
 				await detachTask.mutateAsync({
-					releaseId: item.releaseId,
+					planningId: planning.id,
 					taskId: item.taskId,
 				});
 			}
@@ -226,40 +231,63 @@ export function PlanningTasksPanel() {
 			flex: 1.1,
 			minWidth: 160,
 			editable: (params) =>
-				Boolean(params.data && isTaskRow(params.data) && releaseLabels.length),
+				Boolean(
+					params.data &&
+						isTaskRow(params.data) &&
+						taskReleaseIds(params.data).length === 1 &&
+						releaseLabels.length,
+				),
 			cellEditor: "agSelectCellEditor",
 			cellEditorParams: { values: releaseLabels },
-			valueGetter: (params) =>
-				params.data && isTaskRow(params.data) ? params.data.releaseId : "",
+			valueGetter: (params) => {
+				if (!params.data || !isTaskRow(params.data)) return "";
+				const ids = taskReleaseIds(params.data);
+				return ids.length === 1 ? ids[0] : "";
+			},
 			valueSetter: (params) => {
 				const row = params.data;
-				if (!row || !isTaskRow(row)) return false;
+				if (!row || !isTaskRow(row) || taskReleaseIds(row).length !== 1) {
+					return false;
+				}
 				const nextId = resolveReleaseId(params.newValue);
 				if (!nextId) return false;
 				row.releaseId = nextId;
+				row.releaseIds = [nextId];
 				return true;
 			},
 			valueFormatter: (params) => {
 				if (!params.data || !isTaskRow(params.data)) return "";
-				const release = releaseById.get(params.data.releaseId);
-				return release ? kanbanBoardTaskReleaseLabel(release) : "";
+				return taskReleaseIds(params.data)
+					.map((id) => {
+						const release = releaseById.get(id);
+						return release ? kanbanBoardTaskReleaseLabel(release) : "";
+					})
+					.filter(Boolean)
+					.join(", ");
 			},
 			cellRenderer: (params: ICellRendererParams<GridRow>) => {
 				if (!params.data || !isTaskRow(params.data)) return null;
-				const release = releaseById.get(params.data.releaseId);
-				if (!release) return null;
-				const label = kanbanBoardTaskReleaseLabel(release);
+				const releases = taskReleaseIds(params.data)
+					.map((id) => releaseById.get(id))
+					.filter((release) => Boolean(release));
+				if (!releases.length) return null;
 				return (
 					<TrackerRegistryChipCell>
-						<span title={label}>
-							<KanbanTaskFieldChip
-								label={label}
-								color={
-									releaseColorById.get(release.id) ??
-									KANBAN_BOARD_RELEASE_CHIP_COLOR
-								}
-							/>
-						</span>
+						{releases.map((release) => {
+							if (!release) return null;
+							const label = kanbanBoardTaskReleaseLabel(release);
+							return (
+								<span key={release.id} title={label}>
+									<KanbanTaskFieldChip
+										label={label}
+										color={
+											releaseColorById.get(release.id) ??
+											KANBAN_BOARD_RELEASE_CHIP_COLOR
+										}
+									/>
+								</span>
+							);
+						})}
 					</TrackerRegistryChipCell>
 				);
 			},

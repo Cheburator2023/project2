@@ -12,6 +12,7 @@ import { generateTrackerAutoCode } from "@react-client/features/tracker/trackerA
 import {
 	KANBAN_BOARD_RELEASE_IMAGE_TARGETS,
 	KANBAN_BOARD_RELEASE_STATUSES,
+	kanbanBoardReleaseStatusTitle,
 	kanbanBoardTaskReleaseLabel,
 	normalizeKanbanBoardReleaseImageVersions,
 	type KanbanBoardReleaseDto,
@@ -90,7 +91,12 @@ export function PlanningReleaseAttachDialog({
 	onAttach,
 }: {
 	open: boolean;
-	options: Array<{ id: string; code: string; name: string }>;
+	options: Array<{
+		id: string;
+		code: string;
+		name: string;
+		status?: string;
+	}>;
 	isSubmitting: boolean;
 	onClose: () => void;
 	onAttach: (releaseId: string) => Promise<void>;
@@ -109,7 +115,7 @@ export function PlanningReleaseAttachDialog({
 				<Spacer space={8} />
 				{options.length === 0 ? (
 					<Typography variant="body2" color="text.secondary">
-						Нет свободных релизов для прикрепления
+						Нет незакрытых релизов для прикрепления
 					</Typography>
 				) : (
 					<TextField
@@ -125,6 +131,9 @@ export function PlanningReleaseAttachDialog({
 						{options.map((item) => (
 							<MenuItem key={item.id} value={item.id}>
 								{kanbanBoardTaskReleaseLabel(item)}
+								{item.status
+									? ` · ${kanbanBoardReleaseStatusTitle(item.status)}`
+									: ""}
 							</MenuItem>
 						))}
 					</TextField>

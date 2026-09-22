@@ -15,6 +15,7 @@ import type {
 	CreateKanbanBoardReleaseRequestDto,
 	CreateKanbanBoardReleaseThemeRequestDto,
 	AttachKanbanBoardPlanningReleaseRequestDto,
+	AssignKanbanBoardPlanningTasksRequestDto,
 	KanbanBoardAssigneeDto,
 	KanbanBoardBoardDto,
 	KanbanBoardColumnDto,
@@ -621,6 +622,17 @@ export const kanbanBoardExportSprintsRegistry = (signal?: AbortSignal) =>
 export const kanbanBoardExportSupersprintsRegistry = (signal?: AbortSignal) =>
 	apiClient<Blob>({
 		url: "/kanban-board/supersprints/export",
+		method: "GET",
+		signal,
+		responseType: "blob",
+	});
+
+export const kanbanBoardExportPlanning = (
+	planningId: string,
+	signal?: AbortSignal,
+) =>
+	apiClient<Blob>({
+		url: `/kanban-board/plannings/${encodeURIComponent(planningId)}/export`,
 		method: "GET",
 		signal,
 		responseType: "blob",
@@ -1682,6 +1694,49 @@ export const useDeleteKanbanBoardReleaseTheme = () => {
 				method: "DELETE",
 			}),
 		onSuccess: () => invalidatePlanning(queryClient),
+	});
+};
+
+export const useAssignKanbanBoardPlanningTasks = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			planningId,
+			data,
+		}: {
+			planningId: string;
+			data: AssignKanbanBoardPlanningTasksRequestDto;
+		}) =>
+			apiClient<KanbanBoardPlanningDetailDto>({
+				url: `/kanban-board/plannings/${planningId}/tasks`,
+				method: "POST",
+				data,
+			}),
+		onSuccess: (detail) => {
+			queryClient.setQueryData(["kanbanBoardPlanning", detail.id], detail);
+			invalidatePlanning(queryClient);
+		},
+	});
+};
+
+export const useDetachKanbanBoardPlanningTask = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			planningId,
+			taskId,
+		}: {
+			planningId: string;
+			taskId: string;
+		}) =>
+			apiClient<KanbanBoardPlanningDetailDto>({
+				url: `/kanban-board/plannings/${planningId}/tasks/${taskId}`,
+				method: "DELETE",
+			}),
+		onSuccess: (detail) => {
+			queryClient.setQueryData(["kanbanBoardPlanning", detail.id], detail);
+			invalidatePlanning(queryClient);
+		},
 	});
 };
 

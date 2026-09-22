@@ -7,9 +7,12 @@ import { Header } from "@react-client/common/navigation/organisms/Header";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import {
+	downloadBlob,
+	kanbanBoardExportPlanning,
 	useKanbanBoardPlanning,
 	useUpdateKanbanBoardPlanningLayout,
 } from "@react-client/common/api/queries/kanban-board";
+import { toast } from "@react-client/common/toasts";
 import { PlanningDockLayout } from "@react-client/features/tracker/planning/PlanningDockLayout";
 import type { PlanningDockLayoutHandle } from "@react-client/features/tracker/planning/PlanningDockLayout";
 import { PlanningKanbanImportButton } from "@react-client/features/tracker/planning/PlanningKanbanImportButton";
@@ -32,6 +35,7 @@ export function TrackerPlanningPage() {
 	const [presetOpen, setPresetOpen] = useState(false);
 	const [replacePreset, setReplacePreset] = useState(false);
 	const [panelsAnchor, setPanelsAnchor] = useState<null | HTMLElement>(null);
+	const [isExporting, setIsExporting] = useState(false);
 
 	const [layoutChosen, setLayoutChosen] = useState(false);
 	const [selectedReleaseId, setSelectedReleaseId] = useState<string | null>(
@@ -103,6 +107,28 @@ export function TrackerPlanningPage() {
 					backTo={commonRoutes.trackerPlannings.rootPath}
 				>
 					<Flex gap={8} alignItems="center" wrap="nowrap" style={{ flexShrink: 0 }}>
+						<Button
+							size="small"
+							variant="outlined"
+							disabled={isExporting}
+							sx={{ flexShrink: 0, whiteSpace: "nowrap" }}
+							title="Скачать планирование: общий список по группам и листы по релизам"
+							onClick={() => {
+								setIsExporting(true);
+								void kanbanBoardExportPlanning(data.id)
+									.then((blob) => {
+										const date = new Date().toISOString().slice(0, 10);
+										downloadBlob(
+											blob,
+											`tracker-planning-${data.code}-${date}.xlsx`,
+										);
+									})
+									.catch((caught) => toast.error(apiErrorMessage(caught)))
+									.finally(() => setIsExporting(false));
+							}}
+						>
+							{isExporting ? "Экспорт…" : "Экспорт XLSX"}
+						</Button>
 						<PlanningKanbanImportButton
 							planningId={data.id}
 							releaseId={activeReleaseId}

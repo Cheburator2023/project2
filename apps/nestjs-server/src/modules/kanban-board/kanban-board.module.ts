@@ -17,6 +17,7 @@ import { KanbanBoardReleaseEntity } from "./entities/kanban-board-release.entity
 import { KanbanBoardReleaseThemeEntity } from "./entities/kanban-board-release-theme.entity";
 import { KanbanBoardReleaseTaskEntity } from "./entities/kanban-board-release-task.entity";
 import { KanbanBoardPlanningEntity } from "./entities/kanban-board-planning.entity";
+import { KanbanBoardPlanningTaskEntity } from "./entities/kanban-board-planning-task.entity";
 import { KanbanBoardController } from "./controllers/kanban-board.controller";
 import { KanbanBoardService } from "./services/kanban-board.service";
 import { KanbanBoardRegistryService } from "./services/kanban-board-registry.service";
@@ -55,6 +56,7 @@ import { KanbanGateway } from "./gateways/kanban.gateway";
 			KanbanBoardReleaseThemeEntity,
 			KanbanBoardReleaseTaskEntity,
 			KanbanBoardPlanningEntity,
+			KanbanBoardPlanningTaskEntity,
 		]),
 	],
 	controllers: [KanbanBoardController],

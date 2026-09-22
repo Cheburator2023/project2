@@ -1,5 +1,4 @@
-import Button from "@mui/material/Button";
-import type { ColDef } from "ag-grid-community";
+import type { ColDef, ICellRendererParams } from "ag-grid-community";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { useKanbanBoardAssignees } from "@react-client/common/api/queries/kanban-board";
 import { TrackerRegistryGrid } from "@react-client/features/tracker/components/TrackerRegistryGrid";
@@ -7,29 +6,25 @@ import { usePlanningWorkspace } from "@react-client/features/tracker/planning/Pl
 import {
 	buildPlanningAssigneeLoadFooter,
 	buildPlanningAssigneeLoadRows,
-	type PlanningAssigneeLoadRow,
 } from "@react-client/features/tracker/planning/planningAssigneeLoad";
 import {
-	KANBAN_BOARD_PLANNING_UNTHEMED_ID,
+	kanbanBoardReleaseVisibleOnBoard,
 	kanbanBoardTaskReleaseLabel,
+	type KanbanBoardReleaseTaskDto,
 } from "@smart-anketa/api-contract";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
-type LoadView = "total" | "releases" | "themes";
-
-const VIEW_OPTIONS: Array<{ id: LoadView; label: string; title: string }> = [
-	{ id: "total", label: "Общий", title: "Сумма человеко-дней по исполнителям" },
-	{
-		id: "releases",
-		label: "Релизы",
-		title: "Разрез по релизам планирования",
-	},
-	{
-		id: "themes",
-		label: "Группы",
-		title: "Разрез по группам плана",
-	},
-];
+type AssigneeGridRow = {
+	id: string;
+	rowKind: "release" | "assignee";
+	title: string;
+	roleTitle: string;
+	taskCount: number;
+	totalPd: number;
+	capacityPd?: number;
+	loadPercent?: number;
+	children?: AssigneeGridRow[];
+};
 
 function formatPd(value: unknown, emptyZero = false): string {
 	const parsed = Number(value);
@@ -44,45 +39,112 @@ function formatPercent(value: unknown): string {
 	return `${Math.round(parsed)}%`;
 }
 
-const GRID_STATE_KEY: Record<LoadView, string> = {
-	total: "tracker.planning.assignees",
-	releases: "tracker.planning.assignees.releases",
-	themes: "tracker.planning.assignees.themes",
-};
+function taskOpenReleaseIds(
+	task: KanbanBoardReleaseTaskDto,
+	openReleaseIds: Set<string>,
+): string[] {
+	const ids = task.releaseIds?.length
+		? task.releaseIds
+		: task.releaseId
+			? [task.releaseId]
+			: [];
+	return ids.filter((id) => openReleaseIds.has(id));
+}
+
+function GroupTitleRenderer(params: ICellRendererParams<AssigneeGridRow>) {
+	const row = params.data;
+	if (!row) return "";
+	if (row.rowKind === "release") {
+		const label = `${row.title} (${row.taskCount})`;
+		return <span title={label}>{label}</span>;
+	}
+	return row.title;
+}
 
 export function PlanningAssigneesPanel() {
 	const { planning } = usePlanningWorkspace();
 	const assigneesQuery = useKanbanBoardAssignees();
-	const [view, setView] = useState<LoadView>("total");
 
-	const rows = useMemo(
-		() =>
-			buildPlanningAssigneeLoadRows({
-				tasks: planning.tasks,
-				directory: assigneesQuery.data ?? [],
-			}),
-		[assigneesQuery.data, planning.tasks],
-	);
+	const rowData = useMemo(() => {
+		const openReleases = planning.releases.filter((release) =>
+			kanbanBoardReleaseVisibleOnBoard(release.status),
+		);
+		const openIds = new Set(openReleases.map((release) => release.id));
+		const directory = assigneesQuery.data ?? [];
+		const sections = openReleases.map((release) => ({
+			id: release.id,
+			title: kanbanBoardTaskReleaseLabel(release),
+			tasks: planning.tasks
+				.filter((task) => taskOpenReleaseIds(task, openIds).includes(release.id))
+				.map((task) => ({ ...task, releaseId: release.id })),
+		}));
+		const withoutRelease = planning.tasks.filter(
+			(task) => taskOpenReleaseIds(task, openIds).length === 0,
+		);
+		if (withoutRelease.length) {
+			sections.push({
+				id: "",
+				title: "Без релиза",
+				tasks: withoutRelease.map((task) => ({ ...task, releaseId: "" })),
+			});
+		}
 
-	const footer = useMemo(
-		() => [buildPlanningAssigneeLoadFooter(rows, planning.tasks.length)],
-		[planning.tasks.length, rows],
-	);
+		return sections
+			.filter((section) => section.tasks.length > 0)
+			.map((section): AssigneeGridRow => {
+				const loadRows = buildPlanningAssigneeLoadRows({
+					tasks: section.tasks,
+					directory,
+				});
+				const totals = buildPlanningAssigneeLoadFooter(
+					loadRows,
+					section.tasks.length,
+				);
+				return {
+					id: `release:${section.id || "none"}`,
+					rowKind: "release",
+					title: section.title,
+					roleTitle: "",
+					taskCount: totals.taskCount,
+					totalPd: totals.totalPd,
+					children: loadRows.map((row) => ({
+						id: `release:${section.id || "none"}:${row.assigneeName}`,
+						rowKind: "assignee" as const,
+						title: row.assigneeName,
+						roleTitle: row.roleTitle,
+						taskCount: row.taskCount,
+						totalPd: row.totalPd,
+						capacityPd: row.capacityPd,
+						loadPercent: row.loadPercent,
+					})),
+				};
+			});
+	}, [assigneesQuery.data, planning.releases, planning.tasks]);
 
-	const columnDefs = useMemo<ColDef<PlanningAssigneeLoadRow>[]>(() => {
-		const base: ColDef<PlanningAssigneeLoadRow>[] = [
-			{
-				colId: "assigneeName",
-				headerName: "Исполнитель",
-				flex: 1.2,
-				minWidth: 160,
-				valueGetter: (params) => params.data?.assigneeName ?? "",
+	const autoGroupColumnDef = useMemo<ColDef<AssigneeGridRow>>(
+		() => ({
+			colId: "groupTitle",
+			headerName: "Релиз",
+			minWidth: 220,
+			flex: 1.4,
+			sortable: false,
+			valueGetter: (params) => params.data?.title ?? "",
+			cellRendererParams: {
+				suppressCount: true,
+				innerRenderer: GroupTitleRenderer,
 			},
+		}),
+		[],
+	);
+
+	const columnDefs = useMemo<ColDef<AssigneeGridRow>[]>(
+		() => [
 			{
 				colId: "roleTitle",
 				headerName: "Роль",
 				width: 140,
-				valueGetter: (params) => params.data?.roleTitle ?? "",
+				valueGetter: (params) =>
+					params.data?.rowKind === "assignee" ? params.data.roleTitle : "",
 			},
 			{
 				colId: "taskCount",
@@ -104,7 +166,8 @@ export function PlanningAssigneesPanel() {
 				headerName: "Ёмкость, чд",
 				width: 120,
 				type: "numericColumn",
-				valueGetter: (params) => params.data?.capacityPd,
+				valueGetter: (params) =>
+					params.data?.rowKind === "assignee" ? params.data.capacityPd : undefined,
 				valueFormatter: (params) => formatPd(params.value, true),
 			},
 			{
@@ -112,56 +175,15 @@ export function PlanningAssigneesPanel() {
 				headerName: "Загрузка",
 				width: 110,
 				type: "numericColumn",
-				valueGetter: (params) => params.data?.loadPercent,
+				valueGetter: (params) =>
+					params.data?.rowKind === "assignee"
+						? params.data.loadPercent
+						: undefined,
 				valueFormatter: (params) => formatPercent(params.value),
 			},
-		];
-
-		if (view === "releases") {
-			return [
-				...base,
-				...planning.releases.map((release) => ({
-					colId: `release:${release.id}`,
-					headerName: kanbanBoardTaskReleaseLabel(release),
-					minWidth: 120,
-					flex: 1,
-					type: "numericColumn" as const,
-					valueGetter: (params: { data?: PlanningAssigneeLoadRow }) =>
-						params.data?.byRelease[release.id] ?? 0,
-					valueFormatter: (params: { value: unknown }) =>
-						formatPd(params.value, true),
-				})),
-			];
-		}
-
-		if (view === "themes") {
-			const themeColumns = planning.themes.map((theme) => ({
-				colId: `theme:${theme.id}`,
-				headerName: theme.name,
-				minWidth: 120,
-				flex: 1,
-				type: "numericColumn" as const,
-				valueGetter: (params: { data?: PlanningAssigneeLoadRow }) =>
-					params.data?.byTheme[theme.id] ?? 0,
-				valueFormatter: (params: { value: unknown }) =>
-					formatPd(params.value, true),
-			}));
-			themeColumns.push({
-				colId: `theme:${KANBAN_BOARD_PLANNING_UNTHEMED_ID}`,
-				headerName: "Без группы",
-				minWidth: 120,
-				flex: 1,
-				type: "numericColumn" as const,
-				valueGetter: (params: { data?: PlanningAssigneeLoadRow }) =>
-					params.data?.byTheme[KANBAN_BOARD_PLANNING_UNTHEMED_ID] ?? 0,
-				valueFormatter: (params: { value: unknown }) =>
-					formatPd(params.value, true),
-			});
-			return [...base, ...themeColumns];
-		}
-
-		return base;
-	}, [planning.releases, planning.themes, view]);
+		],
+		[],
+	);
 
 	return (
 		<Flex
@@ -171,30 +193,17 @@ export function PlanningAssigneesPanel() {
 			padding="8px"
 			gap={8}
 		>
-			<Flex gap={8} alignItems="center">
-				{VIEW_OPTIONS.map((option) => (
-					<Button
-						key={option.id}
-						size="small"
-						variant={view === option.id ? "contained" : "outlined"}
-						onClick={() => setView(option.id)}
-						title={option.title}
-					>
-						{option.label}
-					</Button>
-				))}
-			</Flex>
 			<Flex flexGrow={1} minHeight="0">
-				<TrackerRegistryGrid<PlanningAssigneeLoadRow>
-					gridStateKey={GRID_STATE_KEY[view]}
-					rowData={rows}
+				<TrackerRegistryGrid<AssigneeGridRow>
+					gridStateKey="tracker.planning.assignees"
+					rowData={rowData}
 					columnDefs={columnDefs}
+					autoGroupColumnDef={autoGroupColumnDef}
+					treeData
+					treeDataChildrenField="children"
 					pagination={false}
 					loading={assigneesQuery.isLoading}
-					pinnedBottomRowData={rows.length ? footer : undefined}
-					getRowId={(params) =>
-						params.data?.assigneeName ?? "planning-assignee"
-					}
+					getRowId={(params) => params.data?.id ?? "planning-assignee"}
 				/>
 			</Flex>
 		</Flex>
