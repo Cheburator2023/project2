@@ -178,10 +178,8 @@ function parseBlocker(value: unknown): boolean {
 }
 
 function parseAssigneeList(value: unknown): string[] {
-	return String(value ?? "")
-		.split(/[,;]/)
-		.map((item) => item.trim())
-		.filter(Boolean);
+	const items = Array.isArray(value) ? value : String(value ?? "").split(/[,;]/);
+	return items.map((item) => String(item).trim()).filter(Boolean);
 }
 
 function resolveSprintId(

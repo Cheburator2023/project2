@@ -96,6 +96,10 @@ describe("applyPlanningTaskFieldToTask", () => {
 		).toBe(true);
 		expect(row.content.systems).toEqual(["sum", "shell"]);
 		expect(row.systemTitle).toBe("SUM, Shell");
+		expect(
+			applyPlanningTaskFieldToTask(row, "system", ["SUM", "Smart Anketa"]),
+		).toBe(true);
+		expect(row.content.systems).toEqual(["sum", "smart-anketa"]);
 	});
 
 	it("sums role estimates into the total person-days", () => {

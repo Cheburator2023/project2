@@ -25,12 +25,16 @@ import {
 import {
 	KANBAN_BOARD_PRIORITIES,
 	KANBAN_BOARD_ROLE_ESTIMATE_FIELDS,
+	KANBAN_BOARD_STANDS,
 	KANBAN_BOARD_STATUSES,
+	KANBAN_BOARD_SYSTEMS,
 	KANBAN_BOARD_TASK_DESCRIPTION_MAX_LENGTH,
 	KANBAN_BOARD_TASK_TITLE_MAX_LENGTH,
 	KANBAN_BOARD_TASK_TYPES,
 	KANBAN_BOARD_WORK_TYPES,
 	kanbanBoardEffectiveEstimatePd,
+	kanbanBoardStandTitle,
+	kanbanBoardSystemTitle,
 	kanbanBoardSubtasksProgress,
 	kanbanBoardTaskAssignees,
 	kanbanBoardTaskStands,
@@ -63,6 +67,21 @@ function uniqueSelectValues(
 
 function catalogTitles(items: ReadonlyArray<{ title: string }>): string[] {
 	return items.map((item) => item.title);
+}
+
+function multiCatalogEditor<T>(
+	values: (params: ICellRendererParams<T>) => string[],
+): Pick<ColDef<T>, "cellEditor" | "cellEditorPopup" | "cellEditorParams"> {
+	return {
+		cellEditor: "agRichSelectCellEditor",
+		cellEditorPopup: true,
+		cellEditorParams: (params: ICellRendererParams<T>) => ({
+			values: values(params),
+			multiSelect: true,
+			searchType: "fuzzy",
+			valueListMaxHeight: 280,
+		}),
+	};
 }
 
 export function createPlanningTaskFieldColDefs<T>(input: {
@@ -249,14 +268,31 @@ export function createPlanningTaskFieldColDefs<T>(input: {
 			headerName: "Исполнители",
 			minWidth: 160,
 			flex: 0.9,
-			cellEditor: "agTextCellEditor",
+			...multiCatalogEditor<T>((params) => {
+				const task = getTask(params.data);
+				const selected = task
+					? task.assignees.length
+						? task.assignees
+						: kanbanBoardTaskAssignees(task.content)
+					: [];
+				return uniqueSelectValues(lookups.assigneeNames, selected).filter(
+					Boolean,
+				);
+			}),
 			valueGetter: (params) => {
 				const task = getTask(params.data);
+				if (!task) return [];
+				return task.assignees.length
+					? task.assignees
+					: kanbanBoardTaskAssignees(task.content);
+			},
+			filterValueGetter: (params) => {
+				const task = getTask(params.data);
 				if (!task) return "";
-				return (
-					task.assigneeTitle ||
-					kanbanBoardTaskAssignees(task.content).join(", ")
-				);
+				const names = task.assignees.length
+					? task.assignees
+					: kanbanBoardTaskAssignees(task.content);
+				return names.join(", ");
 			},
 			cellRenderer: (params: ICellRendererParams<T>) =>
 				taskRenderer(params, (task) => (
@@ -448,8 +484,28 @@ export function createPlanningTaskFieldColDefs<T>(input: {
 		editableCol("stand", {
 			headerName: "Стенд",
 			width: 180,
-			cellEditor: "agTextCellEditor",
+			...multiCatalogEditor<T>((params) => {
+				const task = getTask(params.data);
+				const selected = task
+					? (task.stands?.length
+							? task.stands
+							: kanbanBoardTaskStands(task.content)
+						).map((id) => kanbanBoardStandTitle(id))
+					: [];
+				return uniqueSelectValues(
+					catalogTitles(KANBAN_BOARD_STANDS),
+					selected,
+				).filter(Boolean);
+			}),
 			valueGetter: (params) => {
+				const task = getTask(params.data);
+				if (!task) return [];
+				return (task.stands?.length
+					? task.stands
+					: kanbanBoardTaskStands(task.content)
+				).map((id) => kanbanBoardStandTitle(id));
+			},
+			filterValueGetter: (params) => {
 				const task = getTask(params.data);
 				if (!task) return "";
 				return task.standTitle || kanbanBoardTaskStandsTitle(task.content);
@@ -470,14 +526,31 @@ export function createPlanningTaskFieldColDefs<T>(input: {
 		editableCol("system", {
 			headerName: "Система",
 			width: 180,
-			cellEditor: "agTextCellEditor",
+			...multiCatalogEditor<T>((params) => {
+				const task = getTask(params.data);
+				const selected = task
+					? (task.systems?.length
+							? task.systems
+							: kanbanBoardTaskSystems(task.content)
+						).map((id) => kanbanBoardSystemTitle(id))
+					: [];
+				return uniqueSelectValues(
+					catalogTitles(KANBAN_BOARD_SYSTEMS),
+					selected,
+				).filter(Boolean);
+			}),
 			valueGetter: (params) => {
 				const task = getTask(params.data);
+				if (!task) return [];
+				return (task.systems?.length
+					? task.systems
+					: kanbanBoardTaskSystems(task.content)
+				).map((id) => kanbanBoardSystemTitle(id));
+			},
+			filterValueGetter: (params) => {
+				const task = getTask(params.data);
 				if (!task) return "";
-				return (
-					task.systemTitle ||
-					kanbanBoardTaskSystemsTitle(task.content)
-				);
+				return task.systemTitle || kanbanBoardTaskSystemsTitle(task.content);
 			},
 			cellRenderer: (params: ICellRendererParams<T>) =>
 				taskRenderer(params, (task) => (
