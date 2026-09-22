@@ -67,6 +67,7 @@ import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { Header } from "@react-client/common/navigation/organisms/Header";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
+import { toast } from "@react-client/common/toasts";
 import {
 	useCreateKanbanBoardTask,
 	useKanbanBoardAssignees,
@@ -994,6 +995,124 @@ export function KanbanTaskPage({
 		title.length,
 		KANBAN_BOARD_TASK_TITLE_MAX_LENGTH,
 	);
+
+	useEffect(() => {
+		const id = "kanban-task-content-length";
+		if (!showForm || !contentLengthError) {
+			toast.dismiss(id);
+			return;
+		}
+		toast.error(
+			`${contentLengthError}. Сохранение заблокировано, пока текст не уложится в лимит.`,
+			{ id, duration: Number.POSITIVE_INFINITY },
+		);
+		return () => {
+			toast.dismiss(id);
+		};
+	}, [contentLengthError, showForm]);
+
+	useEffect(() => {
+		const id = "kanban-task-handoff";
+		if (!showForm || isCreate || !handoffPending) {
+			toast.dismiss(id);
+			return;
+		}
+		toast.warning(
+			kanbanBoardAssigneeHandoffTitle({
+				currentAssignee,
+				assigneeHandoffFrom: handoffFrom || undefined,
+			}),
+			{
+				id,
+				duration: Number.POSITIVE_INFINITY,
+				action: formLocked
+					? undefined
+					: {
+							label: "Взял в работу",
+							onClick: () => {
+								void handleSaveRef.current(undefined, { pickup: true });
+							},
+						},
+			},
+		);
+		return () => {
+			toast.dismiss(id);
+		};
+	}, [
+		currentAssignee,
+		formLocked,
+		handoffFrom,
+		handoffPending,
+		isCreate,
+		showForm,
+	]);
+
+	useEffect(() => {
+		const id = "kanban-task-save-error";
+		const failed = createTask.isError || updateTask.isError;
+		if (!showForm || !failed) {
+			toast.dismiss(id);
+			return;
+		}
+		toast.error(
+			apiErrorMessage(createTask.error ?? updateTask.error) ||
+				(isCreate
+					? "Не удалось создать задачу"
+					: "Не удалось сохранить задачу"),
+			{ id, duration: Number.POSITIVE_INFINITY },
+		);
+		return () => {
+			toast.dismiss(id);
+		};
+	}, [
+		createTask.error,
+		createTask.isError,
+		isCreate,
+		showForm,
+		updateTask.error,
+		updateTask.isError,
+	]);
+
+	useEffect(() => {
+		const id = "kanban-task-foreign-lock";
+		if (!showForm || !isLockedByOther || !foreignLock) {
+			toast.dismiss(id);
+			return;
+		}
+		toast.warning(
+			`Задача сейчас редактируется: ${foreignLock.lockedByLabel}. Поля заблокированы до освобождения.`,
+			{ id, duration: Number.POSITIVE_INFINITY },
+		);
+		return () => {
+			toast.dismiss(id);
+		};
+	}, [foreignLock, isLockedByOther, showForm]);
+
+	useEffect(() => {
+		const id = "kanban-task-remote-stale";
+		if (!showForm || !remoteStale) {
+			toast.dismiss(id);
+			return;
+		}
+		toast.info(
+			"На сервере есть более новая версия, а у вас есть несохранённые изменения. Обновите данные (локальные правки будут потеряны) или досохраните и разрешите конфликт.",
+			{
+				id,
+				duration: Number.POSITIVE_INFINITY,
+				action: {
+					label: "Обновить",
+					onClick: () => {
+						void taskByRefQuery
+							.refetch()
+							.then(() => setRemoteStale(false));
+					},
+				},
+			},
+		);
+		return () => {
+			toast.dismiss(id);
+		};
+	}, [remoteStale, showForm, taskByRefQuery.refetch]);
 	const createDisabled =
 		!title.trim() ||
 		!effectiveBoardId ||
@@ -1184,71 +1303,6 @@ export function KanbanTaskPage({
 						description={`Задача ${taskKey} отсутствует или недоступна.`}
 					/>
 				) : null}
-				{showForm && contentLengthError ? (
-					<Alert severity="error" sx={{ mx: { xs: 1.5, md: 2 }, mt: 1 }}>
-						{contentLengthError}. Сохранение заблокировано, пока текст не
-						уложится в лимит.
-					</Alert>
-				) : null}
-				{showForm && !isCreate && handoffPending ? (
-					<Alert
-						severity="warning"
-						sx={{ mx: { xs: 1.5, md: 2 }, mt: 1 }}
-						action={
-							<Button
-								color="inherit"
-								size="small"
-								disabled={formLocked}
-								onClick={() => void handleSave(undefined, { pickup: true })}
-							>
-								Взял в работу
-							</Button>
-						}
-					>
-						{kanbanBoardAssigneeHandoffTitle({
-							currentAssignee,
-							assigneeHandoffFrom: handoffFrom || undefined,
-						})}
-					</Alert>
-				) : null}
-				{showForm && (createTask.isError || updateTask.isError) ? (
-					<Alert severity="error" sx={{ mx: { xs: 1.5, md: 2 }, mt: 1 }}>
-						{apiErrorMessage(createTask.error ?? updateTask.error) ||
-							(isCreate
-								? "Не удалось создать задачу"
-								: "Не удалось сохранить задачу")}
-					</Alert>
-				) : null}
-				{showForm && isLockedByOther && foreignLock ? (
-					<Alert severity="warning" sx={{ mx: { xs: 1.5, md: 2 }, mt: 1 }}>
-						Задача сейчас редактируется: {foreignLock.lockedByLabel}. Поля
-						заблокированы до освобождения.
-					</Alert>
-				) : null}
-				{showForm && remoteStale ? (
-					<Alert
-						severity="info"
-						sx={{ mx: { xs: 1.5, md: 2 }, mt: 1 }}
-						action={
-							<Button
-								color="inherit"
-								size="small"
-								onClick={() => {
-									void taskByRefQuery
-										.refetch()
-										.then(() => setRemoteStale(false));
-								}}
-							>
-								Обновить
-							</Button>
-						}
-					>
-						На сервере есть более новая версия, а у вас есть несохранённые
-						изменения. Обновите данные (локальные правки будут потеряны) или
-						досохраните и разрешите конфликт.
-					</Alert>
-				) : null}
-
 				{showForm ? (
 					<Flex
 						flexGrow={1}
