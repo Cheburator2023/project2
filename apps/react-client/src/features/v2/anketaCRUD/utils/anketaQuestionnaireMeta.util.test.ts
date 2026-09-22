@@ -55,11 +55,12 @@ describe("anketaQuestionnaireMeta.util", () => {
 		);
 	});
 
-	it("builds version calcName with suffix", () => {
-		expect(buildQuestionnaireVersionCalcName("Проект А", 3)).toBe(
-			"Проект А (версия 3)",
-		);
-		expect(buildQuestionnaireVersionCalcName("x".repeat(260), 12).length).toBeLessThanOrEqual(
+	it("keeps calcName when creating the next version", () => {
+		expect(buildQuestionnaireVersionCalcName("Проект А")).toBe("Проект А");
+		expect(
+			buildQuestionnaireVersionCalcName("Анкета тест 3 (версия 2)"),
+		).toBe("Анкета тест 3 (версия 2)");
+		expect(buildQuestionnaireVersionCalcName("x".repeat(260)).length).toBeLessThanOrEqual(
 			255,
 		);
 	});

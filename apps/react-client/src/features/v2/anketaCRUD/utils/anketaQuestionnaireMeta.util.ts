@@ -98,15 +98,11 @@ export function buildQuestionnaireCopyCalcName(sourceName: string): string {
 	return `${trimmedBase}${suffix}`;
 }
 
-/** Предложение названия для новой версии в серии. */
-export function buildQuestionnaireVersionCalcName(
-	sourceName: string,
-	nextVersion: string | number,
-): string {
+/**
+ * Название новой версии совпадает с исходным.
+ * Номер версии живёт в поле version, не в calcName.
+ */
+export function buildQuestionnaireVersionCalcName(sourceName: string): string {
 	const base = normalizeQuestionnaireCalcName(sourceName) || "Анкета";
-	const suffix = ` (версия ${nextVersion})`;
-	const maxBaseLen = 255 - suffix.length;
-	const trimmedBase =
-		base.length > maxBaseLen ? base.slice(0, maxBaseLen).trimEnd() : base;
-	return `${trimmedBase}${suffix}`;
+	return base.length > 255 ? base.slice(0, 255).trimEnd() : base;
 }

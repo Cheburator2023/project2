@@ -34,6 +34,7 @@ import {
 	syncTriggerGatedGroupActivationFromTypicalWorks,
 	resolveV2QuestionnaireUncertaintyCoefficient,
 	syncAtypicalWorkCoefficientsInFormData,
+	withApprovedWorkflowGlobalStatus,
 	type V2LogicGraphDto,
 	type V2TemplateVersionDto,
 } from "@smart-anketa/api-contract";
@@ -99,7 +100,11 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 		if (!hydrationKey || hydratedKeyRef.current === hydrationKey) return;
 
 		if (source?.initialJsonSchema && source.initialUiSchema && source.initialLogic) {
-			setJsonSchema(coerceJsonSchema(source.initialJsonSchema));
+			setJsonSchema(
+				withApprovedWorkflowGlobalStatus(
+					coerceJsonSchema(source.initialJsonSchema) as Record<string, unknown>,
+				) as RJSFSchema,
+			);
 			setUiSchema(coerceUiSchema(source.initialUiSchema, source.initialJsonSchema));
 			setLogic(
 				coerceLogicGraph(
@@ -117,7 +122,11 @@ export function useV2AnketaSchemaEngine(source: V2AnketaSchemaEngineSource | nul
 			return;
 		}
 		if (!version?.id) return;
-		setJsonSchema(coerceJsonSchema(version.jsonSchema));
+		setJsonSchema(
+			withApprovedWorkflowGlobalStatus(
+				coerceJsonSchema(version.jsonSchema) as Record<string, unknown>,
+			) as RJSFSchema,
+		);
 		setUiSchema(coerceUiSchema(version.uiSchema, version.jsonSchema));
 		setLogic(
 			coerceLogicGraph(
