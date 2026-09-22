@@ -47,8 +47,9 @@ import {
 	kanbanBoardRelatedLinksDiff,
 	applyKanbanBoardRelatedLinkInverse,
 	normalizeTrackerCode,
+	boardKeyToSlug,
 	formatKanbanBoardKey,
-	formatKanbanTaskKey,
+	formatKanbanTaskKeyForBoard,
 	parseKanbanBoardKey,
 	parseKanbanTaskKey,
 	pickKanbanBoardColumnColor,
@@ -752,11 +753,14 @@ export class KanbanBoardRegistryService {
 		});
 		if (!project) throw new NotFoundException("Проект не найден");
 
+		const slug = this.resolveBoardSlugFromDto(dto, project.code);
+		await this.ensureBoardSlugAvailable(project.id, project.code, slug);
+
 		const entity = this.boardRepository.create({
 			id: ulid(),
 			projectId: dto.projectId,
 			name: dto.name.trim(),
-			slug: normalizeTrackerCode(dto.slug),
+			slug,
 			description: dto.description?.trim() || null,
 			sortOrder: dto.sortOrder ?? 0,
 			createdBy: dto.createdBy?.trim() || null,
@@ -962,13 +966,25 @@ export class KanbanBoardRegistryService {
 			board.project = project;
 		}
 		if (dto.name !== undefined) board.name = dto.name.trim();
-		if (dto.slug !== undefined) {
-			board.slug = normalizeTrackerCode(dto.slug);
+		if (dto.boardKey !== undefined || dto.slug !== undefined) {
+			board.slug = this.resolveBoardSlugFromDto(dto, board.project?.code ?? "");
 		}
 		if (dto.description !== undefined) {
 			board.description = dto.description?.trim() || null;
 		}
 		if (dto.sortOrder !== undefined) board.sortOrder = dto.sortOrder;
+		if (
+			dto.boardKey !== undefined ||
+			dto.slug !== undefined ||
+			dto.projectId !== undefined
+		) {
+			await this.ensureBoardSlugAvailable(
+				board.projectId,
+				board.project?.code ?? "",
+				board.slug,
+				board.id,
+			);
+		}
 
 		await this.boardRepository.save(board);
 		const taskCount = await this.taskRepository.count({
@@ -1710,7 +1726,11 @@ export class KanbanBoardRegistryService {
 		await this.historyService.logTaskChanges({
 			boardId: entity.boardId,
 			taskId: entity.id,
-			taskKey: formatKanbanTaskKey(board.project?.code ?? "", taskNumber),
+			taskKey: formatKanbanTaskKeyForBoard(
+				board.project?.code ?? "",
+				board.slug,
+				taskNumber,
+			),
 			taskTitle: content.title,
 			changes: [
 				{
@@ -2280,6 +2300,42 @@ export class KanbanBoardRegistryService {
 			.getOne();
 	}
 
+	private resolveBoardSlugFromDto(
+		dto: Pick<CreateKanbanBoardBoardRequestDto, "slug" | "boardKey">,
+		projectCode: string,
+	): string {
+		const rawKey = dto.boardKey?.trim();
+		if (rawKey) {
+			return boardKeyToSlug(rawKey, projectCode);
+		}
+		const rawSlug = dto.slug?.trim();
+		if (rawSlug) {
+			return normalizeTrackerCode(rawSlug);
+		}
+		throw new BadRequestException("Укажите ключ доски");
+	}
+
+	private async ensureBoardSlugAvailable(
+		_projectId: string,
+		projectCode: string,
+		slug: string,
+		excludeBoardId?: string,
+	): Promise<void> {
+		const publicKey = formatKanbanBoardKey(projectCode, slug);
+		const boards = await this.boardRepository.find({
+			relations: { project: true },
+		});
+		const clash = boards.find(
+			(board) =>
+				board.id !== excludeBoardId &&
+				formatKanbanBoardKey(board.project?.code ?? "", board.slug) ===
+					publicKey,
+		);
+		if (clash) {
+			throw new BadRequestException(`Доска с ключом «${publicKey}» уже есть`);
+		}
+	}
+
 	private async findBoardByProjectIdAndNormalizedSlug(
 		projectId: string,
 		slug: string,
@@ -2305,20 +2361,57 @@ export class KanbanBoardRegistryService {
 		});
 		if (byId) return byId;
 
+		const normalized = normalizeTrackerCode(trimmed);
+		const boards = await this.boardRepository.find({
+			relations: { project: true },
+		});
+		const byPublicKey = boards.find(
+			(board) =>
+				formatKanbanBoardKey(board.project?.code ?? "", board.slug) ===
+				normalized,
+		);
+		if (byPublicKey) return byPublicKey;
+
 		const parsed = parseKanbanBoardKey(trimmed, await this.listProjectCodes());
-		if (!parsed) {
-			throw new NotFoundException("Доска не найдена");
+		if (parsed) {
+			const project = await this.findProjectByNormalizedCode(parsed.projectCode);
+			if (project) {
+				const byLegacySlug = await this.findBoardByProjectIdAndNormalizedSlug(
+					project.id,
+					parsed.boardSlug,
+				);
+				if (byLegacySlug) return byLegacySlug;
+			}
 		}
 
-		const project = await this.findProjectByNormalizedCode(parsed.projectCode);
-		if (!project) throw new NotFoundException("Доска не найдена");
+		throw new NotFoundException("Доска не найдена");
+	}
 
-		const board = await this.findBoardByProjectIdAndNormalizedSlug(
-			project.id,
-			parsed.boardSlug,
+	private async findTaskByBoardKeyAndNumber(
+		boardKey: string,
+		taskNumber: number,
+	): Promise<KanbanBoardTaskEntity | null> {
+		const normalizedKey = normalizeTrackerCode(boardKey);
+		const boards = await this.boardRepository.find({
+			relations: { project: true },
+		});
+		const matches = boards.filter(
+			(board) =>
+				formatKanbanBoardKey(board.project?.code ?? "", board.slug) ===
+				normalizedKey,
 		);
-		if (!board) throw new NotFoundException("Доска не найдена");
-		return board;
+		if (!matches.length) return null;
+		return this.taskRepository.findOne({
+			where: {
+				boardId:
+					matches.length === 1
+						? matches[0]!.id
+						: In(matches.map((board) => board.id)),
+				taskNumber,
+				deletedAt: IsNull(),
+			},
+			relations: { board: { project: true }, project: true },
+		});
 	}
 
 	private async findTaskEntityByRef(ref: string): Promise<KanbanBoardTaskEntity> {
@@ -2332,6 +2425,12 @@ export class KanbanBoardRegistryService {
 
 		const parsed = parseKanbanTaskKey(trimmed);
 		if (!parsed) throw new NotFoundException("Задача не найдена");
+
+		const byBoardKey = await this.findTaskByBoardKeyAndNumber(
+			parsed.projectCode,
+			parsed.taskNumber,
+		);
+		if (byBoardKey) return byBoardKey;
 
 		const byBoardProject = await this.taskRepository
 			.createQueryBuilder("task")
@@ -2564,7 +2663,11 @@ export class KanbanBoardRegistryService {
 			deletedAt: task.deletedAt ?? null,
 			projectCode,
 			projectName: task.board?.project?.name ?? task.project?.name ?? "",
-			taskKey: formatKanbanTaskKey(projectCode, task.taskNumber),
+			taskKey: formatKanbanTaskKeyForBoard(
+				projectCode,
+				boardSlug,
+				task.taskNumber,
+			),
 			boardSlug,
 			boardName: task.board?.name ?? "",
 			boardKey: formatKanbanBoardKey(projectCode, boardSlug),

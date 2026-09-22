@@ -42,6 +42,9 @@ describe("kanban-board-task-filter", () => {
 		});
 		expect(kanbanBoardTaskMatchesSearch(item, "интегр", "PRJ")).toBe(true);
 		expect(kanbanBoardTaskMatchesSearch(item, "PRJ-12", "PRJ")).toBe(true);
+		expect(kanbanBoardTaskMatchesSearch(item, "PRJ-COMMON-12", "PRJ-COMMON")).toBe(
+			true,
+		);
 		expect(kanbanBoardTaskMatchesSearch(item, "несуществующее", "PRJ")).toBe(
 			false,
 		);

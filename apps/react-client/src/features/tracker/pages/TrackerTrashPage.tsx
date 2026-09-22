@@ -91,7 +91,7 @@ export function TrackerTrashPage() {
 				minWidth: 160,
 				valueGetter: (params) =>
 					trackerBoardFilterText({
-						boardSlug: params.data?.boardSlug,
+						boardKey: params.data?.boardKey,
 						boardName: params.data?.boardName,
 					}),
 				cellRenderer: (
@@ -99,7 +99,7 @@ export function TrackerTrashPage() {
 				) =>
 					params.data ? (
 						<TrackerBoardChips
-							boardSlug={params.data.boardSlug}
+							boardKey={params.data.boardKey}
 							boardName={params.data.boardName}
 						/>
 					) : null,

@@ -179,13 +179,13 @@ export function createPlanningTaskFieldColDefs<T>(input: {
 			minWidth: 120,
 			valueGetter: (params) =>
 				trackerBoardFilterText({
-					boardSlug: getTask(params.data)?.boardSlug,
+					boardKey: getTask(params.data)?.boardKey,
 					boardName: getTask(params.data)?.boardName,
 				}),
 			cellRenderer: (params: ICellRendererParams<T>) =>
 				taskRenderer(params, (task) => (
 					<TrackerBoardChips
-						boardSlug={task.boardSlug}
+						boardKey={task.boardKey}
 						boardName={task.boardName}
 					/>
 				)),

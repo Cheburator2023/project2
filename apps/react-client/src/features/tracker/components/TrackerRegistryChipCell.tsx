@@ -53,22 +53,29 @@ export function TrackerProjectChips({
 }
 
 type BoardChipFields = {
+	boardKey?: string;
+	/** @deprecated используйте boardKey */
 	boardSlug?: string;
 	boardName?: string;
 };
 
-export function TrackerBoardChips({ boardSlug, boardName }: BoardChipFields) {
-	if (!boardSlug && !boardName) {
+export function TrackerBoardChips({
+	boardKey,
+	boardSlug,
+	boardName,
+}: BoardChipFields) {
+	const key = boardKey?.trim() || boardSlug?.trim();
+	if (!key && !boardName) {
 		return null;
 	}
 
 	return (
 		<TrackerRegistryChipCell>
-			{boardSlug ? (
+			{key ? (
 				<TrackerRegistryChip
-					label={boardSlug}
+					label={key}
 					color="secondary"
-					title={`Slug доски: ${boardSlug}`}
+					title={`Ключ доски: ${key}`}
 				/>
 			) : null}
 		</TrackerRegistryChipCell>
@@ -89,6 +96,8 @@ export const trackerProjectFilterText = ({
 };
 
 export const trackerBoardFilterText = ({
+	boardKey,
 	boardSlug,
 	boardName,
-}: BoardChipFields) => [boardSlug, boardName].filter(Boolean).join(" ");
+}: BoardChipFields) =>
+	[boardKey, boardSlug, boardName].filter(Boolean).join(" ");

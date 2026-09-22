@@ -6,7 +6,7 @@ import { DataSource, IsNull, Not, Repository } from "typeorm";
 import type { KanbanBoardTaskRecord } from "@smart-anketa/api-contract";
 import {
 	applyKanbanBoardAssigneeHandoff,
-	formatKanbanTaskKey,
+	formatKanbanTaskKeyForBoard,
 	mergeKanbanBoardSubtaskImages,
 	normalizeKanbanBoardTaskContent,
 	pickKanbanBoardRelatedLinks,
@@ -167,8 +167,12 @@ export class KanbanBoardService {
 				if (!expected || expected === prev.updatedAt) continue;
 				conflicts.push({
 					taskId: task.id,
-					taskKey: board?.project?.code
-						? formatKanbanTaskKey(board.project.code, prev.taskNumber ?? 0)
+					taskKey: board
+						? formatKanbanTaskKeyForBoard(
+								board.project?.code ?? "",
+								board.slug,
+								prev.taskNumber ?? 0,
+							)
 						: task.id,
 					taskTitle: prev.content.title,
 					expectedUpdatedAt: expected,
@@ -249,8 +253,12 @@ export class KanbanBoardService {
 				content: task.content,
 			});
 			if (!prev) {
-				const taskKey = board?.project?.code
-					? formatKanbanTaskKey(board.project.code, task.taskNumber ?? 0)
+				const taskKey = board
+					? formatKanbanTaskKeyForBoard(
+							board.project?.code ?? "",
+							board.slug,
+							task.taskNumber ?? 0,
+						)
 					: task.id;
 				await this.historyService.logTaskChanges({
 					boardId,

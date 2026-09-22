@@ -14,7 +14,8 @@ function isTrackerCodeField(field: TrackerFormField): boolean {
 	return (
 		field.autoGenerate != null ||
 		field.name === "code" ||
-		field.name === "slug"
+		field.name === "slug" ||
+		field.name === "boardKey"
 	);
 }
 
@@ -53,14 +54,15 @@ export function TrackerFormDialog({
 	const [values, setValues] = useState<Record<string, string>>({});
 
 	useEffect(() => {
-		if (open) {
-			const next: Record<string, string> = {};
-			for (const field of fields) {
-				next[field.name] = initialValues[field.name] ?? "";
-			}
-			setValues(next);
+		if (!open) return;
+		const next: Record<string, string> = {};
+		for (const field of fields) {
+			next[field.name] = initialValues[field.name] ?? "";
 		}
-	}, [open, fields, initialValues]);
+		setValues(next);
+		// Только при открытии: иначе ререндер родителя затирает ввод (ключ доски).
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- open is the hydrate trigger
+	}, [open]);
 
 	const canSubmit = fields
 		.filter((field) => field.required)

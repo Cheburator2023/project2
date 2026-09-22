@@ -181,13 +181,13 @@ export function TrackerTasksPage() {
 				minWidth: 180,
 				valueGetter: (params) =>
 					trackerBoardFilterText({
-						boardSlug: params.data?.boardSlug,
+						boardKey: params.data?.boardKey,
 						boardName: params.data?.boardName,
 					}),
 				cellRenderer: (params: ICellRendererParams<KanbanBoardTaskRegistryDto>) =>
 					params.data ? (
 						<TrackerBoardChips
-							boardSlug={params.data.boardSlug}
+							boardKey={params.data.boardKey}
 							boardName={params.data.boardName}
 						/>
 					) : null,

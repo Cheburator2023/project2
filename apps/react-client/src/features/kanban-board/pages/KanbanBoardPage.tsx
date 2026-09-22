@@ -4,6 +4,7 @@ import FilterListIcon from "@mui/icons-material/FilterList";
 import HistoryIcon from "@mui/icons-material/History";
 import PublishIcon from "@mui/icons-material/Publish";
 import SearchIcon from "@mui/icons-material/Search";
+import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import Alert from "@mui/material/Alert";
 import Backdrop from "@mui/material/Backdrop";
 import Badge from "@mui/material/Badge";
@@ -104,6 +105,7 @@ import {
 import {
 	kanbanTaskEditPath,
 	trackerBoardHistoryPath,
+	trackerBoardPath,
 	type KanbanBoardReturnLocationState,
 } from "@react-client/features/kanban-board/kanban-task-paths";
 import { useCreateAndOpenKanbanTask } from "@react-client/features/kanban-board/useCreateAndOpenKanbanTask";
@@ -118,6 +120,7 @@ import {
 	parseKanbanBoardTaskFiltersFromSearchParams,
 	type KanbanBoardTaskFilters,
 } from "@react-client/features/kanban-board/kanban-board-task-filter";
+import { TrackerBoardSettingsDialog } from "@react-client/features/tracker/components/TrackerBoardSettingsDialog";
 import { TrackerTaskConflictDialog } from "@react-client/features/tracker/components/TrackerTaskConflictDialog";
 import { useTrackerBoardSync } from "@react-client/features/tracker/hooks/useTrackerBoardSync";
 import { useTrackerEditIdentity } from "@react-client/features/tracker/hooks/useTrackerEditIdentity";
@@ -174,6 +177,7 @@ export function KanbanBoardPage() {
 	);
 	const [remoteStale, setRemoteStale] = useState(false);
 	const [openingTaskLabel, setOpeningTaskLabel] = useState<string | null>(null);
+	const [boardSettingsOpen, setBoardSettingsOpen] = useState(false);
 	const searchQuery = parseKanbanBoardSearchQuery(searchParams);
 	const filters = useMemo(
 		() => parseKanbanBoardTaskFiltersFromSearchParams(searchParams),
@@ -568,7 +572,7 @@ export function KanbanBoardPage() {
 							!kanbanBoardTaskMatchesSearch(
 								item,
 								debouncedSearch,
-								boardMeta?.projectCode,
+								boardMeta?.boardKey,
 							)
 						) {
 							return false;
@@ -581,7 +585,7 @@ export function KanbanBoardPage() {
 		);
 	}, [
 		board,
-		boardMeta?.projectCode,
+		boardMeta?.boardKey,
 		debouncedSearch,
 		filters,
 		releasesQuery.data,
@@ -703,16 +707,16 @@ export function KanbanBoardPage() {
 	const handleCardClick = useCallback(
 		(_event: MouseEvent<HTMLDivElement>, card: BoardItem) => {
 			const task = tasksQuery.data?.find((item) => item.id === card.id);
-			const projectCode = boardMeta?.projectCode;
-			if (task?.taskNumber && projectCode) {
-				const taskRef = formatKanbanTaskKey(projectCode, task.taskNumber);
+			const boardKeyPrefix = boardMeta?.boardKey;
+			if (task?.taskNumber && boardKeyPrefix) {
+				const taskRef = formatKanbanTaskKey(boardKeyPrefix, task.taskNumber);
 				persistScroll();
 				setOpeningTaskLabel(taskRef);
 				navigate(kanbanTaskEditPath(taskRef), { state: boardReturnState });
 			}
 		},
 		[
-			boardMeta?.projectCode,
+			boardMeta?.boardKey,
 			boardReturnState,
 			navigate,
 			persistScroll,
@@ -815,7 +819,21 @@ export function KanbanBoardPage() {
 			data-test-id="kanban-board-page"
 			onContextMenu={handleBoardContextMenu}
 		>
-			<Header title={boardTitle}>
+			<Header
+				title={boardTitle}
+				trailingAccessory={
+					boardMeta ? (
+						<IconButton
+							size="small"
+							title="Настройки доски"
+							aria-label="Настройки доски"
+							onClick={() => setBoardSettingsOpen(true)}
+						>
+							<SettingsOutlinedIcon fontSize="small" />
+						</IconButton>
+					) : null
+				}
+			>
 				<Flex gap={6} wrap="wrap" alignItems="center">
 					<TextField
 						size="small"
@@ -1055,10 +1073,10 @@ export function KanbanBoardPage() {
 													data.parentId ?? column.id,
 												)}
 												taskKey={
-													boardMeta?.projectCode &&
+													boardMeta?.boardKey &&
 													(data as KanbanBoardItem).taskNumber
 														? formatKanbanTaskKey(
-																boardMeta.projectCode,
+																boardMeta.boardKey,
 																(data as KanbanBoardItem).taskNumber!,
 															)
 														: undefined
@@ -1198,6 +1216,19 @@ export function KanbanBoardPage() {
 					Отменить задачу
 				</MenuItem>
 			</Menu>
+			<TrackerBoardSettingsDialog
+				open={boardSettingsOpen}
+				board={boardMeta ?? null}
+				onClose={() => setBoardSettingsOpen(false)}
+				onSaved={(updated) => {
+					if (
+						normalizeTrackerCode(updated.boardKey) !==
+						normalizeTrackerCode(boardKey)
+					) {
+						navigate(trackerBoardPath(updated.boardKey), { replace: true });
+					}
+				}}
+			/>
 			<TrackerTaskConflictDialog
 				open={Boolean(editBlocked)}
 				error={editBlocked}

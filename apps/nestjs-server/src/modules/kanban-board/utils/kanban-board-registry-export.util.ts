@@ -110,7 +110,7 @@ function taskToExportRow(task: KanbanBoardTaskRegistryDto): Record<string, strin
 		dueDate: task.dueDate ?? "",
 		estimatePd: kanbanBoardEffectiveEstimatePd(task.content) ?? "",
 		project: `${task.projectCode} — ${task.projectName}`,
-		board: `${task.boardSlug} — ${task.boardName}`,
+		board: `${task.boardKey} — ${task.boardName}`,
 		taskType: task.taskTypeTitle,
 		workType: task.workTypeTitle,
 		assignee: task.assigneeTitle,

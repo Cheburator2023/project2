@@ -6,6 +6,8 @@ import {
 	useKanbanBoardProjects,
 	useUpdateKanbanBoardBoard,
 } from "@react-client/common/api/queries/kanban-board";
+import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
+import { toast } from "@react-client/common/toasts";
 import {
 	TrackerProjectChips,
 	TrackerRegistryChip,
@@ -15,10 +17,19 @@ import {
 import { TrackerRegistryPage } from "@react-client/features/tracker/components/TrackerRegistryPage";
 import { trackerDateFormatter } from "@react-client/features/tracker/components/TrackerRegistryGrid";
 import { useTrackerEditIdentity } from "@react-client/features/tracker/hooks/useTrackerEditIdentity";
+import {
+	trackerBoardFormFields,
+	trackerBoardFormValues,
+	trackerBoardProjectOptions,
+	trackerBoardWritePayload,
+} from "@react-client/features/tracker/trackerBoardForm";
 import type { KanbanBoardBoardDto } from "@smart-anketa/api-contract";
 import { useMemo } from "react";
 import { useNavigate } from "react-router";
-import { trackerBoardPath, trackerBoardHistoryPath } from "@react-client/features/kanban-board/kanban-task-paths";
+import {
+	trackerBoardPath,
+	trackerBoardHistoryPath,
+} from "@react-client/features/kanban-board/kanban-task-paths";
 
 export function TrackerBoardsPage() {
 	const navigate = useNavigate();
@@ -30,12 +41,12 @@ export function TrackerBoardsPage() {
 	const createdBy = useTrackerEditIdentity();
 
 	const projectOptions = useMemo(
-		() =>
-			projects.map((project) => ({
-				value: project.id,
-				label: `${project.code} — ${project.name}`,
-			})),
+		() => trackerBoardProjectOptions(projects),
 		[projects],
+	);
+	const formFields = useMemo(
+		() => trackerBoardFormFields(projectOptions),
+		[projectOptions],
 	);
 
 	const columnDefs = useMemo<ColDef<KanbanBoardBoardDto>[]>(
@@ -59,8 +70,7 @@ export function TrackerBoardsPage() {
 					) : null,
 			},
 			{ field: "name", headerName: "Доска", flex: 1.2, minWidth: 160 },
-			{ field: "boardKey", headerName: "Ключ", width: 140 },
-			{ field: "slug", headerName: "Slug", width: 120 },
+			{ field: "boardKey", headerName: "Ключ", width: 160 },
 			{
 				field: "taskCount",
 				headerName: "Задач",
@@ -120,39 +130,13 @@ export function TrackerBoardsPage() {
 			gridStateKey="tracker.boards"
 			title="доска"
 			createLabel="Создать доску"
-			searchPlaceholder="Поиск по проекту, названию, slug…"
+			searchPlaceholder="Поиск по проекту, названию, ключу…"
 			rowData={data}
 			columnDefs={columnDefs}
 			loading={isLoading}
-			formFields={[
-				{
-					name: "projectId",
-					label: "Проект",
-					type: "select",
-					required: true,
-					options: projectOptions,
-				},
-				{ name: "name", label: "Название", required: true },
-				{
-					name: "slug",
-					label: "Slug",
-					required: true,
-					autoGenerate: "brd",
-					helperText: "Генерируется автоматически, можно изменить",
-				},
-				{ name: "description", label: "Описание", type: "multiline" },
-				{ name: "sortOrder", label: "Порядок", type: "number" },
-			]}
-			getInitialFormValues={(row): any =>
-				row
-					? {
-							projectId: row.projectId,
-							name: row.name,
-							slug: row.slug,
-							description: row.description ?? "",
-							sortOrder: String(row.sortOrder),
-						}
-					: { sortOrder: "0" }
+			formFields={formFields}
+			getInitialFormValues={(row): Record<string, string> =>
+				row ? trackerBoardFormValues(row) : { sortOrder: "0" }
 			}
 			onRowDoubleClick={(row) => navigate(trackerBoardPath(row.boardKey))}
 			contextActions={[
@@ -170,26 +154,26 @@ export function TrackerBoardsPage() {
 				`Удалить ${count} доск(и/у)? Задачи на них тоже удалятся.`
 			}
 			onCreate={async (values) => {
-				await createBoard.mutateAsync({
-					projectId: values.projectId,
-					name: values.name,
-					slug: values.slug,
-					description: values.description || null,
-					sortOrder: Number(values.sortOrder || 0),
-					createdBy: createdBy || null,
-				});
+				try {
+					await createBoard.mutateAsync({
+						...trackerBoardWritePayload(values),
+						createdBy: createdBy || null,
+					});
+				} catch (error) {
+					toast.error(apiErrorMessage(error));
+					throw error;
+				}
 			}}
 			onUpdate={async (row, values) => {
-				await updateBoard.mutateAsync({
-					id: row.id,
-					data: {
-						projectId: values.projectId,
-						name: values.name,
-						slug: values.slug,
-						description: values.description || null,
-						sortOrder: Number(values.sortOrder || 0),
-					},
-				});
+				try {
+					await updateBoard.mutateAsync({
+						id: row.id,
+						data: trackerBoardWritePayload(values),
+					});
+				} catch (error) {
+					toast.error(apiErrorMessage(error));
+					throw error;
+				}
 			}}
 			onDelete={async (rows) => {
 				for (const row of rows) {

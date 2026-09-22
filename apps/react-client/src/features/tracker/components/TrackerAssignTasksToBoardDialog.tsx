@@ -46,7 +46,7 @@ export function TrackerAssignTasksToBoardDialog({
 		() =>
 			(boardsQuery.data ?? []).map((board) => ({
 				value: board.id,
-				label: `${board.projectCode}/${board.slug} — ${board.name}`,
+				label: `${board.boardKey} — ${board.name}`,
 			})),
 		[boardsQuery.data],
 	);

@@ -168,12 +168,12 @@ const includesNormalized = (haystack: string, needle: string): boolean => {
 
 export function kanbanBoardTaskSearchHaystack(
 	item: KanbanBoardItem,
-	projectCode?: string,
+	taskKeyPrefix?: string,
 ): string {
 	const content = asTaskContent(item.content);
 	const taskKey =
-		projectCode && item.taskNumber
-			? formatKanbanTaskKey(projectCode, item.taskNumber)
+		taskKeyPrefix && item.taskNumber
+			? formatKanbanTaskKey(taskKeyPrefix, item.taskNumber)
 			: "";
 	const assignees = content ? kanbanBoardTaskAssignees(content).join(" ") : "";
 	return [
@@ -198,12 +198,12 @@ export function kanbanBoardTaskSearchHaystack(
 export function kanbanBoardTaskMatchesSearch(
 	item: KanbanBoardItem,
 	query: string,
-	projectCode?: string,
+	taskKeyPrefix?: string,
 ): boolean {
 	const normalized = normalizeSearchText(query);
 	if (!normalized) return true;
 	return includesNormalized(
-		kanbanBoardTaskSearchHaystack(item, projectCode),
+		kanbanBoardTaskSearchHaystack(item, taskKeyPrefix),
 		normalized,
 	);
 }

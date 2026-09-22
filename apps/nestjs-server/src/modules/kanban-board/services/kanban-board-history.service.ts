@@ -5,7 +5,7 @@ import { In, Repository } from "typeorm";
 import {
 	diffKanbanTaskChanges,
 	formatKanbanBoardKey,
-	formatKanbanTaskKey,
+	formatKanbanTaskKeyForBoard,
 	clampKanbanBoardHistoryTaskTitle,
 	KANBAN_BOARD_HISTORY_OVERVIEW_PREVIEW_LIMIT,
 	KANBAN_BOARD_TASK_HISTORY_MAX_PER_TASK,
@@ -223,13 +223,17 @@ export class KanbanBoardHistoryService {
 
 	formatTaskKey(
 		task: Pick<KanbanBoardTaskEntity, "taskNumber"> & {
-			board?: { project?: { code?: string } | null } | null;
+			board?: { slug?: string; project?: { code?: string } | null } | null;
 			project?: { code?: string } | null;
 		},
 	): string {
 		const projectCode =
 			task.board?.project?.code ?? task.project?.code ?? "TASK";
-		return formatKanbanTaskKey(projectCode, task.taskNumber);
+		return formatKanbanTaskKeyForBoard(
+			projectCode,
+			task.board?.slug ?? "",
+			task.taskNumber,
+		);
 	}
 
 	private async trimTaskHistory(taskId: string): Promise<void> {

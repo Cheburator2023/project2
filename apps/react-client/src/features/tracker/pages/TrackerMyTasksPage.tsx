@@ -207,7 +207,7 @@ export function TrackerMyTasksPage() {
 				minWidth: 150,
 				valueGetter: (params) =>
 					trackerBoardFilterText({
-						boardSlug: params.data?.boardSlug,
+						boardKey: params.data?.boardKey,
 						boardName: params.data?.boardName,
 					}),
 				cellRenderer: (
@@ -215,7 +215,7 @@ export function TrackerMyTasksPage() {
 				) =>
 					params.data ? (
 						<TrackerBoardChips
-							boardSlug={params.data.boardSlug}
+							boardKey={params.data.boardKey}
 							boardName={params.data.boardName}
 						/>
 					) : null,

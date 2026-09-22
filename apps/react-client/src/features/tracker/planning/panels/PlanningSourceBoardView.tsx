@@ -203,14 +203,14 @@ export function ReleaseSourceBoardPicker({
 	const handleCardClick = useCallback(
 		(_event: MouseEvent<HTMLDivElement>, card: BoardItem) => {
 			const task = tasksQuery.data?.find((item) => item.id === card.id);
-			const projectCode = boardMeta?.projectCode;
-			if (task?.taskNumber && projectCode) {
+			const boardKeyPrefix = boardMeta?.boardKey;
+			if (task?.taskNumber && boardKeyPrefix) {
 				navigate(
-					trackerTaskPath(formatKanbanTaskKey(projectCode, task.taskNumber)),
+					trackerTaskPath(formatKanbanTaskKey(boardKeyPrefix, task.taskNumber)),
 				);
 			}
 		},
-		[boardMeta?.projectCode, navigate, tasksQuery.data],
+		[boardMeta?.boardKey, navigate, tasksQuery.data],
 	);
 
 	const columnStyle = useCallback((column: BoardItem) => {
@@ -359,7 +359,7 @@ export function ReleaseSourceBoardPicker({
 										data={data}
 										column={column}
 										boardId={resolvedBoardId}
-										projectCode={boardMeta?.projectCode}
+										boardKey={boardMeta?.boardKey}
 										attached={attachedIds.has(data.id)}
 										busy={attachTasks.isPending || detachTask.isPending}
 										onToggle={() => void toggleTask(data.id)}
@@ -433,7 +433,7 @@ function SourceBoardCard({
 	data,
 	column,
 	boardId,
-	projectCode,
+	boardKey,
 	attached,
 	busy,
 	onToggle,
@@ -441,7 +441,7 @@ function SourceBoardCard({
 	data: BoardItem;
 	column: BoardItem;
 	boardId: string;
-	projectCode?: string;
+	boardKey?: string;
 	attached: boolean;
 	busy: boolean;
 	onToggle: () => void;
@@ -454,8 +454,8 @@ function SourceBoardCard({
 				boardId={boardId}
 				parentId={data.parentId ?? column.id}
 				taskKey={
-					projectCode && item.taskNumber
-						? formatKanbanTaskKey(projectCode, item.taskNumber)
+					boardKey && item.taskNumber
+						? formatKanbanTaskKey(boardKey, item.taskNumber)
 						: undefined
 				}
 				title={data.title}

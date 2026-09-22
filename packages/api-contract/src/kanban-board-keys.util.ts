@@ -15,26 +15,56 @@ export function isKanbanRecordId(value: string): boolean {
 
 const DEFAULT_BOARD_SLUG = "MAIN";
 
-/** Ключ доски в URL: PROJECT или PROJECT-SLUG (slug MAIN опускается). */
+/**
+ * Публичный ключ доски = сохранённый slug.
+ * MAIN / пусто → код проекта (главная доска).
+ */
 export function formatKanbanBoardKey(
 	projectCode: string,
 	boardSlug: string,
 ): string {
 	const project = normalizeTrackerCode(projectCode);
 	const slug = normalizeTrackerCode(boardSlug);
-	if (!slug || slug === DEFAULT_BOARD_SLUG || slug === project) {
+	if (!slug || slug === DEFAULT_BOARD_SLUG) {
 		return project;
 	}
-	return `${project}-${slug}`;
+	return slug;
 }
 
-/** Ключ задачи в URL: PROJECT-N (например SMARTA-1). */
-export function formatKanbanTaskKey(
+/**
+ * Сохраняет публичный ключ как есть.
+ * MAIN / пусто / код проекта → MAIN; иначе ключ не префиксируется проектом.
+ */
+export function boardKeyToSlug(
+	boardKey: string,
 	projectCode: string,
+): string {
+	const key = normalizeTrackerCode(boardKey);
+	const project = normalizeTrackerCode(projectCode);
+	if (!key || key === DEFAULT_BOARD_SLUG || key === project) {
+		return DEFAULT_BOARD_SLUG;
+	}
+	return key;
+}
+
+/** Ключ задачи в URL: BOARDKEY-N (SMARTA-1 или SUM-RM-HEAP-42). */
+export function formatKanbanTaskKey(
+	boardKey: string,
 	taskNumber: number,
 ): string {
-	const project = normalizeTrackerCode(projectCode);
-	return `${project}-${taskNumber}`;
+	const prefix = normalizeTrackerCode(boardKey);
+	return `${prefix}-${taskNumber}`;
+}
+
+export function formatKanbanTaskKeyForBoard(
+	projectCode: string,
+	boardSlug: string,
+	taskNumber: number,
+): string {
+	return formatKanbanTaskKey(
+		formatKanbanBoardKey(projectCode, boardSlug),
+		taskNumber,
+	);
 }
 
 export function parseKanbanTaskKey(

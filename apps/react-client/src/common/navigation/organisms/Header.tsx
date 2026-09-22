@@ -33,6 +33,7 @@ export function Header({
 	title,
 	calcId,
 	leadingAccessory,
+	trailingAccessory,
 	fixed = false,
 	/** Явный маршрут «Назад» (например, реестр схем из редактора). Надёжнее history.back(). */
 	backTo,
@@ -42,6 +43,8 @@ export function Header({
 	calcId?: string;
 	title?: string;
 	leadingAccessory?: React.ReactNode;
+	/** Крайний правый слот кастомной области (перед системными кнопками). */
+	trailingAccessory?: React.ReactNode;
 	fixed?: boolean;
 	backTo?: string;
 	onBack?: () => void;
@@ -90,7 +93,7 @@ export function Header({
 			observer.disconnect();
 			window.removeEventListener("resize", update);
 		};
-	}, [children, title, calcId, isSideMenuVisible, leadingAccessory]);
+	}, [children, title, calcId, isSideMenuVisible, leadingAccessory, trailingAccessory]);
 
 	return (
 		<>
@@ -196,7 +199,8 @@ export function Header({
 							data-test-id="header--Flex-2"
 						>
 							{children}
-							{children ? (
+							{trailingAccessory}
+							{children || trailingAccessory ? (
 								<Divider
 									orientation="vertical"
 									flexItem

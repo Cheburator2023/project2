@@ -605,7 +605,7 @@ export interface KanbanBoardTaskRegistryDto extends KanbanBoardTaskRecord {
 	taskNumber: number;
 	projectCode: string;
 	projectName: string;
-	/** Читаемый ключ задачи для URL (/tracker/task/…). */
+	/** Читаемый ключ задачи для URL (/tracker/task/…): BOARDKEY-N. */
 	taskKey: string;
 	boardSlug: string;
 	boardName: string;
@@ -658,7 +658,10 @@ export interface UpdateKanbanBoardProjectRequestDto {
 export interface CreateKanbanBoardBoardRequestDto {
 	projectId: string;
 	name: string;
-	slug: string;
+	/** @deprecated передавайте boardKey; slug хранит публичный ключ. */
+	slug?: string;
+	/** Публичный ключ доски (как указано: SMARTA, SMARTA-DEV или BRD-COMMON). */
+	boardKey?: string;
 	description?: string | null;
 	sortOrder?: number;
 	/** Имя из настроек трекера («Я — исполнитель»). */
@@ -668,7 +671,10 @@ export interface CreateKanbanBoardBoardRequestDto {
 export interface UpdateKanbanBoardBoardRequestDto {
 	projectId?: string;
 	name?: string;
+	/** @deprecated передавайте boardKey; slug хранит публичный ключ. */
 	slug?: string;
+	/** Публичный ключ доски (как указано: SMARTA, SMARTA-DEV или BRD-COMMON). */
+	boardKey?: string;
 	description?: string | null;
 	sortOrder?: number;
 }

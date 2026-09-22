@@ -491,6 +491,20 @@ export function KanbanTaskPage({ mode }: Props = {}) {
 		: (taskFilesQuery.data ?? []);
 
 	useEffect(() => {
+		if (isCreate) return;
+		const actual = taskByRefQuery.data?.taskKey?.trim();
+		if (!actual || !taskKey) return;
+		if (normalizeTrackerCode(actual) === normalizeTrackerCode(taskKey)) return;
+		navigate(trackerTaskPath(actual), { replace: true, state: location.state });
+	}, [
+		isCreate,
+		location.state,
+		navigate,
+		taskByRefQuery.data?.taskKey,
+		taskKey,
+	]);
+
+	useEffect(() => {
 		if (boardId) {
 			setSelectedBoardId(boardId);
 			return;
