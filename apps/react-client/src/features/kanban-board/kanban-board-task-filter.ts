@@ -39,8 +39,10 @@ export type KanbanBoardBlockerFilter = "" | "yes" | "no";
 export type KanbanBoardTaskFilters = {
 	/** Колонка-статус */
 	status: string;
-	/** Исполнитель (точное имя) */
+	/** Исполнитель команды (точное имя) */
 	assignee: string;
+	/** Текущий исполнитель (точное имя) */
+	currentAssignee: string;
 	/** Назначил (точное имя) */
 	createdBy: string;
 	priority: KanbanBoardPriorityId | "";
@@ -74,6 +76,7 @@ export type KanbanBoardTaskFilters = {
 export const EMPTY_KANBAN_BOARD_TASK_FILTERS: KanbanBoardTaskFilters = {
 	status: "",
 	assignee: "",
+	currentAssignee: "",
 	createdBy: "",
 	priority: "",
 	taskType: "",
@@ -100,6 +103,7 @@ export const EMPTY_KANBAN_BOARD_TASK_FILTERS: KanbanBoardTaskFilters = {
 export const KANBAN_BOARD_VIEW_QUERY = {
 	q: "q",
 	assignee: "assignee",
+	currentAssignee: "currentAssignee",
 	createdBy: "createdBy",
 	priority: "priority",
 	taskType: "type",
@@ -175,6 +179,7 @@ export function parseKanbanBoardTaskFiltersFromSearchParams(
 	return {
 		status: readParam(params, KANBAN_BOARD_VIEW_QUERY.status),
 		assignee: readParam(params, KANBAN_BOARD_VIEW_QUERY.assignee),
+		currentAssignee: readParam(params, KANBAN_BOARD_VIEW_QUERY.currentAssignee),
 		createdBy: readParam(params, KANBAN_BOARD_VIEW_QUERY.createdBy),
 		priority: PRIORITY_IDS.has(priority)
 			? (priority as KanbanBoardPriorityId)
@@ -219,6 +224,11 @@ export function applyKanbanBoardViewToSearchParams(
 	setOrDelete(next, KANBAN_BOARD_VIEW_QUERY.q, view.query);
 	setOrDelete(next, KANBAN_BOARD_VIEW_QUERY.status, view.filters.status);
 	setOrDelete(next, KANBAN_BOARD_VIEW_QUERY.assignee, view.filters.assignee);
+	setOrDelete(
+		next,
+		KANBAN_BOARD_VIEW_QUERY.currentAssignee,
+		view.filters.currentAssignee,
+	);
 	setOrDelete(next, KANBAN_BOARD_VIEW_QUERY.createdBy, view.filters.createdBy);
 	setOrDelete(next, KANBAN_BOARD_VIEW_QUERY.priority, view.filters.priority);
 	setOrDelete(next, KANBAN_BOARD_VIEW_QUERY.taskType, view.filters.taskType);
@@ -418,6 +428,12 @@ export function kanbanBoardTaskMatchesFilters(
 			].filter(Boolean),
 		);
 		if (!names.has(filters.assignee)) return false;
+	}
+	if (
+		filters.currentAssignee &&
+		(content?.currentAssignee?.trim() ?? "") !== filters.currentAssignee
+	) {
+		return false;
 	}
 	if (filters.createdBy) {
 		if ((item.createdBy ?? "").trim() !== filters.createdBy) return false;

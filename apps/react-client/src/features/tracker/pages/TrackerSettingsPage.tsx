@@ -26,6 +26,7 @@ import {
 	clearAgGridColumnStates,
 	TRACKER_AG_GRID_STATE_KEYS,
 } from "@react-client/common/tableStuff/agGridColumnState";
+import { TrackerPlanningCsvImport } from "@react-client/features/tracker/planning/TrackerPlanningCsvImport";
 import {
 	getTrackerCurrentUserAssigneeName,
 	setTrackerCurrentUserAssigneeName,
@@ -219,6 +220,15 @@ export function TrackerSettingsPage() {
 							</Button>
 						</Flex>
 						{saveError ? <Alert severity="error">{saveError}</Alert> : null}
+					</SettingsSection>
+
+					<Divider />
+
+					<SettingsSection
+						title="Импорт планирования из CSV"
+						description="Сопоставляет задачи по названию: при совпадении обновляет оценки, спринт и добавляет комментарий, иначе создаёт задачу в статусе из файла. Перед записью показывает предпросмотр, после — даёт откатить."
+					>
+						<TrackerPlanningCsvImport />
 					</SettingsSection>
 
 					<Divider />

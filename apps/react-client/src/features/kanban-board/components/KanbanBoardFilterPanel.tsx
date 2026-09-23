@@ -27,6 +27,7 @@ type Props = {
 	filters: KanbanBoardTaskFilters;
 	onChange: (next: KanbanBoardTaskFilters) => void;
 	assigneeOptions: PersonOption[];
+	currentAssigneeOptions: PersonOption[];
 	createdByOptions: PersonOption[];
 	statusOptions: PersonOption[];
 	customerOptions: PersonOption[];
@@ -79,6 +80,7 @@ export function KanbanBoardFilterPanel({
 	filters,
 	onChange,
 	assigneeOptions,
+	currentAssigneeOptions,
 	createdByOptions,
 	statusOptions,
 	customerOptions,
@@ -135,6 +137,14 @@ export function KanbanBoardFilterPanel({
 					value={filters.status}
 					options={statusOptions}
 					onChange={(status) => patch({ status })}
+				/>
+				<FilterSelect
+					id="kanban-filter-current-assignee"
+					label="Текущий исполнитель"
+					value={filters.currentAssignee}
+					options={currentAssigneeOptions}
+					onChange={(currentAssignee) => patch({ currentAssignee })}
+					minWidth={200}
 				/>
 				<FormControl size="small" sx={{ minWidth: 180 }}>
 					<InputLabel id="kanban-filter-assignee">Исполнитель</InputLabel>

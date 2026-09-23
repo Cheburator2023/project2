@@ -82,6 +82,8 @@ type Props<TRow extends object> = {
 	getRowStyle?: (params: RowClassParams<TRow>) => RowStyle | undefined;
 	showRowTintToggle?: boolean;
 	pagination?: boolean;
+	selectAllOnReady?: boolean;
+	stopEditingWhenCellsLoseFocus?: boolean;
 	pinnedBottomRowData?: TRow[];
 	defaultFilter?: ColDef["filter"];
 	defaultFilterParams?: ColDef["filterParams"];
@@ -107,6 +109,8 @@ export function TrackerRegistryGrid<TRow extends object>({
 	getRowStyle,
 	showRowTintToggle = false,
 	pagination = true,
+	selectAllOnReady = false,
+	stopEditingWhenCellsLoseFocus = false,
 	pinnedBottomRowData,
 	defaultFilter,
 	defaultFilterParams,
@@ -220,7 +224,11 @@ export function TrackerRegistryGrid<TRow extends object>({
 					enableClickSelection: false,
 				}}
 				sideBar={sideBar}
-				onGridReady={onGridReady}
+				onGridReady={(event) => {
+					onGridReady(event);
+					if (selectAllOnReady) event.api.selectAll();
+				}}
+				stopEditingWhenCellsLoseFocus={stopEditingWhenCellsLoseFocus}
 				onNewColumnsLoaded={(event) => onColumnsReset(event.api)}
 				onColumnMoved={(event) =>
 					handleColumnStateChange(event.api, event.source)

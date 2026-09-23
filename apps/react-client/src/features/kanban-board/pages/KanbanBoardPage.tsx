@@ -682,6 +682,19 @@ export function KanbanBoardPage() {
 		return cards;
 	}, [board]);
 
+	const currentAssigneeFilterOptions = useMemo(() => {
+		const names = new Set(directoryAssigneeNames);
+		for (const card of boardCards) {
+			const name = (
+				card.content as KanbanBoardTaskContent | undefined
+			)?.currentAssignee?.trim();
+			if (name) names.add(name);
+		}
+		return [...names]
+			.sort((a, b) => a.localeCompare(b, "ru"))
+			.map((name) => ({ value: name, label: name }));
+	}, [boardCards, directoryAssigneeNames]);
+
 	const statusFilterOptions = useMemo(
 		() =>
 			(columnsQuery.data ?? []).map((column) => ({
@@ -1321,6 +1334,7 @@ export function KanbanBoardPage() {
 					filters={filters}
 					onChange={setFilters}
 					assigneeOptions={assigneeFilterOptions}
+					currentAssigneeOptions={currentAssigneeFilterOptions}
 					createdByOptions={createdByFilterOptions}
 					statusOptions={statusFilterOptions}
 					customerOptions={customerFilterOptions}

@@ -104,6 +104,46 @@ describe("kanban-board-task-filter", () => {
 		).toBe(false);
 	});
 
+	it("filters by current assignee and ignores the rest of the team", () => {
+		const item = card({
+			id: "t1",
+			content: {
+				title: "A",
+				currentAssignee: "Петров",
+				assignees: ["Иванов", "Петров"],
+			},
+		});
+		expect(
+			kanbanBoardTaskMatchesFilters(item, {
+				...EMPTY_KANBAN_BOARD_TASK_FILTERS,
+				currentAssignee: "Петров",
+			}),
+		).toBe(true);
+		expect(
+			kanbanBoardTaskMatchesFilters(item, {
+				...EMPTY_KANBAN_BOARD_TASK_FILTERS,
+				currentAssignee: "Иванов",
+			}),
+		).toBe(false);
+		expect(
+			kanbanBoardTaskMatchesFilters(item, {
+				...EMPTY_KANBAN_BOARD_TASK_FILTERS,
+				assignee: "Иванов",
+			}),
+		).toBe(true);
+		const query = applyKanbanBoardViewToSearchParams(new URLSearchParams(), {
+			filters: {
+				...EMPTY_KANBAN_BOARD_TASK_FILTERS,
+				currentAssignee: "Петров",
+			},
+			query: "",
+		});
+		expect(query.get("currentAssignee")).toBe("Петров");
+		expect(parseKanbanBoardTaskFiltersFromSearchParams(query).currentAssignee).toBe(
+			"Петров",
+		);
+	});
+
 	it("filters board columns and counts cards", () => {
 		const board: KanbanBoardData = {
 			root: {
