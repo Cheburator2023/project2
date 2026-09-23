@@ -8,6 +8,8 @@ import { Outlet, useLocation } from "react-router";
  *
  * React Router 7 оборачивает навигацию в startTransition — без key на Suspense
  * fallback не показывается и остаётся предыдущая страница до загрузки chunk.
+ * Ключ только по pathname: смена query (поиск, фильтры) не должна размонтировать
+ * страницу и сбрасывать фокус в поле ввода.
  */
 export function SuspenseOutlet({
 	context,
@@ -18,7 +20,7 @@ export function SuspenseOutlet({
 
 	return (
 		<Suspense
-			key={location.key}
+			key={location.pathname}
 			fallback={<FullScreenLoader height="100%" />}
 		>
 			<Outlet context={context} />
