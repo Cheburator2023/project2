@@ -182,6 +182,7 @@ export function KanbanBoardPage() {
 	const [searchParams, setSearchParams] = useSearchParams();
 	const queryClient = useQueryClient();
 	const fileInputRef = useRef<HTMLInputElement>(null);
+	const searchInputRef = useRef<HTMLInputElement>(null);
 	const [board, setBoard] = useState<KanbanBoardData | null>(null);
 	const [importError, setImportError] = useState<string | null>(null);
 	const [editBlocked, setEditBlocked] =
@@ -192,7 +193,8 @@ export function KanbanBoardPage() {
 	const [remoteStale, setRemoteStale] = useState(false);
 	const [openingTaskLabel, setOpeningTaskLabel] = useState<string | null>(null);
 	const [boardSettingsOpen, setBoardSettingsOpen] = useState(false);
-	const searchQuery = parseKanbanBoardSearchQuery(searchParams);
+	const urlSearchQuery = parseKanbanBoardSearchQuery(searchParams);
+	const [searchDraft, setSearchDraft] = useState(urlSearchQuery);
 	const layout = parseKanbanBoardLayout(searchParams);
 	const filters = useMemo(
 		() => parseKanbanBoardTaskFiltersFromSearchParams(searchParams),
@@ -203,7 +205,7 @@ export function KanbanBoardPage() {
 			parseKanbanBoardTaskFiltersFromSearchParams(searchParams),
 		),
 	);
-	const debouncedSearch = useDebouncedValue(searchQuery, SEARCH_DEBOUNCE_MS);
+	const debouncedSearch = useDebouncedValue(searchDraft, SEARCH_DEBOUNCE_MS);
 	const editLabel = useTrackerEditIdentity();
 	const boardSearch = searchParams.toString();
 	const boardReturnState = useMemo<KanbanBoardReturnLocationState>(
@@ -224,10 +226,15 @@ export function KanbanBoardPage() {
 		},
 		[setSearchParams],
 	);
-	const setSearchQuery = useCallback(
-		(query: string) => setBoardView({ query }),
-		[setBoardView],
-	);
+	useEffect(() => {
+		if (debouncedSearch === urlSearchQuery) return;
+		setBoardView({ query: debouncedSearch });
+	}, [debouncedSearch, setBoardView, urlSearchQuery]);
+	useEffect(() => {
+		const input = searchInputRef.current;
+		if (input && document.activeElement === input) return;
+		setSearchDraft(urlSearchQuery);
+	}, [urlSearchQuery]);
 	const setFilters = useCallback(
 		(next: KanbanBoardTaskFilters) => setBoardView({ filters: next }),
 		[setBoardView],
@@ -1208,8 +1215,9 @@ export function KanbanBoardPage() {
 					<TextField
 						size="small"
 						placeholder="Быстрый поиск…"
-						value={searchQuery}
-						onChange={(event) => setSearchQuery(event.target.value)}
+						value={searchDraft}
+						onChange={(event) => setSearchDraft(event.target.value)}
+						inputRef={searchInputRef}
 						sx={{
 							width: { xs: "100%", sm: 260 },
 							maxWidth: 360,
