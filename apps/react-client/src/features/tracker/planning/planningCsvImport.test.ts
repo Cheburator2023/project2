@@ -135,4 +135,39 @@ describe("matchPlanningCsvRows", () => {
 		expect(matches[0]?.task?.id).toBe("known");
 		expect(matches[1]?.task).toBeNull();
 	});
+
+	it("matches only tasks on the selected board", () => {
+		const rows = parsePlanningCsv(
+			[
+				"Статус;Название задачи",
+				"todo;Убрать колокольчик с уведомлениями в Смарт-анкете",
+			].join("\n"),
+		);
+		const matches = matchPlanningCsvRows({
+			rows,
+			tasks: [
+				...tasks,
+				{
+					id: "other-board",
+					boardId: "other",
+					taskKey: "OTHER-1",
+					title: "Убрать колокольчик с уведомлениями в Смарт-анкете",
+				},
+			],
+			columns,
+			sprints: [],
+			boardId: "other",
+		});
+		expect(matches[0]?.action).not.toBe("create");
+		expect(matches[0]?.task?.id).toBe("other-board");
+		const skipped = matchPlanningCsvRows({
+			rows,
+			tasks,
+			columns,
+			sprints: [],
+			boardId: "empty-board",
+		});
+		expect(skipped[0]?.action).toBe("create");
+		expect(skipped[0]?.task).toBeNull();
+	});
 });

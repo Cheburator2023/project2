@@ -92,6 +92,61 @@ const emptyJournal = (): RollbackJournal => ({
 	attached: [],
 });
 
+function importJournalIsEmpty(journal: RollbackJournal): boolean {
+	return (
+		!journal.createdPlanningId &&
+		journal.createdTaskIds.length === 0 &&
+		journal.comments.length === 0 &&
+		journal.updates.length === 0 &&
+		journal.createdThemeIds.length === 0 &&
+		journal.attached.length === 0
+	);
+}
+
+async function revertImportJournal(journal: RollbackJournal, authorName: string) {
+	for (const comment of [...journal.comments].reverse()) {
+		await apiClient({
+			url: `/kanban-board/tasks/${comment.taskId}/comments/${comment.commentId}`,
+			method: "DELETE",
+		});
+	}
+	for (const update of [...journal.updates].reverse()) {
+		await apiClient({
+			url: `/kanban-board/tasks/${update.id}`,
+			method: "PUT",
+			data: {
+				content: update.content,
+				forceOverwrite: true,
+				lockHolderLabel: authorName || undefined,
+			} satisfies UpdateKanbanBoardTaskRequestDto,
+		});
+	}
+	for (const item of [...journal.attached].reverse()) {
+		await apiClient({
+			url: `/kanban-board/plannings/${item.planningId}/tasks/${item.taskId}`,
+			method: "DELETE",
+		});
+	}
+	for (const theme of [...journal.createdThemeIds].reverse()) {
+		await apiClient({
+			url: `/kanban-board/plannings/${theme.planningId}/themes/${theme.themeId}`,
+			method: "DELETE",
+		});
+	}
+	if (journal.createdPlanningId) {
+		await apiClient({
+			url: `/kanban-board/plannings/${journal.createdPlanningId}`,
+			method: "DELETE",
+		});
+	}
+	for (const taskId of [...journal.createdTaskIds].reverse()) {
+		await apiClient({
+			url: `/kanban-board/tasks/${taskId}`,
+			method: "DELETE",
+		});
+	}
+}
+
 function planningCode(): string {
 	const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 	let suffix = "";
@@ -457,6 +512,17 @@ export function TrackerPlanningCsvImport() {
 		const tasksById = new Map(
 			(tasksQuery.data ?? []).map((task) => [task.id, task]),
 		);
+		const missingTask = included.find((row) => {
+			if (row.action !== "update" || !row.matchedTaskId) return false;
+			const task = tasksById.get(row.matchedTaskId);
+			return !task || task.boardId !== selectedBoardId;
+		});
+		if (missingTask) {
+			toast.error(
+				`Задача ${missingTask.matchedTaskKey || missingTask.title} не на выбранной доске`,
+			);
+			return;
+		}
 		const nextJournal = emptyJournal();
 		setBusy(true);
 		setJournal(null);
@@ -495,11 +561,6 @@ export function TrackerPlanningCsvImport() {
 				if (!row) continue;
 				setProgress(`Задачи ${index + 1} / ${included.length}`);
 				const sprint = sprintByCode(row.sprintCode);
-				if (row.sprintCode.trim() && !sprint) {
-					throw new Error(
-						`Спринт «${row.sprintCode.trim()}» не найден (${row.title})`,
-					);
-				}
 				const assignees = assigneesFromText(row.assigneesText);
 				const estimates = estimatesFromRow(row);
 				const edited = new Set(row.editedFields);
@@ -528,8 +589,10 @@ export function TrackerPlanningCsvImport() {
 					tasksById.set(created.id, created);
 				} else if (row.matchedTaskId && row.action === "update") {
 					const current = tasksById.get(row.matchedTaskId);
-					if (!current) {
-						throw new Error(`Задача ${row.matchedTaskKey} не найдена`);
+					if (!current || current.boardId !== selectedBoardId) {
+						throw new Error(
+							`Задача ${row.matchedTaskKey || row.title} не на выбранной доске`,
+						);
 					}
 					nextJournal.updates.push({
 						id: current.id,
@@ -572,12 +635,7 @@ export function TrackerPlanningCsvImport() {
 				}
 
 				const taskId = taskIdByLine.get(row.line);
-				if (taskId && row.comment.trim()) {
-					if (!authorName) {
-						throw new Error(
-							"Чтобы добавить комментарии, укажите «Я — исполнитель» в настройках",
-						);
-					}
+				if (taskId && row.comment.trim() && authorName) {
 					const comment = await apiClient<KanbanBoardTaskCommentDto>({
 						url: `/kanban-board/tasks/${taskId}/comments`,
 						method: "POST",
@@ -651,14 +709,39 @@ export function TrackerPlanningCsvImport() {
 			toast.success("Импорт применён");
 			setProgress("");
 		} catch (error) {
-			setJournal(nextJournal);
-			setProgress("");
-			toast.error("Импорт остановился. Уже записанное можно откатить.", {
-				description: apiErrorMessage(error),
-			});
+			const message = apiErrorMessage(error);
+			if (importJournalIsEmpty(nextJournal)) {
+				setProgress("");
+				toast.error(message);
+			} else {
+				setProgress("Откатываем импорт");
+				try {
+					await revertImportJournal(nextJournal, authorName);
+					await invalidateImportQueries();
+					setJournal(null);
+					setProgress("");
+					toast.error("Импорт не выполнен, ничего не записано.", {
+						description: message,
+					});
+				} catch (rollbackError) {
+					setJournal(nextJournal);
+					setProgress("");
+					toast.error(
+						"Импорт остановился, и откат не завершился. Нажмите «Откатить импорт» в этом окне.",
+						{ description: apiErrorMessage(rollbackError) },
+					);
+				}
+			}
 		} finally {
 			setBusy(false);
 		}
+	};
+
+	const invalidateImportQueries = async () => {
+		await queryClient.invalidateQueries({ queryKey: ["kanbanBoardTasksRegistry"] });
+		await queryClient.invalidateQueries({ queryKey: ["kanbanBoardTasks"] });
+		await queryClient.invalidateQueries({ queryKey: ["kanbanBoardPlannings"] });
+		await queryClient.invalidateQueries({ queryKey: ["kanbanBoardPlanning"] });
 	};
 
 	const rollback = async () => {
@@ -666,52 +749,9 @@ export function TrackerPlanningCsvImport() {
 		setBusy(true);
 		setProgress("Откатываем импорт");
 		try {
-			for (const comment of [...journal.comments].reverse()) {
-				await apiClient({
-					url: `/kanban-board/tasks/${comment.taskId}/comments/${comment.commentId}`,
-					method: "DELETE",
-				});
-			}
-			for (const update of [...journal.updates].reverse()) {
-				await apiClient({
-					url: `/kanban-board/tasks/${update.id}`,
-					method: "PUT",
-					data: {
-						content: update.content,
-						forceOverwrite: true,
-						lockHolderLabel: authorName || undefined,
-					} satisfies UpdateKanbanBoardTaskRequestDto,
-				});
-			}
-			for (const item of [...journal.attached].reverse()) {
-				await apiClient({
-					url: `/kanban-board/plannings/${item.planningId}/tasks/${item.taskId}`,
-					method: "DELETE",
-				});
-			}
-			for (const theme of [...journal.createdThemeIds].reverse()) {
-				await apiClient({
-					url: `/kanban-board/plannings/${theme.planningId}/themes/${theme.themeId}`,
-					method: "DELETE",
-				});
-			}
-			if (journal.createdPlanningId) {
-				await apiClient({
-					url: `/kanban-board/plannings/${journal.createdPlanningId}`,
-					method: "DELETE",
-				});
-			}
-			for (const taskId of [...journal.createdTaskIds].reverse()) {
-				await apiClient({
-					url: `/kanban-board/tasks/${taskId}`,
-					method: "DELETE",
-				});
-			}
+			await revertImportJournal(journal, authorName);
 			setJournal(null);
-			await queryClient.invalidateQueries({ queryKey: ["kanbanBoardTasksRegistry"] });
-			await queryClient.invalidateQueries({ queryKey: ["kanbanBoardTasks"] });
-			await queryClient.invalidateQueries({ queryKey: ["kanbanBoardPlannings"] });
-			await queryClient.invalidateQueries({ queryKey: ["kanbanBoardPlanning"] });
+			await invalidateImportQueries();
 			toast.success("Импорт откатан");
 			setProgress("");
 		} catch (error) {
@@ -824,7 +864,7 @@ export function TrackerPlanningCsvImport() {
 						Создать {counts.create}, обновить {counts.update}, без изменений{" "}
 						{counts.unchanged}
 						{counts.sprintMissing
-							? `, спринт не найден: ${counts.sprintMissing}`
+							? `. Спринт не найден и не запишется: ${counts.sprintMissing}`
 							: ""}
 						{counts.comments && !authorName
 							? ". Комментарии не запишутся, пока не указан «Я — исполнитель»"
@@ -883,6 +923,16 @@ export function TrackerPlanningCsvImport() {
 					</Flex>
 				</DialogContent>
 				<DialogActions>
+					{journal ? (
+						<Button
+							variant="outlined"
+							color="warning"
+							onClick={() => void rollback()}
+							disabled={busy}
+						>
+							Откатить импорт
+						</Button>
+					) : null}
 					<Button onClick={() => setPreview(null)} disabled={busy}>
 						Закрыть
 					</Button>
