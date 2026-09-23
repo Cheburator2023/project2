@@ -1,15 +1,26 @@
 import {
 	formatKanbanTaskKey,
 	KANBAN_BOARD_PRIORITIES,
+	KANBAN_BOARD_ROLE_ESTIMATE_FIELDS,
+	KANBAN_BOARD_STANDS,
+	KANBAN_BOARD_SYSTEMS,
 	KANBAN_BOARD_TASK_TYPES,
+	KANBAN_BOARD_WORK_TYPES,
+	kanbanBoardEffectiveEstimatePd,
 	kanbanBoardTaskAssignees,
+	kanbanBoardTaskHasBlocker,
+	kanbanBoardTaskReleaseLabel,
+	kanbanBoardTaskStands,
+	kanbanBoardTaskStandsTitle,
 	kanbanBoardTaskSystems,
 	kanbanBoardTaskSystemsTitle,
+	kanbanBoardWorkTypeTitle,
 	type KanbanBoardData,
 	type KanbanBoardItem,
 	type KanbanBoardPriorityId,
 	type KanbanBoardTaskContent,
 	type KanbanBoardTaskTypeId,
+	type KanbanBoardWorkTypeId,
 } from "@smart-anketa/api-contract";
 import { normalizeSearchText } from "@react-client/utils/substringSearch";
 
@@ -23,13 +34,29 @@ const asTaskContent = (
 	return content as KanbanBoardTaskContent;
 };
 
+export type KanbanBoardBlockerFilter = "" | "yes" | "no";
+
 export type KanbanBoardTaskFilters = {
+	/** Колонка-статус */
+	status: string;
 	/** Исполнитель (точное имя) */
 	assignee: string;
 	/** Назначил (точное имя) */
 	createdBy: string;
 	priority: KanbanBoardPriorityId | "";
 	taskType: KanbanBoardTaskTypeId | "";
+	workType: KanbanBoardWorkTypeId | "";
+	stand: string;
+	system: string;
+	customer: string;
+	sprintId: string;
+	stream: string;
+	releaseId: string;
+	blocker: KanbanBoardBlockerFilter;
+	parent: string;
+	tag: string;
+	/** Точный № в бэклоге */
+	backlog: string;
 	/** YYYY-MM-DD */
 	dueFrom: string;
 	/** YYYY-MM-DD */
@@ -38,17 +65,35 @@ export type KanbanBoardTaskFilters = {
 	createdFrom: string;
 	/** YYYY-MM-DD */
 	createdTo: string;
+	/** YYYY-MM-DD */
+	updatedFrom: string;
+	/** YYYY-MM-DD */
+	updatedTo: string;
 };
 
 export const EMPTY_KANBAN_BOARD_TASK_FILTERS: KanbanBoardTaskFilters = {
+	status: "",
 	assignee: "",
 	createdBy: "",
 	priority: "",
 	taskType: "",
+	workType: "",
+	stand: "",
+	system: "",
+	customer: "",
+	sprintId: "",
+	stream: "",
+	releaseId: "",
+	blocker: "",
+	parent: "",
+	tag: "",
+	backlog: "",
 	dueFrom: "",
 	dueTo: "",
 	createdFrom: "",
 	createdTo: "",
+	updatedFrom: "",
+	updatedTo: "",
 };
 
 /** Query-ключи вида доски: фильтры + быстрый поиск. */
@@ -58,10 +103,24 @@ export const KANBAN_BOARD_VIEW_QUERY = {
 	createdBy: "createdBy",
 	priority: "priority",
 	taskType: "type",
+	workType: "work",
+	stand: "stand",
+	system: "system",
+	customer: "customer",
+	sprintId: "sprint",
+	stream: "stream",
+	releaseId: "release",
+	blocker: "blocker",
+	parent: "parent",
+	tag: "tag",
+	backlog: "backlog",
+	status: "status",
 	dueFrom: "dueFrom",
 	dueTo: "dueTo",
 	createdFrom: "createdFrom",
 	createdTo: "createdTo",
+	updatedFrom: "updatedFrom",
+	updatedTo: "updatedTo",
 } as const;
 
 const PRIORITY_IDS = new Set<string>(
@@ -69,6 +128,16 @@ const PRIORITY_IDS = new Set<string>(
 );
 const TASK_TYPE_IDS = new Set<string>(
 	KANBAN_BOARD_TASK_TYPES.map((item) => item.id),
+);
+const WORK_TYPE_IDS = new Set<string>(
+	KANBAN_BOARD_WORK_TYPES.map((item) => item.id),
+);
+const STAND_IDS = new Set<string>([
+	...KANBAN_BOARD_STANDS.map((item) => item.id),
+	"dev",
+]);
+const SYSTEM_IDS = new Set<string>(
+	KANBAN_BOARD_SYSTEMS.map((item) => item.id),
 );
 
 const readParam = (params: URLSearchParams, key: string): string =>
@@ -88,7 +157,12 @@ export function parseKanbanBoardTaskFiltersFromSearchParams(
 ): KanbanBoardTaskFilters {
 	const priority = readParam(params, KANBAN_BOARD_VIEW_QUERY.priority);
 	const taskType = readParam(params, KANBAN_BOARD_VIEW_QUERY.taskType);
+	const workType = readParam(params, KANBAN_BOARD_VIEW_QUERY.workType);
+	const stand = readParam(params, KANBAN_BOARD_VIEW_QUERY.stand);
+	const system = readParam(params, KANBAN_BOARD_VIEW_QUERY.system);
+	const blocker = readParam(params, KANBAN_BOARD_VIEW_QUERY.blocker);
 	return {
+		status: readParam(params, KANBAN_BOARD_VIEW_QUERY.status),
 		assignee: readParam(params, KANBAN_BOARD_VIEW_QUERY.assignee),
 		createdBy: readParam(params, KANBAN_BOARD_VIEW_QUERY.createdBy),
 		priority: PRIORITY_IDS.has(priority)
@@ -97,10 +171,25 @@ export function parseKanbanBoardTaskFiltersFromSearchParams(
 		taskType: TASK_TYPE_IDS.has(taskType)
 			? (taskType as KanbanBoardTaskTypeId)
 			: "",
+		workType: WORK_TYPE_IDS.has(workType)
+			? (workType as KanbanBoardWorkTypeId)
+			: "",
+		stand: STAND_IDS.has(stand) ? stand : "",
+		system: SYSTEM_IDS.has(system) ? system : "",
+		customer: readParam(params, KANBAN_BOARD_VIEW_QUERY.customer),
+		sprintId: readParam(params, KANBAN_BOARD_VIEW_QUERY.sprintId),
+		stream: readParam(params, KANBAN_BOARD_VIEW_QUERY.stream),
+		releaseId: readParam(params, KANBAN_BOARD_VIEW_QUERY.releaseId),
+		blocker: blocker === "yes" || blocker === "no" ? blocker : "",
+		parent: readParam(params, KANBAN_BOARD_VIEW_QUERY.parent),
+		tag: readParam(params, KANBAN_BOARD_VIEW_QUERY.tag),
+		backlog: readParam(params, KANBAN_BOARD_VIEW_QUERY.backlog),
 		dueFrom: readDateParam(params, KANBAN_BOARD_VIEW_QUERY.dueFrom),
 		dueTo: readDateParam(params, KANBAN_BOARD_VIEW_QUERY.dueTo),
 		createdFrom: readDateParam(params, KANBAN_BOARD_VIEW_QUERY.createdFrom),
 		createdTo: readDateParam(params, KANBAN_BOARD_VIEW_QUERY.createdTo),
+		updatedFrom: readDateParam(params, KANBAN_BOARD_VIEW_QUERY.updatedFrom),
+		updatedTo: readDateParam(params, KANBAN_BOARD_VIEW_QUERY.updatedTo),
 	};
 }
 
@@ -117,10 +206,22 @@ export function applyKanbanBoardViewToSearchParams(
 ): URLSearchParams {
 	const next = new URLSearchParams(current);
 	setOrDelete(next, KANBAN_BOARD_VIEW_QUERY.q, view.query);
+	setOrDelete(next, KANBAN_BOARD_VIEW_QUERY.status, view.filters.status);
 	setOrDelete(next, KANBAN_BOARD_VIEW_QUERY.assignee, view.filters.assignee);
 	setOrDelete(next, KANBAN_BOARD_VIEW_QUERY.createdBy, view.filters.createdBy);
 	setOrDelete(next, KANBAN_BOARD_VIEW_QUERY.priority, view.filters.priority);
 	setOrDelete(next, KANBAN_BOARD_VIEW_QUERY.taskType, view.filters.taskType);
+	setOrDelete(next, KANBAN_BOARD_VIEW_QUERY.workType, view.filters.workType);
+	setOrDelete(next, KANBAN_BOARD_VIEW_QUERY.stand, view.filters.stand);
+	setOrDelete(next, KANBAN_BOARD_VIEW_QUERY.system, view.filters.system);
+	setOrDelete(next, KANBAN_BOARD_VIEW_QUERY.customer, view.filters.customer);
+	setOrDelete(next, KANBAN_BOARD_VIEW_QUERY.sprintId, view.filters.sprintId);
+	setOrDelete(next, KANBAN_BOARD_VIEW_QUERY.stream, view.filters.stream);
+	setOrDelete(next, KANBAN_BOARD_VIEW_QUERY.releaseId, view.filters.releaseId);
+	setOrDelete(next, KANBAN_BOARD_VIEW_QUERY.blocker, view.filters.blocker);
+	setOrDelete(next, KANBAN_BOARD_VIEW_QUERY.parent, view.filters.parent);
+	setOrDelete(next, KANBAN_BOARD_VIEW_QUERY.tag, view.filters.tag);
+	setOrDelete(next, KANBAN_BOARD_VIEW_QUERY.backlog, view.filters.backlog);
 	setOrDelete(next, KANBAN_BOARD_VIEW_QUERY.dueFrom, view.filters.dueFrom);
 	setOrDelete(next, KANBAN_BOARD_VIEW_QUERY.dueTo, view.filters.dueTo);
 	setOrDelete(
@@ -129,6 +230,8 @@ export function applyKanbanBoardViewToSearchParams(
 		view.filters.createdFrom,
 	);
 	setOrDelete(next, KANBAN_BOARD_VIEW_QUERY.createdTo, view.filters.createdTo);
+	setOrDelete(next, KANBAN_BOARD_VIEW_QUERY.updatedFrom, view.filters.updatedFrom);
+	setOrDelete(next, KANBAN_BOARD_VIEW_QUERY.updatedTo, view.filters.updatedTo);
 	return next;
 }
 
@@ -176,6 +279,13 @@ export function kanbanBoardTaskSearchHaystack(
 			? formatKanbanTaskKey(taskKeyPrefix, item.taskNumber)
 			: "";
 	const assignees = content ? kanbanBoardTaskAssignees(content).join(" ") : "";
+	const roleEstimates = content?.roleEstimates
+		? KANBAN_BOARD_ROLE_ESTIMATE_FIELDS.flatMap((field) => {
+				const value = content.roleEstimates?.[field.key];
+				return value == null ? [] : [field.title, String(value)];
+			})
+		: [];
+	const estimate = content ? kanbanBoardEffectiveEstimatePd(content) : undefined;
 	return [
 		item.title,
 		content?.title,
@@ -187,9 +297,19 @@ export function kanbanBoardTaskSearchHaystack(
 		item.createdBy,
 		content?.customer,
 		content?.parentTask,
+		content?.streamCustomer,
 		content?.tags?.join(" "),
+		content?.subtasks?.map((subtask) => subtask.text).join(" "),
+		content ? kanbanBoardWorkTypeTitle(content.workType) : "",
+		content ? kanbanBoardTaskStands(content).join(" ") : "",
+		content ? kanbanBoardTaskStandsTitle(content) : "",
 		content ? kanbanBoardTaskSystems(content).join(" ") : "",
 		content ? kanbanBoardTaskSystemsTitle(content) : "",
+		item.releases?.map((release) => kanbanBoardTaskReleaseLabel(release)).join(" "),
+		content?.backlogNumber != null ? String(content.backlogNumber) : "",
+		estimate != null ? String(estimate) : "",
+		...roleEstimates,
+		content && kanbanBoardTaskHasBlocker(content) ? "блокер" : "",
 	]
 		.filter(Boolean)
 		.join(" ");
@@ -213,10 +333,70 @@ export function kanbanBoardTaskMatchesFilters(
 	filters: KanbanBoardTaskFilters,
 ): boolean {
 	const content = asTaskContent(item.content);
+	if (filters.status && item.parentId !== filters.status) return false;
 	if (filters.priority && content?.priority !== filters.priority) {
 		return false;
 	}
 	if (filters.taskType && content?.taskType !== filters.taskType) {
+		return false;
+	}
+	if (filters.workType && content?.workType !== filters.workType) {
+		return false;
+	}
+	if (
+		filters.stand &&
+		!(content ? kanbanBoardTaskStands(content) : []).some(
+			(id) => id === filters.stand,
+		)
+	) {
+		return false;
+	}
+	if (
+		filters.system &&
+		!(content ? kanbanBoardTaskSystems(content) : []).some(
+			(id) => id === filters.system,
+		)
+	) {
+		return false;
+	}
+	if (
+		filters.customer &&
+		(content?.customer ?? "").trim() !== filters.customer
+	) {
+		return false;
+	}
+	if (filters.sprintId && content?.sprintId !== filters.sprintId) return false;
+	if (
+		filters.stream &&
+		(content?.streamCustomer ?? "").trim() !== filters.stream
+	) {
+		return false;
+	}
+	if (
+		filters.releaseId &&
+		!(item.releases ?? []).some((release) => release.id === filters.releaseId)
+	) {
+		return false;
+	}
+	if (filters.blocker === "yes" && !kanbanBoardTaskHasBlocker(content)) {
+		return false;
+	}
+	if (filters.blocker === "no" && kanbanBoardTaskHasBlocker(content)) {
+		return false;
+	}
+	if (filters.parent && (content?.parentTask ?? "").trim() !== filters.parent) {
+		return false;
+	}
+	if (
+		filters.tag &&
+		!(content?.tags ?? []).some((tag) => tag.trim() === filters.tag)
+	) {
+		return false;
+	}
+	if (
+		filters.backlog &&
+		String(content?.backlogNumber ?? "") !== filters.backlog
+	) {
 		return false;
 	}
 	if (filters.assignee) {
@@ -241,6 +421,14 @@ export function kanbanBoardTaskMatchesFilters(
 		return false;
 	}
 	if (filters.createdTo && (!created || created > filters.createdTo)) {
+		return false;
+	}
+
+	const updated = dateOnly(item.updatedAt);
+	if (filters.updatedFrom && (!updated || updated < filters.updatedFrom)) {
+		return false;
+	}
+	if (filters.updatedTo && (!updated || updated > filters.updatedTo)) {
 		return false;
 	}
 

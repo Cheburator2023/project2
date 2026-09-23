@@ -30,6 +30,7 @@ const card = (
 	createdBy: partial.createdBy,
 	updatedAt: partial.updatedAt,
 	commentCount: partial.commentCount,
+	releases: partial.releases,
 });
 
 describe("kanban-board-task-filter", () => {
@@ -167,6 +168,54 @@ describe("kanban-board-task-filter", () => {
 		expect(query.get("type")).toBeNull();
 		expect(parseKanbanBoardSearchQuery(query)).toBe("интеграция");
 		expect(parseKanbanBoardTaskFiltersFromSearchParams(query)).toEqual(filters);
+	});
+
+	it("filters by the rest of the task fields", () => {
+		const item = card({
+			id: "t1",
+			parentId: "doing",
+			updatedAt: "2026-09-01T10:00:00.000Z",
+			content: {
+				title: "A",
+				workType: "feature",
+				stands: ["ift"],
+				systems: ["sum"],
+				customer: "Банк",
+				sprintId: "spr-1",
+				streamCustomer: "Риски",
+				parentTask: "Эпик",
+				tags: ["релиз"],
+				backlogNumber: 4,
+				hasBlocker: true,
+			},
+			releases: [{ id: "rel-1", code: "REL-1", name: "Осень" }],
+		});
+		expect(
+			kanbanBoardTaskMatchesFilters(item, {
+				...EMPTY_KANBAN_BOARD_TASK_FILTERS,
+				status: "doing",
+				workType: "feature",
+				stand: "ift",
+				system: "sum",
+				customer: "Банк",
+				sprintId: "spr-1",
+				stream: "Риски",
+				releaseId: "rel-1",
+				blocker: "yes",
+				parent: "Эпик",
+				tag: "релиз",
+				backlog: "4",
+				updatedFrom: "2026-09-01",
+			}),
+		).toBe(true);
+		expect(
+			kanbanBoardTaskMatchesFilters(item, {
+				...EMPTY_KANBAN_BOARD_TASK_FILTERS,
+				blocker: "no",
+			}),
+		).toBe(false);
+		expect(kanbanBoardTaskMatchesSearch(item, "блокер")).toBe(true);
+		expect(kanbanBoardTaskMatchesSearch(item, "осень")).toBe(true);
 	});
 
 	it("ignores unknown priority and invalid dates in URL", () => {

@@ -1,6 +1,7 @@
-import type { ColumnState } from "ag-grid-community";
+import type { ColumnState, FilterModel } from "ag-grid-community";
 
 const STORAGE_PREFIX = "smart_anketa:ag-grid-column-state:";
+const FILTER_STORAGE_PREFIX = "smart_anketa:ag-grid-filter-model:";
 const ROW_TINT_STORAGE_PREFIX = "smart_anketa:ag-grid-row-tint:";
 
 export const TRACKER_AG_GRID_STATE_KEYS = [
@@ -72,6 +73,45 @@ export function clearAgGridColumnState(gridId: string): void {
 	window.localStorage.removeItem(storageKey(gridId));
 }
 
+function filterStorageKey(gridId: string): string {
+	return `${FILTER_STORAGE_PREFIX}${gridId}`;
+}
+
+export function loadAgGridFilterModel(gridId: string): FilterModel | null {
+	if (typeof window === "undefined") return null;
+	try {
+		const raw = window.localStorage.getItem(filterStorageKey(gridId));
+		if (!raw) return null;
+		const parsed = JSON.parse(raw) as unknown;
+		if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+			return null;
+		}
+		return parsed as FilterModel;
+	} catch {
+		return null;
+	}
+}
+
+export function saveAgGridFilterModel(
+	gridId: string,
+	filterModel: FilterModel,
+): void {
+	if (typeof window === "undefined") return;
+	try {
+		window.localStorage.setItem(
+			filterStorageKey(gridId),
+			JSON.stringify(filterModel),
+		);
+	} catch {
+		// ignore quota errors
+	}
+}
+
+export function clearAgGridFilterModel(gridId: string): void {
+	if (typeof window === "undefined") return;
+	window.localStorage.removeItem(filterStorageKey(gridId));
+}
+
 export function clearAgGridColumnStates(gridIds: readonly string[]): void {
 	for (const gridId of gridIds) {
 		clearAgGridColumnState(gridId);
@@ -83,7 +123,10 @@ export function clearAllAgGridColumnStates(): void {
 	const keysToRemove: string[] = [];
 	for (let index = 0; index < window.localStorage.length; index += 1) {
 		const key = window.localStorage.key(index);
-		if (key?.startsWith(STORAGE_PREFIX)) {
+		if (
+			key?.startsWith(STORAGE_PREFIX) ||
+			key?.startsWith(FILTER_STORAGE_PREFIX)
+		) {
 			keysToRemove.push(key);
 		}
 	}

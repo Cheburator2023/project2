@@ -73,19 +73,20 @@ function planningReleaseChipColor(index: number): string {
 
 const PLANNING_TASK_BOARD_CHIP_COLOR = "#0f766e";
 
-const PLANNING_TASK_HIDDEN_COL_IDS = new Set(["taskKey", "assigneeRole"]);
+const PLANNING_TASK_HIDDEN_COL_IDS = new Set(["assigneeRole"]);
 
 const PLANNING_TASK_LEAD_COL_IDS = [
+	"taskKey",
 	"title",
+	"estimatePd",
+	...KANBAN_BOARD_ROLE_ESTIMATE_FIELDS.map((field) =>
+		roleEstimateColId(field.key),
+	),
 	"status",
 	"currentAssignee",
 	"assignees",
 	"stand",
 	"system",
-	"estimatePd",
-	...KANBAN_BOARD_ROLE_ESTIMATE_FIELDS.map((field) =>
-		roleEstimateColId(field.key),
-	),
 ];
 
 const PLANNING_TASK_TAIL_COL_IDS = ["project", "board"];
@@ -339,7 +340,17 @@ export function PlanningTasksPanel() {
 				lookups,
 			}),
 		).map((column) =>
-			column.colId === "system"
+			column.colId === "taskKey"
+				? { ...column, pinned: "left" as const, width: 140, minWidth: 110 }
+				: column.colId === "title"
+				? {
+						...column,
+						pinned: "left" as const,
+						flex: undefined,
+						width: 280,
+						minWidth: 180,
+					}
+				: column.colId === "system"
 				? { ...column, headerName: "Система / приложение" }
 				: column.colId === "board"
 				? {
@@ -362,12 +373,12 @@ export function PlanningTasksPanel() {
 					}
 				: column,
 		);
-		const titleIndex = taskCols.findIndex((col) => col.colId === "title");
-		if (titleIndex < 0) return [releaseCol, ...taskCols];
+		const systemIndex = taskCols.findIndex((col) => col.colId === "system");
+		if (systemIndex < 0) return [...taskCols, releaseCol];
 		return [
-			...taskCols.slice(0, titleIndex + 1),
+			...taskCols.slice(0, systemIndex + 1),
 			releaseCol,
-			...taskCols.slice(titleIndex + 1),
+			...taskCols.slice(systemIndex + 1),
 		];
 	}, [
 		lookups,
@@ -432,7 +443,7 @@ export function PlanningTasksPanel() {
 			</Flex>
 			<Flex flexGrow={1} minHeight="0">
 				<TrackerRegistryGrid<GridRow>
-					gridStateKey="tracker.planning.tasks.v3"
+					gridStateKey="tracker.planning.tasks.v6"
 					rowData={rowData}
 					columnDefs={columnDefs}
 					autoGroupColumnDef={autoGroupColumnDef}

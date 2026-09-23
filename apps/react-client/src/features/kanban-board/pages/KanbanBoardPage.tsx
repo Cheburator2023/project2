@@ -51,6 +51,7 @@ import {
 	countKanbanBoardBlockers,
 	countKanbanBoardColumnBlockers,
 	kanbanBoardReleaseCanComplete,
+	kanbanBoardTaskReleaseLabel,
 	KANBAN_BOARD_RELEASE_DONE_STATUS_ID,
 	type KanbanBoardTaskEditBlockedErrorDto,
 } from "@smart-anketa/api-contract";
@@ -81,7 +82,10 @@ import {
 	useKanbanBoardBoards,
 	useKanbanBoardColumns,
 	useKanbanBoardConfig,
+	useKanbanBoardCustomers,
 	useKanbanBoardReleases,
+	useKanbanBoardSprints,
+	useKanbanBoardStreams,
 	useCompleteKanbanBoardRelease,
 	useCreateKanbanBoardColumn,
 	useDeleteKanbanBoardColumn,
@@ -233,6 +237,9 @@ export function KanbanBoardPage() {
 	const configQuery = useKanbanBoardConfig();
 	const boardsQuery = useKanbanBoardBoards();
 	const assigneesQuery = useKanbanBoardAssignees();
+	const customersQuery = useKanbanBoardCustomers();
+	const sprintsQuery = useKanbanBoardSprints();
+	const streamsQuery = useKanbanBoardStreams();
 	const boardMeta = boardsQuery.data?.find(
 		(item) =>
 			item.boardKey === normalizeTrackerCode(boardKey) || item.id === boardKey,
@@ -564,6 +571,11 @@ export function KanbanBoardPage() {
 	const searchActive = Boolean(debouncedSearch.trim());
 	const viewFiltered = filtersActive || searchActive;
 
+	const expandedBoard = useMemo(() => {
+		if (!board) return null;
+		return expandKanbanBoardReleasesLanes(board, releasesQuery.data ?? []);
+	}, [board, releasesQuery.data]);
+
 	const viewBoard = useMemo(() => {
 		if (!board) return null;
 		const filtered =
@@ -615,6 +627,129 @@ export function KanbanBoardPage() {
 			})),
 		[assigneesQuery.data],
 	);
+
+	const boardCards = useMemo(() => {
+		if (!board) return [];
+		const cards: KanbanBoardItem[] = [];
+		for (const columnId of board.root.children) {
+			for (const cardId of board[columnId]?.children ?? []) {
+				const card = board[cardId];
+				if (card?.type === "card") cards.push(card);
+			}
+		}
+		return cards;
+	}, [board]);
+
+	const statusFilterOptions = useMemo(
+		() =>
+			(columnsQuery.data ?? []).map((column) => ({
+				value: column.id,
+				label: kanbanBoardDisplayColumnTitle(column),
+			})),
+		[columnsQuery.data],
+	);
+
+	const customerFilterOptions = useMemo(() => {
+		const names = new Set(
+			(customersQuery.data ?? []).map((item) => item.name.trim()).filter(Boolean),
+		);
+		for (const card of boardCards) {
+			const name = (card.content as KanbanBoardTaskContent | undefined)?.customer?.trim();
+			if (name) names.add(name);
+		}
+		return [...names]
+			.sort((a, b) => a.localeCompare(b, "ru"))
+			.map((name) => ({ value: name, label: name }));
+	}, [boardCards, customersQuery.data]);
+
+	const sprintFilterOptions = useMemo(() => {
+		const options = (sprintsQuery.data ?? []).map((item) => ({
+			value: item.id,
+			label: `${item.code} — ${item.name}`,
+		}));
+		const known = new Set(options.map((option) => option.value));
+		for (const card of boardCards) {
+			const sprintId = (card.content as KanbanBoardTaskContent | undefined)?.sprintId;
+			if (sprintId && !known.has(sprintId)) {
+				known.add(sprintId);
+				options.push({ value: sprintId, label: sprintId });
+			}
+		}
+		return options.sort((a, b) => a.label.localeCompare(b.label, "ru"));
+	}, [boardCards, sprintsQuery.data]);
+
+	const streamFilterOptions = useMemo(() => {
+		const names = new Set(
+			(streamsQuery.data ?? []).map((item) => item.name.trim()).filter(Boolean),
+		);
+		for (const card of boardCards) {
+			const name = (
+				card.content as KanbanBoardTaskContent | undefined
+			)?.streamCustomer?.trim();
+			if (name) names.add(name);
+		}
+		return [...names]
+			.sort((a, b) => a.localeCompare(b, "ru"))
+			.map((name) => ({ value: name, label: name }));
+	}, [boardCards, streamsQuery.data]);
+
+	const releaseFilterOptions = useMemo(() => {
+		const options = new Map<string, string>();
+		for (const release of releasesQuery.data ?? []) {
+			options.set(release.id, kanbanBoardTaskReleaseLabel(release));
+		}
+		for (const card of boardCards) {
+			for (const release of card.releases ?? []) {
+				if (!options.has(release.id)) {
+					options.set(release.id, kanbanBoardTaskReleaseLabel(release));
+				}
+			}
+		}
+		return [...options.entries()]
+			.map(([value, label]) => ({ value, label }))
+			.sort((a, b) => a.label.localeCompare(b.label, "ru"));
+	}, [boardCards, releasesQuery.data]);
+
+	const parentFilterOptions = useMemo(() => {
+		const names = new Set<string>();
+		for (const card of boardCards) {
+			const name = (
+				card.content as KanbanBoardTaskContent | undefined
+			)?.parentTask?.trim();
+			if (name) names.add(name);
+		}
+		return [...names]
+			.sort((a, b) => a.localeCompare(b, "ru"))
+			.map((name) => ({ value: name, label: name }));
+	}, [boardCards]);
+
+	const tagFilterOptions = useMemo(() => {
+		const names = new Set<string>();
+		for (const card of boardCards) {
+			for (const tag of (card.content as KanbanBoardTaskContent | undefined)?.tags ??
+				[]) {
+				const name = tag.trim();
+				if (name) names.add(name);
+			}
+		}
+		return [...names]
+			.sort((a, b) => a.localeCompare(b, "ru"))
+			.map((name) => ({ value: name, label: name }));
+	}, [boardCards]);
+
+	const backlogFilterOptions = useMemo(() => {
+		const numbers = new Set<string>();
+		for (const card of boardCards) {
+			const backlog = (card.content as KanbanBoardTaskContent | undefined)
+				?.backlogNumber;
+			if (backlog != null && !Number.isNaN(backlog)) {
+				numbers.add(String(backlog));
+			}
+		}
+		return [...numbers]
+			.sort((a, b) => Number(a) - Number(b))
+			.map((value) => ({ value, label: value }));
+	}, [boardCards]);
 
 	const createdByFilterOptions = useMemo(() => {
 		const names = new Set<string>();
@@ -1058,6 +1193,14 @@ export function KanbanBoardPage() {
 					onChange={setFilters}
 					assigneeOptions={assigneeFilterOptions}
 					createdByOptions={createdByFilterOptions}
+					statusOptions={statusFilterOptions}
+					customerOptions={customerFilterOptions}
+					sprintOptions={sprintFilterOptions}
+					streamOptions={streamFilterOptions}
+					releaseOptions={releaseFilterOptions}
+					parentOptions={parentFilterOptions}
+					tagOptions={tagFilterOptions}
+					backlogOptions={backlogFilterOptions}
 					matchCount={matchCardCount}
 					totalCount={totalCardCount}
 				/>
@@ -1181,12 +1324,13 @@ export function KanbanBoardPage() {
 									},
 								}}
 								onCardMove={(move) => {
-									if (isSavingBoard || !standId || viewFiltered || !viewBoard)
-										return;
+									if (isSavingBoard || !standId || !expandedBoard) return;
+									// Соседи берутся из отфильтрованного вида, а вставка идёт
+									// в полную доску, чтобы скрытые карточки остались в колонках.
 									const movedView = normalizeKanbanBoardData(
 										dropHandler(
 											move,
-											viewBoard as BoardData,
+											expandedBoard as BoardData,
 										) as KanbanBoardData,
 									);
 									const toLane = parseKanbanBoardReleasesLaneId(

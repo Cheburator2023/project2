@@ -6,6 +6,7 @@ import Typography from "@mui/material/Typography";
 import type { IToolPanelParams } from "ag-grid-community";
 import {
 	clearAgGridColumnState,
+	clearAgGridFilterModel,
 	loadAgGridRowTintEnabled,
 	saveAgGridRowTintEnabled,
 } from "@react-client/common/tableStuff/agGridColumnState";
@@ -28,8 +29,10 @@ export function AgGridColumnStateToolPanel({
 	const handleReset = () => {
 		if (gridStateKey) {
 			clearAgGridColumnState(gridStateKey);
+			clearAgGridFilterModel(gridStateKey);
 		}
 		api.resetColumnState();
+		api.setFilterModel(null);
 	};
 
 	const handleRowTintChange = (enabled: boolean) => {
@@ -46,7 +49,7 @@ export function AgGridColumnStateToolPanel({
 				Настройки таблицы
 			</Typography>
 			<Typography variant="body2" color="text.secondary">
-				Порядок и видимость колонок сохраняются автоматически в браузере.
+				Порядок, ширина, видимость колонок и фильтры сохраняются в браузере.
 			</Typography>
 			{showRowTintToggle ? (
 				<FormControlLabel

@@ -117,10 +117,8 @@ export function TrackerRegistryGrid<TRow extends object>({
 		sideBar,
 		onGridReady,
 		onColumnMoved,
-		onColumnVisible,
-		onColumnPinned,
-		onSortChanged,
-		onColumnResized,
+		onFilterChanged,
+		onColumnsReset,
 	} = useAgGridColumnPersistence(gridStateKey, { showRowTintToggle });
 	const [menuState, setMenuState] = useState<{
 		mouseX: number;
@@ -141,10 +139,14 @@ export function TrackerRegistryGrid<TRow extends object>({
 	const closeMenu = useCallback(() => setMenuState(null), []);
 
 	const handleColumnStateChange = useCallback(
-		(api: GridApi) => {
-			onColumnMoved(api);
+		(api: GridApi, source?: string) => {
+			if (source === "gridOptionsChanged") {
+				onColumnsReset(api);
+				return;
+			}
+			onColumnMoved(api, source);
 		},
-		[onColumnMoved],
+		[onColumnMoved, onColumnsReset],
 	);
 
 	const resolveRowStyle = useCallback(
@@ -187,6 +189,7 @@ export function TrackerRegistryGrid<TRow extends object>({
 				icons={agGridIconSet}
 				rowData={rowData}
 				columnDefs={columnDefs}
+				maintainColumnOrder
 				autoGroupColumnDef={autoGroupColumnDef}
 				treeData={treeData}
 				treeDataChildrenField={treeData ? treeDataChildrenField : undefined}
@@ -218,12 +221,25 @@ export function TrackerRegistryGrid<TRow extends object>({
 				}}
 				sideBar={sideBar}
 				onGridReady={onGridReady}
-				onColumnMoved={(event) => handleColumnStateChange(event.api)}
-				onColumnVisible={(event) => onColumnVisible(event.api)}
-				onColumnPinned={(event) => onColumnPinned(event.api)}
-				onSortChanged={(event) => onSortChanged(event.api)}
+				onNewColumnsLoaded={(event) => onColumnsReset(event.api)}
+				onColumnMoved={(event) =>
+					handleColumnStateChange(event.api, event.source)
+				}
+				onColumnVisible={(event) =>
+					handleColumnStateChange(event.api, event.source)
+				}
+				onColumnPinned={(event) =>
+					handleColumnStateChange(event.api, event.source)
+				}
+				onSortChanged={(event) =>
+					handleColumnStateChange(event.api, event.source)
+				}
 				onColumnResized={(event) => {
-					if (event.finished) onColumnResized(event.api);
+					if (!event.finished) return;
+					handleColumnStateChange(event.api, event.source);
+				}}
+				onFilterChanged={(event) => {
+					onFilterChanged(event.api, event.source);
 				}}
 				onSelectionChanged={(event: SelectionChangedEvent<TRow>) => {
 					onSelectionChange?.(event.api.getSelectedRows());
