@@ -1082,6 +1082,24 @@ export function applyKanbanBoardAssigneeHandoff(
 	};
 }
 
+/** Меняет текущего исполнителя и добавляет его в список исполнителей. */
+export function withKanbanBoardCurrentAssignee(
+	content: KanbanBoardTaskContent,
+	nextAssignee: string,
+): KanbanBoardTaskContent {
+	const trimmed = nextAssignee.trim();
+	const assignees = kanbanBoardTaskAssignees(content);
+	const nextAssignees =
+		trimmed && !assignees.includes(trimmed)
+			? [...assignees, trimmed]
+			: assignees;
+	return applyKanbanBoardAssigneeHandoff(content, {
+		...content,
+		assignees: nextAssignees.length ? nextAssignees : undefined,
+		currentAssignee: trimmed || undefined,
+	});
+}
+
 export function boardsEquivalent(
 	left: KanbanBoardData,
 	right: KanbanBoardData,

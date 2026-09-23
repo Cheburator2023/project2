@@ -1,6 +1,8 @@
 import AddIcon from "@mui/icons-material/Add";
 import DownloadIcon from "@mui/icons-material/Download";
 import FilterListIcon from "@mui/icons-material/FilterList";
+import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
+import ViewColumnIcon from "@mui/icons-material/ViewColumn";
 import HistoryIcon from "@mui/icons-material/History";
 import PublishIcon from "@mui/icons-material/Publish";
 import SearchIcon from "@mui/icons-material/Search";
@@ -24,6 +26,8 @@ import InputAdornment from "@mui/material/InputAdornment";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import TextField from "@mui/material/TextField";
+import ToggleButton from "@mui/material/ToggleButton";
+import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Typography from "@mui/material/Typography";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -39,6 +43,7 @@ import {
 	expandKanbanBoardReleasesLanes,
 	parseKanbanBoardReleasesLaneId,
 	moveKanbanBoardCardToColumn,
+	withKanbanBoardCurrentAssignee,
 	type KanbanBoardColumnDto,
 	type KanbanBoardData,
 	type KanbanBoardItem,
@@ -101,6 +106,7 @@ import {
 	getKanbanColumnColor,
 } from "@react-client/features/kanban-board/components/KanbanBoardColumnChrome";
 import { KanbanBoardFilterPanel } from "@react-client/features/kanban-board/components/KanbanBoardFilterPanel";
+import { KanbanBoardPeopleView } from "@react-client/features/kanban-board/components/KanbanBoardPeopleView";
 import { KanbanTaskBoardCard } from "@react-client/features/kanban-board/components/KanbanTaskBoardCard";
 import { useKanbanBoardPageScroll } from "@react-client/features/kanban-board/useKanbanBoardPageScroll";
 import {
@@ -114,6 +120,7 @@ import {
 	trackerBoardPath,
 	type KanbanBoardReturnLocationState,
 } from "@react-client/features/kanban-board/kanban-task-paths";
+import { groupKanbanBoardByCurrentAssignee } from "@react-client/features/kanban-board/kanbanBoardPeopleGroups";
 import { useCreateAndOpenKanbanTask } from "@react-client/features/kanban-board/useCreateAndOpenKanbanTask";
 import {
 	countKanbanBoardCards,
@@ -122,6 +129,7 @@ import {
 	kanbanBoardTaskMatchesFilters,
 	kanbanBoardTaskMatchesSearch,
 	applyKanbanBoardViewToSearchParams,
+	parseKanbanBoardLayout,
 	parseKanbanBoardSearchQuery,
 	parseKanbanBoardTaskFiltersFromSearchParams,
 	type KanbanBoardTaskFilters,
@@ -185,6 +193,7 @@ export function KanbanBoardPage() {
 	const [openingTaskLabel, setOpeningTaskLabel] = useState<string | null>(null);
 	const [boardSettingsOpen, setBoardSettingsOpen] = useState(false);
 	const searchQuery = parseKanbanBoardSearchQuery(searchParams);
+	const layout = parseKanbanBoardLayout(searchParams);
 	const filters = useMemo(
 		() => parseKanbanBoardTaskFiltersFromSearchParams(searchParams),
 		[searchParams],
@@ -222,6 +231,20 @@ export function KanbanBoardPage() {
 	const setFilters = useCallback(
 		(next: KanbanBoardTaskFilters) => setBoardView({ filters: next }),
 		[setBoardView],
+	);
+	const setLayout = useCallback(
+		(next: "board" | "people") => {
+			setSearchParams(
+				(prev) => {
+					const params = new URLSearchParams(prev);
+					if (next === "people") params.set("layout", "people");
+					else params.delete("layout");
+					return params;
+				},
+				{ replace: true },
+			);
+		},
+		[setSearchParams],
 	);
 	const [boardContextMenu, setBoardContextMenu] = useState<{
 		mouseX: number;
@@ -576,35 +599,54 @@ export function KanbanBoardPage() {
 		return expandKanbanBoardReleasesLanes(board, releasesQuery.data ?? []);
 	}, [board, releasesQuery.data]);
 
-	const viewBoard = useMemo(() => {
+	const filteredBoard = useMemo(() => {
 		if (!board) return null;
-		const filtered =
-			!viewFiltered
-				? board
-				: filterKanbanBoardData(board, (item) => {
-						if (
-							!kanbanBoardTaskMatchesSearch(
-								item,
-								debouncedSearch,
-								boardMeta?.boardKey,
-							)
-						) {
-							return false;
-						}
-						return kanbanBoardTaskMatchesFilters(item, filters);
-					});
+		if (!viewFiltered) return board;
+		return filterKanbanBoardData(board, (item) => {
+			if (
+				!kanbanBoardTaskMatchesSearch(
+					item,
+					debouncedSearch,
+					boardMeta?.boardKey,
+				)
+			) {
+				return false;
+			}
+			return kanbanBoardTaskMatchesFilters(item, filters);
+		});
+	}, [board, boardMeta?.boardKey, debouncedSearch, filters, viewFiltered]);
+
+	const viewBoard = useMemo(() => {
+		if (!filteredBoard) return null;
 		return expandKanbanBoardReleasesLanes(
-			filtered,
+			filteredBoard,
 			releasesQuery.data ?? [],
 		);
-	}, [
-		board,
-		boardMeta?.boardKey,
-		debouncedSearch,
-		filters,
-		releasesQuery.data,
-		viewFiltered,
-	]);
+	}, [filteredBoard, releasesQuery.data]);
+
+	const directoryAssigneeNames = useMemo(
+		() =>
+			[
+				...new Set(
+					(assigneesQuery.data ?? [])
+						.map((item) => item.name.trim())
+						.filter(Boolean),
+				),
+			].sort((a, b) => a.localeCompare(b, "ru")),
+		[assigneesQuery.data],
+	);
+
+	const peopleGroups = useMemo(
+		() =>
+			filteredBoard
+				? groupKanbanBoardByCurrentAssignee(
+						filteredBoard,
+						boardMeta?.boardKey,
+						directoryAssigneeNames,
+					)
+				: [],
+		[boardMeta?.boardKey, directoryAssigneeNames, filteredBoard],
+	);
 
 	const totalCardCount = useMemo(
 		() => (board ? countKanbanBoardCards(board) : 0),
@@ -841,24 +883,24 @@ export function KanbanBoardPage() {
 		[],
 	);
 
+	const openTaskByKey = useCallback(
+		(taskKey: string) => {
+			persistScroll();
+			setOpeningTaskLabel(taskKey);
+			navigate(kanbanTaskEditPath(taskKey), { state: boardReturnState });
+		},
+		[boardReturnState, navigate, persistScroll],
+	);
+
 	const handleCardClick = useCallback(
 		(_event: MouseEvent<HTMLDivElement>, card: BoardItem) => {
 			const task = tasksQuery.data?.find((item) => item.id === card.id);
 			const boardKeyPrefix = boardMeta?.boardKey;
 			if (task?.taskNumber && boardKeyPrefix) {
-				const taskRef = formatKanbanTaskKey(boardKeyPrefix, task.taskNumber);
-				persistScroll();
-				setOpeningTaskLabel(taskRef);
-				navigate(kanbanTaskEditPath(taskRef), { state: boardReturnState });
+				openTaskByKey(formatKanbanTaskKey(boardKeyPrefix, task.taskNumber));
 			}
 		},
-		[
-			boardMeta?.boardKey,
-			boardReturnState,
-			navigate,
-			persistScroll,
-			tasksQuery.data,
-		],
+		[boardMeta?.boardKey, openTaskByKey, tasksQuery.data],
 	);
 
 	const handleTaskContentUpdated = useCallback(
@@ -892,14 +934,9 @@ export function KanbanBoardPage() {
 		[],
 	);
 
-	const moveCardToColumnFromMenu = useCallback(
-		(columnId: string) => {
-			if (!cardContextMenu || !board || isSavingBoard) {
-				setCardContextMenu(null);
-				return;
-			}
-			const { cardId, parentId } = cardContextMenu;
-			setCardContextMenu(null);
+	const moveCardToColumn = useCallback(
+		(cardId: string, parentId: string, columnId: string) => {
+			if (!board || isSavingBoard) return;
 			if (kanbanBoardResolveColumnId(parentId) === columnId) return;
 			if (!board[columnId] || !board[cardId]) {
 				toast.error("Колонка ещё не появилась — обновите доску");
@@ -909,7 +946,20 @@ export function KanbanBoardPage() {
 			if (!moved || moved === board) return;
 			void persistBoard(moved).catch(() => undefined);
 		},
-		[board, cardContextMenu, isSavingBoard, persistBoard],
+		[board, isSavingBoard, persistBoard],
+	);
+
+	const moveCardToColumnFromMenu = useCallback(
+		(columnId: string) => {
+			if (!cardContextMenu || isSavingBoard) {
+				setCardContextMenu(null);
+				return;
+			}
+			const { cardId, parentId } = cardContextMenu;
+			setCardContextMenu(null);
+			moveCardToColumn(cardId, parentId, columnId);
+		},
+		[cardContextMenu, isSavingBoard, moveCardToColumn],
 	);
 
 	const cancelCardFromMenu = useCallback(() => {
@@ -948,6 +998,39 @@ export function KanbanBoardPage() {
 		if (!moved) return;
 		void persistBoard(moved).catch(() => undefined);
 	}, [board, cardContextMenu, columnsQuery.data, isSavingBoard, persistBoard]);
+
+	const assignCard = useCallback(
+		(cardId: string, nextAssignee: string) => {
+			if (!board || isSavingBoard) return;
+			const card = board[cardId];
+			const content = card?.content;
+			if (!card || !content || !("title" in content)) return;
+			const current = content.currentAssignee?.trim() ?? "";
+			if (nextAssignee.trim() === current) return;
+			const nextBoard: KanbanBoardData = {
+				...board,
+				[cardId]: {
+					...card,
+					content: withKanbanBoardCurrentAssignee(content, nextAssignee),
+				},
+			};
+			void persistBoard(nextBoard).catch(() => undefined);
+		},
+		[board, isSavingBoard, persistBoard],
+	);
+
+	const assignCardFromMenu = useCallback(
+		(nextAssignee: string) => {
+			if (!cardContextMenu || isSavingBoard) {
+				setCardContextMenu(null);
+				return;
+			}
+			const { cardId } = cardContextMenu;
+			setCardContextMenu(null);
+			assignCard(cardId, nextAssignee);
+		},
+		[assignCard, cardContextMenu, isSavingBoard],
+	);
 
 	useEffect(() => {
 		const id = "kanban-board-import-error";
@@ -1063,6 +1146,23 @@ export function KanbanBoardPage() {
 	const cardColumnId = cardContextMenu
 		? kanbanBoardResolveColumnId(cardContextMenu.parentId)
 		: null;
+	const cardMenuAssignee = (() => {
+		if (!cardContextMenu || !board) return "";
+		const content = board[cardContextMenu.cardId]?.content;
+		if (!content || !("title" in content)) return "";
+		return content.currentAssignee?.trim() ?? "";
+	})();
+	const assigneeMenuNames = [
+		...new Set(
+			(assigneesQuery.data ?? [])
+				.map((item) => item.name.trim())
+				.filter(Boolean),
+		),
+	];
+	if (cardMenuAssignee && !assigneeMenuNames.includes(cardMenuAssignee)) {
+		assigneeMenuNames.push(cardMenuAssignee);
+	}
+	assigneeMenuNames.sort((a, b) => a.localeCompare(b, "ru"));
 
 	return (
 		<Flex
@@ -1128,6 +1228,35 @@ export function KanbanBoardPage() {
 							<FilterListIcon fontSize="small" />
 						</Badge>
 					</IconButton>
+					<ToggleButtonGroup
+						exclusive
+						size="small"
+						value={layout}
+						onChange={(_, next: "board" | "people" | null) => {
+							if (next) setLayout(next);
+						}}
+						aria-label="Вид доски"
+						sx={{ flexShrink: 0, height: 32 }}
+					>
+						<ToggleButton
+							value="board"
+							title="Доска"
+							aria-label="Доска"
+							sx={{ textTransform: "none", px: 1, gap: 0.5 }}
+						>
+							<ViewColumnIcon fontSize="small" />
+							Доска
+						</ToggleButton>
+						<ToggleButton
+							value="people"
+							title="По людям"
+							aria-label="По людям"
+							sx={{ textTransform: "none", px: 1, gap: 0.5 }}
+						>
+							<PeopleAltOutlinedIcon fontSize="small" />
+							По людям
+						</ToggleButton>
+					</ToggleButtonGroup>
 					{viewFiltered ? (
 						<Typography variant="caption" color="text.secondary" noWrap>
 							{matchCardCount} / {totalCardCount}
@@ -1245,6 +1374,22 @@ export function KanbanBoardPage() {
 						boxSizing: "border-box",
 					}}
 				>
+					{layout === "people" && filteredBoard ? (
+						<KanbanBoardPeopleView
+							groups={peopleGroups}
+							statuses={statusColumns.map((column) => ({
+								id: column.id,
+								title: kanbanBoardDisplayColumnTitle(column),
+								color: column.color || "#94a3b8",
+							}))}
+							assigneeNames={directoryAssigneeNames}
+							busy={isSavingBoard}
+							onOpenTask={openTaskByKey}
+							onMoveTask={moveCardToColumn}
+							onAssignTask={assignCard}
+							onTaskContextMenu={handleCardContextMenu}
+						/>
+					) : (
 					<Box
 						sx={{
 							display: "flex",
@@ -1389,6 +1534,7 @@ export function KanbanBoardPage() {
 							/>
 						) : null}
 					</Box>
+					)}
 				</Box>
 			</Card>
 			<Menu
@@ -1453,6 +1599,27 @@ export function KanbanBoardPage() {
 						</MenuItem>
 					);
 				})}
+				<Divider />
+				<ListSubheader
+					sx={{ bgcolor: "background.paper", lineHeight: "32px", fontSize: 12 }}
+				>
+					Текущий исполнитель
+				</ListSubheader>
+				{assigneeMenuNames.map((name) => (
+					<MenuItem
+						key={name}
+						disabled={!cardContextMenu || isSavingBoard || name === cardMenuAssignee}
+						onClick={() => assignCardFromMenu(name)}
+					>
+						{name}
+					</MenuItem>
+				))}
+				<MenuItem
+					disabled={!cardContextMenu || isSavingBoard || !cardMenuAssignee}
+					onClick={() => assignCardFromMenu("")}
+				>
+					Без исполнителя
+				</MenuItem>
 				<Divider />
 				<MenuItem
 					disabled={

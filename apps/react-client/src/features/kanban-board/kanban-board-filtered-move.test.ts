@@ -61,7 +61,6 @@ describe("filtered board card move", () => {
 					toColumnId: "doing",
 					taskAbove: "other",
 					taskBelow: null,
-					position: 1,
 				},
 				board,
 			) as KanbanBoardData,

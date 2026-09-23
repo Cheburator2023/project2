@@ -121,7 +121,18 @@ export const KANBAN_BOARD_VIEW_QUERY = {
 	createdTo: "createdTo",
 	updatedFrom: "updatedFrom",
 	updatedTo: "updatedTo",
+	layout: "layout",
 } as const;
+
+export type KanbanBoardLayout = "board" | "people";
+
+export function parseKanbanBoardLayout(
+	params: URLSearchParams,
+): KanbanBoardLayout {
+	return params.get(KANBAN_BOARD_VIEW_QUERY.layout) === "people"
+		? "people"
+		: "board";
+}
 
 const PRIORITY_IDS = new Set<string>(
 	KANBAN_BOARD_PRIORITIES.map((item) => item.id),

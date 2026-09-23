@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	applyKanbanBoardAssigneeHandoff,
+	withKanbanBoardCurrentAssignee,
 	diffKanbanTaskChanges,
 	kanbanBoardAssigneeHandoffTitle,
 	kanbanBoardTaskHasAssigneeHandoff,
@@ -78,5 +79,36 @@ describe("applyKanbanBoardAssigneeHandoff", () => {
 				to: null,
 			}),
 		]);
+	});
+});
+
+describe("withKanbanBoardCurrentAssignee", () => {
+	it("adds the new current assignee and marks the handoff", () => {
+		const next = withKanbanBoardCurrentAssignee(
+			{
+				title: "Задача",
+				assignees: ["Иванов"],
+				currentAssignee: "Иванов",
+			},
+			"Петров",
+		);
+		expect(next.currentAssignee).toBe("Петров");
+		expect(next.assignees).toEqual(["Иванов", "Петров"]);
+		expect(next.assigneeHandoffPending).toBe(true);
+		expect(next.assigneeHandoffFrom).toBe("Иванов");
+	});
+
+	it("clears the current assignee without dropping the team", () => {
+		const next = withKanbanBoardCurrentAssignee(
+			{
+				title: "Задача",
+				assignees: ["Иванов"],
+				currentAssignee: "Иванов",
+			},
+			"",
+		);
+		expect(next.currentAssignee).toBeUndefined();
+		expect(next.assignees).toEqual(["Иванов"]);
+		expect(next.assigneeHandoffPending).toBeUndefined();
 	});
 });
