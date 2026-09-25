@@ -1,5 +1,30 @@
 # Semantic Versioning Changelog
 
+# [1.69.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.68.0...v1.69.0) (2026-09-25)
+
+
+### Bug Fixes
+
+* update SuspenseOutlet key handling and improve KanbanBoardPage search functionality ([aaa5e70](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/aaa5e70391d67c1851e2d5312aef498dc8030cd7))
+
+
+### Features
+
+* add current assignee filtering and management to Kanban board ([0fd4d3e](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/0fd4d3e16de82299a30fd683ea12a56015d14ac2))
+* add migration for v2 stream kind and executor fields ([f423c83](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/f423c83fd1d7a5ef44952934be641de46f50bf80))
+* enhance ag-grid column and filter model management ([b52c5bb](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/b52c5bb7f26617d45da7e51162574282cd971fc4))
+* enhance Kanban board planning functionality ([9aa9b72](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/9aa9b72b48f7c6432f535dac080f1662287dd94c))
+* enhance PlanningTasksPanel with column ordering and new color coding ([a1115ff](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/a1115ffeeee27e451bb1f23d5edcde22cebe211b))
+* enhance PlanningTasksPanel with column ordering and new color coding ([23a5474](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/23a54745af73d8741a479d732e5b4e1b411221d6))
+* enhance task management and dialog functionality in planning ([4cbccb5](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/4cbccb5dab7ad156b7501a834626b6822c527404))
+* expand Kanban board release statuses and add completion functionality ([2f79d60](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/2f79d60a4f2b7a5e78dae3a9b619344ba5a71788))
+* implement Kanban board assignee management and layout options ([7ac702b](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/7ac702b36763f326dd904c75fe229a5967942c6f))
+* implement Kanban board slug migration and update task key formatting ([0ac34a5](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/0ac34a5023f3c41aa961d58f9af7294f20d297f9))
+* implement toast notifications for status messages in Kanban board ([34efba1](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/34efba1fe2ce736d1eb2d3d84593738a8b55a7bf))
+* integrate toast notifications for KanbanTaskPage ([55fe5a2](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/55fe5a2c76a4155665da791dd4faaf17ebdbe0fb))
+* update global status handling in anketa workflow and UI ([19eda72](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/19eda72dd33d2ae0edce18baf3cf676049fcbe50))
+* update release configuration to support multiple branches ([64047de](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/commit/64047de612e43fd51dd5c6329ee925ed0674b517))
+
 # [1.68.0](https://git.sfera.inno.local:7999/SUMD/smart_anketa_ui/compare/v1.67.0...v1.68.0) (2026-09-17)
 
 
