@@ -1,9 +1,13 @@
 import {
 	formatKanbanTaskKey,
 	kanbanBoardDisplayColumnTitle,
+	kanbanBoardRelatedLinksFromContent,
+	KANBAN_BOARD_DEFAULT_TASK_TYPE_ID,
 	type KanbanBoardData,
 	type KanbanBoardItem,
+	type KanbanBoardRelatedTaskLink,
 	type KanbanBoardTaskContent,
+	type KanbanBoardTaskTypeId,
 } from "@smart-anketa/api-contract";
 
 export const KANBAN_BOARD_UNASSIGNED_PERSON_TITLE = "Без исполнителя";
@@ -15,6 +19,8 @@ export type KanbanBoardPersonTask = {
 	taskKey: string;
 	statusTitle: string;
 	statusColor: string;
+	taskType: KanbanBoardTaskTypeId;
+	relatedLinks: KanbanBoardRelatedTaskLink[];
 };
 
 export type KanbanBoardPersonGroup = {
@@ -94,6 +100,10 @@ export function groupKanbanBoardByCurrentAssignee(
 				taskKey,
 				statusTitle: kanbanBoardDisplayColumnTitle(column),
 				statusColor: columnColor(column),
+				taskType: content?.taskType ?? KANBAN_BOARD_DEFAULT_TASK_TYPE_ID,
+				relatedLinks: kanbanBoardRelatedLinksFromContent(content, {
+					excludeId: card.id,
+				}),
 			});
 		}
 	}
