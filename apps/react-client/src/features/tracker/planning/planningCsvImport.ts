@@ -300,19 +300,18 @@ export function matchPlanningCsvRows(input: {
 	threshold?: number;
 }): PlanningCsvMatch[] {
 	const threshold = input.threshold ?? PLANNING_CSV_MATCH_THRESHOLD;
+	const tasks = input.boardId
+		? input.tasks.filter((task) => task.boardId === input.boardId)
+		: input.tasks;
 	const usedTaskIds = new Set<string>();
 	const ranked = input.rows.map((row) => {
-		const candidates = input.tasks
+		const candidates = tasks
 			.map((task) => ({
 				task,
 				score: planningTaskTitleSimilarity(row.title, task.title),
 			}))
 			.filter((item) => item.score >= threshold)
-			.sort((a, b) => {
-				const boardBias = (item: { task: PlanningCsvExistingTask }) =>
-					input.boardId && item.task.boardId === input.boardId ? 1 : 0;
-				return b.score - a.score || boardBias(b) - boardBias(a);
-			});
+			.sort((a, b) => b.score - a.score);
 		return { row, candidates };
 	});
 	ranked.sort((a, b) => (b.candidates[0]?.score ?? 0) - (a.candidates[0]?.score ?? 0));
