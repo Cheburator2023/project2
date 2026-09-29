@@ -1127,3 +1127,52 @@ export function resolveKanbanBoardLegacyColumnId(
 	}
 	return mapped;
 }
+
+/**
+ * Извлекает имена исполнителей, упомянутых в комментарии как @Name или @"Full Name".
+ * Сопоставление только с известными именами; более длинные совпадения имеют приоритет.
+ */
+export function extractKanbanCommentMentionNames(
+	body: string,
+	assigneeNames: readonly string[],
+): string[] {
+	const names = [
+		...new Set(assigneeNames.map((name) => name.trim()).filter(Boolean)),
+	].sort((left, right) => right.length - left.length);
+	if (!body || !names.length) return [];
+
+	const found = new Set<string>();
+	const result: string[] = [];
+
+	for (let index = 0; index < body.length; index += 1) {
+		if (body[index] !== "@") continue;
+
+		if (body[index + 1] === '"') {
+			const end = body.indexOf('"', index + 2);
+			if (end === -1) continue;
+			const candidate = body.slice(index + 2, end);
+			const match = names.find((name) => name === candidate);
+			if (match && !found.has(match)) {
+				found.add(match);
+				result.push(match);
+			}
+			index = end;
+			continue;
+		}
+
+		const rest = body.slice(index + 1);
+		for (const name of names) {
+			if (!rest.startsWith(name)) continue;
+			const after = rest[name.length];
+			if (after !== undefined && /[\p{L}\p{N}_]/u.test(after)) continue;
+			if (!found.has(name)) {
+				found.add(name);
+				result.push(name);
+			}
+			index += name.length;
+			break;
+		}
+	}
+
+	return result;
+}

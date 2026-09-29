@@ -101,6 +101,7 @@ describe("KanbanBoardPeopleView links", () => {
 								hasHandoff: true,
 								handoffTitle: "Передано: Иванов → Петров. Нужно взять в работу.",
 								handoffSummary: "Иванов → Петров",
+								participants: ["Петров", "Иванов"],
 								chips: [
 									{ label: "Высокий", color: "#dc2626" },
 									{ label: "Баг", color: "#ef4444" },
@@ -126,6 +127,7 @@ describe("KanbanBoardPeopleView links", () => {
 								taskType: "story",
 								hasBlocker: false,
 								hasHandoff: false,
+								participants: ["Петров"],
 								chips: [{ label: "История", color: "#22c55e" }],
 								meta: {
 									createdLabel: null,
@@ -159,6 +161,12 @@ describe("KanbanBoardPeopleView links", () => {
 		expect(screen.getByTestId("kanban-board-people-task-blocker")).toBeTruthy();
 		expect(screen.getByText("Есть блокер")).toBeTruthy();
 		expect(screen.getByText("Иванов → Петров")).toBeTruthy();
+		expect(screen.getByText("Участники · 2")).toBeTruthy();
+		fireEvent.click(screen.getByText("Участники · 2"));
+		const participantBlocks = screen.getAllByTestId(
+			"kanban-board-people-task-participants",
+		);
+		expect(participantBlocks[0]?.textContent).toContain("Иванов");
 		expect(screen.getByText("23 сент. 2026")).toBeTruthy();
 		expect(screen.getByText("6 д")).toBeTruthy();
 		expect(screen.getByText("2 чд")).toBeTruthy();

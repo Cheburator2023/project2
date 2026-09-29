@@ -136,6 +136,7 @@ import { KanbanBoardTaskImageService } from "./kanban-board-task-image.service";
 import { KanbanBoardTaskFileService } from "./kanban-board-task-file.service";
 import { KanbanBoardTaskLockService } from "./kanban-board-task-lock.service";
 import { KanbanBoardHistoryService } from "./kanban-board-history.service";
+import { KanbanBoardPushService } from "./kanban-board-push.service";
 import { assertKanbanBoardTaskVersion } from "../utils/kanban-board-task-edit.util";
 import { loadReleasesByTaskIds } from "../utils/kanban-board-task-releases.util";
 
@@ -171,6 +172,7 @@ export class KanbanBoardRegistryService {
 		private readonly taskFileService: KanbanBoardTaskFileService,
 		private readonly taskLockService: KanbanBoardTaskLockService,
 		private readonly historyService: KanbanBoardHistoryService,
+		private readonly pushService: KanbanBoardPushService,
 	) {}
 
 	async getSettings(): Promise<KanbanBoardSettingsDto> {
@@ -1785,6 +1787,8 @@ export class KanbanBoardRegistryService {
 
 		const before = this.historyService.snapshotFromTask(task);
 		const previousRelated = kanbanBoardRelatedLinksFromContent(task.content);
+		const previousAssignee = task.content.currentAssignee?.trim() ?? "";
+		const previousParentId = task.parentId;
 
 		if (dto.boardId !== undefined) {
 			const board = await this.boardRepository.findOne({
@@ -1865,6 +1869,34 @@ export class KanbanBoardRegistryService {
 		);
 		const [updated] = await this.mapTasksToRegistry([task]);
 		if (!updated) throw new NotFoundException("Задача не найдена");
+
+		try {
+			const nextAssignee = task.content.currentAssignee?.trim() ?? "";
+			const taskTitle = task.content.title?.trim() || updated.taskKey;
+			const taskUrl = `/tracker/task/${encodeURIComponent(updated.taskKey)}`;
+
+			if (nextAssignee && nextAssignee !== previousAssignee) {
+				this.pushService.notifyAssignees([nextAssignee], {
+					title: "Назначение на задачу",
+					body: taskTitle,
+					url: taskUrl,
+					tag: `kanban-assign-${task.id}`,
+				});
+			}
+
+			if (task.parentId !== previousParentId && nextAssignee) {
+				const statusTitle = columnTitle(task.parentId) || task.parentId;
+				this.pushService.notifyAssignees([nextAssignee], {
+					title: "Смена статуса",
+					body: `${taskTitle} → ${statusTitle}`,
+					url: taskUrl,
+					tag: `kanban-status-${task.id}`,
+				});
+			}
+		} catch {
+			/* push must not fail task update */
+		}
+
 		return updated;
 	}
 

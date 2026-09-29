@@ -7,6 +7,8 @@ import HistoryIcon from "@mui/icons-material/History";
 import PublishIcon from "@mui/icons-material/Publish";
 import SearchIcon from "@mui/icons-material/Search";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
+import NotificationsNoneOutlinedIcon from "@mui/icons-material/NotificationsNoneOutlined";
+import NotificationsActiveOutlinedIcon from "@mui/icons-material/NotificationsActiveOutlined";
 import Alert from "@mui/material/Alert";
 import Backdrop from "@mui/material/Backdrop";
 import Badge from "@mui/material/Badge";
@@ -140,6 +142,8 @@ import { TrackerTaskConflictDialog } from "@react-client/features/tracker/compon
 import { PlanningTaskDialog } from "@react-client/features/tracker/planning/PlanningTaskDialog";
 import { useTrackerBoardSync } from "@react-client/features/tracker/hooks/useTrackerBoardSync";
 import { useTrackerEditIdentity } from "@react-client/features/tracker/hooks/useTrackerEditIdentity";
+import { isDevLikeEnvironment } from "@react-client/common/constants/dev";
+import { useTrackerPushNotifications } from "@react-client/features/tracker/push/useTrackerPushNotifications";
 import { useDebouncedValue } from "@react-client/features/v2/admin_constructor/hooks/useDebouncedValue";
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -210,6 +214,7 @@ export function KanbanBoardPage() {
 	);
 	const debouncedSearch = useDebouncedValue(searchDraft, SEARCH_DEBOUNCE_MS);
 	const editLabel = useTrackerEditIdentity();
+	const trackerPush = useTrackerPushNotifications(editLabel);
 	const boardSearch = searchParams.toString();
 	const boardReturnState = useMemo<KanbanBoardReturnLocationState>(
 		() => ({ boardSearch }),
@@ -1257,6 +1262,27 @@ export function KanbanBoardPage() {
 						}}
 						inputProps={{ "aria-label": "Быстрый поиск по задачам" }}
 					/>
+					{isDevLikeEnvironment() ? (
+						<IconButton
+							size="small"
+							color={trackerPush.enabled ? "primary" : "default"}
+							onClick={() => void trackerPush.toggle()}
+							disabled={
+								trackerPush.busy ||
+								!trackerPush.allowed ||
+								trackerPush.status === "unsupported"
+							}
+							title="Уведомления"
+							aria-label="Уведомления"
+							aria-pressed={trackerPush.enabled}
+						>
+							{trackerPush.enabled ? (
+								<NotificationsActiveOutlinedIcon fontSize="small" />
+							) : (
+								<NotificationsNoneOutlinedIcon fontSize="small" />
+							)}
+						</IconButton>
+					) : null}
 					<IconButton
 						size="small"
 						color={filtersOpen || filtersActive ? "primary" : "default"}

@@ -42,6 +42,9 @@ lerna-debug.log*
 .env.production.local
 .env.local
 
+# DEV Web Push VAPID keys (generated when TRACKER_VAPID_* unset)
+.tracker-vapid.json
+
 # temp directory
 .temp
 .tmp

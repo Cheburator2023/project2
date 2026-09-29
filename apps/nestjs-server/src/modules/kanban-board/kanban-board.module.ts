@@ -18,6 +18,7 @@ import { KanbanBoardReleaseThemeEntity } from "./entities/kanban-board-release-t
 import { KanbanBoardReleaseTaskEntity } from "./entities/kanban-board-release-task.entity";
 import { KanbanBoardPlanningEntity } from "./entities/kanban-board-planning.entity";
 import { KanbanBoardPlanningTaskEntity } from "./entities/kanban-board-planning-task.entity";
+import { KanbanBoardPushSubscriptionEntity } from "./entities/kanban-board-push-subscription.entity";
 import { KanbanBoardController } from "./controllers/kanban-board.controller";
 import { KanbanBoardService } from "./services/kanban-board.service";
 import { KanbanBoardRegistryService } from "./services/kanban-board-registry.service";
@@ -30,6 +31,7 @@ import { KanbanBoardTaskLockEntity } from "./entities/kanban-board-task-lock.ent
 import { KanbanBoardTaskImageCleanupService } from "./services/kanban-board-task-image-cleanup.service";
 import { KanbanBoardTaskHistoryEntity } from "./entities/kanban-board-task-history.entity";
 import { KanbanBoardHistoryService } from "./services/kanban-board-history.service";
+import { KanbanBoardPushService } from "./services/kanban-board-push.service";
 import { KanbanWsPublisher } from "./services/kanban-ws-publisher.service";
 import { KanbanTaskWsSubscriber } from "./services/kanban-task-ws.subscriber";
 import { KanbanGateway } from "./gateways/kanban.gateway";
@@ -57,6 +59,7 @@ import { KanbanGateway } from "./gateways/kanban.gateway";
 			KanbanBoardReleaseTaskEntity,
 			KanbanBoardPlanningEntity,
 			KanbanBoardPlanningTaskEntity,
+			KanbanBoardPushSubscriptionEntity,
 		]),
 	],
 	controllers: [KanbanBoardController],
@@ -70,6 +73,7 @@ import { KanbanGateway } from "./gateways/kanban.gateway";
 		KanbanBoardTaskLockService,
 		KanbanBoardTaskImageCleanupService,
 		KanbanBoardHistoryService,
+		KanbanBoardPushService,
 		KanbanWsPublisher,
 		KanbanTaskWsSubscriber,
 		KanbanGateway,
@@ -83,6 +87,7 @@ import { KanbanGateway } from "./gateways/kanban.gateway";
 		KanbanBoardTaskCommentService,
 		KanbanBoardTaskLockService,
 		KanbanBoardHistoryService,
+		KanbanBoardPushService,
 	],
 })
 export class KanbanBoardModule {}

@@ -165,6 +165,87 @@ function PeopleTaskMeta({ meta }: { meta: KanbanBoardPersonTaskMeta }) {
 	);
 }
 
+function PeopleTaskParticipants({
+	participants,
+	onToggle,
+}: {
+	participants: string[];
+	onToggle: () => void;
+}) {
+	const [expanded, setExpanded] = useState(false);
+	if (!participants.length) return null;
+
+	const toggle = (event: MouseEvent) => {
+		stopRowClick(event);
+		setExpanded((value) => !value);
+	};
+
+	return (
+		<Flex
+			flexDirection="column"
+			gap={2}
+			sx={{ pl: "96px", pr: 1, pb: expanded ? 1 : 0.25 }}
+			onClick={stopRowClick}
+			onMouseDown={stopRowClick}
+			data-test-id="kanban-board-people-task-participants"
+		>
+			<Flex
+				alignItems="center"
+				gap={6}
+				onClick={toggle}
+				role="button"
+				tabIndex={0}
+				aria-expanded={expanded}
+				title={expanded ? "Скрыть участников" : "Показать участников"}
+				onKeyDown={(event) => {
+					if (event.key !== "Enter" && event.key !== " ") return;
+					event.preventDefault();
+					event.stopPropagation();
+					setExpanded((value) => !value);
+				}}
+				sx={{
+					cursor: "pointer",
+					color: "text.secondary",
+					userSelect: "none",
+					width: "fit-content",
+					minHeight: 20,
+				}}
+			>
+				<KeyboardArrowDownIcon
+					sx={{
+						fontSize: 16,
+						transform: expanded ? "rotate(0deg)" : "rotate(-90deg)",
+						transition: "transform 0.15s ease",
+					}}
+				/>
+				<Typography variant="caption" fontWeight={600} sx={{ fontSize: "0.7rem" }}>
+					Участники · {participants.length}
+				</Typography>
+			</Flex>
+			<Collapse
+				in={expanded}
+				timeout="auto"
+				unmountOnExit={false}
+				onEntered={onToggle}
+				onExited={onToggle}
+			>
+				<Flex flexDirection="column" gap={2} sx={{ pl: "22px" }}>
+					{participants.map((name) => (
+						<Typography
+							key={name}
+							variant="caption"
+							color="text.secondary"
+							sx={{ fontSize: "0.72rem" }}
+						>
+							{name}
+						</Typography>
+					))}
+				</Flex>
+			</Collapse>
+		</Flex>
+	);
+}
+
 function PeopleTaskRelations({
 	links,
 	tasksById,
@@ -613,6 +694,10 @@ export function KanbanBoardPeopleView({
 				</IconButton>
 			</Flex>
 			<PeopleTaskMeta meta={task.meta} />
+			<PeopleTaskParticipants
+				participants={task.participants}
+				onToggle={remeasureLinks}
+			/>
 			<PeopleTaskRelations
 				links={task.relatedLinks}
 				tasksById={tasksById}

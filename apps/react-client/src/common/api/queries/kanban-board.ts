@@ -65,6 +65,9 @@ import type {
 	AcquireKanbanBoardTaskLockRequestDto,
 	KanbanBoardTaskLockDto,
 	ResetKanbanBoardColumnsResultDto,
+	TrackerPushPublicKeyDto,
+	TrackerPushSubscriptionDto,
+	UpsertTrackerPushSubscriptionRequestDto,
 } from "@smart-anketa/api-contract";
 import { apiClient } from "../helpers/apiClient";
 
@@ -360,6 +363,29 @@ export const useUpdateKanbanBoardSettings = () => {
 		onSuccess: () => invalidateTracker(queryClient),
 	});
 };
+
+export const kanbanBoardGetPushVapidPublicKey = (signal?: AbortSignal) =>
+	apiClient<TrackerPushPublicKeyDto>({
+		url: "/kanban-board/push/vapid-public-key",
+		method: "GET",
+		signal,
+	});
+
+export const kanbanBoardUpsertPushSubscription = (
+	data: UpsertTrackerPushSubscriptionRequestDto,
+) =>
+	apiClient<TrackerPushSubscriptionDto>({
+		url: "/kanban-board/push/subscriptions",
+		method: "PUT",
+		data,
+	});
+
+export const kanbanBoardDeletePushSubscription = (endpoint: string) =>
+	apiClient<void>({
+		url: "/kanban-board/push/subscriptions",
+		method: "DELETE",
+		data: { endpoint },
+	});
 
 export const useKanbanBoardSupersprints = () =>
 	useQuery({

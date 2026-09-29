@@ -62,6 +62,8 @@ export type KanbanBoardPersonTask = {
 	hasHandoff: boolean;
 	handoffTitle?: string;
 	handoffSummary?: string;
+	/** Участники: текущий, исполнители, назначивший — без дублей. */
+	participants: string[];
 	chips: KanbanBoardPersonTaskChip[];
 	meta: KanbanBoardPersonTaskMeta;
 	relatedLinks: KanbanBoardRelatedTaskLink[];
@@ -95,6 +97,25 @@ function columnColor(column: KanbanBoardItem | undefined): string {
 		return color.color;
 	}
 	return "#94a3b8";
+}
+
+/** Участники карточки: текущий исполнитель, список исполнителей, назначивший. */
+export function buildKanbanBoardPersonTaskParticipants(
+	card: Pick<KanbanBoardItem, "createdBy">,
+	content: KanbanBoardTaskContent | undefined,
+): string[] {
+	const names: string[] = [];
+	const pushUnique = (value?: string | null) => {
+		const name = value?.trim() ?? "";
+		if (!name) return;
+		if (names.some((item) => item.toLowerCase() === name.toLowerCase())) return;
+		names.push(name);
+	};
+	pushUnique(content?.currentAssignee);
+	for (const assignee of content?.assignees ?? []) pushUnique(assignee);
+	pushUnique(content?.assignee);
+	pushUnique(card.createdBy);
+	return names;
 }
 
 /** Те же метки, что на карточке доски: приоритет, блокер, тип, стенд, система, релиз. */
@@ -253,6 +274,7 @@ export function groupKanbanBoardByCurrentAssignee(
 					? kanbanBoardAssigneeHandoffTitle(content)
 					: undefined,
 				handoffSummary,
+				participants: buildKanbanBoardPersonTaskParticipants(card, content),
 				chips: buildKanbanBoardPersonTaskChips(content, card.releases ?? []),
 				meta: buildKanbanBoardPersonTaskMeta(card, content),
 				relatedLinks: kanbanBoardRelatedLinksFromContent(content, {

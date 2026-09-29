@@ -271,6 +271,10 @@ export const KANBAN_BOARD_TASK_FILE_ALLOWED_MIME = [
 	"text/csv",
 	"application/csv",
 	"application/vnd.ms-excel.sheet.macroenabled.12",
+	"application/zip",
+	"application/x-zip-compressed",
+	"application/x-rar-compressed",
+	"application/vnd.rar",
 	"application/octet-stream",
 ] as const;
 
@@ -808,6 +812,24 @@ export interface KanbanBoardTaskCommentDto {
 export interface CreateKanbanBoardTaskCommentRequestDto {
 	body: string;
 	authorName: string;
+}
+
+export interface TrackerPushSubscriptionDto {
+	endpoint: string;
+	p256dh: string;
+	auth: string;
+	assigneeName: string;
+}
+
+export interface UpsertTrackerPushSubscriptionRequestDto {
+	endpoint: string;
+	p256dh: string;
+	auth: string;
+	assigneeName: string;
+}
+
+export interface TrackerPushPublicKeyDto {
+	publicKey: string;
 }
 
 export interface ResetKanbanBoardColumnsResultDto {

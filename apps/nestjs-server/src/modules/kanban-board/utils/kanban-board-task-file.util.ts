@@ -26,6 +26,8 @@ const EXT_TO_MIME: Record<string, string> = {
 	".txt": "text/plain",
 	".md": "text/markdown",
 	".csv": "text/csv",
+	".zip": "application/zip",
+	".rar": "application/vnd.rar",
 };
 
 export function resolveKanbanBoardTaskFileMime(

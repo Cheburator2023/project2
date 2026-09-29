@@ -3,6 +3,7 @@ import {
 	boardsEquivalent,
 	countKanbanBoardBlockers,
 	defaultKanbanBoardColumns,
+	extractKanbanCommentMentionNames,
 	findKanbanBoardCancelledColumnId,
 	findKanbanBoardDoneColumnId,
 	findKanbanBoardReleasesColumnId,
@@ -643,5 +644,31 @@ describe("kanban releases column lanes", () => {
 				true,
 			),
 		).toEqual([]);
+	});
+});
+
+describe("extractKanbanCommentMentionNames", () => {
+	const assignees = ["Иванов", "Иванов Иван", "Петров", "Anna"];
+
+	it("matches @Name and quoted full names; prefers longest", () => {
+		expect(
+			extractKanbanCommentMentionNames(
+				'Привет @"Иванов Иван" и @Петров, ок?',
+				assignees,
+			),
+		).toEqual(["Иванов Иван", "Петров"]);
+		expect(
+			extractKanbanCommentMentionNames("@Иванов Иван сделал", assignees),
+		).toEqual(["Иванов Иван"]);
+		expect(extractKanbanCommentMentionNames("@Anna hi", assignees)).toEqual([
+			"Anna",
+		]);
+	});
+
+	it("ignores unknown mentions and author-only noise", () => {
+		expect(extractKanbanCommentMentionNames("@Unknown", assignees)).toEqual([]);
+		expect(extractKanbanCommentMentionNames("no mentions", assignees)).toEqual(
+			[],
+		);
 	});
 });

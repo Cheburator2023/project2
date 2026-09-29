@@ -4,6 +4,7 @@ import {
 	Controller,
 	Delete,
 	Get,
+	Headers,
 	HttpStatus,
 	Param,
 	Post,
@@ -79,6 +80,9 @@ import type {
 	KanbanBoardHistoryDto,
 	KanbanBoardHistoryOverviewDto,
 	TrashKanbanBoardColumnTasksResultDto,
+	TrackerPushPublicKeyDto,
+	TrackerPushSubscriptionDto,
+	UpsertTrackerPushSubscriptionRequestDto,
 	UpdateKanbanBoardCustomerRequestDto,
 	UpdateKanbanBoardAssigneeRequestDto,
 	UpdateKanbanBoardBoardRequestDto,
@@ -96,6 +100,7 @@ import { KanbanBoardTaskImageService } from "../services/kanban-board-task-image
 import { KanbanBoardTaskFileService } from "../services/kanban-board-task-file.service";
 import { KanbanBoardTaskCommentService } from "../services/kanban-board-task-comment.service";
 import { KanbanBoardTaskLockService } from "../services/kanban-board-task-lock.service";
+import { KanbanBoardPushService } from "../services/kanban-board-push.service";
 import {
 	KanbanBoardService,
 	PlanningImportNotSupportedError,
@@ -127,6 +132,7 @@ export class KanbanBoardController {
 		private readonly taskLockService: KanbanBoardTaskLockService,
 		private readonly historyService: KanbanBoardHistoryService,
 		private readonly planningService: KanbanBoardPlanningService,
+		private readonly pushService: KanbanBoardPushService,
 	) {}
 
 	@Get("config")
@@ -194,6 +200,33 @@ export class KanbanBoardController {
 		@Body() dto: UpdateKanbanBoardSettingsRequestDto,
 	): Promise<KanbanBoardSettingsDto> {
 		return this.registryService.updateSettings(dto);
+	}
+
+	@Get("push/vapid-public-key")
+	@ApiOperation({ summary: "VAPID public key for tracker Web Push" })
+	async getTrackerPushVapidPublicKey(): Promise<TrackerPushPublicKeyDto> {
+		return this.pushService.getVapidPublicKey();
+	}
+
+	@Put("push/subscriptions")
+	@ApiOperation({ summary: "Upsert tracker Web Push subscription" })
+	async upsertTrackerPushSubscription(
+		@Body() dto: UpsertTrackerPushSubscriptionRequestDto,
+		@Headers("user-agent") userAgent?: string,
+	): Promise<TrackerPushSubscriptionDto> {
+		return this.pushService.upsertSubscription(dto, userAgent);
+	}
+
+	@Delete("push/subscriptions")
+	@ApiOperation({ summary: "Delete tracker Web Push subscription by endpoint" })
+	async deleteTrackerPushSubscription(
+		@Body() dto: { endpoint: string },
+	): Promise<void> {
+		const endpoint = dto?.endpoint?.trim() ?? "";
+		if (!endpoint) {
+			throw new BadRequestException("Укажите endpoint подписки");
+		}
+		return this.pushService.deleteByEndpoint(endpoint);
 	}
 
 	@Post("columns/reset-default")

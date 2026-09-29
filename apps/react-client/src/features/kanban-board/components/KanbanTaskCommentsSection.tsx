@@ -6,6 +6,8 @@ import Avatar from "@mui/material/Avatar";
 import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
 import IconButton from "@mui/material/IconButton";
+import MenuItem from "@mui/material/MenuItem";
+import Paper from "@mui/material/Paper";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { alpha } from "@mui/material/styles";
@@ -21,12 +23,24 @@ import { FuzzyAutocomplete } from "@react-client/common/muiCustom/FuzzyAutocompl
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import {
+	getKanbanCommentMentionQueryAtCursor,
+	insertKanbanCommentMention,
+	replaceKanbanCommentMentionQuery,
+	splitKanbanCommentBodyWithMentions,
+} from "@react-client/features/kanban-board/kanbanCommentMentions";
+import {
 	kanbanBoardCommentLengthError,
 	KANBAN_BOARD_TASK_COMMENT_MAX_LENGTH,
 	kanbanBoardTextLengthHint,
 } from "@smart-anketa/api-contract";
 import { getTrackerCurrentUserAssigneeName } from "@react-client/features/tracker/utils/trackerCurrentUserAssignee.storage";
-import { useEffect, useMemo, useState } from "react";
+import {
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+	type KeyboardEvent,
+} from "react";
 
 async function copyTextToClipboard(text: string): Promise<boolean> {
 	const value = text.trim();
@@ -91,9 +105,14 @@ export function KanbanTaskCommentsSection({ taskId, disabled }: Props) {
 	const assigneesQuery = useKanbanBoardAssignees();
 	const createComment = useCreateKanbanBoardTaskComment();
 	const deleteComment = useDeleteKanbanBoardTaskComment();
+	const draftInputRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(
+		null,
+	);
 
 	const [authorName, setAuthorName] = useState("");
 	const [draft, setDraft] = useState("");
+	const [cursor, setCursor] = useState(0);
+	const [mentionIndex, setMentionIndex] = useState(0);
 	const [error, setError] = useState<string | null>(null);
 	const defaultAuthorName = getTrackerCurrentUserAssigneeName();
 
@@ -104,6 +123,11 @@ export function KanbanTaskCommentsSection({ taskId, disabled }: Props) {
 				label: item.roleTitle ? `${item.name} — ${item.roleTitle}` : item.name,
 			})),
 		[assigneesQuery.data],
+	);
+
+	const assigneeNames = useMemo(
+		() => authorOptions.map((option) => option.value),
+		[authorOptions],
 	);
 
 	const selectedAuthor = useMemo(
@@ -128,12 +152,53 @@ export function KanbanTaskCommentsSection({ taskId, disabled }: Props) {
 	const getAuthorColor = (name: string): string =>
 		authorColorByName.get(name) ?? "#64748b";
 
+	const mentionQuery = useMemo(
+		() => getKanbanCommentMentionQueryAtCursor(draft, cursor),
+		[cursor, draft],
+	);
+
+	const mentionSuggestions = useMemo(() => {
+		if (!mentionQuery) return [];
+		const q = mentionQuery.query.trim().toLowerCase();
+		return authorOptions
+			.filter((option) => option.value !== authorName)
+			.filter((option) =>
+				q ? option.value.toLowerCase().includes(q) : true,
+			)
+			.slice(0, 8);
+	}, [authorName, authorOptions, mentionQuery]);
+
+	useEffect(() => {
+		setMentionIndex(0);
+	}, [mentionQuery?.query, mentionSuggestions.length]);
+
 	useEffect(() => {
 		if (!defaultAuthorName || authorName) return;
 		if (authorOptions.some((option) => option.value === defaultAuthorName)) {
 			setAuthorName(defaultAuthorName);
 		}
 	}, [authorName, authorOptions, defaultAuthorName]);
+
+	const applyDraft = (next: { body: string; cursor: number }) => {
+		setDraft(next.body);
+		setCursor(next.cursor);
+		requestAnimationFrame(() => {
+			const input = draftInputRef.current;
+			if (!input) return;
+			input.focus();
+			input.setSelectionRange(next.cursor, next.cursor);
+		});
+	};
+
+	const mentionPerson = (name: string) => {
+		if (mentionQuery) {
+			applyDraft(
+				replaceKanbanCommentMentionQuery(draft, mentionQuery, name),
+			);
+			return;
+		}
+		applyDraft(insertKanbanCommentMention(draft, name, cursor));
+	};
 
 	const handleSubmit = async () => {
 		setError(null);
@@ -157,8 +222,41 @@ export function KanbanTaskCommentsSection({ taskId, disabled }: Props) {
 				data: { body, authorName: authorName.trim() },
 			});
 			setDraft("");
+			setCursor(0);
 		} catch {
 			setError("Не удалось отправить комментарий");
+		}
+	};
+
+	const handleDraftKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+		if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+			event.preventDefault();
+			void handleSubmit();
+			return;
+		}
+		if (!mentionSuggestions.length || !mentionQuery) return;
+		if (event.key === "ArrowDown") {
+			event.preventDefault();
+			setMentionIndex((index) => (index + 1) % mentionSuggestions.length);
+			return;
+		}
+		if (event.key === "ArrowUp") {
+			event.preventDefault();
+			setMentionIndex(
+				(index) =>
+					(index - 1 + mentionSuggestions.length) % mentionSuggestions.length,
+			);
+			return;
+		}
+		if (event.key === "Enter" || event.key === "Tab") {
+			const option = mentionSuggestions[mentionIndex];
+			if (!option) return;
+			event.preventDefault();
+			mentionPerson(option.value);
+		}
+		if (event.key === "Escape") {
+			event.preventDefault();
+			setCursor(draft.length);
 		}
 	};
 
@@ -179,6 +277,10 @@ export function KanbanTaskCommentsSection({ taskId, disabled }: Props) {
 				<Flex flexDirection="column" gap={14}>
 					{comments.map((comment) => {
 						const color = getAuthorColor(comment.authorName);
+						const parts = splitKanbanCommentBodyWithMentions(
+							comment.body,
+							assigneeNames,
+						);
 						return (
 							<Flex key={comment.id} gap={10} alignItems="flex-start">
 								<Avatar
@@ -201,7 +303,26 @@ export function KanbanTaskCommentsSection({ taskId, disabled }: Props) {
 										gap={8}
 									>
 										<Flex alignItems="baseline" gap={8} wrap="wrap" minWidth="0">
-											<Typography variant="body2" fontWeight={700} noWrap>
+											<Typography
+												component="button"
+												type="button"
+												variant="body2"
+												fontWeight={700}
+												noWrap
+												disabled={isBusy}
+												onClick={() => mentionPerson(comment.authorName)}
+												title={`Упомянуть ${comment.authorName}`}
+												sx={{
+													border: 0,
+													background: "none",
+													padding: 0,
+													cursor: isBusy ? "default" : "pointer",
+													color: "inherit",
+													font: "inherit",
+													fontWeight: 700,
+													"&:hover": { textDecoration: "underline" },
+												}}
+											>
 												{comment.authorName}
 											</Typography>
 											<Typography
@@ -244,7 +365,27 @@ export function KanbanTaskCommentsSection({ taskId, disabled }: Props) {
 										variant="body2"
 										sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
 									>
-										{comment.body}
+										{parts.map((part, index) =>
+											part.mention ? (
+												<Typography
+													key={`${comment.id}-m-${index}`}
+													component="span"
+													variant="body2"
+													fontWeight={700}
+													sx={{
+														color: "primary.main",
+														bgcolor: (theme) =>
+															alpha(theme.palette.primary.main, 0.1),
+														borderRadius: 0.5,
+														px: 0.25,
+													}}
+												>
+													{part.text}
+												</Typography>
+											) : (
+												<span key={`${comment.id}-t-${index}`}>{part.text}</span>
+											),
+										)}
 									</Typography>
 								</Flex>
 							</Flex>
@@ -259,7 +400,7 @@ export function KanbanTaskCommentsSection({ taskId, disabled }: Props) {
 
 			<Spacer space={4} />
 
-			<Flex flexDirection="column" gap={10}>
+			<Flex flexDirection="column" gap={10} position="relative">
 				{!defaultAuthorName ? (
 					<FuzzyAutocomplete<AuthorOption>
 						label="Кто пишет"
@@ -275,32 +416,68 @@ export function KanbanTaskCommentsSection({ taskId, disabled }: Props) {
 				) : null}
 				<TextField
 					value={draft}
-					onChange={(event) => setDraft(event.target.value)}
+					onChange={(event) => {
+						setDraft(event.target.value);
+						setCursor(event.target.selectionStart ?? event.target.value.length);
+					}}
+					onSelect={(event) => {
+						const target = event.target as HTMLTextAreaElement;
+						setCursor(target.selectionStart ?? 0);
+					}}
+					onClick={(event) => {
+						const target = event.target as HTMLTextAreaElement;
+						setCursor(target.selectionStart ?? 0);
+					}}
 					disabled={isBusy}
 					fullWidth
 					multiline
 					minRows={3}
 					maxRows={8}
-					placeholder="Оставить комментарий…"
+					placeholder="Оставить комментарий… Используйте @ чтобы упомянуть"
 					error={draftHint.over}
 					helperText={draftHint.text}
-					title={`Комментарий: до ${KANBAN_BOARD_TASK_COMMENT_MAX_LENGTH} символов`}
+					title={`Комментарий: до ${KANBAN_BOARD_TASK_COMMENT_MAX_LENGTH} символов. @ — упоминание`}
+					inputRef={draftInputRef}
 					inputProps={{
 						maxLength: KANBAN_BOARD_TASK_COMMENT_MAX_LENGTH,
 					}}
 					FormHelperTextProps={{
 						sx: draftHint.near ? { color: "warning.main" } : undefined,
 					}}
-					onKeyDown={(event) => {
-						if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-							event.preventDefault();
-							void handleSubmit();
-						}
-					}}
+					onKeyDown={handleDraftKeyDown}
 				/>
+				{mentionSuggestions.length && mentionQuery ? (
+					<Paper
+						elevation={4}
+						sx={{
+							position: "absolute",
+							left: 0,
+							right: 0,
+							bottom: "100%",
+							mb: 0.5,
+							maxHeight: 220,
+							overflow: "auto",
+							zIndex: 2,
+						}}
+						data-test-id="kanban-comment-mention-menu"
+					>
+						{mentionSuggestions.map((option, index) => (
+							<MenuItem
+								key={option.value}
+								selected={index === mentionIndex}
+								onMouseDown={(event) => {
+									event.preventDefault();
+									mentionPerson(option.value);
+								}}
+							>
+								{option.label}
+							</MenuItem>
+						))}
+					</Paper>
+				) : null}
 				<Flex justifyContent="flex-end" alignItems="center" gap={8}>
 					<Typography variant="caption" color="text.secondary">
-						Ctrl+Enter
+						@ упоминание · Ctrl+Enter
 					</Typography>
 					<Button
 						variant="contained"
