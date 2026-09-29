@@ -206,7 +206,6 @@ export const KANBAN_BOARD_SYSTEM_COLORS: Record<KanbanBoardSystemId, string> = {
 	camunda: "#db2777",
 	keycloak: "#4f46e5",
 	monitoring: "#0d9488",
-	"api-gateway": "#9333ea",
 	infra: "#64748b",
 };
 
