@@ -41,6 +41,7 @@ import { TrackerRegistryImportButton } from "@react-client/features/tracker/comp
 import { trackerDateFormatter } from "@react-client/features/tracker/components/TrackerRegistryGrid";
 import { V2AdminButton } from "@react-client/features/v2/admin/atoms/V2AdminButton";
 import { kanbanTaskEditPath } from "@react-client/features/kanban-board/kanban-task-paths";
+import { KanbanCreateTaskSystemDialog } from "@react-client/features/kanban-board/components/KanbanCreateTaskSystemDialog";
 import { useCreateAndOpenKanbanTask } from "@react-client/features/kanban-board/useCreateAndOpenKanbanTask";
 import {
 	KANBAN_BOARD_CANCELLED_COLUMN_ID,
@@ -67,7 +68,7 @@ export function TrackerTasksPage() {
 	const deleteTask = useDeleteKanbanBoardTask();
 	const updateTask = useUpdateKanbanBoardTask();
 	const assignToBoard = useAssignKanbanBoardTasksToBoard();
-	const { createAndOpenSafe } = useCreateAndOpenKanbanTask();
+	const { requestCreate, systemDialog } = useCreateAndOpenKanbanTask();
 	const editLabel = useTrackerEditIdentity();
 	const [assignDialogOpen, setAssignDialogOpen] = useState(false);
 	const [assignTaskIds, setAssignTaskIds] = useState<string[]>([]);
@@ -452,7 +453,7 @@ export function TrackerTasksPage() {
 				rowData={data}
 				columnDefs={columnDefs}
 				loading={isLoading}
-				onCreateClick={() => void createAndOpenSafe()}
+				onCreateClick={() => requestCreate()}
 				onEditClick={openTask}
 				onRowDoubleClick={openTask}
 				defaultFilter="agSetColumnFilter"
@@ -515,6 +516,7 @@ export function TrackerTasksPage() {
 					void confirmAssignToBoard(boardId, systems)
 				}
 			/>
+			<KanbanCreateTaskSystemDialog {...systemDialog} />
 		</>
 	);
 }

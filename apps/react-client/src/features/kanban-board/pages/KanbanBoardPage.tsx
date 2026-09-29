@@ -122,6 +122,7 @@ import {
 } from "@react-client/features/kanban-board/kanban-task-paths";
 import { groupKanbanBoardByCurrentAssignee } from "@react-client/features/kanban-board/kanbanBoardPeopleGroups";
 import { useCreateAndOpenKanbanTask } from "@react-client/features/kanban-board/useCreateAndOpenKanbanTask";
+import { KanbanCreateTaskSystemDialog } from "@react-client/features/kanban-board/components/KanbanCreateTaskSystemDialog";
 import {
 	countKanbanBoardCards,
 	filterKanbanBoardData,
@@ -136,6 +137,7 @@ import {
 } from "@react-client/features/kanban-board/kanban-board-task-filter";
 import { TrackerBoardSettingsDialog } from "@react-client/features/tracker/components/TrackerBoardSettingsDialog";
 import { TrackerTaskConflictDialog } from "@react-client/features/tracker/components/TrackerTaskConflictDialog";
+import { PlanningTaskDialog } from "@react-client/features/tracker/planning/PlanningTaskDialog";
 import { useTrackerBoardSync } from "@react-client/features/tracker/hooks/useTrackerBoardSync";
 import { useTrackerEditIdentity } from "@react-client/features/tracker/hooks/useTrackerEditIdentity";
 import { useDebouncedValue } from "@react-client/features/v2/admin_constructor/hooks/useDebouncedValue";
@@ -193,6 +195,7 @@ export function KanbanBoardPage() {
 	const [remoteStale, setRemoteStale] = useState(false);
 	const [openingTaskLabel, setOpeningTaskLabel] = useState<string | null>(null);
 	const [boardSettingsOpen, setBoardSettingsOpen] = useState(false);
+	const [peopleTaskKey, setPeopleTaskKey] = useState<string | null>(null);
 	const urlSearchQuery = parseKanbanBoardSearchQuery(searchParams);
 	const [searchDraft, setSearchDraft] = useState(urlSearchQuery);
 	const layout = parseKanbanBoardLayout(searchParams);
@@ -501,36 +504,31 @@ export function KanbanBoardPage() {
 		});
 	}, []);
 
-	const { createAndOpen, isPending: isCreatingTask } =
+	const { requestCreate, isPending: isCreatingTask, systemDialog } =
 		useCreateAndOpenKanbanTask();
 
 	const defaultColumnId = columnsQuery.data?.[0]?.id ?? "todo";
 
 	const openCreateTask = useCallback(
-		async (columnId = defaultColumnId) => {
+		(columnId = defaultColumnId) => {
 			if (!resolvedBoardId) return;
-			try {
-				persistScroll();
-				setOpeningTaskLabel("Новая задача");
-				const lane = parseKanbanBoardReleasesLaneId(columnId);
-				const created = await createAndOpen({
-					boardId: resolvedBoardId,
-					parentId: lane?.columnId ?? columnId,
-					releaseIds: lane?.releaseId ? [lane.releaseId] : undefined,
-					returnState: boardReturnState,
-				});
-				setOpeningTaskLabel(created.taskKey);
-			} catch (error) {
-				setOpeningTaskLabel(null);
-				toast.error(apiErrorMessage(error));
-			}
+			persistScroll();
+			const lane = parseKanbanBoardReleasesLaneId(columnId);
+			requestCreate({
+				boardId: resolvedBoardId,
+				parentId: lane?.columnId ?? columnId,
+				releaseIds: lane?.releaseId ? [lane.releaseId] : undefined,
+				returnState: boardReturnState,
+				onStart: () => setOpeningTaskLabel("Новая задача"),
+				onCreated: (created) => setOpeningTaskLabel(created.taskKey),
+				onError: () => setOpeningTaskLabel(null),
+			});
 		},
 		[
-			boardApiRef,
 			boardReturnState,
-			createAndOpen,
 			defaultColumnId,
 			persistScroll,
+			requestCreate,
 			resolvedBoardId,
 		],
 	);
@@ -911,6 +909,23 @@ export function KanbanBoardPage() {
 		},
 		[boardReturnState, navigate, persistScroll],
 	);
+
+	const openPeopleTask = useCallback((taskKey: string) => {
+		const next = taskKey.trim();
+		if (next) setPeopleTaskKey(next);
+	}, []);
+
+	const closePeopleTask = useCallback(() => {
+		setPeopleTaskKey(null);
+		void queryClient.invalidateQueries({ queryKey: ["kanbanBoardTasks"] });
+		void queryClient.invalidateQueries({
+			queryKey: ["kanbanBoardTasksRegistry"],
+		});
+	}, [queryClient]);
+
+	useEffect(() => {
+		if (layout !== "people") setPeopleTaskKey(null);
+	}, [layout]);
 
 	const handleCardClick = useCallback(
 		(_event: MouseEvent<HTMLDivElement>, card: BoardItem) => {
@@ -1406,7 +1421,7 @@ export function KanbanBoardPage() {
 							}))}
 							assigneeNames={directoryAssigneeNames}
 							busy={isSavingBoard}
-							onOpenTask={openTaskByKey}
+							onOpenTask={openPeopleTask}
 							onMoveTask={moveCardToColumn}
 							onAssignTask={assignCard}
 							onTaskContextMenu={handleCardContextMenu}
@@ -1746,6 +1761,11 @@ export function KanbanBoardPage() {
 					</Button>
 				</DialogActions>
 			</Dialog>
+			<PlanningTaskDialog
+				taskKey={peopleTaskKey}
+				onClose={closePeopleTask}
+				onOpenTask={openPeopleTask}
+			/>
 			<Backdrop
 				open={Boolean(openingTaskLabel)}
 				sx={{
@@ -1760,6 +1780,7 @@ export function KanbanBoardPage() {
 					Открываем задачу{openingTaskLabel ? ` ${openingTaskLabel}` : ""}…
 				</Typography>
 			</Backdrop>
+			<KanbanCreateTaskSystemDialog {...systemDialog} />
 		</Flex>
 	);
 }

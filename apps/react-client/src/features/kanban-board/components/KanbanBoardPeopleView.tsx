@@ -1,7 +1,13 @@
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
+import AttachFileOutlinedIcon from "@mui/icons-material/AttachFileOutlined";
+import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
+import ChatBubbleOutlineOutlinedIcon from "@mui/icons-material/ChatBubbleOutlineOutlined";
+import HourglassBottomOutlinedIcon from "@mui/icons-material/HourglassBottomOutlined";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
-import type { MouseEvent } from "react";
+import ScheduleOutlinedIcon from "@mui/icons-material/ScheduleOutlined";
+import type { MouseEvent, ReactNode } from "react";
 import {
 	useCallback,
 	useEffect,
@@ -25,6 +31,7 @@ import { KanbanTaskFieldChip } from "@react-client/features/kanban-board/compone
 import type {
 	KanbanBoardPersonGroup,
 	KanbanBoardPersonTask,
+	KanbanBoardPersonTaskMeta,
 } from "@react-client/features/kanban-board/kanbanBoardPeopleGroups";
 import {
 	buildKanbanBoardPeopleLinkEdges,
@@ -35,8 +42,6 @@ import {
 import {
 	kanbanBoardRelationTypeColor,
 	kanbanBoardRelationTypeTitle,
-	kanbanBoardTaskTypeColor,
-	kanbanBoardTaskTypeTitle,
 	type KanbanBoardRelatedTaskLink,
 } from "@smart-anketa/api-contract";
 
@@ -74,6 +79,88 @@ function rowIsVisible(element: HTMLElement): boolean {
 const stopRowClick = (event: MouseEvent) => {
 	event.stopPropagation();
 };
+
+function MetaStat({
+	icon,
+	value,
+	title,
+}: {
+	icon: ReactNode;
+	value: number | string;
+	title: string;
+}) {
+	return (
+		<Flex
+			alignItems="center"
+			gap={4}
+			title={title}
+			sx={{ color: "text.secondary", flexShrink: 0 }}
+		>
+			{icon}
+			<Typography variant="caption" color="text.secondary" lineHeight={1}>
+				{value}
+			</Typography>
+		</Flex>
+	);
+}
+
+function PeopleTaskMeta({ meta }: { meta: KanbanBoardPersonTaskMeta }) {
+	return (
+		<Flex
+			alignItems="center"
+			gap={10}
+			wrap="wrap"
+			sx={{
+				pl: "96px",
+				pr: 1,
+				pb: 0.75,
+				pt: 0.25,
+			}}
+			data-test-id="kanban-board-people-task-meta"
+		>
+			{meta.createdLabel ? (
+				<MetaStat
+					title="Дата создания"
+					value={meta.createdLabel}
+					icon={<CalendarTodayOutlinedIcon sx={{ fontSize: 14 }} />}
+				/>
+			) : null}
+			{meta.ageDays !== null ? (
+				<MetaStat
+					title={`Висит ${meta.ageDays} дн.`}
+					value={`${meta.ageDays} д`}
+					icon={<ScheduleOutlinedIcon sx={{ fontSize: 14 }} />}
+				/>
+			) : null}
+			{meta.dueLabel ? (
+				<MetaStat
+					title="Срок"
+					value={meta.dueLabel}
+					icon={<AccessTimeOutlinedIcon sx={{ fontSize: 14 }} />}
+				/>
+			) : null}
+			{meta.estimatePd !== undefined ? (
+				<MetaStat
+					title="Оценка, чд"
+					value={`${meta.estimatePd} чд`}
+					icon={<HourglassBottomOutlinedIcon sx={{ fontSize: 14 }} />}
+				/>
+			) : null}
+			<MetaStat
+				title="Комментарии"
+				value={meta.commentCount}
+				icon={<ChatBubbleOutlineOutlinedIcon sx={{ fontSize: 14 }} />}
+			/>
+			{meta.attachmentCount > 0 ? (
+				<MetaStat
+					title="Вложения"
+					value={meta.attachmentCount}
+					icon={<AttachFileOutlinedIcon sx={{ fontSize: 14 }} />}
+				/>
+			) : null}
+		</Flex>
+	);
+}
 
 function PeopleTaskRelations({
 	links,
@@ -374,12 +461,19 @@ export function KanbanBoardPeopleView({
 						{task.taskKey}
 					</Typography>
 				) : null}
-				<span data-test-id="kanban-board-people-task-type">
-					<KanbanTaskFieldChip
-						label={kanbanBoardTaskTypeTitle(task.taskType)}
-						color={kanbanBoardTaskTypeColor(task.taskType)}
-					/>
-				</span>
+				<Flex
+					gap={4}
+					wrap="wrap"
+					alignItems="center"
+					sx={{ flexShrink: 0, maxWidth: 360 }}
+					data-test-id="kanban-board-people-task-chips"
+				>
+					{task.chips.map((chip) => (
+						<span key={`${chip.label}:${chip.color}`} title={chip.title}>
+							<KanbanTaskFieldChip label={chip.label} color={chip.color} />
+						</span>
+					))}
+				</Flex>
 				<Typography
 					variant="body2"
 					sx={{ flex: 1, minWidth: 0 }}
@@ -434,6 +528,7 @@ export function KanbanBoardPeopleView({
 					<PersonOutlineIcon fontSize="small" />
 				</IconButton>
 			</Flex>
+			<PeopleTaskMeta meta={task.meta} />
 			<PeopleTaskRelations
 				links={task.relatedLinks}
 				tasksById={tasksById}

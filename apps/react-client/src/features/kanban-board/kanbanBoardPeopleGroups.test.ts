@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { KanbanBoardData } from "@smart-anketa/api-contract";
-import { groupKanbanBoardByCurrentAssignee } from "./kanbanBoardPeopleGroups";
+import {
+	buildKanbanBoardPersonTaskChips,
+	groupKanbanBoardByCurrentAssignee,
+} from "./kanbanBoardPeopleGroups";
 
 function board(): KanbanBoardData {
 	return {
@@ -15,8 +18,8 @@ function board(): KanbanBoardData {
 			id: "todo",
 			title: "Сделать",
 			parentId: "root",
-			children: ["a", "b"],
-			totalChildrenCount: 2,
+			children: ["a", "b", "d"],
+			totalChildrenCount: 3,
 			content: { color: "#111111" },
 		},
 		doing: {
@@ -45,7 +48,21 @@ function board(): KanbanBoardData {
 			totalChildrenCount: 0,
 			type: "card",
 			taskNumber: 2,
-			content: { title: "Задача Петрова", currentAssignee: "Петров" },
+			createdAt: "2026-09-23T10:00:00.000Z",
+			commentCount: 1,
+			content: {
+				title: "Задача Петрова",
+				currentAssignee: "Петров",
+				priority: "high",
+				taskType: "bug",
+				workType: "feature",
+				stands: ["ift"],
+				systems: ["sum"],
+				hasBlocker: true,
+				roleEstimates: { analyst: 2 },
+				dueDate: "2026-10-01",
+			},
+			releases: [{ id: "rel-1", code: "REL-1", name: "Осень" }],
 		},
 		c: {
 			id: "c",
@@ -55,7 +72,25 @@ function board(): KanbanBoardData {
 			totalChildrenCount: 0,
 			type: "card",
 			taskNumber: 3,
-			content: { title: "Ещё Петров", currentAssignee: "Петров" },
+			content: {
+				title: "Ещё Петров",
+				currentAssignee: "Петров",
+				priority: "low",
+			},
+		},
+		d: {
+			id: "d",
+			title: "Средний Петров",
+			parentId: "todo",
+			children: [],
+			totalChildrenCount: 0,
+			type: "card",
+			taskNumber: 4,
+			content: {
+				title: "Средний Петров",
+				currentAssignee: "Петров",
+				priority: "medium",
+			},
 		},
 	};
 }
@@ -69,9 +104,16 @@ describe("groupKanbanBoardByCurrentAssignee", () => {
 		]);
 		expect(groups[0]?.tasks.map((task) => task.taskKey)).toEqual([
 			"COMMON-2",
+			"COMMON-4",
 			"COMMON-3",
 		]);
+		expect(groups[0]?.tasks.map((task) => task.priority)).toEqual([
+			"high",
+			"medium",
+			"low",
+		]);
 		expect(groups[0]?.tasks.map((task) => task.statusTitle)).toEqual([
+			"Сделать",
 			"Сделать",
 			"В работе",
 		]);
@@ -90,9 +132,42 @@ describe("groupKanbanBoardByCurrentAssignee", () => {
 			"Петров",
 		]);
 		expect(groups.map((group) => [group.title, group.tasks.length])).toEqual([
-			["Петров", 2],
+			["Петров", 3],
 			["Сидоров", 0],
 			["Без исполнителя", 1],
 		]);
+	});
+
+	it("builds priority and board chips for a task", () => {
+		const groups = groupKanbanBoardByCurrentAssignee(board(), "COMMON");
+		const task = groups[0]?.tasks[0];
+		expect(task?.priority).toBe("high");
+		expect(task?.chips.map((chip) => chip.label)).toEqual(
+			expect.arrayContaining([
+				"Высокий",
+				"Блокер",
+				"Баг",
+				"Новая функциональность",
+				"ИФТ",
+				"SUM",
+				"Осень",
+			]),
+		);
+		expect(
+			buildKanbanBoardPersonTaskChips({
+				title: "X",
+				priority: "hold",
+				taskType: "epic",
+			}).map((chip) => chip.label),
+		).toEqual(["Холд", "Эпик"]);
+		expect(task?.meta).toEqual(
+			expect.objectContaining({
+				createdLabel: "23 сент. 2026",
+				dueLabel: "1 окт. 2026",
+				estimatePd: 2,
+				commentCount: 1,
+			}),
+		);
+		expect(typeof task?.meta.ageDays).toBe("number");
 	});
 });

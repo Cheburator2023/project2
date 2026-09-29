@@ -814,6 +814,10 @@ export function KanbanTaskPage({
 		}
 
 		if (isCreate) {
+			if (!systems.length) {
+				toast.error("Укажите систему / приложение");
+				return;
+			}
 			const created = await createTask.mutateAsync({
 				boardId: effectiveBoardId,
 				parentId,
@@ -1115,6 +1119,7 @@ export function KanbanTaskPage({
 	}, [remoteStale, showForm, taskByRefQuery.refetch]);
 	const createDisabled =
 		!title.trim() ||
+		!systems.length ||
 		!effectiveBoardId ||
 		createTask.isPending ||
 		isLockedByOther ||
@@ -1243,7 +1248,9 @@ export function KanbanTaskPage({
 									? contentLengthError
 									: !title.trim()
 										? "Укажите заголовок"
-										: undefined
+										: !systems.length
+											? "Укажите систему / приложение"
+											: undefined
 							}
 						>
 							Создать
@@ -1542,8 +1549,11 @@ export function KanbanTaskPage({
 											options={systemOptions}
 											onChange={setSystems}
 											fullWidth
+											required={isCreate}
 											disabled={formLocked}
-											emptyLabel="— не выбрана —"
+											emptyLabel={
+												isCreate ? "— выберите —" : "— не выбрана —"
+											}
 										/>
 									</Box>
 								</KanbanTaskDetailRow>

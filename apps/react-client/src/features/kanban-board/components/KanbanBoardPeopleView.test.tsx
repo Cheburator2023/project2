@@ -96,6 +96,20 @@ describe("KanbanBoardPeopleView links", () => {
 								statusTitle: "Сделать",
 								statusColor: "#111",
 								taskType: "bug",
+								priority: "high",
+								chips: [
+									{ label: "Высокий", color: "#dc2626" },
+									{ label: "Баг", color: "#ef4444" },
+									{ label: "IFT", color: "#0ea5e9" },
+								],
+								meta: {
+									createdLabel: "23 сент. 2026",
+									ageDays: 6,
+									dueLabel: null,
+									estimatePd: 2,
+									commentCount: 1,
+									attachmentCount: 0,
+								},
 								relatedLinks: [{ taskId: "b", type: "blocks" }],
 							},
 							{
@@ -106,6 +120,14 @@ describe("KanbanBoardPeopleView links", () => {
 								statusTitle: "В работе",
 								statusColor: "#222",
 								taskType: "story",
+								chips: [{ label: "История", color: "#22c55e" }],
+								meta: {
+									createdLabel: null,
+									ageDays: null,
+									dueLabel: null,
+									commentCount: 0,
+									attachmentCount: 0,
+								},
 								relatedLinks: [],
 							},
 						],
@@ -124,8 +146,13 @@ describe("KanbanBoardPeopleView links", () => {
 		);
 
 		expect(screen.getByTestId("kanban-board-people-view")).toBeTruthy();
+		expect(screen.getByText("Высокий")).toBeTruthy();
 		expect(screen.getByText("Баг")).toBeTruthy();
+		expect(screen.getByText("IFT")).toBeTruthy();
 		expect(screen.getByText("История")).toBeTruthy();
+		expect(screen.getByText("23 сент. 2026")).toBeTruthy();
+		expect(screen.getByText("6 д")).toBeTruthy();
+		expect(screen.getByText("2 чд")).toBeTruthy();
 		expect(screen.getByText("Связи · 1")).toBeTruthy();
 		fireEvent.click(screen.getByText("Связи · 1"));
 		expect(
