@@ -43,6 +43,9 @@ describe("inferPlanningSystemFromTitle", () => {
 		expect(inferPlanningSystemFromTitle("[SUM_RM] баг в реестре СУРМ")).toBe(
 			"sum-rm",
 		);
+		expect(inferPlanningSystemFromTitle("Миграция на SUM-Next")).toBe(
+			"sum-next",
+		);
 		expect(
 			inferPlanningSystemFromTitle("Синхронизация атрибутов из СУМ в СУРМ"),
 		).toBeNull();

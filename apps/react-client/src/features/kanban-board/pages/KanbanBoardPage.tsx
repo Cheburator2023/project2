@@ -504,8 +504,11 @@ export function KanbanBoardPage() {
 		});
 	}, []);
 
-	const { requestCreate, isPending: isCreatingTask, systemDialog } =
-		useCreateAndOpenKanbanTask();
+	const {
+		requestCreate,
+		isPending: isCreatingTask,
+		systemDialog,
+	} = useCreateAndOpenKanbanTask();
 
 	const defaultColumnId = columnsQuery.data?.[0]?.id ?? "todo";
 
@@ -711,10 +714,14 @@ export function KanbanBoardPage() {
 
 	const customerFilterOptions = useMemo(() => {
 		const names = new Set(
-			(customersQuery.data ?? []).map((item) => item.name.trim()).filter(Boolean),
+			(customersQuery.data ?? [])
+				.map((item) => item.name.trim())
+				.filter(Boolean),
 		);
 		for (const card of boardCards) {
-			const name = (card.content as KanbanBoardTaskContent | undefined)?.customer?.trim();
+			const name = (
+				card.content as KanbanBoardTaskContent | undefined
+			)?.customer?.trim();
 			if (name) names.add(name);
 		}
 		return [...names]
@@ -729,7 +736,8 @@ export function KanbanBoardPage() {
 		}));
 		const known = new Set(options.map((option) => option.value));
 		for (const card of boardCards) {
-			const sprintId = (card.content as KanbanBoardTaskContent | undefined)?.sprintId;
+			const sprintId = (card.content as KanbanBoardTaskContent | undefined)
+				?.sprintId;
 			if (sprintId && !known.has(sprintId)) {
 				known.add(sprintId);
 				options.push({ value: sprintId, label: sprintId });
@@ -786,8 +794,8 @@ export function KanbanBoardPage() {
 	const tagFilterOptions = useMemo(() => {
 		const names = new Set<string>();
 		for (const card of boardCards) {
-			for (const tag of (card.content as KanbanBoardTaskContent | undefined)?.tags ??
-				[]) {
+			for (const tag of (card.content as KanbanBoardTaskContent | undefined)
+				?.tags ?? []) {
 				const name = tag.trim();
 				if (name) names.add(name);
 			}
@@ -1004,7 +1012,9 @@ export function KanbanBoardPage() {
 		}
 		const { cardId, parentId } = cardContextMenu;
 		setCardContextMenu(null);
-		if (kanbanBoardIsCancelledColumn({ id: kanbanBoardResolveColumnId(parentId) }))
+		if (
+			kanbanBoardIsCancelledColumn({ id: kanbanBoardResolveColumnId(parentId) })
+		)
 			return;
 
 		const columnId =
@@ -1300,7 +1310,7 @@ export function KanbanBoardPage() {
 					) : null}
 					<KanbanBlockerCountChip
 						count={boardBlockerCount}
-						label={`Блокер: ${boardBlockerCount}`}
+						label={`Задач с блокером: ${boardBlockerCount}`}
 					/>
 					<Spacer />
 					<Button
@@ -1427,150 +1437,150 @@ export function KanbanBoardPage() {
 							onTaskContextMenu={handleCardContextMenu}
 						/>
 					) : (
-					<Box
-						sx={{
-							display: "flex",
-							height: "100%",
-							minHeight: "100%",
-							width: "max-content",
-							minWidth: "100%",
-							boxSizing: "border-box",
-							...kanbanBoardRkkBoardSx,
-						}}
-					>
-						{viewBoard ? (
-							<Kanban
-								dataSource={viewBoard as BoardData}
-								rootStyle={{
-									height: "100%",
-									width: "max-content",
-									minWidth: "100%",
-									flex: 1,
-								}}
-								cardsGap={8}
-								renderColumnHeader={renderColumnHeader}
-								renderColumnAdder={renderColumnAdder}
-								allowColumnAdder={!isBoardBusy}
-								columnStyle={columnStyle}
-								columnWrapperStyle={columnWrapperStyle}
-								columnWrapperClassName={kanbanBoardColumnWrapperClassName}
-								onCardClick={handleCardClick}
-								configMap={{
-									card: {
-										render: ({
-											data,
-											column,
-										}: {
-											data: BoardItem;
-											column: BoardItem;
-										}) => (
-											<KanbanTaskBoardCard
-												taskId={data.id}
-												boardId={resolvedBoardId}
-												parentId={kanbanBoardResolveColumnId(
-													data.parentId ?? column.id,
-												)}
-												taskKey={
-													boardMeta?.boardKey &&
-													(data as KanbanBoardItem).taskNumber
-														? formatKanbanTaskKey(
-																boardMeta.boardKey,
-																(data as KanbanBoardItem).taskNumber!,
-															)
-														: undefined
-												}
-												title={data.title}
-												content={
-													data.content as KanbanBoardTaskContent | undefined
-												}
-												createdAt={(data as KanbanBoardItem).createdAt}
-												createdBy={(data as KanbanBoardItem).createdBy}
-												commentCount={(data as KanbanBoardItem).commentCount}
-												taskUpdatedAt={(data as KanbanBoardItem).updatedAt}
-												releases={(data as KanbanBoardItem).releases}
-												editLabel={editLabel}
-												columnColor={getKanbanColumnColor(column)}
-												isBoardBusy={isBoardBusy}
-												highlightQuery={debouncedSearch}
-												onContentUpdated={handleTaskContentUpdated}
-												onEditBlocked={handleEditBlocked}
-												onContextMenu={(event) =>
-													handleCardContextMenu(
-														event,
-														data.id,
+						<Box
+							sx={{
+								display: "flex",
+								height: "100%",
+								minHeight: "100%",
+								width: "max-content",
+								minWidth: "100%",
+								boxSizing: "border-box",
+								...kanbanBoardRkkBoardSx,
+							}}
+						>
+							{viewBoard ? (
+								<Kanban
+									dataSource={viewBoard as BoardData}
+									rootStyle={{
+										height: "100%",
+										width: "max-content",
+										minWidth: "100%",
+										flex: 1,
+									}}
+									cardsGap={8}
+									renderColumnHeader={renderColumnHeader}
+									renderColumnAdder={renderColumnAdder}
+									allowColumnAdder={!isBoardBusy}
+									columnStyle={columnStyle}
+									columnWrapperStyle={columnWrapperStyle}
+									columnWrapperClassName={kanbanBoardColumnWrapperClassName}
+									onCardClick={handleCardClick}
+									configMap={{
+										card: {
+											render: ({
+												data,
+												column,
+											}: {
+												data: BoardItem;
+												column: BoardItem;
+											}) => (
+												<KanbanTaskBoardCard
+													taskId={data.id}
+													boardId={resolvedBoardId}
+													parentId={kanbanBoardResolveColumnId(
 														data.parentId ?? column.id,
-													)
-												}
-											/>
-										),
-									},
-								}}
-								onCardMove={(move) => {
-									if (isSavingBoard || !standId || !expandedBoard) return;
-									// Соседи берутся из отфильтрованного вида, а вставка идёт
-									// в полную доску, чтобы скрытые карточки остались в колонках.
-									const movedView = normalizeKanbanBoardData(
-										dropHandler(
-											move,
-											expandedBoard as BoardData,
-										) as KanbanBoardData,
-									);
-									const toLane = parseKanbanBoardReleasesLaneId(
-										move.toColumnId,
-									);
-									const fromLane = parseKanbanBoardReleasesLaneId(
-										move.fromColumnId,
-									);
-									const membershipChanged =
-										Boolean(toLane) &&
-										(fromLane?.releaseId ?? null) !==
-											(toLane?.releaseId ?? null);
-									const nextReleaseId = toLane?.releaseId ?? null;
-									const nextRelease = nextReleaseId
-										? (releasesQuery.data ?? []).find(
-												(item) => item.id === nextReleaseId,
-											)
-										: null;
-									if (membershipChanged && movedView[move.cardId]) {
-										movedView[move.cardId] = {
-											...movedView[move.cardId],
-											releases: nextReleaseId
-												? [
-														{
-															id: nextReleaseId,
-															code: nextRelease?.code ?? "",
-															name:
-																nextRelease?.name ??
-																nextRelease?.code ??
-																nextReleaseId,
-														},
-													]
-												: [],
-										};
-									}
-									void (async () => {
-										try {
-											const saved = await persistBoard(movedView);
-											if (!membershipChanged) return;
-											const savedTask = saved.find(
-												(task) => task.id === move.cardId,
-											);
-											await updateTask.mutateAsync({
-												id: move.cardId,
-												data: {
-													releaseIds: nextReleaseId ? [nextReleaseId] : [],
-													expectedUpdatedAt: savedTask?.updatedAt,
-													lockHolderLabel: editLabel || undefined,
-												},
-											});
-										} catch (error) {
-											toast.error(apiErrorMessage(error));
+													)}
+													taskKey={
+														boardMeta?.boardKey &&
+														(data as KanbanBoardItem).taskNumber
+															? formatKanbanTaskKey(
+																	boardMeta.boardKey,
+																	(data as KanbanBoardItem).taskNumber!,
+																)
+															: undefined
+													}
+													title={data.title}
+													content={
+														data.content as KanbanBoardTaskContent | undefined
+													}
+													createdAt={(data as KanbanBoardItem).createdAt}
+													createdBy={(data as KanbanBoardItem).createdBy}
+													commentCount={(data as KanbanBoardItem).commentCount}
+													taskUpdatedAt={(data as KanbanBoardItem).updatedAt}
+													releases={(data as KanbanBoardItem).releases}
+													editLabel={editLabel}
+													columnColor={getKanbanColumnColor(column)}
+													isBoardBusy={isBoardBusy}
+													highlightQuery={debouncedSearch}
+													onContentUpdated={handleTaskContentUpdated}
+													onEditBlocked={handleEditBlocked}
+													onContextMenu={(event) =>
+														handleCardContextMenu(
+															event,
+															data.id,
+															data.parentId ?? column.id,
+														)
+													}
+												/>
+											),
+										},
+									}}
+									onCardMove={(move) => {
+										if (isSavingBoard || !standId || !expandedBoard) return;
+										// Соседи берутся из отфильтрованного вида, а вставка идёт
+										// в полную доску, чтобы скрытые карточки остались в колонках.
+										const movedView = normalizeKanbanBoardData(
+											dropHandler(
+												move,
+												expandedBoard as BoardData,
+											) as KanbanBoardData,
+										);
+										const toLane = parseKanbanBoardReleasesLaneId(
+											move.toColumnId,
+										);
+										const fromLane = parseKanbanBoardReleasesLaneId(
+											move.fromColumnId,
+										);
+										const membershipChanged =
+											Boolean(toLane) &&
+											(fromLane?.releaseId ?? null) !==
+												(toLane?.releaseId ?? null);
+										const nextReleaseId = toLane?.releaseId ?? null;
+										const nextRelease = nextReleaseId
+											? (releasesQuery.data ?? []).find(
+													(item) => item.id === nextReleaseId,
+												)
+											: null;
+										if (membershipChanged && movedView[move.cardId]) {
+											movedView[move.cardId] = {
+												...movedView[move.cardId],
+												releases: nextReleaseId
+													? [
+															{
+																id: nextReleaseId,
+																code: nextRelease?.code ?? "",
+																name:
+																	nextRelease?.name ??
+																	nextRelease?.code ??
+																	nextReleaseId,
+															},
+														]
+													: [],
+											};
 										}
-									})();
-								}}
-							/>
-						) : null}
-					</Box>
+										void (async () => {
+											try {
+												const saved = await persistBoard(movedView);
+												if (!membershipChanged) return;
+												const savedTask = saved.find(
+													(task) => task.id === move.cardId,
+												);
+												await updateTask.mutateAsync({
+													id: move.cardId,
+													data: {
+														releaseIds: nextReleaseId ? [nextReleaseId] : [],
+														expectedUpdatedAt: savedTask?.updatedAt,
+														lockHolderLabel: editLabel || undefined,
+													},
+												});
+											} catch (error) {
+												toast.error(apiErrorMessage(error));
+											}
+										})();
+									}}
+								/>
+							) : null}
+						</Box>
 					)}
 				</Box>
 			</Card>
@@ -1645,7 +1655,9 @@ export function KanbanBoardPage() {
 				{assigneeMenuNames.map((name) => (
 					<MenuItem
 						key={name}
-						disabled={!cardContextMenu || isSavingBoard || name === cardMenuAssignee}
+						disabled={
+							!cardContextMenu || isSavingBoard || name === cardMenuAssignee
+						}
 						onClick={() => assignCardFromMenu(name)}
 					>
 						{name}
@@ -1696,7 +1708,8 @@ export function KanbanBoardPage() {
 				}}
 				onForceOverwrite={() => {
 					setEditBlocked(null);
-					if (pendingBoard) void persistBoard(pendingBoard, true).catch(() => undefined);
+					if (pendingBoard)
+						void persistBoard(pendingBoard, true).catch(() => undefined);
 				}}
 			/>
 			<Dialog

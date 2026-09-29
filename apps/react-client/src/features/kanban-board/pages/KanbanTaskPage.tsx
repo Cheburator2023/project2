@@ -1190,7 +1190,7 @@ export function KanbanTaskPage({
 								: "Отметить, что на задаче есть блокер"
 						}
 					>
-						{hasBlocker ? "Блокер" : "Есть блокер"}
+						{hasBlocker ? "Есть блокер" : "Отметить блокер"}
 					</Button>
 					{!isCreate && handoffPending ? (
 						<Button

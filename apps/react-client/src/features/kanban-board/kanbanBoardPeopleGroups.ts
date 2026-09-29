@@ -19,9 +19,7 @@ import {
 	kanbanBoardTaskTypeTitle,
 	kanbanBoardWorkTypeColor,
 	kanbanBoardWorkTypeTitle,
-	KANBAN_BOARD_BLOCKER_COLOR,
 	KANBAN_BOARD_DEFAULT_TASK_TYPE_ID,
-	KANBAN_BOARD_HANDOFF_COLOR,
 	KANBAN_BOARD_RELEASE_CHIP_COLOR,
 	type KanbanBoardData,
 	type KanbanBoardItem,
@@ -60,6 +58,10 @@ export type KanbanBoardPersonTask = {
 	statusColor: string;
 	taskType: KanbanBoardTaskTypeId;
 	priority?: KanbanBoardPriorityId;
+	hasBlocker: boolean;
+	hasHandoff: boolean;
+	handoffTitle?: string;
+	handoffSummary?: string;
 	chips: KanbanBoardPersonTaskChip[];
 	meta: KanbanBoardPersonTaskMeta;
 	relatedLinks: KanbanBoardRelatedTaskLink[];
@@ -106,19 +108,6 @@ export function buildKanbanBoardPersonTaskChips(
 			label: kanbanBoardPriorityTitle(content.priority),
 			color: kanbanBoardPriorityColor(content.priority),
 			title: `Приоритет: ${kanbanBoardPriorityTitle(content.priority)}`,
-		});
-	}
-	if (kanbanBoardTaskHasAssigneeHandoff(content)) {
-		chips.push({
-			label: "Передано",
-			color: KANBAN_BOARD_HANDOFF_COLOR,
-			title: kanbanBoardAssigneeHandoffTitle(content),
-		});
-	}
-	if (kanbanBoardTaskHasBlocker(content)) {
-		chips.push({
-			label: "Блокер",
-			color: KANBAN_BOARD_BLOCKER_COLOR,
 		});
 	}
 	const taskType = content?.taskType ?? KANBAN_BOARD_DEFAULT_TASK_TYPE_ID;
@@ -240,6 +229,15 @@ export function groupKanbanBoardByCurrentAssignee(
 				taskKeyPrefix && card.taskNumber
 					? formatKanbanTaskKey(taskKeyPrefix, card.taskNumber)
 					: "";
+			const hasBlocker = kanbanBoardTaskHasBlocker(content);
+			const hasHandoff = kanbanBoardTaskHasAssigneeHandoff(content);
+			const handoffFrom = content?.assigneeHandoffFrom?.trim() || "";
+			const handoffTo = content?.currentAssignee?.trim() || "";
+			const handoffSummary = hasHandoff
+				? handoffFrom && handoffTo
+					? `${handoffFrom} → ${handoffTo}`
+					: handoffTo || undefined
+				: undefined;
 			group.tasks.push({
 				id: card.id,
 				parentId: column.id,
@@ -249,6 +247,12 @@ export function groupKanbanBoardByCurrentAssignee(
 				statusColor: columnColor(column),
 				taskType: content?.taskType ?? KANBAN_BOARD_DEFAULT_TASK_TYPE_ID,
 				priority: content?.priority,
+				hasBlocker,
+				hasHandoff,
+				handoffTitle: hasHandoff
+					? kanbanBoardAssigneeHandoffTitle(content)
+					: undefined,
+				handoffSummary,
 				chips: buildKanbanBoardPersonTaskChips(content, card.releases ?? []),
 				meta: buildKanbanBoardPersonTaskMeta(card, content),
 				relatedLinks: kanbanBoardRelatedLinksFromContent(content, {

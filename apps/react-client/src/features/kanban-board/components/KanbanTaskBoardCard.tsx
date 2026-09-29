@@ -217,7 +217,16 @@ export function KanbanTaskBoardCard({
 	const hasHandoff = kanbanBoardTaskHasAssigneeHandoff(content);
 	const handoffTitle = kanbanBoardAssigneeHandoffTitle(content);
 	const typeColor = kanbanBoardTaskTypeColor(content?.taskType);
-	const stripeColor = hasBlocker ? KANBAN_BOARD_BLOCKER_COLOR : typeColor;
+	const stripeColor = hasBlocker
+		? KANBAN_BOARD_BLOCKER_COLOR
+		: hasHandoff
+			? KANBAN_BOARD_HANDOFF_COLOR
+			: typeColor;
+	const accentColor = hasBlocker
+		? KANBAN_BOARD_BLOCKER_COLOR
+		: hasHandoff
+			? KANBAN_BOARD_HANDOFF_COLOR
+			: null;
 	const tags: Array<{ label: string; color: string; title?: string }> = [];
 	if (hasHandoff) {
 		tags.push({
@@ -228,7 +237,7 @@ export function KanbanTaskBoardCard({
 	}
 	if (hasBlocker) {
 		tags.push({
-			label: "Блокер",
+			label: "Есть блокер",
 			color: KANBAN_BOARD_BLOCKER_COLOR,
 		});
 	}
@@ -269,9 +278,9 @@ export function KanbanTaskBoardCard({
 			sx={{
 				minWidth: 0,
 				borderRadius: 1.5,
-				zIndex: hasBlocker ? 1 : 0,
-				boxShadow: hasBlocker
-					? `0 0 0 1px ${KANBAN_BOARD_BLOCKER_COLOR}, 0 0 10px ${alpha(KANBAN_BOARD_BLOCKER_COLOR, 0.45)}`
+				zIndex: hasBlocker || hasHandoff ? 1 : 0,
+				boxShadow: accentColor
+					? `0 0 0 1px ${accentColor}, 0 0 10px ${alpha(accentColor, hasBlocker ? 0.45 : 0.35)}`
 					: (theme) =>
 							`0 1px 2px ${alpha(theme.palette.common.black, 0.06)}, 0 1px 3px ${alpha(theme.palette.common.black, 0.04)}`,
 				...(hasBlocker
@@ -289,13 +298,28 @@ export function KanbanTaskBoardCard({
 								animation: "none",
 							},
 						}
-					: {
-							transition: "box-shadow 120ms ease",
-							"&:hover": {
-								boxShadow: (theme) =>
-									`0 2px 8px ${alpha(theme.palette.common.black, 0.08)}`,
-							},
-						}),
+					: hasHandoff
+						? {
+								animation: "kanbanTaskHandoffPulse 2s ease-in-out infinite",
+								"@keyframes kanbanTaskHandoffPulse": {
+									"0%, 100%": {
+										boxShadow: `0 0 0 1px ${KANBAN_BOARD_HANDOFF_COLOR}, 0 0 6px ${alpha(KANBAN_BOARD_HANDOFF_COLOR, 0.3)}`,
+									},
+									"50%": {
+										boxShadow: `0 0 0 2px ${alpha(KANBAN_BOARD_HANDOFF_COLOR, 0.85)}, 0 0 12px ${alpha(KANBAN_BOARD_HANDOFF_COLOR, 0.4)}`,
+									},
+								},
+								"@media (prefers-reduced-motion: reduce)": {
+									animation: "none",
+								},
+							}
+						: {
+								transition: "box-shadow 120ms ease",
+								"&:hover": {
+									boxShadow: (theme) =>
+										`0 2px 8px ${alpha(theme.palette.common.black, 0.08)}`,
+								},
+							}),
 			}}
 		>
 			<Box
@@ -303,15 +327,19 @@ export function KanbanTaskBoardCard({
 					position: "relative",
 					minWidth: 0,
 					borderRadius: 1.5,
-					bgcolor: "background.paper",
+					bgcolor: hasBlocker
+						? alpha(KANBAN_BOARD_BLOCKER_COLOR, 0.1)
+						: hasHandoff
+							? alpha(KANBAN_BOARD_HANDOFF_COLOR, 0.1)
+							: "background.paper",
 					border: "1px solid",
-					borderColor: hasBlocker ? KANBAN_BOARD_BLOCKER_COLOR : "divider",
+					borderColor: accentColor ?? "divider",
 					overflow: "hidden",
 					cursor: "pointer",
 					transition: "border-color 120ms ease",
-					"&:hover": hasBlocker
+					"&:hover": accentColor
 						? {
-								borderColor: KANBAN_BOARD_BLOCKER_COLOR,
+								borderColor: accentColor,
 							}
 						: {
 								borderColor: alpha(columnColor, 0.45),
@@ -324,7 +352,7 @@ export function KanbanTaskBoardCard({
 					left: 0,
 					top: 0,
 					bottom: 0,
-					width: 3,
+					width: hasBlocker || hasHandoff ? 4 : 3,
 					bgcolor: stripeColor,
 				}}
 			/>

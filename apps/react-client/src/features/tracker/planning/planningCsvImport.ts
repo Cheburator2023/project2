@@ -136,15 +136,21 @@ export function inferPlanningSystemFromTitle(
 	if (has(/data\s*lineage|дата\s*лине/) || has(/(^| )dl( |$)/)) {
 		hits.add("data-lineage");
 	}
-	const sumRm = has(/сурм|sum\s*rm|сумрм|sumrm/);
+	const sumRm = has(/сурм|su[mм]\s*r[mм]|сумрм|sumrm/);
+	const sumNext = has(
+		/su[mм]\s*n[eе][xх][tт]|сум\s*н[еe][кk][сc][тt]|sumnext|сумнекст/,
+	);
 	const sum =
 		has(/(^| )сум( |$)/) ||
 		has(/sumd/) ||
-		(has(/(^| )sum( |$)/) && !sumRm);
-	if (sum && sumRm) {
-		// В названии и СУМ, и СУРМ — систему не угадываем.
-	} else if (sumRm) hits.add("sum-rm");
+		(has(/(^| )su[mм]( |$)/) && !sumRm && !sumNext);
+	if ((sum && sumRm) || (sum && sumNext) || (sumRm && sumNext)) {
+		// В названии несколько SUM-систем — не угадываем.
+	} else if (sumNext) hits.add("sum-next");
+	else if (sumRm) hits.add("sum-rm");
 	else if (sum) hits.add("sum");
+	if (has(/camunda|камунд/)) hits.add("camunda");
+	if (has(/keycloak|кейклок/)) hits.add("keycloak");
 	if (hits.size !== 1) return null;
 	return [...hits][0] ?? null;
 }

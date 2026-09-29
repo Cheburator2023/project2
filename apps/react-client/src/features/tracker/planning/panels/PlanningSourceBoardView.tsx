@@ -375,7 +375,7 @@ export function ReleaseSourceBoardPicker({
 				</Button>
 				<KanbanBlockerCountChip
 					count={sourceBoardBlockerCount}
-					label={`Блокер: ${sourceBoardBlockerCount}`}
+					label={`Задач с блокером: ${sourceBoardBlockerCount}`}
 				/>
 			</Flex>
 			{!planningMode && !releaseId ? (

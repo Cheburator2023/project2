@@ -25,6 +25,7 @@ import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
 import Typography from "@mui/material/Typography";
+import { alpha } from "@mui/material/styles";
 import { useKanbanBoardTasksRegistry } from "@react-client/common/api/queries/kanban-board";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { KanbanTaskFieldChip } from "@react-client/features/kanban-board/components/KanbanTaskSelectField";
@@ -40,6 +41,8 @@ import {
 	type KanbanBoardPeopleLinkGeometry,
 } from "@react-client/features/kanban-board/kanbanBoardPeopleLinks";
 import {
+	KANBAN_BOARD_BLOCKER_COLOR,
+	KANBAN_BOARD_HANDOFF_COLOR,
 	kanbanBoardRelationTypeColor,
 	kanbanBoardRelationTypeTitle,
 	type KanbanBoardRelatedTaskLink,
@@ -427,16 +430,97 @@ export function KanbanBoardPeopleView({
 		menuNames.sort((a, b) => a.localeCompare(b, "ru"));
 	}
 
-	const renderTask = (task: KanbanBoardPersonTask, assignee: string) => (
+	const renderTask = (task: KanbanBoardPersonTask, assignee: string) => {
+		const accentColor = task.hasBlocker
+			? KANBAN_BOARD_BLOCKER_COLOR
+			: task.hasHandoff
+				? KANBAN_BOARD_HANDOFF_COLOR
+				: null;
+		const rowTestId = task.hasBlocker
+			? "kanban-board-people-task-blocker"
+			: task.hasHandoff
+				? "kanban-board-people-task-handoff"
+				: "kanban-board-people-task";
+
+		return (
 		<Flex
 			key={task.id}
 			flexDirection="column"
+			title={
+				task.hasBlocker
+					? "Есть блокер"
+					: task.hasHandoff
+						? task.handoffTitle
+						: undefined
+			}
+			data-test-id={rowTestId}
 			sx={{
 				borderTop: "1px solid",
-				borderColor: "divider",
-				"&:hover": task.taskKey ? { bgcolor: "action.hover" } : undefined,
+				borderColor: accentColor
+					? alpha(accentColor, 0.35)
+					: "divider",
+				bgcolor: accentColor ? alpha(accentColor, 0.1) : undefined,
+				boxShadow: accentColor ? `inset 3px 0 0 ${accentColor}` : undefined,
+				"&:hover": task.taskKey
+					? {
+							bgcolor: accentColor
+								? alpha(accentColor, 0.16)
+								: "action.hover",
+						}
+					: undefined,
 			}}
 		>
+			{task.hasBlocker || task.hasHandoff ? (
+				<Flex
+					alignItems="center"
+					gap={10}
+					wrap="wrap"
+					sx={{
+						px: 1,
+						pt: 0.75,
+						pl: "12px",
+					}}
+				>
+					{task.hasBlocker ? (
+						<Typography
+							variant="caption"
+							fontWeight={800}
+							sx={{
+								color: KANBAN_BOARD_BLOCKER_COLOR,
+								letterSpacing: 0.4,
+								textTransform: "uppercase",
+							}}
+						>
+							Есть блокер
+						</Typography>
+					) : null}
+					{task.hasHandoff ? (
+						<Flex alignItems="center" gap={6} minWidth={0}>
+							<Typography
+								variant="caption"
+								fontWeight={800}
+								sx={{
+									color: KANBAN_BOARD_HANDOFF_COLOR,
+									letterSpacing: 0.4,
+									textTransform: "uppercase",
+									flexShrink: 0,
+								}}
+							>
+								Передано
+							</Typography>
+							{task.handoffSummary ? (
+								<Typography
+									variant="caption"
+									noWrap
+									sx={{ color: alpha(KANBAN_BOARD_HANDOFF_COLOR, 0.9) }}
+								>
+									{task.handoffSummary}
+								</Typography>
+							) : null}
+						</Flex>
+					) : null}
+				</Flex>
+			) : null}
 			<Flex
 				ref={(node) => setRowRef(task.id, node)}
 				alignItems="center"
@@ -536,7 +620,8 @@ export function KanbanBoardPeopleView({
 				onToggle={remeasureLinks}
 			/>
 		</Flex>
-	);
+		);
+	};
 
 	return (
 		<Flex

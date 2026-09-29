@@ -347,7 +347,7 @@ export function TrackerTaskBlockerChip({
 	if (!hasBlocker) return null;
 	return (
 		<TrackerRegistryChipCell>
-			<KanbanTaskFieldChip label="Блокер" color={KANBAN_BOARD_BLOCKER_COLOR} />
+			<KanbanTaskFieldChip label="Есть блокер" color={KANBAN_BOARD_BLOCKER_COLOR} />
 		</TrackerRegistryChipCell>
 	);
 }
@@ -367,7 +367,7 @@ export function KanbanTaskContentChips({
 	if (kanbanBoardTaskHasBlocker(content)) {
 		chips.push({
 			value: "blocker",
-			label: "Блокер",
+			label: "Есть блокер",
 			color: KANBAN_BOARD_BLOCKER_COLOR,
 		});
 	}

@@ -142,10 +142,10 @@ describe("groupKanbanBoardByCurrentAssignee", () => {
 		const groups = groupKanbanBoardByCurrentAssignee(board(), "COMMON");
 		const task = groups[0]?.tasks[0];
 		expect(task?.priority).toBe("high");
+		expect(task?.hasBlocker).toBe(true);
 		expect(task?.chips.map((chip) => chip.label)).toEqual(
 			expect.arrayContaining([
 				"Высокий",
-				"Блокер",
 				"Баг",
 				"Новая функциональность",
 				"ИФТ",
@@ -153,6 +153,8 @@ describe("groupKanbanBoardByCurrentAssignee", () => {
 				"Осень",
 			]),
 		);
+		expect(task?.chips.map((chip) => chip.label)).not.toContain("Блокер");
+		expect(task?.chips.map((chip) => chip.label)).not.toContain("Есть блокер");
 		expect(
 			buildKanbanBoardPersonTaskChips({
 				title: "X",

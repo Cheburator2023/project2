@@ -257,6 +257,12 @@ export function resolveTaskTypeIdFromText(
 		}
 	}
 	if (normalized.includes("баг") || normalized.includes("bug")) return "bug";
+	if (
+		normalized.includes("инцидент") ||
+		normalized.includes("incident")
+	) {
+		return "incident";
+	}
 	if (normalized.includes("эпик") || normalized.includes("epic")) return "epic";
 	if (normalized.includes("истор")) return "story";
 	if (normalized.includes("подзадач")) return "subtask";

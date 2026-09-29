@@ -97,6 +97,10 @@ describe("KanbanBoardPeopleView links", () => {
 								statusColor: "#111",
 								taskType: "bug",
 								priority: "high",
+								hasBlocker: true,
+								hasHandoff: true,
+								handoffTitle: "Передано: Иванов → Петров. Нужно взять в работу.",
+								handoffSummary: "Иванов → Петров",
 								chips: [
 									{ label: "Высокий", color: "#dc2626" },
 									{ label: "Баг", color: "#ef4444" },
@@ -120,6 +124,8 @@ describe("KanbanBoardPeopleView links", () => {
 								statusTitle: "В работе",
 								statusColor: "#222",
 								taskType: "story",
+								hasBlocker: false,
+								hasHandoff: false,
 								chips: [{ label: "История", color: "#22c55e" }],
 								meta: {
 									createdLabel: null,
@@ -150,6 +156,9 @@ describe("KanbanBoardPeopleView links", () => {
 		expect(screen.getByText("Баг")).toBeTruthy();
 		expect(screen.getByText("IFT")).toBeTruthy();
 		expect(screen.getByText("История")).toBeTruthy();
+		expect(screen.getByTestId("kanban-board-people-task-blocker")).toBeTruthy();
+		expect(screen.getByText("Есть блокер")).toBeTruthy();
+		expect(screen.getByText("Иванов → Петров")).toBeTruthy();
 		expect(screen.getByText("23 сент. 2026")).toBeTruthy();
 		expect(screen.getByText("6 д")).toBeTruthy();
 		expect(screen.getByText("2 чд")).toBeTruthy();

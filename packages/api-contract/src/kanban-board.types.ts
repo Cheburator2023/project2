@@ -183,10 +183,14 @@ export function kanbanBoardStandColor(
 /** Система / приложение задачи. */
 export const KANBAN_BOARD_SYSTEMS = [
 	{ id: "sum", title: "SUM" },
+	{ id: "sum-next", title: "SUM-Next" },
 	{ id: "sum-rm", title: "SUM-RM" },
 	{ id: "data-lineage", title: "Data Lineage" },
 	{ id: "smart-anketa", title: "Smart Anketa" },
 	{ id: "shell", title: "Shell" },
+	{ id: "camunda", title: "Camunda" },
+	{ id: "keycloak", title: "Keycloak" },
+	{ id: "monitoring", title: "Мониторинг" },
 	{ id: "infra", title: "Инфра" },
 ] as const;
 
@@ -194,10 +198,15 @@ export type KanbanBoardSystemId = (typeof KANBAN_BOARD_SYSTEMS)[number]["id"];
 
 export const KANBAN_BOARD_SYSTEM_COLORS: Record<KanbanBoardSystemId, string> = {
 	sum: "#2563eb",
+	"sum-next": "#0284c7",
 	"sum-rm": "#7c3aed",
 	"data-lineage": "#0891b2",
 	"smart-anketa": "#16a34a",
 	shell: "#ca8a04",
+	camunda: "#db2777",
+	keycloak: "#4f46e5",
+	monitoring: "#0d9488",
+	"api-gateway": "#9333ea",
 	infra: "#64748b",
 };
 
@@ -273,7 +282,8 @@ export const KANBAN_BOARD_DONE_COLUMN_ID = "done" as const;
 export const KANBAN_BOARD_CANCELLED_COLUMN_ID = "cancelled" as const;
 export const KANBAN_BOARD_RELEASES_COLUMN_ID = "demo" as const;
 export const KANBAN_BOARD_RELEASES_COLUMN_TITLE = "Релизы" as const;
-export const KANBAN_BOARD_RELEASES_UNASSIGNED_LANE_TITLE = "Без релиза" as const;
+export const KANBAN_BOARD_RELEASES_UNASSIGNED_LANE_TITLE =
+	"Без релиза" as const;
 export const KANBAN_BOARD_COLUMN_WIDTH_PX = 320;
 
 export const KANBAN_BOARD_PRIORITIES = [
@@ -303,6 +313,7 @@ export const KANBAN_BOARD_TASK_TYPES = [
 	{ id: "story", title: "История" },
 	{ id: "task", title: "Задача" },
 	{ id: "bug", title: "Баг" },
+	{ id: "incident", title: "Инцидент" },
 	{ id: "subtask", title: "Подзадача" },
 ] as const;
 
@@ -482,6 +493,7 @@ export const KANBAN_BOARD_TASK_TYPE_COLORS: Record<
 	story: "#2563eb",
 	task: "#64748b",
 	bug: "#dc2626",
+	incident: "#be123c",
 	subtask: "#94a3b8",
 };
 
@@ -955,6 +967,11 @@ export const KANBAN_BOARD_STOCK_CUSTOMERS = [
 
 export const KANBAN_BOARD_STOCK_PROJECTS = [
 	{ code: "sum", name: "SUM", description: "Стоковый проект SUM" },
+	{
+		code: "sum-next",
+		name: "SUM-Next",
+		description: "Стоковый проект SUM-Next",
+	},
 	{ code: "sum-rm", name: "SUM-RM", description: "Стоковый проект SUM-RM" },
 	{
 		code: "data_lineage",
@@ -1248,9 +1265,7 @@ export function kanbanBoardReleaseCanComplete(
 export function kanbanBoardReleaseVisibleOnBoard(
 	status?: KanbanBoardReleaseStatusId | string,
 ): boolean {
-	return (
-		status !== "done" && status !== "cancelled" && status !== "archived"
-	);
+	return status !== "done" && status !== "cancelled" && status !== "archived";
 }
 
 export interface KanbanBoardReleaseThemeDto {
