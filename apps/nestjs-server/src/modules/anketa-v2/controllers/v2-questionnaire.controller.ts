@@ -376,69 +376,203 @@ export class V2QuestionnaireController {
 		return this.editLockService.getLock(id);
 	}
 
-	@Post(":id/edit-lock")
-	@RealmRole(Permission.ANKETA_EDIT_CALCULATION)
-	@ApiOperation({ summary: "Захватить блокировку редактирования анкеты" })
-	async acquireEditLock(
-		@Param("id", ParseUUIDPipe) id: string,
-		@Body() body: AcquireV2QuestionnaireEditLockDto,
-		@CurrentUser() user: Record<string, unknown> | undefined,
-	): Promise<V2QuestionnaireEditLockDto> {
-		return this.editLockService.acquire(id, {
-			label: body.lockedByLabel,
-			userId: questionnaireAuditUserId(user),
-		});
-	}
+    @Post(":id/edit-lock")
+    @RealmRole(Permission.ANKETA_EDIT_CALCULATION)
+    @ApiOperation({ summary: "Захватить блокировку редактирования анкеты" })
+    async acquireEditLock(
+        @Param("id", ParseUUIDPipe) id: string,
+        @Body() body: AcquireV2QuestionnaireEditLockDto,
+        @CurrentUser() user: Record<string, unknown> | undefined,
+    ): Promise<V2QuestionnaireEditLockDto> {
+        const correlationId = uuidv4();
+        const initiator = this.buildInitiator(user);
 
-	@Put(":id/edit-lock")
-	@RealmRole(Permission.ANKETA_EDIT_CALCULATION)
-	@ApiOperation({ summary: "Продлить блокировку редактирования анкеты" })
-	async renewEditLock(
-		@Param("id", ParseUUIDPipe) id: string,
-		@Body() body: AcquireV2QuestionnaireEditLockDto,
-		@CurrentUser() user: Record<string, unknown> | undefined,
-	): Promise<V2QuestionnaireEditLockDto> {
-		return this.editLockService.renew(id, {
-			label: body.lockedByLabel,
-			userId: questionnaireAuditUserId(user),
-		});
-	}
+        this.auditService.sendEvent(
+            AUDIT_EVENT_SUMD_HOLDANKETA,
+            "START",
+            correlationId,
+            initiator,
+            { questionnaireId: id, operation: "acquire", label: body.lockedByLabel },
+        );
 
-	@Delete(":id/edit-lock")
-	@HttpCode(HttpStatus.NO_CONTENT)
-	@RealmRole(Permission.ANKETA_EDIT_CALCULATION)
-	@ApiOperation({ summary: "Снять блокировку редактирования анкеты" })
-	async releaseEditLock(
-		@Param("id", ParseUUIDPipe) id: string,
-		@Body() body: AcquireV2QuestionnaireEditLockDto,
-		@CurrentUser() user: Record<string, unknown> | undefined,
-	): Promise<void> {
-		return this.editLockService.release(id, {
-			label: body.lockedByLabel,
-			userId: questionnaireAuditUserId(user),
-		});
-	}
+        try {
+            const result = await this.editLockService.acquire(id, {
+                label: body.lockedByLabel,
+                userId: questionnaireAuditUserId(user),
+            });
+            this.auditService.sendEvent(
+                AUDIT_EVENT_SUMD_HOLDANKETA,
+                "SUCCESS",
+                correlationId,
+                initiator,
+                { questionnaireId: id, operation: "acquire" },
+            );
+            return result;
+        } catch (error) {
+            this.auditService.sendEvent(
+                AUDIT_EVENT_SUMD_HOLDANKETA,
+                "FAILURE",
+                correlationId,
+                initiator,
+                {
+                    questionnaireId: id,
+                    operation: "acquire",
+                    errorMessage: (error as Error).message,
+                },
+            );
+            throw error;
+        }
+    }
 
-	/**
-	 * Отдельный POST для снятия lock при закрытии вкладки (fetch keepalive).
-	 * Только query `lockedByLabel` — simple-request без CORS-preflight на unload.
-	 */
-	@Post(":id/edit-lock/release")
-	@HttpCode(HttpStatus.NO_CONTENT)
-	@RealmRole(Permission.ANKETA_EDIT_CALCULATION)
-	@ApiOperation({
-		summary: "Снять блокировку (unload/beacon)",
-	})
-	async releaseEditLockOnUnload(
-		@Param("id", ParseUUIDPipe) id: string,
-		@Query("lockedByLabel") lockedByLabel: string,
-		@CurrentUser() user: Record<string, unknown> | undefined,
-	): Promise<void> {
-		return this.editLockService.release(id, {
-			label: typeof lockedByLabel === "string" ? lockedByLabel : "",
-			userId: questionnaireAuditUserId(user),
-		});
-	}
+    @Put(":id/edit-lock")
+    @RealmRole(Permission.ANKETA_EDIT_CALCULATION)
+    @ApiOperation({ summary: "Продлить блокировку редактирования анкеты" })
+    async renewEditLock(
+        @Param("id", ParseUUIDPipe) id: string,
+        @Body() body: AcquireV2QuestionnaireEditLockDto,
+        @CurrentUser() user: Record<string, unknown> | undefined,
+    ): Promise<V2QuestionnaireEditLockDto> {
+        const correlationId = uuidv4();
+        const initiator = this.buildInitiator(user);
+
+        this.auditService.sendEvent(
+            AUDIT_EVENT_SUMD_HOLDANKETA,
+            "START",
+            correlationId,
+            initiator,
+            { questionnaireId: id, operation: "renew", label: body.lockedByLabel },
+        );
+
+        try {
+            const result = await this.editLockService.renew(id, {
+                label: body.lockedByLabel,
+                userId: questionnaireAuditUserId(user),
+            });
+            this.auditService.sendEvent(
+                AUDIT_EVENT_SUMD_HOLDANKETA,
+                "SUCCESS",
+                correlationId,
+                initiator,
+                { questionnaireId: id, operation: "renew" },
+            );
+            return result;
+        } catch (error) {
+            this.auditService.sendEvent(
+                AUDIT_EVENT_SUMD_HOLDANKETA,
+                "FAILURE",
+                correlationId,
+                initiator,
+                {
+                    questionnaireId: id,
+                    operation: "renew",
+                    errorMessage: (error as Error).message,
+                },
+            );
+            throw error;
+        }
+    }
+
+    @Delete(":id/edit-lock")
+    @HttpCode(HttpStatus.NO_CONTENT)
+    @RealmRole(Permission.ANKETA_EDIT_CALCULATION)
+    @ApiOperation({ summary: "Снять блокировку редактирования анкеты" })
+    async releaseEditLock(
+        @Param("id", ParseUUIDPipe) id: string,
+        @Body() body: AcquireV2QuestionnaireEditLockDto,
+        @CurrentUser() user: Record<string, unknown> | undefined,
+    ): Promise<void> {
+        const correlationId = uuidv4();
+        const initiator = this.buildInitiator(user);
+
+        this.auditService.sendEvent(
+            AUDIT_EVENT_SUMD_HOLDANKETA,
+            "START",
+            correlationId,
+            initiator,
+            { questionnaireId: id, operation: "release", label: body.lockedByLabel },
+        );
+
+        try {
+            await this.editLockService.release(id, {
+                label: body.lockedByLabel,
+                userId: questionnaireAuditUserId(user),
+            });
+            this.auditService.sendEvent(
+                AUDIT_EVENT_SUMD_HOLDANKETA,
+                "SUCCESS",
+                correlationId,
+                initiator,
+                { questionnaireId: id, operation: "release" },
+            );
+        } catch (error) {
+            this.auditService.sendEvent(
+                AUDIT_EVENT_SUMD_HOLDANKETA,
+                "FAILURE",
+                correlationId,
+                initiator,
+                {
+                    questionnaireId: id,
+                    operation: "release",
+                    errorMessage: (error as Error).message,
+                },
+            );
+            throw error;
+        }
+    }
+
+    /**
+     * Отдельный POST для снятия lock при закрытии вкладки (fetch keepalive).
+     * Только query `lockedByLabel` — simple-request без CORS-preflight на unload.
+     */
+    @Post(":id/edit-lock/release")
+    @HttpCode(HttpStatus.NO_CONTENT)
+    @RealmRole(Permission.ANKETA_EDIT_CALCULATION)
+    @ApiOperation({
+        summary: "Снять блокировку (unload/beacon)",
+    })
+    async releaseEditLockOnUnload(
+        @Param("id", ParseUUIDPipe) id: string,
+        @Query("lockedByLabel") lockedByLabel: string,
+        @CurrentUser() user: Record<string, unknown> | undefined,
+    ): Promise<void> {
+        const correlationId = uuidv4();
+        const initiator = this.buildInitiator(user);
+
+        this.auditService.sendEvent(
+            AUDIT_EVENT_SUMD_HOLDANKETA,
+            "START",
+            correlationId,
+            initiator,
+            { questionnaireId: id, operation: "release", label: lockedByLabel },
+        );
+
+        try {
+            await this.editLockService.release(id, {
+                label: typeof lockedByLabel === "string" ? lockedByLabel : "",
+                userId: questionnaireAuditUserId(user),
+            });
+            this.auditService.sendEvent(
+                AUDIT_EVENT_SUMD_HOLDANKETA,
+                "SUCCESS",
+                correlationId,
+                initiator,
+                { questionnaireId: id, operation: "release" },
+            );
+        } catch (error) {
+            this.auditService.sendEvent(
+                AUDIT_EVENT_SUMD_HOLDANKETA,
+                "FAILURE",
+                correlationId,
+                initiator,
+                {
+                    questionnaireId: id,
+                    operation: "release",
+                    errorMessage: (error as Error).message,
+                },
+            );
+            throw error;
+        }
+    }
 
 	@Post()
 	@RealmRole(Permission.ANKETA_CREATE_CALCULATION)
@@ -620,7 +754,7 @@ export class V2QuestionnaireController {
             "START",
             correlationId,
             initiator,
-            { questionnaireId: id },
+            { questionnaireId: id, operation: "hold" },
         );
 
         try {
@@ -628,9 +762,9 @@ export class V2QuestionnaireController {
             this.auditService.sendEvent(
                 AUDIT_EVENT_SUMD_HOLDANKETA,
                 "SUCCESS",
-                uuidv4(),
+                correlationId,
                 initiator,
-                { questionnaireId: id },
+                { questionnaireId: id, operation: "hold" },
             );
             return result;
         } catch (error) {
@@ -639,7 +773,11 @@ export class V2QuestionnaireController {
                 "FAILURE",
                 correlationId,
                 initiator,
-                { questionnaireId: id, errorMessage: (error as Error).message },
+                {
+                    questionnaireId: id,
+                    operation: "hold",
+                    errorMessage: (error as Error).message,
+                },
             );
             throw error;
         }
