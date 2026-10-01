@@ -1,5 +1,6 @@
 import { ConfigService } from "@nestjs/config";
 import { TypeOrmModuleOptions } from "@nestjs/typeorm";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "path";
 import { DataSourceOptions, LoggerOptions } from "typeorm";
 
@@ -15,9 +16,80 @@ interface DatabaseConfig {
 	schema?: string;
 }
 
-const buildPostgresExtra = (schema?: string) => ({
-	connectionTimeoutMillis: DB_CONNECT_TIMEOUT_MS,
-	...(schema ? { options: `-c search_path=${schema},public` } : {}),
+/**
+ * Параметры TLS-подключения к PostgreSQL (node-postgres).
+ * Передаются в `extra.ssl` DataSource/TypeORM.
+ *
+ * Соответствие с PostgreSQL sslmode:
+ * - без TLS                                 — ssl: false / отсутствует (sslmode=disable)
+ * - TLS с проверкой CA                       — { ca, rejectUnauthorized: true }  (verify-ca / verify-full)
+ * - TLS без проверки (небезопасно, dev-only) — { rejectUnauthorized: false }
+ * - mTLS                                     — плюс { cert, key } от клиента
+ */
+interface DatabaseTlsConfig {
+    ca: string;
+    cert?: string;
+    key?: string;
+    rejectUnauthorized: boolean;
+}
+
+/**
+ * Читает содержимое файла, если он существует и доступен.
+ * Возвращает `undefined` при любой ошибке — вызывающий код должен
+ * трактовать это как «файл не задан / не найден» (обратная совместимость).
+ */
+function readFileIfExists(filePath: string | undefined): string | undefined {
+    if (!filePath) return undefined;
+    const trimmed = filePath.trim();
+    if (!trimmed) return undefined;
+    try {
+        if (!existsSync(trimmed)) return undefined;
+        return readFileSync(trimmed, "utf8");
+    } catch {
+        return undefined;
+    }
+}
+
+/**
+ * Резолвит TLS-конфигурацию для PostgreSQL.
+ *
+ * Правила (для обратной совместимости и безопасности):
+ * 1. `TLS_ENABLED=false` (или не задан) → TLS выключен.
+ * 2. `TLS_ENABLED=true`, но CA-сертификат не задан / нечитаем → TLS выключен
+ *    (graceful fallback к обычному подключению).
+ * 3. `TLS_ENABLED=true` и CA прочитан → включаем TLS:
+ *    - `rejectUnauthorized` берётся из `TLS_REJECT_UNAUTHORIZED`
+ *      (по умолчанию `true` — безопасно);
+ *    - если заданы `TLS_CLIENT_CERT_PATH` + `TLS_CLIENT_KEY_PATH` — клиентские сертификаты (mTLS).
+ */
+function resolveDatabaseTlsConfig(
+    configService: ConfigService,
+): DatabaseTlsConfig | undefined {
+    const tlsEnabled = readEnvFlag(configService, "TLS_ENABLED", false);
+    if (!tlsEnabled) return undefined;
+
+    const ca = readFileIfExists(configService.get<string>("TLS_CA_CERT_PATH"));
+    if (!ca) return undefined;
+
+    const cert = readFileIfExists(configService.get<string>("TLS_CLIENT_CERT_PATH"));
+    const key = readFileIfExists(configService.get<string>("TLS_CLIENT_KEY_PATH"));
+
+    return {
+        ca,
+        ...(cert ? { cert } : {}),
+        ...(key ? { key } : {}),
+        rejectUnauthorized:
+            configService.get<string>("TLS_REJECT_UNAUTHORIZED") !== "false",
+    };
+}
+
+const buildPostgresExtra = (
+    schema: string | undefined,
+    tls: DatabaseTlsConfig | undefined,
+) => ({
+    connectionTimeoutMillis: DB_CONNECT_TIMEOUT_MS,
+    ...(schema ? { options: `-c search_path=${schema},public` } : {}),
+    ...(tls ? { ssl: tls } : {}),
 });
 
 const resolveTypeOrmLogging = (configService: ConfigService): LoggerOptions => {
@@ -30,6 +102,7 @@ const resolveTypeOrmLogging = (configService: ConfigService): LoggerOptions => {
 const logTypeOrmConnectTarget = (
 	dbConfig: DatabaseConfig,
 	migrationsRun: boolean,
+    tlsEnabled: boolean,
 ): void => {
 	if (process.env.JEST_WORKER_ID) {
 		return;
@@ -38,7 +111,8 @@ const logTypeOrmConnectTarget = (
 		`[startup] TypeORM connect ${dbConfig.host}:${dbConfig.port}/${dbConfig.database}` +
 			` schema=${dbConfig.schema || "-"}` +
 			` timeout=${DB_CONNECT_TIMEOUT_MS}ms` +
-			` migrationsRun=${migrationsRun}`,
+            ` migrationsRun=${migrationsRun}` +
+            ` tls=${tlsEnabled ? "on" : "off"}`,
 	);
 };
 
@@ -90,13 +164,14 @@ export const getTypeOrmModuleOptions = (
 	const dbConfig = getDatabaseConfig(configService);
 	const { schema, ...connectionConfig } = dbConfig;
 	const migrationsRun = readEnvFlag(configService, "DB_MIGRATIONS_RUN", true);
-	logTypeOrmConnectTarget(dbConfig, migrationsRun);
+    const tls = resolveDatabaseTlsConfig(configService);
+    logTypeOrmConnectTarget(dbConfig, migrationsRun, Boolean(tls));
 
 	return {
 		type: "postgres",
 		...connectionConfig,
 		...(schema ? { schema } : {}),
-		extra: buildPostgresExtra(schema),
+		extra: buildPostgresExtra(schema, tls),
 		entities: [join(__dirname, "../../**/*.entity{.ts,.js}")],
 		migrations: [join(__dirname, "../../migrations/*{.ts,.js}")],
 		migrationsRun,
@@ -115,12 +190,13 @@ export const getDataSourceOptions = (
 	const dbConfig = getDatabaseConfig(configService);
 	const { schema, ...connectionConfig } = dbConfig;
 	const migrationsRun = readEnvFlag(configService, "DB_MIGRATIONS_RUN", true);
+    const tls = resolveDatabaseTlsConfig(configService);
 
 	return {
 		type: "postgres",
 		...connectionConfig,
 		...(schema ? { schema } : {}),
-		extra: buildPostgresExtra(schema),
+        extra: buildPostgresExtra(schema, tls),
 		entities: [join(__dirname, "../../**/*.entity{.ts,.js}")],
 		migrations: [join(__dirname, "../../migrations/*{.ts,.js}")],
 		migrationsRun,
