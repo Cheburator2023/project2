@@ -3,11 +3,11 @@
 # с контекстом apps/<app> (transfer-пайплайн: docker build . -f Dockerfile).
 #
 # Из корня репо:
-#   sh scripts/stage-docker-ci-packages.sh nestjs-server api-contract json-logic-ts
+#   sh scripts/stage-docker-ci-packages.sh nestjs-server api-contract json-logic-ts web-push
 #   sh scripts/stage-docker-ci-packages.sh react-client api-contract json-logic-ts ag-grid-enterprise
 #
 # В Jenkins (workspace = корень репо) перед runDockerBuild с projDir apps/*:
-#   sh scripts/stage-docker-ci-packages.sh nestjs-server api-contract json-logic-ts
+#   sh scripts/stage-docker-ci-packages.sh nestjs-server api-contract json-logic-ts web-push
 
 set -eu
 

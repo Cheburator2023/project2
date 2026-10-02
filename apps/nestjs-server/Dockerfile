@@ -1,11 +1,13 @@
 # Сборка поверх базового образа ubi8-base-smart-anketa-ui (корневой Dockerfile).
-# База содержит node_modules; исходники подмешиваем из build context.
+# База содержит node_modules; исходники подменяем из build context
+# (не merge через cp -a: удалённые в git файлы иначе остаются в образе
+# и nest build их компилирует).
 #
 # Dev (контекст = корень монорепо):
 #   docker build . -f apps/nestjs-server/Dockerfile
 #
 # Transfer (контекст = apps/nestjs-server) — перед сборкой нужны packages в .ci-packages:
-#   sh scripts/stage-docker-ci-packages.sh nestjs-server api-contract json-logic-ts
+#   sh scripts/stage-docker-ci-packages.sh nestjs-server api-contract json-logic-ts web-push
 #   docker build . -f Dockerfile
 #
 # Альтернатива transfer: projDir = корень репо, dockerfilePath = apps/nestjs-server/Dockerfile
@@ -17,20 +19,29 @@ WORKDIR /app
 
 COPY . /tmp/build-context
 RUN set -eux; \
+	replace_tree() { \
+		src="$1"; dest="$2"; \
+		[ -d "$src" ] || { echo "ERROR: missing $src" >&2; exit 1; }; \
+		mkdir -p "$dest"; \
+		rm -rf "$dest/src" "$dest/dist" "$dest/test"; \
+		cp -a "$src"/. "$dest"/; \
+	}; \
 	if [ -f /tmp/build-context/apps/nestjs-server/package.json ]; then \
-		cp -a /tmp/build-context/apps/nestjs-server/. /app/apps/nestjs-server/; \
-		cp -a /tmp/build-context/packages/api-contract/. /app/packages/api-contract/; \
-		cp -a /tmp/build-context/packages/json-logic-ts/. /app/packages/json-logic-ts/; \
+		replace_tree /tmp/build-context/apps/nestjs-server /app/apps/nestjs-server; \
+		replace_tree /tmp/build-context/packages/api-contract /app/packages/api-contract; \
+		replace_tree /tmp/build-context/packages/json-logic-ts /app/packages/json-logic-ts; \
+		replace_tree /tmp/build-context/packages/web-push /app/packages/web-push; \
 	elif [ -f /tmp/build-context/package.json ]; then \
-		cp -a /tmp/build-context/. /app/apps/nestjs-server/; \
+		replace_tree /tmp/build-context /app/apps/nestjs-server; \
 		if [ ! -d /tmp/build-context/.ci-packages/api-contract ]; then \
 			echo "ERROR: app-only build is missing apps/nestjs-server/.ci-packages/" >&2; \
-			echo "Run: sh scripts/stage-docker-ci-packages.sh nestjs-server api-contract json-logic-ts" >&2; \
+			echo "Run: sh scripts/stage-docker-ci-packages.sh nestjs-server api-contract json-logic-ts web-push" >&2; \
 			echo "Or build from monorepo root: docker build . -f apps/nestjs-server/Dockerfile" >&2; \
 			exit 1; \
 		fi; \
-		cp -a /tmp/build-context/.ci-packages/api-contract/. /app/packages/api-contract/; \
-		cp -a /tmp/build-context/.ci-packages/json-logic-ts/. /app/packages/json-logic-ts/; \
+		replace_tree /tmp/build-context/.ci-packages/api-contract /app/packages/api-contract; \
+		replace_tree /tmp/build-context/.ci-packages/json-logic-ts /app/packages/json-logic-ts; \
+		replace_tree /tmp/build-context/.ci-packages/web-push /app/packages/web-push; \
 	else \
 		echo "Unsupported Docker build context for nestjs-server." >&2; \
 		exit 1; \
@@ -38,6 +49,11 @@ RUN set -eux; \
 	if [ -f /tmp/build-context/CHANGELOG.md ]; then \
 		cp /tmp/build-context/CHANGELOG.md /app/CHANGELOG.md; \
 	fi; \
+	# Base image may predate new workspace packages — ensure Nest can resolve them.
+	mkdir -p /app/node_modules/@smart-anketa; \
+	ln -sfn ../../packages/web-push /app/node_modules/@smart-anketa/web-push; \
+	ln -sfn ../../packages/api-contract /app/node_modules/@smart-anketa/api-contract; \
+	ln -sfn ../../packages/json-logic-ts /app/node_modules/@smart-anketa/json-logic-ts; \
 	rm -rf /tmp/build-context
 
 RUN npm --prefix packages/json-logic-ts run build

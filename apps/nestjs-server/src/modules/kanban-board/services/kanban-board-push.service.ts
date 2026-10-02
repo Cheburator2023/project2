@@ -1,15 +1,20 @@
-import { BadRequestException, Injectable, Logger } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import type {
 	TrackerPushPublicKeyDto,
 	TrackerPushSubscriptionDto,
 	UpsertTrackerPushSubscriptionRequestDto,
 } from "@smart-anketa/api-contract";
+import {
+	generateVapidKeys,
+	sendPushNotification,
+	WebPushError,
+	type VapidConfig,
+} from "@smart-anketa/web-push";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { In, Repository } from "typeorm";
 import { ulid } from "ulid";
-import * as webpush from "web-push";
 import { KanbanBoardPushSubscriptionEntity } from "../entities/kanban-board-push-subscription.entity";
 
 export type TrackerPushPayload = {
@@ -46,29 +51,30 @@ function writeStoredVapidKeys(path: string, keys: StoredVapidKeys): void {
 }
 
 @Injectable()
-export class KanbanBoardPushService {
+export class KanbanBoardPushService implements OnModuleInit {
 	private readonly logger = new Logger(KanbanBoardPushService.name);
-	private readonly vapidPublicKey: string;
+	private vapid: VapidConfig | null = null;
 	private vapidReady = false;
 
 	constructor(
 		@InjectRepository(KanbanBoardPushSubscriptionEntity)
 		private readonly subscriptionRepository: Repository<KanbanBoardPushSubscriptionEntity>,
-	) {
-		const envPublic = process.env.TRACKER_VAPID_PUBLIC_KEY?.trim() ?? "";
-		const envPrivate = process.env.TRACKER_VAPID_PRIVATE_KEY?.trim() ?? "";
+	) {}
+
+	async onModuleInit(): Promise<void> {
 		const subject =
 			process.env.TRACKER_VAPID_SUBJECT?.trim() || "mailto:dev@localhost";
+		const envPublic = process.env.TRACKER_VAPID_PUBLIC_KEY?.trim() ?? "";
+		const envPrivate = process.env.TRACKER_VAPID_PRIVATE_KEY?.trim() ?? "";
 
 		if (envPublic && envPrivate) {
-			this.vapidPublicKey = envPublic;
-			webpush.setVapidDetails(subject, envPublic, envPrivate);
+			this.vapid = { publicKey: envPublic, privateKey: envPrivate, subject };
 			this.vapidReady = true;
 			return;
 		}
 
 		const stored = readStoredVapidKeys(DEV_VAPID_FILE);
-		const keys = stored ?? webpush.generateVAPIDKeys();
+		const keys = stored ?? (await generateVapidKeys());
 		if (!stored) {
 			writeStoredVapidKeys(DEV_VAPID_FILE, keys);
 			this.logger.warn(
@@ -79,13 +85,16 @@ export class KanbanBoardPushService {
 				`TRACKER_VAPID_* env missing — reusing DEV keys from ${DEV_VAPID_FILE}`,
 			);
 		}
-		this.vapidPublicKey = keys.publicKey;
-		webpush.setVapidDetails(subject, keys.publicKey, keys.privateKey);
+		this.vapid = {
+			publicKey: keys.publicKey,
+			privateKey: keys.privateKey,
+			subject,
+		};
 		this.vapidReady = true;
 	}
 
 	getVapidPublicKey(): TrackerPushPublicKeyDto {
-		return { publicKey: this.vapidPublicKey };
+		return { publicKey: this.vapid?.publicKey ?? "" };
 	}
 
 	async upsertSubscription(
@@ -146,7 +155,7 @@ export class KanbanBoardPushService {
 		names: string[],
 		payload: TrackerPushPayload,
 	): Promise<void> {
-		if (!this.vapidReady) return;
+		if (!this.vapidReady || !this.vapid) return;
 		const uniqueNames = [
 			...new Set(names.map((name) => name.trim()).filter(Boolean)),
 		];
@@ -162,35 +171,44 @@ export class KanbanBoardPushService {
 			return;
 		}
 
-		const body = JSON.stringify(payload);
+		const vapid = this.vapid;
 		await Promise.all(
 			rows.map(async (row) => {
 				try {
-					await webpush.sendNotification(
+					const delivered = await sendPushNotification(
 						{
 							endpoint: row.endpoint,
 							keys: { p256dh: row.p256dh, auth: row.auth },
 						},
-						body,
+						{
+							title: payload.title,
+							body: payload.body,
+							url: payload.url,
+							tag: payload.tag,
+						},
+						vapid,
 					);
-					this.logger.log(
-						`Push sent to ${row.assigneeName}: ${payload.title}`,
-					);
-				} catch (error) {
-					const statusCode =
-						error &&
-						typeof error === "object" &&
-						"statusCode" in error &&
-						typeof (error as { statusCode?: unknown }).statusCode === "number"
-							? (error as { statusCode: number }).statusCode
-							: undefined;
-					if (statusCode === 404 || statusCode === 410) {
+					if (!delivered) {
 						await this.subscriptionRepository.delete({ id: row.id });
 						this.logger.warn(
 							`Push subscription expired for ${row.assigneeName}, removed`,
 						);
 						return;
 					}
+					this.logger.log(
+						`Push sent to ${row.assigneeName}: ${payload.title}`,
+					);
+				} catch (error) {
+					const statusCode =
+						error instanceof WebPushError
+							? error.statusCode
+							: error &&
+								  typeof error === "object" &&
+								  "statusCode" in error &&
+								  typeof (error as { statusCode?: unknown }).statusCode ===
+										"number"
+								? (error as { statusCode: number }).statusCode
+								: undefined;
 					this.logger.warn(
 						`Push to ${row.assigneeName} failed (${statusCode ?? "?"}): ${
 							error instanceof Error ? error.message : String(error)
