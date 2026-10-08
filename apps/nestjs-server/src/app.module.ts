@@ -8,7 +8,6 @@ import { DocsModule } from "./modules/docs/docs.module";
 import { HealthModule } from "./modules/health/health.module";
 import { QuestionnaireModule } from "./modules/questionnaire/questionnaire.module";
 import { AnketaV2Module } from "./modules/anketa-v2/anketa-v2.module";
-import { KanbanBoardModule } from "./modules/kanban-board/kanban-board.module";
 import { DatabaseModule } from "./shared/database/database.module";
 import { GodModeGuard } from "./shared/keycloak/god-mode.guard";
 import { DomainRolesGuard } from "./shared/keycloak/domain-roles.guard";
@@ -35,7 +34,6 @@ import {SharedModule} from "./shared/shared.module";
 		DocsModule,
 		QuestionnaireModule,
 		AnketaV2Module,
-		KanbanBoardModule,
 		MiddlewareModule,
         SharedModule,
         AuditModule,

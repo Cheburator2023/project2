@@ -9,7 +9,7 @@ import {
 	saveAgGridRowTintEnabled,
 } from "./agGridColumnState";
 
-const GRID_ID = "tracker.planning.tasks";
+const GRID_ID = "v2.questionnaires";
 const STORAGE_KEY = `smart_anketa:ag-grid-row-tint:${GRID_ID}`;
 const FILTER_KEY = `smart_anketa:ag-grid-filter-model:${GRID_ID}`;
 

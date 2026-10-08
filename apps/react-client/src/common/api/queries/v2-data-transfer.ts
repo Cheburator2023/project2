@@ -4,7 +4,7 @@ import {
 	type V2DataTransferSection,
 } from "@smart-anketa/api-contract";
 import { apiClient, API_HEAVY_OPERATION_TIMEOUT_MS } from "../helpers/apiClient";
-import { downloadBlob } from "./kanban-board";
+import { downloadBlob } from "../helpers/downloadBlob";
 
 export type V2DataImportMode = "merge" | "replace";
 

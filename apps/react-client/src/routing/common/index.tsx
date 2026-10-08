@@ -4,7 +4,6 @@ import { MainLayout } from "@react-client/common/layouts/MainLayout";
 import { SettingsPage } from "@react-client/routing/lazyPages";
 import { adminLegacyRedirects, adminRoutes } from "./adminRoutes";
 import { playgroundRoutes } from "./playgroundRoutes";
-import { trackerRoutes } from "./trackerRoutes";
 import { commonRoutes } from "./routes";
 
 export { adminRoutes, adminLegacyRedirects } from "./adminRoutes";
@@ -25,7 +24,6 @@ export function commonAppRoutes({
 			children: [{ index: true, element: <SettingsPage /> }],
 		},
 		adminRoutes({ onLogout }),
-		trackerRoutes({ onLogout }),
 		playgroundRoutes({ onLogout }),
 		...adminLegacyRedirects(),
 		{

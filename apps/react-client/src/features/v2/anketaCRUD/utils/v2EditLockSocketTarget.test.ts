@@ -37,9 +37,9 @@ describe("resolveV2EditLockSocketTarget", () => {
 		const target = resolveV2EditLockSocketTarget(
 			"https://shell.example/proxy/smart-anketa-api",
 			"https://shell.example",
-			"/kanban",
+			"/locks",
 		);
-		expect(target.uri).toBe("https://shell.example/kanban");
+		expect(target.uri).toBe("https://shell.example/locks");
 		expect(target.path).toBe("/proxy/smart-anketa-api/socket.io");
 	});
 });

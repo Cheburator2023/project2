@@ -76,7 +76,7 @@ import {
 	useV2QuestionnaireExportLock,
 	v2QuestionnairesExportXlsx,
 } from "@react-client/common/api/queries/v2-questionnaires";
-import { downloadBlob } from "@react-client/common/api/queries/kanban-board";
+import { downloadBlob } from "@react-client/common/api/helpers/downloadBlob";
 import { useNavigate } from "react-router";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { v2Routes } from "@react-client/routing/version/v2/routes";

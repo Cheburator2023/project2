@@ -10,7 +10,7 @@ import {
 } from "@mui/material";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
-import { downloadBlob } from "@react-client/common/api/queries/kanban-board";
+import { downloadBlob } from "@react-client/common/api/helpers/downloadBlob";
 import {
 	v2QuestionnairesExportJobDownload,
 	v2QuestionnairesStartExportJob,

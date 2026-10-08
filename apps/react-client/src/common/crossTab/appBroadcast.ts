@@ -5,9 +5,7 @@ export type AppQueryScope =
 	| "v2-templates"
 	| "v2-dictionaries"
 	| "v2-questionnaires"
-	| "v2-all"
-	| "tracker"
-	| "tracker-lock";
+	| "v2-all";
 
 export type AppSyncEvent =
 	| {
@@ -17,11 +15,6 @@ export type AppSyncEvent =
 	| { type: "auth:session-changed" }
 	| { type: "query:invalidate"; scope: AppQueryScope; entityId?: string }
 	| { type: "settings:theme"; mode: "light" | "dark" }
-	| {
-			type: "tracker:lock-changed";
-			taskId: string;
-			action: "acquired" | "released" | "blocked";
-		}
 	| {
 			type: "schema:server-version-changed";
 			templateId: string;
@@ -80,18 +73,9 @@ export function isAppSyncEnvelope(value: unknown): value is AppSyncEnvelope {
 				"v2-dictionaries",
 				"v2-questionnaires",
 				"v2-all",
-				"tracker",
-				"tracker-lock",
 			].includes(String(value.event.scope));
 		case "settings:theme":
 			return value.event.mode === "light" || value.event.mode === "dark";
-		case "tracker:lock-changed":
-			return (
-				typeof value.event.taskId === "string" &&
-				["acquired", "released", "blocked"].includes(
-					String(value.event.action),
-				)
-			);
 		case "schema:server-version-changed":
 			return (
 				typeof value.event.templateId === "string" &&

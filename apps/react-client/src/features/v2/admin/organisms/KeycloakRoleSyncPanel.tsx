@@ -12,7 +12,7 @@ import Typography from "@mui/material/Typography";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiErrorMessage } from "@react-client/common/api/helpers/apiErrorMessage";
 import { apiClient } from "@react-client/common/api/helpers/apiClient";
-import { downloadBlob } from "@react-client/common/api/queries/kanban-board";
+import { downloadBlob } from "@react-client/common/api/helpers/downloadBlob";
 import { Flex } from "@react-client/common/primitives/Flex";
 import { Spacer } from "@react-client/common/primitives/Spacer";
 import { toast } from "@react-client/common/toasts";

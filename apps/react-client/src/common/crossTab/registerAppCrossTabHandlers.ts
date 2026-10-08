@@ -14,7 +14,7 @@ import {
 
 let registered = false;
 
-function invalidateScope(scope: AppQueryScope, entityId?: string): void {
+function invalidateScope(scope: AppQueryScope): void {
 	switch (scope) {
 		case "v2-templates":
 			void queryClient.invalidateQueries({ queryKey: ["v2-templates"] });
@@ -26,26 +26,10 @@ function invalidateScope(scope: AppQueryScope, entityId?: string): void {
 		case "v2-questionnaires":
 			void queryClient.invalidateQueries({ queryKey: ["v2-questionnaires"] });
 			break;
-		case "tracker-lock":
-			void queryClient.invalidateQueries({
-				queryKey: entityId
-					? ["kanbanBoardTaskLock", entityId]
-					: ["kanbanBoardTaskLock"],
-			});
-			break;
-		case "tracker":
-			void queryClient.invalidateQueries({
-				predicate: ({ queryKey }) =>
-					typeof queryKey[0] === "string" &&
-					queryKey[0].startsWith("kanbanBoard"),
-			});
-			break;
 		case "v2-all":
 			void queryClient.invalidateQueries({
 				predicate: ({ queryKey }) =>
-					typeof queryKey[0] === "string" &&
-					(queryKey[0].startsWith("v2-") ||
-						queryKey[0].startsWith("kanbanBoard")),
+					typeof queryKey[0] === "string" && queryKey[0].startsWith("v2-"),
 			});
 			break;
 	}
@@ -92,13 +76,10 @@ export function registerAppCrossTabHandlers(): void {
 				break;
 			}
 			case "query:invalidate":
-				invalidateScope(event.scope, event.entityId);
-				break;
-			case "tracker:lock-changed":
-				invalidateScope("tracker-lock", event.taskId);
+				invalidateScope(event.scope);
 				break;
 			case "schema:server-version-changed":
-				invalidateScope("v2-templates", event.templateId);
+				invalidateScope("v2-templates");
 				break;
 			case "settings:theme":
 				// Применяется внутри MUI ThemeProvider в ColorModeIconDropdown.

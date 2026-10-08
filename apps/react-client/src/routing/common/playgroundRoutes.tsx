@@ -1,4 +1,3 @@
-import { Navigate } from "react-router";
 import type { RouteObject } from "react-router";
 import { MainLayout } from "@react-client/common/layouts/MainLayout";
 import {
@@ -20,14 +19,6 @@ export function playgroundRoutes({
 		element: <MainLayout onLogout={onLogout} />,
 		children: [
 			{ index: true, element: <PlaygroundPage /> },
-			{
-				path: "kanban-board",
-				element: <Navigate to="/tracker/boards" replace />,
-			},
-			{
-				path: "tasks",
-				element: <Navigate to="/tracker/tasks" replace />,
-			},
 			{
 				path: "v2/templates/:templateId/read",
 				element: <V2TemplatePreviewPage />,

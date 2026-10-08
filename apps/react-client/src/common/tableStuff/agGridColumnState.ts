@@ -4,24 +4,7 @@ const STORAGE_PREFIX = "smart_anketa:ag-grid-column-state:";
 const FILTER_STORAGE_PREFIX = "smart_anketa:ag-grid-filter-model:";
 const ROW_TINT_STORAGE_PREFIX = "smart_anketa:ag-grid-row-tint:";
 
-export const TRACKER_AG_GRID_STATE_KEYS = [
-	"tracker.tasks",
-	"tracker.my-tasks",
-	"tracker.trash",
-	"tracker.projects",
-	"tracker.boards",
-	"tracker.assignees",
-	"tracker.customers",
-	"tracker.settings-assignees",
-	"tracker.sprints",
-	"tracker.supersprints",
-	"tracker.streams",
-] as const;
-
-export type TrackerAgGridStateKey = (typeof TRACKER_AG_GRID_STATE_KEYS)[number];
-
 export const ALL_AG_GRID_STATE_KEYS = [
-	...TRACKER_AG_GRID_STATE_KEYS,
 	"v1.home.calculations",
 	"v2.questionnaires",
 	"v2.dictionaries",

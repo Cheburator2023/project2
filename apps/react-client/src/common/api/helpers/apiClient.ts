@@ -62,7 +62,6 @@ function mutationScopeForUrl(url?: string): AppQueryScope | null {
 	}
 	if (url.includes("/v2/dictionaries")) return "v2-dictionaries";
 	if (url.includes("/v2/questionnaires")) return "v2-questionnaires";
-	if (url.includes("/kanban-board")) return "tracker";
 	return null;
 }
 

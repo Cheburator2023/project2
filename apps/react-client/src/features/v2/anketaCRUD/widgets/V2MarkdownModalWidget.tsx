@@ -7,7 +7,7 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import InputAdornment from "@mui/material/InputAdornment";
 import { TextFieldCustom } from "@react-client/common/muiCustom/TextFieldCustom";
-import { TrackerMarkdownEditor } from "@react-client/features/kanban-board/components/TrackerMarkdownEditor";
+import { MarkdownEditor } from "@react-client/common/markdown/MarkdownEditor";
 import { useEffect, useState } from "react";
 import type { WidgetProps } from "@rjsf/utils";
 
@@ -142,7 +142,7 @@ export function V2MarkdownModalWidget(props: WidgetProps) {
 					sx={{ pt: 2, overflow: "hidden", minWidth: 0 }}
 				>
 					<Box sx={{ minWidth: 0, maxWidth: "100%", overflow: "hidden" }}>
-						<TrackerMarkdownEditor
+						<MarkdownEditor
 							value={draft}
 							onChange={setDraft}
 							disabled={readOnly}

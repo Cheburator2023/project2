@@ -29,7 +29,6 @@ import { performance } from "node:perf_hooks";
 import { io, type Socket } from "socket.io-client";
 
 const V2_EDIT_LOCK_WS_NAMESPACE = "/v2-edit-locks";
-const KANBAN_WS_NAMESPACE = "/kanban";
 const WS_JOIN = "lock:join";
 const WS_SNAPSHOT = "lock:snapshot";
 
@@ -99,7 +98,6 @@ type Report = {
 		joinsOk: number;
 		joinsDenied: number;
 		joinErrors: number;
-		kanbanConnectOk: number;
 	};
 };
 
@@ -339,7 +337,6 @@ async function discoverTarget(baseUrl: string): Promise<{
 	templateId: string;
 	versionId: string | null;
 	questionnaireIds: string[];
-	taskIds: string[];
 }> {
 	const templatesRes = await fetch(`${baseUrl}/v2/templates`, {
 		headers: authHeaders("203.0.113.1"),
@@ -369,29 +366,10 @@ async function discoverTarget(baseUrl: string): Promise<{
 		questionnaireIds = (page.data ?? []).map((row) => row.id);
 	}
 
-	let taskIds: string[] = [];
-	try {
-		const tasksRes = await fetch(`${baseUrl}/kanban-board/tasks`, {
-			headers: authHeaders("203.0.113.1"),
-			signal: AbortSignal.timeout(30_000),
-		});
-		if (tasksRes.ok) {
-			const rows = (await readJson(tasksRes)) as Array<{ id?: string }>;
-			if (Array.isArray(rows)) {
-				taskIds = rows
-					.map((row) => row.id)
-					.filter((id): id is string => Boolean(id));
-			}
-		}
-	} catch {
-		taskIds = [];
-	}
-
 	return {
 		templateId: withVersion.id,
 		versionId: withVersion.currentVersionId ?? null,
 		questionnaireIds,
-		taskIds,
 	};
 }
 
@@ -450,7 +428,7 @@ async function main(): Promise<void> {
 	try {
 		const target = await discoverTarget(baseUrl);
 		console.log(
-			`Load: users=${USERS} duration=${DURATION_SEC}s think=${THINK_MS}ms template=${target.templateId} version=${target.versionId ?? "—"} questionnaires=${target.questionnaireIds.length} kanbanTasks=${target.taskIds.length} sameIp=${SAME_IP} ws=${SKIP_WS ? "off" : "on"}`,
+			`Load: users=${USERS} duration=${DURATION_SEC}s think=${THINK_MS}ms template=${target.templateId} version=${target.versionId ?? "—"} questionnaires=${target.questionnaireIds.length} sameIp=${SAME_IP} ws=${SKIP_WS ? "off" : "on"}`,
 		);
 
 		const calculatePath = target.versionId
@@ -467,7 +445,6 @@ async function main(): Promise<void> {
 			joinsOk: 0,
 			joinsDenied: 0,
 			joinErrors: 0,
-			kanbanConnectOk: 0,
 		};
 		const deadline = Date.now() + DURATION_SEC * 1000;
 
@@ -480,13 +457,8 @@ async function main(): Promise<void> {
 					: null;
 			const editorJoin =
 				Boolean(questionnaireId) && vu < target.questionnaireIds.length;
-			const taskId =
-				target.taskIds.length > 0 && vu % 4 === 0
-					? target.taskIds[Math.floor(vu / 4) % target.taskIds.length]
-					: null;
 			let tick = 0;
 			let v2Socket: Socket | null = null;
-			let kanbanSocket: Socket | null = null;
 
 			if (!SKIP_WS) {
 				ws.connectAttempts += 1;
@@ -511,30 +483,6 @@ async function main(): Promise<void> {
 					}
 				} catch {
 					ws.connectErrors += 1;
-				}
-				if (taskId) {
-					ws.connectAttempts += 1;
-					try {
-						const kanban = await connectSocket(
-							baseUrl,
-							KANBAN_WS_NAMESPACE,
-							label,
-							WS_SNAPSHOT,
-						);
-						kanbanSocket = kanban.client;
-						ws.connectOk += 1;
-						ws.kanbanConnectOk += 1;
-						if (kanban.snapshot) ws.snapshots += 1;
-						const join = await emitJoin(kanbanSocket, WS_JOIN, {
-							taskId,
-							lockedByLabel: label,
-						});
-						if (join === "ok") ws.joinsOk += 1;
-						else if (join === "denied") ws.joinsDenied += 1;
-						else ws.joinErrors += 1;
-					} catch {
-						ws.connectErrors += 1;
-					}
 				}
 			}
 
@@ -598,7 +546,6 @@ async function main(): Promise<void> {
 				if (THINK_MS > 0) await sleep(THINK_MS);
 			}
 			} finally {
-				kanbanSocket?.disconnect();
 				v2Socket?.disconnect();
 			}
 		};

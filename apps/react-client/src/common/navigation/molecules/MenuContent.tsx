@@ -38,7 +38,7 @@ const REMOTE_APP_LINKS: RemoteAppLink[] = [
 	{ id: "sum-rm", label: "СУРМ", href: "/sum-rm" },
 ];
 
-const getGroupNavbarItems = (group: "adminV2" | "tracker") =>
+const getGroupNavbarItems = (group: "adminV2") =>
 	(Object.values(commonRoutes) as AppRouteConfig[])
 		.filter((r) => r.showInNavbar)
 		.filter((r) => r.navbar?.group === group)
@@ -46,7 +46,7 @@ const getGroupNavbarItems = (group: "adminV2" | "tracker") =>
 		.filter((r) => r.navbar?.asSectionIcon !== "settings")
 		.sort((a, b) => (a.navbar?.order ?? 0) - (b.navbar?.order ?? 0));
 
-const getGroupSettingsRoute = (group: "adminV2" | "tracker") =>
+const getGroupSettingsRoute = (group: "adminV2") =>
 	(Object.values(commonRoutes) as AppRouteConfig[]).find(
 		(r) =>
 			r.showInNavbar &&
@@ -56,7 +56,6 @@ const getGroupSettingsRoute = (group: "adminV2" | "tracker") =>
 	);
 
 const getAdminNavbarItems = () => getGroupNavbarItems("adminV2");
-const getTrackerNavbarItems = () => getGroupNavbarItems("tracker");
 
 const getDevNavbarItems = () =>
 	(Object.values(commonRoutes) as AppRouteConfig[])
@@ -247,7 +246,6 @@ function NavSection({
 
 function SmartAnketaSections({ pathname }: { pathname: string }) {
 	const {
-		canAccessTracker,
 		canAccessAdminPanel,
 		canAccessAudit,
 		canViewAllCalculations,
@@ -261,7 +259,6 @@ function SmartAnketaSections({ pathname }: { pathname: string }) {
 		return true;
 	});
 	const adminSettings = getGroupSettingsRoute("adminV2");
-	const trackerSettings = getGroupSettingsRoute("tracker");
 	const sectionIndent = SHOW_SMART_ANKETA_APP_TITLE ? 1 : 0;
 
 	return (
@@ -297,39 +294,6 @@ function SmartAnketaSections({ pathname }: { pathname: string }) {
 						pathname={pathname}
 						indent={sectionIndent}
 					/>
-				</>
-			) : null}
-
-			{canAccessTracker ? (
-				<>
-					<Divider sx={{ my: 1 }} />
-					{/* Все пункты трекера равноправны — порядок только из navbar.order */}
-					<Box sx={{ display: "block", mb: 0.2 }}>
-						<NavSectionHeader
-							title={commonNavbarGroups.tracker.title}
-							pl={1 + sectionIndent}
-							settingsPath={trackerSettings?.rootPath}
-							settingsSelected={
-								Boolean(trackerSettings) &&
-								(pathname === trackerSettings?.rootPath ||
-									pathname.startsWith(`${trackerSettings?.rootPath}/`))
-							}
-						/>
-						<List disablePadding sx={{ py: 0 }}>
-							{getTrackerNavbarItems().map((route) => (
-								<NavLinkItem
-									key={route.rootPath}
-									to={route.rootPath}
-									selected={
-										pathname === route.rootPath ||
-										pathname.startsWith(`${route.rootPath}/`)
-									}
-									primary={route.name}
-									pl={2 + sectionIndent}
-								/>
-							))}
-						</List>
-					</Box>
 				</>
 			) : null}
 

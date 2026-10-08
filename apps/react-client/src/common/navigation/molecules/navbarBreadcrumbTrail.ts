@@ -232,102 +232,6 @@ function v2Trail(pathname: string): NavbarBreadcrumbItem[] | null {
 	return [rootCrumb(), { label: v2Routes.home.name }];
 }
 
-function trackerTrail(pathname: string): NavbarBreadcrumbItem[] | null {
-	if (pathname !== "/tracker" && !pathname.startsWith("/tracker/")) return null;
-
-	const rootCrumb = (): NavbarBreadcrumbItem => ({
-		label: commonRoutes.tracker.name,
-		to: commonRoutes.trackerProjects.rootPath,
-	});
-
-	if (pathname === "/tracker" || pathname === "/tracker/") {
-		return [{ label: commonRoutes.tracker.name }];
-	}
-
-	if (
-		pathname === "/tracker/task/new" ||
-		pathname === "/tracker/tasks/new" ||
-		/^\/tracker\/board\/[^/]+\/task\/new/.test(pathname)
-	) {
-		return [rootCrumb(), { label: commonRoutes.trackerTaskCreate.name }];
-	}
-
-	const boardHistory = pathname.match(/^\/tracker\/board\/([^/]+)\/history$/);
-	if (boardHistory) {
-		const boardKey = decodeURIComponent(boardHistory[1]);
-		return [
-			rootCrumb(),
-			{
-				label: boardKey,
-				to: `/tracker/board/${encodeURIComponent(boardKey)}`,
-			},
-			{
-				label:
-					commonRoutes.trackerBoardHistory.shortName ??
-					commonRoutes.trackerBoardHistory.name,
-			},
-		];
-	}
-
-	const boardView = pathname.match(/^\/tracker\/board\/([^/]+)$/);
-	if (boardView) {
-		return [rootCrumb(), { label: decodeURIComponent(boardView[1]) }];
-	}
-
-	const taskView = pathname.match(/^\/tracker\/task\/([^/]+)$/);
-	if (taskView) {
-		return [rootCrumb(), { label: decodeURIComponent(taskView[1]) }];
-	}
-
-	const releaseView = pathname.match(/^\/tracker\/releases\/([^/]+)$/);
-	if (releaseView) {
-		return [
-			rootCrumb(),
-			{
-				label: commonRoutes.trackerReleases.name,
-				to: commonRoutes.trackerReleases.rootPath,
-			},
-			{ label: commonRoutes.trackerReleaseView.shortName ?? "Релиз" },
-		];
-	}
-
-	const planningView = pathname.match(/^\/tracker\/plannings\/([^/]+)$/);
-	if (planningView) {
-		return [
-			rootCrumb(),
-			{
-				label: commonRoutes.trackerPlannings.name,
-				to: commonRoutes.trackerPlannings.rootPath,
-			},
-			{ label: commonRoutes.trackerPlanningView.shortName ?? "Планирование" },
-		];
-	}
-
-	const staticRoutes = Object.values(commonRoutes)
-		.filter((segment) => {
-			if (!("rootPath" in segment) || typeof segment.rootPath !== "string") {
-				return false;
-			}
-			return (
-				segment.rootPath.startsWith("/tracker/") &&
-				!segment.rootPath.includes(":")
-			);
-		})
-		.map((segment) => ({
-			name: segment.name,
-			full: segment.rootPath.replace(/\/$/, ""),
-		}))
-		.sort((a, b) => b.full.length - a.full.length);
-
-	for (const route of staticRoutes) {
-		if (pathname === route.full || pathname.startsWith(`${route.full}/`)) {
-			return [rootCrumb(), { label: route.name }];
-		}
-	}
-
-	return [rootCrumb()];
-}
-
 function v1Trail(pathname: string): NavbarBreadcrumbItem[] | null {
 	if (pathname !== "/v1" && !pathname.startsWith("/v1/")) return null;
 
@@ -373,9 +277,6 @@ export function buildNavbarBreadcrumbTrail(
 
 	const v1 = v1Trail(pathname);
 	if (v1) return v1;
-
-	const tracker = trackerTrail(pathname);
-	if (tracker) return tracker;
 
 	if (pathname === "/") return [{ label: "Реестр" }];
 

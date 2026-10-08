@@ -14,7 +14,6 @@ import {
 	userHasV2QuestionnaireDeleteRole,
 } from "@smart-anketa/api-contract";
 
-const isDev = process.env.NODE_ENV === "development";
 const godMode = isNoRolesGodMode();
 
 function hasDomainRole(
@@ -84,12 +83,6 @@ export const usePermissions = () => {
 		),
 		canAccessAudit: hasEffectivePermission(Permission.ANKETA_AUDIT_VIEW),
 		canHoldCalculation: hasEffectivePermission(Permission.ANKETA_HOLD),
-		canAccessTracker:
-			godMode ||
-			isDev ||
-			(hasEffectivePermission(Permission.DEVELOPER) &&
-				window.location.hostname.toLowerCase().includes("dev") &&
-				!window.location.hostname.toLowerCase().includes("vtb")),
 		hasRole: (role: Role) => hasRole(role),
 	};
 };

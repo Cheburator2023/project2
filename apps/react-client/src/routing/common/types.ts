@@ -9,7 +9,7 @@ export type AppRouteConfig = {
 	/** Пункт основного сайдменю */
 	showInNavbar?: boolean;
 	navbar?: {
-		group?: "main" | "adminV2" | "dev" | "tracker";
+		group?: "main" | "adminV2" | "dev";
 		order?: number;
 		/**
 		 * Не пункт списка, а иконка справа от заголовка секции группы.

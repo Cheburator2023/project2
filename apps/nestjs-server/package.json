@@ -62,7 +62,6 @@
 		"ioredis": "^6.0.0",
 		"keyv": "^5.6.0",
 		"nest-keycloak-connect": "2.0.0-alpha.1",
-		"@smart-anketa/web-push": "*",
 		"pg": "8.14.1",
 		"reflect-metadata": "0.2.2",
 		"typeorm": "0.3.21"

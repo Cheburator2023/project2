@@ -2,7 +2,7 @@ import type { V2EditLockJoinAck, V2QuestionnaireEditLockDto } from "@smart-anket
 
 /**
  * Свой ли это lock (по label из userStore).
- * Без userId на клиенте — как в kanban: сравнение lockedByLabel.
+ * Без userId на клиенте сравнение идёт по lockedByLabel.
  */
 export function isOwnV2QuestionnaireEditLock(
 	lock: V2QuestionnaireEditLockDto | null | undefined,

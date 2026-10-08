@@ -16,8 +16,7 @@ interface UserStoreState {
 	permissions: UserPermissions;
 	/**
 	 * Профиль из Keycloak (groups/roles/permissions) уже применён в store.
-	 * До этого редиректы с `/` и PermissionGuard не должны решать «первую страницу»
-	 * — иначе в development `canAccessTracker` уводит в трекер раньше реестра.
+	 * До этого редиректы с `/` и PermissionGuard не должны решать «первую страницу».
 	 */
 	profileHydrated: boolean;
 	setUsername: (username: string) => void;
