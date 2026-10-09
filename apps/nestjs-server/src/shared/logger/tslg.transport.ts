@@ -1,182 +1,370 @@
 import * as net from 'net';
-import { v4 as uuidv4 } from 'uuid';
+import { BufferManager } from './buffer-manager';
 
+export interface TSLGTransportMetrics {
+    sentLogs: number;
+    failedLogs: number;
+    reconnections: number;
+    bufferFlushes: number;
+    connectionErrors: number;
+    ttlReconnections: number;
+    bufferOverflows: number;
+    forcedFlushes: number;
+}
+
+/**
+ * Транспорт до TSLG-агента.
+ *
+ * Обеспечивает:
+ *  - неблокирующую отправку (ОЛ.01);
+ *  - переподключение с экспоненциальной задержкой;
+ *  - graceful reconnect по TTL (для балансировки);
+ *  - буферизацию при недоступности агента (ОЛ.02);
+ *  - метрики работы транспорта.
+ *
+ * Не отвечает за формирование записи лога — за это отвечает LogEntryBuilder
+ * на стороне CustomLogger.
+ */
 export class TSLGTransport {
     private socket: net.Socket | null = null;
     private reconnectTimeout: NodeJS.Timeout | null = null;
-    private lastConnectionTime: number = 0;
-    private readonly isProduction: boolean;
+    private ttlInterval: NodeJS.Timeout | null = null;
+    private flushInterval: NodeJS.Timeout | null = null;
+    private connectionAttempts = 0;
+    private maxConnectionAttempts: number;
+    private lastConnectionTime = 0;
+    private bufferManager: BufferManager;
+    private metrics: TSLGTransportMetrics;
 
-    constructor(
-        private readonly options: {
-            host: string;
-            port: number;
-            appName: string;
-            projectCode: string;
-            risCode: string;
-            appType: string;
-            envType: string;
-            tslgClientVersion: string;
-            reconnectionDelay?: number;
-            connectionTTL?: number;
-        }
-    ) {
+    private readonly options: {
+        host: string;
+        port: number;
+        socketTimeout: number;
+        reconnectionDelay: number;
+        connectionTTL: number;
+        maxConnectionAttempts: number;
+        maxBufferSize: number;
+        bufferFlushInterval: number;
+    };
+
+    private readonly console = {
+        log: console.log.bind(console),
+        warn: console.warn.bind(console),
+        error: console.error.bind(console),
+    };
+
+    constructor(options: {
+        host: string;
+        port: number;
+        socketTimeout?: number;
+        reconnectionDelay?: number;
+        connectionTTL?: number;
+        maxConnectionAttempts?: number;
+        maxBufferSize?: number;
+        bufferFlushInterval?: number;
+    }) {
         this.options = {
+            socketTimeout: 10000,
             reconnectionDelay: 1000,
             connectionTTL: 2000,
+            maxConnectionAttempts: 10,
+            maxBufferSize: 1000,
+            bufferFlushInterval: 500,
             ...options,
         };
-        this.isProduction = process.env.NODE_ENV === 'production';
-
-        if (this.isProduction) {
-            this.connect();
-        }
-    }
-
-    private connect() {
-        if (!this.isProduction) return;
-
-        this.socket = net.createConnection(
-            {
-                host: this.options.host,
-                port: this.options.port,
-            },
-            () => {
-                this.lastConnectionTime = Date.now();
-            }
+        this.maxConnectionAttempts = this.options.maxConnectionAttempts;
+        this.metrics = this.initializeMetrics();
+        this.bufferManager = new BufferManager(
+            this.options.maxBufferSize,
+            this.metrics,
         );
 
-        this.socket.on('error', (error) => {
-            console.error('TSLG Transport connection error:', error);
-            this.scheduleReconnect();
-        });
+        this.connect();
 
-        this.socket.on('close', () => {
-            this.scheduleReconnect();
-        });
-    }
-
-    private scheduleReconnect() {
-        if (!this.isProduction) return;
-
-        if (this.reconnectTimeout) {
-            clearTimeout(this.reconnectTimeout);
+        if (this.options.connectionTTL > 0) {
+            this.startTTLMonitor();
         }
-
-        this.reconnectTimeout = setTimeout(() => {
-            this.connect();
-        }, this.options.reconnectionDelay);
+        this.startBufferFlushMonitor();
     }
 
-    private shouldReconnect(): boolean {
-        if (!this.isProduction) return false;
-        return Date.now() - this.lastConnectionTime >= this.options.connectionTTL!;
+    private initializeMetrics(): TSLGTransportMetrics {
+        return {
+            sentLogs: 0,
+            failedLogs: 0,
+            reconnections: 0,
+            bufferFlushes: 0,
+            connectionErrors: 0,
+            ttlReconnections: 0,
+            bufferOverflows: 0,
+            forcedFlushes: 0,
+        };
     }
 
-    log(level: string, message: string, context?: string, additionalData?: Record<string, any>, stack?: string) {
-        if (!this.isProduction) {
-            const logInfo = {
-                level,
-                message: `[TSLG STUB] ${message}`,
-                context,
-                additionalData,
-                stack,
-                timestamp: new Date().toISOString()
-            };
-            console.log(JSON.stringify(logInfo));
+    private connect(): void {
+        if (this.connectionAttempts >= this.maxConnectionAttempts) {
+            this.console.error(
+                `[TSLG] Max connection attempts (${this.maxConnectionAttempts}) reached. Giving up.`,
+            );
             return;
         }
 
-        // В production среде отправляем в TSLG
-        if (this.socket && this.socket.writable) {
-            if (this.shouldReconnect()) {
-                this.socket.destroy();
-                this.connect();
-                return;
+        this.connectionAttempts++;
+
+        try {
+            this.socket = net.createConnection({
+                host: this.options.host,
+                port: this.options.port,
+                timeout: this.options.socketTimeout,
+            });
+
+            this.setupSocketEventHandlers();
+            this.socket.setTimeout(this.options.socketTimeout);
+            this.socket.setKeepAlive(true, 60000);
+        } catch (error) {
+            this.console.error('[TSLG] Failed to create TSLG connection:', error);
+            this.metrics.connectionErrors++;
+            this.scheduleReconnect();
+        }
+    }
+
+    private setupSocketEventHandlers(): void {
+        if (!this.socket) return;
+
+        this.socket.on('connect', () => {
+            this.lastConnectionTime = Date.now();
+            this.connectionAttempts = 0;
+            this.console.log(
+                `[TSLG] Connected successfully to ${this.options.host}:${this.options.port}`,
+            );
+            this.bufferManager.flushBuffer((data) => this.write(data + '\n'));
+        });
+
+        this.socket.on('error', (error) => {
+            this.console.error(`[TSLG] Connection error: ${error.message}`);
+            this.metrics.connectionErrors++;
+            this.scheduleReconnect();
+        });
+
+        this.socket.on('close', (hadError) => {
+            if (hadError) {
+                this.scheduleReconnect();
             }
+        });
 
-            const logEntry = this.formatLogEntry(level, message, context, additionalData, stack);
-            this.socket.write(JSON.stringify(logEntry) + '\n');
-        }
+        this.socket.on('timeout', () => {
+            this.console.error('[TSLG] Connection timeout');
+            this.safeReconnect();
+        });
     }
 
-    private formatLogEntry(
-        level: string,
-        message: string,
-        context?: string,
-        additionalData?: Record<string, any>,
-        stack?: string
-    ): any {
-        const logEntry: any = {
-            eventId: uuidv4(),
-            appName: this.options.appName,
-            level: level.toUpperCase(),
-            text: message,
-            localTime: new Date().toISOString(),
-            tslgClientVersion: this.options.tslgClientVersion,
-            risCode: this.options.risCode,
-            projectCode: this.options.projectCode,
-            appType: this.options.appType,
-            envType: this.options.envType,
-            PID: process.pid,
-            loggerName: context || 'application',
-            ...this.sanitizeData(additionalData || {}),
-        };
-
-        if (stack) {
-            logEntry.stack = this.cleanStack(stack);
-        }
-
-        if (this.options.envType === 'K8S') {
-            logEntry.namespace = process.env.KUBERNETES_NAMESPACE;
-            logEntry.podName = process.env.POD_NAME;
-            logEntry.tec = {
-                podIp: process.env.POD_IP,
-                nodeName: process.env.NODE_NAME,
-            };
-        }
-
-        return logEntry;
-    }
-
-    private cleanStack(stack: string): string {
-        return stack
-            ?.split('\n')
-            ?.map((line) => line.trim())
-            ?.join('\n');
-    }
-
-    private sanitizeData(data: Record<string, any>): Record<string, any> {
-        const sensitiveFields = [
-            'password',
-            'token',
-            'jwt',
-            'accessToken',
-            'refreshToken',
-            'authorization',
-            'secret',
-            'apiKey',
-            'credentials',
-        ];
-
-        const sanitized = { ...data };
-        for (const [key, value] of Object.entries(sanitized)) {
-            if (sensitiveFields.includes(key.toLowerCase())) {
-                sanitized[key] = '*****';
-            }
-        }
-
-        return sanitized;
-    }
-
-    close() {
-        if (!this.isProduction) return;
-
+    private scheduleReconnect(): void {
         if (this.reconnectTimeout) {
             clearTimeout(this.reconnectTimeout);
         }
+
+        const delay = this.calculateReconnectDelay();
+        this.metrics.reconnections++;
+        this.console.log(`[TSLG] Scheduling reconnect in ${delay}ms`);
+
+        this.reconnectTimeout = setTimeout(() => {
+            this.connect();
+        }, delay);
+    }
+
+    private calculateReconnectDelay(): number {
+        const baseDelay = this.options.reconnectionDelay;
+        const maxDelay = 30000;
+        return Math.min(
+            baseDelay * Math.pow(1.5, Math.max(0, this.connectionAttempts - 1)),
+            maxDelay,
+        );
+    }
+
+    private safeReconnect(): void {
         if (this.socket) {
             this.socket.destroy();
+            this.socket = null;
         }
+        this.scheduleReconnect();
+    }
+
+    isConnected(): boolean {
+        return !!(this.socket && !this.socket.destroyed && this.socket.writable);
+    }
+
+    private write(data: string): boolean {
+        if (!this.isConnected()) {
+            return false;
+        }
+        try {
+            return this.socket!.write(data);
+        } catch (error) {
+            this.console.error('[TSLG] Error writing to socket:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Отправляет подготовленную JSON-строку лога.
+     * Если соединение недоступно — буферизует (ОЛ.01 / ОЛ.02).
+     */
+    send(logData: string): void {
+        if (!this.isConnected()) {
+            this.bufferManager.bufferLog(logData);
+            return;
+        }
+
+        try {
+            const success = this.write(logData + '\n');
+            if (!success) {
+                this.bufferManager.bufferLog(logData);
+            } else {
+                this.metrics.sentLogs++;
+            }
+        } catch (error) {
+            this.console.error('[TSLG] Failed to send log to TSLG:', error);
+            this.bufferManager.bufferLog(logData);
+        }
+    }
+
+    close(): void {
+        if (this.reconnectTimeout) {
+            clearTimeout(this.reconnectTimeout);
+            this.reconnectTimeout = null;
+        }
+        if (this.ttlInterval) {
+            clearInterval(this.ttlInterval);
+            this.ttlInterval = null;
+        }
+        if (this.flushInterval) {
+            clearInterval(this.flushInterval);
+            this.flushInterval = null;
+        }
+
+        if (this.bufferManager.getBufferSize() > 0) {
+            this.console.log(
+                `[TSLG] Attempting to flush ${this.bufferManager.getBufferSize()} buffered logs before shutdown`,
+            );
+            this.bufferManager.flushBufferSync((data) => this.write(data + '\n'));
+        }
+
+        if (this.socket) {
+            this.socket.destroy();
+            this.socket = null;
+        }
+        this.console.log('[TSLG] Transport closed');
+    }
+
+    private startTTLMonitor(): void {
+        if (this.ttlInterval) {
+            clearInterval(this.ttlInterval);
+        }
+
+        this.ttlInterval = setInterval(async () => {
+            if (!this.isConnected()) return;
+
+            const now = Date.now();
+            const timeSinceReconnect = now - this.lastConnectionTime;
+
+            if (timeSinceReconnect >= this.options.connectionTTL) {
+                this.console.log(
+                    `[TSLG] TTL ${this.options.connectionTTL}ms expired, scheduling reconnection for load balancing`,
+                );
+                await this.performGracefulReconnect();
+            }
+        }, 1000);
+    }
+
+    private startBufferFlushMonitor(): void {
+        if (this.flushInterval) {
+            clearInterval(this.flushInterval);
+        }
+
+        this.flushInterval = setInterval(() => {
+            if (
+                this.bufferManager.getBufferSize() > 0 &&
+                this.isConnected() &&
+                !this.bufferManager.isCurrentlyFlushing()
+            ) {
+                this.metrics.forcedFlushes++;
+                this.bufferManager.flushBuffer((data) => this.write(data + '\n'));
+            }
+        }, this.options.bufferFlushInterval);
+    }
+
+    private async performGracefulReconnect(): Promise<void> {
+        try {
+            this.console.log(
+                '[TSLG] Starting graceful reconnection for load balancing',
+            );
+
+            if (this.isConnected()) {
+                const size = this.bufferManager.getBufferSize();
+                if (size > 0) {
+                    this.console.log(
+                        `[TSLG] Waiting for ${size} buffered logs to be sent`,
+                    );
+                    await this.waitForBufferFlush();
+                }
+                if (this.socket) {
+                    this.socket.destroy();
+                    this.socket = null;
+                }
+            }
+
+            this.connect();
+            this.metrics.ttlReconnections++;
+            this.console.log(
+                '[TSLG] Graceful reconnection completed successfully',
+            );
+        } catch (error) {
+            this.console.error('[TSLG] Graceful reconnection failed:', error);
+        }
+    }
+
+    private async waitForBufferFlush(): Promise<void> {
+        return new Promise((resolve) => {
+            let attempts = 0;
+            const maxAttempts = 10;
+            const checkBuffer = () => {
+                attempts++;
+                const size = this.bufferManager.getBufferSize();
+                if (size === 0 || attempts >= maxAttempts) {
+                    if (size > 0) {
+                        this.console.warn(
+                            `[TSLG] Buffer not fully flushed after ${attempts} attempts, ${size} logs remaining`,
+                        );
+                    }
+                    resolve();
+                } else {
+                    setTimeout(checkBuffer, 500);
+                }
+            };
+            setTimeout(checkBuffer, 500);
+        });
+    }
+
+    getStatus(): Record<string, unknown> {
+        return {
+            isConnected: this.isConnected(),
+            host: this.options.host,
+            port: this.options.port,
+            bufferSize: this.bufferManager.getBufferSize(),
+            connectionAttempts: this.connectionAttempts,
+            lastConnectionTime: this.lastConnectionTime,
+            metrics: { ...this.metrics },
+        };
+    }
+
+    getBufferSize(): number {
+        return this.bufferManager.getBufferSize();
+    }
+
+    getLastConnectionTime(): number {
+        return this.lastConnectionTime;
+    }
+
+    getConnectionAttempts(): number {
+        return this.connectionAttempts;
     }
 }
