@@ -10,7 +10,7 @@ import { LogEntryBuilder } from "../logger/log-entry-builder";
  *  - формирование JSON-записи лога (LogEntryBuilder) по ТИС 1404;
  *  - вывод в консоль (управляется TSLG_CONSOLE_OUTPUT);
  *  - отправку в СС Журналирование через TSLGTransport;
- *  - маскирование чувствительных данных;
+ *  - маскирование чувствительных данных (БЛ.01);
  *  - поддержку уровней TRACE/DEBUG/INFO/WARN/WARNING/ERROR/FATAL/PANIC/CRITICAL.
  */
 @Injectable()
@@ -37,6 +37,26 @@ export class CustomLogger implements LoggerService {
         "dictionariesSnapshot",
         "json_schema",
         "ui_schema",
+    ]);
+
+    /**
+     * Заголовки, значения которых полностью маскируются перед
+     * записью в консоль и в СС Журналирование (БЛ.01 «Маскирование
+     * чувствительных данных» ТИС 1404). Сравнение — регистронезависимое.
+     *
+     * `cookie` / `set-cookie` содержат JWT-токен (в т.ч. `token=eyJ...`),
+     * поэтому подлежат обязательной маскировке — иначе токен утекает
+     * в открытом виде в консольные логи (нарушение RQ.SEC.8.5 ТИС 1404).
+     */
+    private static readonly SENSITIVE_HEADER_NAMES: ReadonlySet<string> = new Set([
+        "authorization",
+        "proxy-authorization",
+        "cookie",
+        "set-cookie",
+        "x-access-token",
+        "x-refresh-token",
+        "x-auth-token",
+        "x-api-key",
     ]);
 
     /**
@@ -450,18 +470,27 @@ export class CustomLogger implements LoggerService {
         return sanitized;
     }
 
-    private sanitizeHeaders(headers: any): any {
-        if (!headers) return {};
+    /**
+     * Маскирование чувствительных HTTP-заголовков.
+     *
+     * В соответствии с БЛ.01 ТИС 1404 и RQ.SEC.8.5 заголовки
+     * `authorization`, `cookie`, `set-cookie` и родственные обязаны
+     * маскироваться перед записью в консоль и в СС Журналирование.
+     *
+     * Сравнение имён — регистронезависимое (Express/Node.js отдаёт
+     * заголовки в нижнем регистре, но HTTP/2 и прокси могут
+     * сохранять исходный регистр — для надёжности нормализуем).
+     */
+    private sanitizeHeaders(headers: any): Record<string, unknown> {
+        if (!headers || typeof headers !== "object") return {};
 
-        const sanitized = { ...headers };
-        if (sanitized.authorization) {
-            sanitized.authorization = "*****";
-        }
-        if (sanitized["x-access-token"]) {
-            sanitized["x-access-token"] = "*****";
-        }
-        if (sanitized["x-refresh-token"]) {
-            sanitized["x-refresh-token"] = "*****";
+        const sanitized: Record<string, unknown> = {};
+        for (const [key, value] of Object.entries(headers)) {
+            if (CustomLogger.SENSITIVE_HEADER_NAMES.has(key.toLowerCase())) {
+                sanitized[key] = "*****";
+            } else {
+                sanitized[key] = value;
+            }
         }
 
         return sanitized;
